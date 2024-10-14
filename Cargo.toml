@@ -2,6 +2,12 @@
 name = "marmite"
 version = "0.1.0"
 edition = "2021"
+license-file = "LICENSE"
+description = "MARkdown Makes sITEs is a very simple static site generator, mainly for simple blogs."
+homepage = "https://rochacbruno.github.io/marmite"
+repository = "https://github.com/rochacbruno/marmite"
+readme = "README.md"
+keywords = ["web", "blog", "static", "site", "html"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
