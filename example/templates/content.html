@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block main %}
+<article class="post">
+    <h1 class="post-title">{{ title }}</h1>
+    <span class="post-date">{{ date | date(format="Y-m-d") }}</span>
+    <div class="post-content">{{ content | safe }}</div>
+    <ul class="post-tags">
+        {% for tag in tags | split(pat=",")  %}
+            <li><a href="/tag/{{ tag }}.html">{{ tag }}</a></li>
+        {% endfor %}
+    </ul>
+</article>
+{% endblock %}

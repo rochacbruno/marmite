@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ site.name }} | {{ title }}</title>
+    <link rel="stylesheet" type="text/css" href="/static/style.css">
+</head>
+<body>
+    <header class="header-content">
+        <div class="header-text">
+            <h1>{{ site.name }}</h1>
+            <span> {{ site.tagline }}</span>
+        </div>
+        <nav class="header-nav">
+            <ul>
+                {% for page in pages | filter(attribute="show_in_menu", value=true) %}
+                    <li><a href="/{{ page.slug }}.html">{{ page.title }}</a></li>
+                {% endfor %}
+            </ul>
+        </nav>
+    </header>
+    <main class="main-content">{% block main %}{% endblock %}</main>
+    <footer class="footer-content">{{ site.footer | safe }}</footer>
+</body>
+</html>
