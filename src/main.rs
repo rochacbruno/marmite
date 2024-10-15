@@ -11,19 +11,41 @@ use walkdir::WalkDir;
 fn main() {
     // Argument Parsing
     let args: Vec<String> = std::env::args().collect();
+    if args.len() < 2 {
+        eprintln!("Usage: program <folder>");
+        process::exit(1);
+    }
     let folder = PathBuf::from(&args[1]);
 
     // Initialize site data
-    let marmite = fs::read_to_string("marmite.yaml").expect("Unable to read marmite.yaml");
-    let site: Site = serde_yaml::from_str(&marmite).expect("Failed to parse YAML");
+    let marmite = match fs::read_to_string("marmite.yaml") {
+        Ok(data) => data,
+        Err(e) => {
+            eprintln!("Unable to read marmite.yaml: {}", e);
+            process::exit(1);
+        }
+    };
+    let site: Site = match serde_yaml::from_str(&marmite) {
+        Ok(site) => site,
+        Err(e) => {
+            eprintln!("Failed to parse YAML: {}", e);
+            process::exit(1);
+        }
+    };
     let mut site_data = SiteData::new(&site);
 
     // Walk through the content directory
     for entry in WalkDir::new(folder.join(site_data.site.content_path)) {
-        let entry = entry.unwrap();
-        let path = entry.path();
-        if path.is_file() && path.extension().unwrap() == "md" {
-            process_file(path, &mut site_data);
+        match entry {
+            Ok(entry) => {
+                let path = entry.path();
+                if path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("md") {
+                    if let Err(e) = process_file(path, &mut site_data) {
+                        eprintln!("Failed to process file {}: {}", path.display(), e);
+                    }
+                }
+            }
+            Err(e) => eprintln!("Error reading entry: {}", e),
         }
     }
 
@@ -33,21 +55,24 @@ fn main() {
     site_data.pages.sort_by(|a, b| b.title.cmp(&a.title));
 
     // Create the output directory
-    let output_dir = folder.join(site_data.site.site_path);
-    fs::create_dir_all(&output_dir).expect("Unable to create output directory");
+    if let Err(e) = fs::create_dir_all(folder.join(&site_data.site.site_path)) {
+        eprintln!("Unable to create output directory: {}", e);
+        process::exit(1);
+    }
 
     // Initialize Tera templates
     let tera = match Tera::new(format!("{}/**/*", site_data.site.templates_path).as_str()) {
         Ok(t) => t,
         Err(e) => {
-            println!("Parsing error(s): {}", e);
-            std::process::exit(1);
+            eprintln!("Parsing error(s): {}", e);
+            process::exit(1);
         }
     };
     // Render templates
-    render_templates(&site_data, &tera, &output_dir);
-
-    // TODO: Move static and media folders to the site.
+    if let Err(e) = render_templates(&site_data, &tera, &folder.join(&site_data.site.site_path)) {
+        eprintln!("Failed to render templates: {}", e);
+        process::exit(1);
+    }
 
     println!("Site generated at: {}/", site_data.site.site_path);
 }
@@ -79,23 +104,21 @@ impl<'a> SiteData<'a> {
     }
 }
 
-fn parse_front_matter(content: &str) -> (Frontmatter, &str) {
+fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
     if content.starts_with("---") {
-        let (frontmatter, markdown) = extract(&content).unwrap();
-        return (frontmatter, markdown);
+        extract(&content).map_err(|e| e.to_string())
     } else {
-        let frontmatter = Frontmatter::new();
-        return (frontmatter, content);
+        Ok((Frontmatter::new(), content))
     }
 }
 
-fn process_file(path: &Path, site_data: &mut SiteData) {
-    let file_content = fs::read_to_string(path).expect("Failed to read file");
-    let (frontmatter, markdown) = parse_front_matter(&file_content);
+fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
+    let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let (frontmatter, markdown) = parse_front_matter(&file_content)?;
     // TODO: Trim empty first and trailing lines of markdown
     let html = markdown_to_html(markdown, &ComrakOptions::default());
 
-    let title = get_title(&frontmatter, markdown).clone();
+    let title = get_title(&frontmatter, markdown);
     let tags = get_tags(&frontmatter);
     let slug = get_slug(&frontmatter, &path);
     let date = get_date(&frontmatter, &path);
@@ -115,11 +138,12 @@ fn process_file(path: &Path, site_data: &mut SiteData) {
     } else {
         site_data.pages.push(content);
     }
+    Ok(())
 }
 
 fn get_show_in_menu(frontmatter: &Frontmatter) -> bool {
     if let Some(show_in_menu) = frontmatter.get("show_in_menu") {
-        return show_in_menu.as_bool().unwrap();
+        return show_in_menu.as_bool().unwrap_or(false);
     }
     false
 }
@@ -138,7 +162,7 @@ fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
             // Add a default time (00:00:00)
             return date.and_hms_opt(0, 0, 0);
         } else {
-            println!(
+            eprintln!(
                 "ERROR: Invalid date format {} when parsing {}",
                 input.to_string_representation(),
                 path.display()
@@ -190,26 +214,26 @@ fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
     tags
 }
 
-fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) {
+fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Result<(), String> {
     // Render index.html
     let mut context = Context::new();
     context.insert("site", &site_data.site);
     context.insert("pages", &site_data.pages);
     context.insert("posts", &site_data.posts);
     context.insert("title", "Blog Posts"); // Get from marmite.yaml
-    let index_output = tera.render("list.html", &context).unwrap();
-    fs::write(output_dir.join("index.html"), index_output).expect("Unable to write file");
+    let index_output = tera.render("list.html", &context).map_err(|e| e.to_string())?;
+    fs::write(output_dir.join("index.html"), index_output).map_err(|e| e.to_string())?;
 
-    // // Render individual posts and pages
+    // Render individual posts and pages
     for post in &site_data.posts {
         let mut post_context = Context::new();
         post_context.insert("site", &site_data.site);
         post_context.insert("pages", &site_data.pages);
         post_context.insert("title", &post.title);
         post_context.insert("content", &post);
-        let post_output = tera.render("content.html", &post_context).unwrap();
+        let post_output = tera.render("content.html", &post_context).map_err(|e| e.to_string())?;
         fs::write(output_dir.join(format!("{}.html", post.slug)), post_output)
-            .expect("Unable to write post");
+            .map_err(|e| e.to_string())?;
     }
 
     for page in &site_data.pages {
@@ -218,10 +242,11 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) {
         page_context.insert("pages", &site_data.pages);
         page_context.insert("title", &page.title);
         page_context.insert("content", &page);
-        let page_output = tera.render("content.html", &page_context).unwrap();
+        let page_output = tera.render("content.html", &page_context).map_err(|e| e.to_string())?;
         fs::write(output_dir.join(format!("{}.html", page.slug)), page_output)
-            .expect("Unable to write page");
+            .map_err(|e| e.to_string())?;
     }
+    Ok(())
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -266,7 +291,7 @@ fn default_url() -> &'static str {
 }
 
 fn default_footer() -> &'static str {
-    r#"<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a> | Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a>"#
+    r#"<a href=\"https://creativecommons.org/licenses/by-nc-sa/4.0/\">CC-BY_NC-SA</a> | Site generated with <a href=\"https://github.com/rochacbruno/marmite\">Marmite</a>"#
 }
 
 fn default_pagination() -> u32 {
