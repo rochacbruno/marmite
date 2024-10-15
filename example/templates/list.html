@@ -6,9 +6,9 @@
     <li class="post-list-item">
         <h2 class="post-title"><a href="/{{ post.slug }}.html">{{ post.title }}</a></h2>
         <span class="post-date">{{ post.date | date(format="Y-m-d") }}</span>
-        <p class="post-excerpt">{{ post.content | striptags | truncate(length=100, end="...") }}</p>
+        <p class="post-excerpt">{{ post.html | striptags | truncate(length=100, end="...") }}</p>
         <ul class="post-tags">
-            {% for tag in post.tags | split(pat=",") %}
+            {% for tag in post.tags %}
                 <li><a href="/tag/{{ tag | trim }}.html">{{ tag }}</a></li>
             {% endfor %}
         </ul>

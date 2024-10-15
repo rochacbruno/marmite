@@ -1,5 +1,12 @@
 name: My Blog
 tagline: This blog is awesome
-url: https://www.myblog.com
+# url: https://www.myblog.com
 # pagination: 10
-footer: This is an example site generated with Marmite
+# footer: This is an example site generated with Marmite
+# list_title: Blog Posts
+# tags_title: Tags
+# content_path: content
+# templates_path: templates
+# static_path: static
+# media_path: content/media
+# site_path: site

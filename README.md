@@ -1,8 +1,4 @@
-**DO NOT USE IT YET**
-
-
 ![Logo](/assets/_resized/logo_160x120.png)
-
 
 # Marmite
 
@@ -12,30 +8,32 @@
 
 It does **"one"** simple thing only:
 
-Reads all `.md` files on the `content` folder
-Using `CommonMark` parse it to `HTML` content
-Renders each content using templates from the `templates` folder
-Outputs the rendered static site to the `site` folder.
+- Reads all `.md` files on the `content` folder
+- Using `CommonMark` parse it to `HTML` content
+- Renders each content using templates from the `templates` folder
+- Outputs the rendered static site to the `site` folder.
 
 [![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
+![Crates.io Version](https://img.shields.io/crates/v/marmite)
+
 
 ## Installation
 
-Install my-project with cargo
+Install with cargo
 
 ```bash
 cargo install marmite
 ```
 
-Or download the pre-built binary from the [releases]() page.
-
-
+Or download the pre-built binary from the [releases](https://github.com/rochacbruno/marmite/releases) page.
 
 ## Write the content
 
 1. Initialize the project
 
 This command creates the initial folder structure
+
+> **NOTE** this command is not implemented yet.
 
 ```bash
 marmite init myblog
@@ -57,19 +55,29 @@ myblog
     └── list.html       # Renders index, tags, archive
 ```
 
-2. Write the site data
+2. Edit the configuration
+
+> All keys are optional, but you probably want to set at least `name`,`tagline`, `url`
 
 `marmite.yaml`
 ```yaml
 name: My Blog
 tagline: This blog is awesome
 url: https://www.myblog.com
-pagination: 10
+# pagination: 10
+# footer: This is an example site generated with Marmite
+# list_title: Blog Posts
+# tags_title: Tags
+# content_path: content
+# templates_path: templates
+# static_path: static
+# media_path: content/media
+# site_path: site
 ```
 
-3. Write yout content
+3. Write your content
 
-Drop an `.md` file on the `content/` folder.
+Drop Markdown files with `.md` extension on the `content/` folder.
 
 **Pages vs Posts**
 
@@ -86,20 +94,22 @@ date: "2024-01-01"
 title: Title
 slug: title
 tags: comma,separated,tags
+tags:
+  - yaml
+  - list
+  - also
+  - works
 show_in_menu: true
 ---
-
 ```
 
 - **date**: If informed, the content is considered a `Post` and shows in index list.
 - **title**: If not defined, the first line of the markdown content is used.
 - **slug**: If not defined, the filename is used to build the url.
 - **tags**: Optional
-- **show_in_menu**: if content is a page (has no date) then it is added in the menu.
-
+- **show_in_menu**: if content is a page (has no date) then it is added in the menu (this field has no effect for posts).
 
 All fields are optional, if nothing is declared then the content is considered a `Page` that does't show in the listing, neither rss or menu. (useful for drafts, or pages accessible with link only.)
-
 
 **Example Post**
 
@@ -135,6 +145,18 @@ de foo():
 ```
 ````
 
+### Build the site
+
+```console
+$ cd myblog
+$ marmite .
+Site generated at: site/
+```
+
+Now take the output of `site/` and deploy it.
+
+> **NOTE** marmite does not serve the site **yet**, it will do for edevelopment purposes soon, use `python -m http.server` inside the site folder for now.
+
 ### editors and deployment
 
 Marmite does not come with an editor but as the content is simply markdown files, **any** text editor will work!
@@ -160,7 +182,6 @@ Common examples:
 > Marmite focus on generating the site from markdown only, the deployment and media management is a separate problem to solve.
 
 
-
 ## That's all!
 
 **Marmite** is very simple, and limited in functionality, there is no intention to add more features or built-in themes.
@@ -172,4 +193,3 @@ Here are some that I recommend:
 
 - Cobalt
 - Zola
-
