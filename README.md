@@ -2,7 +2,7 @@
 
 # Marmite
 
-[**Mar**kdown **M**akes s**ite**] is a **very!** simple static site generator.
+[**Mar**kdown **M**akes s**ite**s] is a **very!** simple static site generator.
 
 ## How it works
 
@@ -39,6 +39,8 @@ This command creates the initial folder structure
 marmite init myblog
 ```
 
+For now `copy and paste` the [example](example/) folder
+
 Folder structure will be
 
 ```plain
@@ -54,6 +56,7 @@ myblog
     ├── content.html    # Renders page and post
     └── list.html       # Renders index, tags, archive
 ```
+
 
 2. Edit the configuration
 
