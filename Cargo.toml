@@ -1,6 +1,6 @@
 [package]
 name = "marmite"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license-file = "LICENSE"
 description = "MARkdown Makes sITEs is a very simple static site generator, mainly for simple blogs."
