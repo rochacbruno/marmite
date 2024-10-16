@@ -1,35 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <title>My Blog | this is a page with no front matter 3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" type="text/css" href="/static/pico.min.css">
     <link rel="stylesheet" type="text/css" href="/static/style.css">
+    <title>Home | This is a page with no front matter</title>
 </head>
 <body>
+    <main class="container">
     <header class="header-content">
-        <div class="header-text">
-            <h1>My Blog</h1>
-            <span> This blog is awesome</span>
-        </div>
         <nav class="header-nav">
-            <ul>
-                
-                    <li><a href="/about.html">About me</a></li>
-                
-            </ul>
+        <ul class="header-name">
+            <li>
+                <hgroup>
+                <h2><a href="/" class="contrast">Home</a></h2>
+                <p>Site generated from markdown content</p>
+                </hgroup>
+            </li>
+        </ul>
+        <ul class="header-menu">
+            
+            <li><a href="/pages.html" class="secondary">Pages</a></li>
+            
+        </ul>
         </nav>
     </header>
-    <main class="main-content">
-<article class="content">
-    <div class="content-html"><h1>this is a page with no front matter 3</h1>
-<p>The page must work</p>
-</div>
-    <ul class="content-tags">
+    <section class="main-content">
         
-    </ul>
+<article>
+    <div class="content-html"><h1>This is a page with no front matter</h1>
+<p>The page must work even without <code>frontmatter</code> specified, the <code>slug</code> to build the
+<code>url</code> is extracted from the filename and page <code>title</code> is extracted from the
+first line of the markdown.</p>
+<p>By default this page doesn't show in menu, unless explititly added to the <code>menu:</code>
+in the configuration file <code>marmite.yaml</code></p>
+<pre><code class="language-yaml">menu:
+  - [&quot;My Page&quot;, &quot;no-metadata.html&quot;]
+
+</code></pre>
+<p>If the menu is not specified, than <code>marmite</code> will add <code>tags</code>, <code>archive</code> and <code>pages</code>
+listing to the menu.</p>
+</div>
     
 </article>
-</main>
-    <footer class="footer-content"><a href=\"https://creativecommons.org/licenses/by-nc-sa/4.0/\">CC-BY_NC-SA</a> | Site generated with <a href=\"https://github.com/rochacbruno/marmite\">Marmite</a></footer>
+
+    </section>
+    <footer class="footer-content">
+        <nav>
+           <ul>
+                <li><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a> | Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a></li>
+           </ul>
+           <ul>
+                <li><a href="#" data-theme-switcher="dark" class="secondary">&#9789;</a></li>
+                <li><a href="#" data-theme-switcher="light" class="secondary">&#9788;</a></li>
+           </ul>
+        </nav>
+    </footer>
+    </main>
+    <script src="/static/theme-switcher.js"></script>
 </body>
 </html>
