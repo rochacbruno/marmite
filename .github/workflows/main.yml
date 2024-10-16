@@ -1,0 +1,57 @@
+name: GH Pages Deploy
+
+on:
+  push:
+    branches: [main]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@v4
+
+      - name: Build 🔧
+        run: cargo build --release
+
+      - name: Add paths
+        run: echo "::add-path::$GITHUB_WORKSPACE/target/release"
+
+      - name: Prepare site 🏗️
+        run: |
+          cp -R example marmitesite
+          rm marmitesite/content/*
+          rm -rf marmitesite/site
+          echo "---\ntitle:Markdown Makes Sites\ndate:2024-10-16\ntags:marmite,ssg\n---\n" > marmitesite/content/markdown-makes-sites.md
+          cat README.md >> marmitesite/content/markdown-makes-sites.md
+          echo "name:Marmite Site\ntagline: Site generated with marmite" > marmitesite/marmite.yaml
+
+      - name: Build site 🏗️
+        run: cd marmitesite && marmite . site && cd ..
+
+      - name: Deploy to GitHub Pages 🚀
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./marmitesite/site

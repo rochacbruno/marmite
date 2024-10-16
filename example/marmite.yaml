@@ -20,5 +20,5 @@
 #  - ["Path", "/relative-path"]
 #  - ["External", "https://example.com"]
 
-data:
- foo: bar
+# data:
+#  foo: bar
