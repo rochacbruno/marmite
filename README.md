@@ -25,23 +25,36 @@ Install with cargo
 cargo install marmite
 ```
 
-Or download the pre-built binary from the [releases](https://github.com/rochacbruno/marmite/releases) page.
+<!--
+Or download the pre-built binary from the [releases](https://github.com/rochacbruno/marmite/releases) page. 
+-->
 
-## Write the content
+## Build a site from markdown content
 
-1. Initialize the project
+Put some markdown in a folder.
 
-This command creates the initial folder structure
-
-> **NOTE** this command is not implemented yet.
-
-```bash
-marmite init myblog
+```console
+mkdir myblog
+echo "# page ..." > myblog/page.md
+echo "# post ..." > myblog/2024-01-31-my-first-post.md
 ```
 
-For now `copy and paste` the [example](example/) folder
+Build the website
+```console
+$ marmite myblog site
 
-Folder structure will be
+building index.html
+building page.html
+building my-first-post.html
+building pages.html
+building 404.html
+
+Site generated at site/ 
+```
+
+# Customization 
+
+## Optional folder structure will be
 
 ```plain
 myblog
@@ -58,7 +71,7 @@ myblog
 ```
 
 
-2. Edit the configuration
+2. Optional configuration
 
 > All keys are optional, but you probably want to set at least `name`,`tagline`, `url`
 
@@ -78,14 +91,12 @@ url: https://www.myblog.com
 # site_path: site
 ```
 
-3. Write your content
-
-Drop Markdown files with `.md` extension on the `content/` folder.
+3. Content types
 
 **Pages vs Posts**
 
-- Post: If it has a `date` property it is considered a post to show in the index posts list.
-- Page: If it does not have a `date` it is considered a page to show in the menu.
+- Post: If it has a `date` property it is considered a post to show in the index.html posts list.
+- Page: If it does not have a `date` it is considered a page, listed on pages.html and can be added to the main menu.
 
 **Metadatada**
 
