@@ -2,13 +2,15 @@ use chrono::{NaiveDate, NaiveDateTime};
 use comrak::{markdown_to_html, ComrakOptions};
 use frontmatter_gen::{extract, Frontmatter, Value};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process;
 use tera::{Context, Tera};
 use walkdir::WalkDir;
 
-fn main() {
+fn main() -> io::Result<()> {
     // Argument Parsing
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 2 {
@@ -25,7 +27,7 @@ fn main() {
             process::exit(1);
         }
     };
-    let site: Site = match serde_yaml::from_str(&marmite) {
+    let site: Marmite = match serde_yaml::from_str(&marmite) {
         Ok(site) => site,
         Err(e) => {
             eprintln!("Failed to parse YAML: {}", e);
@@ -55,7 +57,8 @@ fn main() {
     site_data.pages.sort_by(|a, b| b.title.cmp(&a.title));
 
     // Create the output directory
-    if let Err(e) = fs::create_dir_all(folder.join(&site_data.site.site_path)) {
+    let output_path = folder.join(&site_data.site.site_path);
+    if let Err(e) = fs::create_dir_all(&output_path) {
         eprintln!("Unable to create output directory: {}", e);
         process::exit(1);
     }
@@ -74,7 +77,40 @@ fn main() {
         process::exit(1);
     }
 
+    // Copy static folder if present
+    let static_source = Path::new(site_data.site.static_path);
+    let static_destiny = output_path.join(Path::new("static"));
+    if static_source.exists() {
+        if let Err(e) = fs::create_dir_all(&static_destiny) {
+            eprintln!("Unable to create static directory: {}", e);
+            process::exit(1);
+        }
+        for entry in WalkDir::new(&static_source) {
+            match entry {
+                Ok(entry) => {
+                    let static_filename = match entry.path().strip_prefix(&static_source) {
+                        Ok(filename) => filename,
+                        Err(e) => {
+                            eprintln!("Error building static_filename: {}", e);
+                            process::exit(1);
+                        }
+                    };
+                    let target_path = static_destiny.join(&static_filename);
+                    if entry.file_type().is_dir() {
+                        fs::create_dir_all(&target_path)?;
+                    } else {
+                        fs::copy(entry.path(), target_path)?;
+                    }
+                }
+                Err(e) => eprintln!("Error copying static file: {}", e),
+            }
+        }
+    }
+    // TODO: ^same above for content/media folder to site/media
+
     println!("Site generated at: {}/", site_data.site.site_path);
+
+    Ok(())
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
@@ -85,17 +121,17 @@ struct Content {
     html: String,
     tags: Vec<String>,
     date: Option<NaiveDateTime>,
-    show_in_menu: bool,
 }
 
+#[derive(Serialize)]
 struct SiteData<'a> {
-    site: &'a Site<'a>,
+    site: &'a Marmite<'a>,
     posts: Vec<Content>,
     pages: Vec<Content>,
 }
 
 impl<'a> SiteData<'a> {
-    fn new(site: &'a Site) -> Self {
+    fn new(site: &'a Marmite) -> Self {
         SiteData {
             site,
             posts: Vec::new(),
@@ -116,13 +152,15 @@ fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
     let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
     let (frontmatter, markdown) = parse_front_matter(&file_content)?;
     // TODO: Trim empty first and trailing lines of markdown
-    let html = markdown_to_html(markdown, &ComrakOptions::default());
+
+    let mut options = ComrakOptions::default();
+    options.render.unsafe_ = true; // Allow raw html
+    let html = markdown_to_html(markdown, &options);
 
     let title = get_title(&frontmatter, markdown);
     let tags = get_tags(&frontmatter);
     let slug = get_slug(&frontmatter, &path);
     let date = get_date(&frontmatter, &path);
-    let show_in_menu = get_show_in_menu(&frontmatter);
 
     let content = Content {
         title,
@@ -130,7 +168,6 @@ fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
         tags,
         html,
         date,
-        show_in_menu,
     };
 
     if date.is_some() {
@@ -139,13 +176,6 @@ fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
         site_data.pages.push(content);
     }
     Ok(())
-}
-
-fn get_show_in_menu(frontmatter: &Frontmatter) -> bool {
-    if let Some(show_in_menu) = frontmatter.get("show_in_menu") {
-        return show_in_menu.as_bool().unwrap_or(false);
-    }
-    false
 }
 
 fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
@@ -215,43 +245,62 @@ fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
 }
 
 fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Result<(), String> {
-    // Render index.html
-    let mut context = Context::new();
-    context.insert("site", &site_data.site);
-    context.insert("pages", &site_data.pages);
-    context.insert("posts", &site_data.posts);
-    context.insert("title", "Blog Posts"); // Get from marmite.yaml
-    let index_output = tera.render("list.html", &context).map_err(|e| e.to_string())?;
-    fs::write(output_dir.join("index.html"), index_output).map_err(|e| e.to_string())?;
+    // Build the context of variable that are global on every template
+    let mut global_context = Context::new();
+    global_context.insert("global", &site_data);
+    global_context.insert("site", &site_data.site);
+    global_context.insert("menu", &site_data.site.menu);
+    global_context.insert("data", &site_data.site.data);
 
-    // Render individual posts and pages
-    for post in &site_data.posts {
-        let mut post_context = Context::new();
-        post_context.insert("site", &site_data.site);
-        post_context.insert("pages", &site_data.pages);
-        post_context.insert("title", &post.title);
-        post_context.insert("content", &post);
-        let post_output = tera.render("content.html", &post_context).map_err(|e| e.to_string())?;
-        fs::write(output_dir.join(format!("{}.html", post.slug)), post_output)
-            .map_err(|e| e.to_string())?;
+    // Render index.html from list.html template
+    let mut list_context = global_context.clone();
+    list_context.insert("title", site_data.site.list_title);
+    list_context.insert("content_list", &site_data.posts);
+    generate_html("list.html", "index.html", tera, &list_context, output_dir)?;
+
+    // Render pages.html from list.html template
+    let mut list_context = global_context.clone();
+    list_context.insert("title", site_data.site.pages_title);
+    list_context.insert("content_list", &site_data.pages);
+    generate_html("list.html", "pages.html", tera, &list_context, output_dir)?;
+
+    // TODO: Render tags/index.html to list all tags (from group.html)
+    // archive/index.html to list all dates grouped by year/month (from group.html)
+    // render each individual /tags/tag.html and /archive/year|month.html (from list.html)
+
+    // Render individual content-slug.html from content.html template
+    for content in site_data.posts.iter().chain(&site_data.pages) {
+        let mut content_context = global_context.clone();
+        content_context.insert("title", &content.title);
+        content_context.insert("content", &content);
+        generate_html(
+            "content.html",
+            &format!("{}.html", &content.slug),
+            tera,
+            &content_context,
+            output_dir,
+        )?;
     }
 
-    for page in &site_data.pages {
-        let mut page_context = Context::new();
-        page_context.insert("site", &site_data.site);
-        page_context.insert("pages", &site_data.pages);
-        page_context.insert("title", &page.title);
-        page_context.insert("content", &page);
-        let page_output = tera.render("content.html", &page_context).map_err(|e| e.to_string())?;
-        fs::write(output_dir.join(format!("{}.html", page.slug)), page_output)
-            .map_err(|e| e.to_string())?;
-    }
+    Ok(())
+}
+
+fn generate_html(
+    template: &str,
+    filename: &str,
+    tera: &Tera,
+    context: &Context,
+    output_dir: &Path,
+) -> Result<(), String> {
+    let rendered = tera.render(template, &context).map_err(|e| e.to_string())?;
+    fs::write(output_dir.join(filename), rendered).map_err(|e| e.to_string())?;
+    println!("Generated {filename}");
     Ok(())
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
-struct Site<'a> {
+struct Marmite<'a> {
     #[serde(default = "default_name")]
     name: &'a str,
     #[serde(default = "default_tagline")]
@@ -262,28 +311,47 @@ struct Site<'a> {
     footer: &'a str,
     #[serde(default = "default_pagination")]
     pagination: u32,
+
     #[serde(default = "default_list_title")]
     list_title: &'a str,
+    #[serde(default = "default_pages_title")]
+    pages_title: &'a str,
     #[serde(default = "default_tags_title")]
     tags_title: &'a str,
+    #[serde(default = "default_archives_title")]
+    archives_title: &'a str,
+
+    // To be removed
     #[serde(default = "default_content_path")]
     content_path: &'a str,
+    #[serde(default = "default_site_path")]
+    site_path: &'a str,
+    // to be removed
     #[serde(default = "default_templates_path")]
     templates_path: &'a str,
     #[serde(default = "default_static_path")]
     static_path: &'a str,
     #[serde(default = "default_media_path")]
     media_path: &'a str,
-    #[serde(default = "default_site_path")]
-    site_path: &'a str,
+
+    #[serde(default = "default_card_image")]
+    card_image: &'a str,
+    #[serde(default = "default_logo_image")]
+    logo_image: &'a str,
+
+    #[serde(default = "default_menu")]
+    menu: Option<Vec<(String, String)>>,
+
+    #[serde(default = "default_data")]
+    data: Option<HashMap<String, String>>,
 }
 
 fn default_name() -> &'static str {
-    "Marmite Site"
+    "Home"
 }
 
 fn default_tagline() -> &'static str {
-    "A website generated with Marmite"
+    "Site generated from markdown content"
 }
 
 fn default_url() -> &'static str {
@@ -291,7 +359,7 @@ fn default_url() -> &'static str {
 }
 
 fn default_footer() -> &'static str {
-    r#"<a href=\"https://creativecommons.org/licenses/by-nc-sa/4.0/\">CC-BY_NC-SA</a> | Site generated with <a href=\"https://github.com/rochacbruno/marmite\">Marmite</a>"#
+    r#"<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a> | Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a>"#
 }
 
 fn default_pagination() -> u32 {
@@ -304,6 +372,14 @@ fn default_list_title() -> &'static str {
 
 fn default_tags_title() -> &'static str {
     "Tags"
+}
+
+fn default_pages_title() -> &'static str {
+    "Pages"
+}
+
+fn default_archives_title() -> &'static str {
+    "Archive"
 }
 
 fn default_site_path() -> &'static str {
@@ -324,4 +400,25 @@ fn default_static_path() -> &'static str {
 
 fn default_media_path() -> &'static str {
     "content/media"
+}
+
+fn default_card_image() -> &'static str {
+    ""
+}
+
+fn default_logo_image() -> &'static str {
+    ""
+}
+
+fn default_menu() -> Option<Vec<(String, String)>> {
+    vec![
+        ("Pages".to_string(), "/pages.html".to_string()),
+        // ("Tags".to_string(), "/tags.html".to_string()),
+        // ("Archive".to_string(), "/archive.html".to_string()),
+    ]
+    .into()
+}
+
+fn default_data() -> Option<HashMap<String, String>> {
+    None
 }

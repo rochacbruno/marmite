@@ -1,18 +1,26 @@
 {% extends "base.html" %}
 {% block main %}
-<h1> {{ title }} </h1>
-<ul class="post-list">
-    {% for post in posts %}
-    <li class="post-list-item">
-        <h2 class="post-title"><a href="/{{ post.slug }}.html">{{ post.title }}</a></h2>
-        <span class="post-date">{{ post.date | date(format="%Y-%m-%d") }}</span>
-        <p class="post-excerpt">{{ post.html | striptags | truncate(length=100, end="...") }}</p>
-        <ul class="post-tags">
-            {% for tag in post.tags %}
-                <li><a href="/tag/{{ tag | trim }}.html">{{ tag }}</a></li>
-            {% endfor %}
-        </ul>
-    </li>
-    {% endfor %}
-</ul>
+        <div class="list-title">
+            <strong> {{ title }} </strong>
+        </div>
+        <div class="content-list">
+            {%- for content in content_list %}
+            <article class="content-list-item">
+                <h2 class="content-title"><a href="/{{ content.slug }}.html">{{ content.title | capitalize }}</a></h2>
+                <p class="content-excerpt">{{ content.html | striptags | truncate(length=100, end="...") }}</p>
+                {% if content.date -%}
+                <footer>
+                    <span class="content-date">{{ content.date | date(format="%v") }}</span>
+                    {% if content.tags -%}
+                    <ul class="content-tags">
+                        {% for tag in content.tags -%}
+                            <li><a href="/tag/{{ tag | trim }}.html">{{ tag }}</a></li>
+                        {%- endfor %}
+                    </ul>
+                    {%- endif %}
+                </footer>
+                {%- endif %}
+            </article>
+            {%- endfor %}
+        </div>
 {% endblock %}

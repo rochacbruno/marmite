@@ -1,57 +1,78 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <title>My Blog | Blog Posts</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" type="text/css" href="/static/pico.min.css">
     <link rel="stylesheet" type="text/css" href="/static/style.css">
+    <title>Home | Posts</title>
 </head>
 <body>
+    <main class="container">
     <header class="header-content">
-        <div class="header-text">
-            <h1>My Blog</h1>
-            <span> This blog is awesome</span>
-        </div>
         <nav class="header-nav">
-            <ul>
-                
-                    <li><a href="/about.html">About me</a></li>
-                
-            </ul>
-        </nav>
-    </header>
-    <main class="main-content">
-<h1> Blog Posts </h1>
-<ul class="post-list">
-    
-    <li class="post-list-item">
-        <h2 class="post-title"><a href="/blog-post.html">Blog Post</a></h2>
-        <span class="post-date">2024-01-01</span>
-        <p class="post-excerpt">This is the post content
-dsfjklgdfs
-gsdfgsdf
-
-a
-b
-c
-
-foo()
-
-</p>
-        <ul class="post-tags">
+        <ul class="header-name">
+            <li>
+                <hgroup>
+                <h2><a href="/" class="contrast">Home</a></h2>
+                <p>Site generated from markdown content</p>
+                </hgroup>
+            </li>
+        </ul>
+        <ul class="header-menu">
             
-                <li><a href="/tag/foo.html">foo</a></li>
-            
-                <li><a href="/tag/bar.html">bar</a></li>
-            
-                <li><a href="/tag/zaz.html">zaz</a></li>
-            
-                <li><a href="/tag/maz.html">maz </a></li>
+            <li><a href="/pages.html" class="secondary">Pages</a></li>
             
         </ul>
-    </li>
-    
-</ul>
-</main>
-    <footer class="footer-content"><a href=\"https://creativecommons.org/licenses/by-nc-sa/4.0/\">CC-BY_NC-SA</a> | Site generated with <a href=\"https://github.com/rochacbruno/marmite\">Marmite</a></footer>
+        </nav>
+    </header>
+    <section class="main-content">
+        
+        <div class="list-title">
+            <strong> Posts </strong>
+        </div>
+        <div class="content-list">
+            <article class="content-list-item">
+                <h2 class="content-title"><a href="/second-blog-post.html">Another blog post</a></h2>
+                <p class="content-excerpt">Another blog post
+Very simple post showing on this website
+
+How is cool is this?
+
+
+</p>
+                <footer>
+                    <span class="content-date"> 2-Jan-2024</span>
+                    
+                </footer>
+            </article>
+            <article class="content-list-item">
+                <h2 class="content-title"><a href="/blog-post.html">Example blog post</a></h2>
+                <p class="content-excerpt">This is the post content
+The content here accepts any valid CommonMark or Github Flavoured markdown....</p>
+                <footer>
+                    <span class="content-date"> 1-Jan-2024</span>
+                    <ul class="content-tags">
+                        <li><a href="/tag/exampletag.html">exampletag</a></li>
+                    </ul>
+                </footer>
+            </article>
+        </div>
+
+    </section>
+    <footer class="footer-content">
+        <nav>
+           <ul>
+                <li><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a> | Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a></li>
+           </ul>
+           <ul>
+                <li><a href="#" data-theme-switcher="dark" class="secondary">&#9789;</a></li>
+                <li><a href="#" data-theme-switcher="light" class="secondary">&#9788;</a></li>
+           </ul>
+        </nav>
+    </footer>
+    </main>
+    <script src="/static/theme-switcher.js"></script>
 </body>
 </html>

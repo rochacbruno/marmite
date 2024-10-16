@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light dark" />
     <link rel="stylesheet" type="text/css" href="/static/pico.min.css">
     <link rel="stylesheet" type="text/css" href="/static/style.css">
-    <title>Home | about</title>
+    <title>Home | Pages</title>
 </head>
 <body>
     <main class="container">
@@ -29,36 +29,24 @@
     </header>
     <section class="main-content">
         
-<article>
-    <div class="content-html"><h1>About me</h1>
-<p>This page tells everything about me, the blog author!</p>
-<p>I am someone who likes to write blog posts in <strong>markdown</strong> format!</p>
-<p>And I like simplicity, so I use <code>marmite</code> to build this site!</p>
-<h2>My social networks</h2>
-<ul>
-<li><a href="https://fosstodon.org/@marmite">Mastodon</a></li>
-</ul>
-<h2>My Projects</h2>
-<ul>
-<li><a href="https://github.com/rochacbruno/marmite">Marmite SSG</a></li>
-</ul>
-<h2>FAQ</h2>
-<p><small>The default embedded template uses <a href="https://picocss.com">picocss</a> so it is possible to write raw html like this:</small></p>
-<details>
-<summary>Why is it named Marmite?</summary>
-<p>The creator of this project was looking for some cool name
-to use for a <strong>mark</strong>down related project.
-Then while having bread with Marmite spread for breakfast
-it looked like a good idea!</p>
-</details>
-<hr />
-<details>
-<summary>Why Rust?</summary>
-<p><strong>Why not?</strong></p>
-</details>
-</div>
-    
-</article>
+        <div class="list-title">
+            <strong> Pages </strong>
+        </div>
+        <div class="content-list">
+            <article class="content-list-item">
+                <h2 class="content-title"><a href="/about.html">About</a></h2>
+                <p class="content-excerpt">About me
+This page tells everything about me, the blog author!
+I am someone who likes to write blog ...</p>
+                
+            </article>
+            <article class="content-list-item">
+                <h2 class="content-title"><a href="/no-metadata.html">This is a page with no front matter</a></h2>
+                <p class="content-excerpt">This is a page with no front matter
+The page must work even without frontmatter specified, the slug ...</p>
+                
+            </article>
+        </div>
 
     </section>
     <footer class="footer-content">
