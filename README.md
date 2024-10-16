@@ -87,7 +87,7 @@ building 404.html
 building my-page.html
 building my-first-post.html
 
-Site generated at site/ 
+Site generated at: site/
 ```
 
 ### Result
@@ -103,6 +103,37 @@ Deploy `site/` folder to your favorite webserver.
 
 Open `index.html` on your web-browser or run `marmite myblog site --serve` to run
 the embedded webserver.
+
+### Screenshots
+
+<details>
+<summary> CLICK HERE TO SEE SOME SCREENSHOTS </summary>
+
+The following screenshots are using the default embedded
+templates (from [/example](/example) folder)
+
+**Light Mode**
+
+Index:
+
+![Index Light](/assets/screenshots/index-light.png)
+
+Content:
+
+![Post Light](/assets/screenshots/post-light.png)
+
+**Dark mode**
+
+Index:
+
+![Index Dark](/assets/screenshots/index-dark.png)
+
+Content:
+
+![Post Dark](/assets/screenshots/post-dark.png)
+
+</details>
+
 
 ## Customization
 
