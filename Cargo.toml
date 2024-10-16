@@ -17,3 +17,5 @@ comrak = "0.17"
 walkdir = "2.3"
 chrono = { version = "0.4", features = ["serde"] }
 frontmatter-gen = "0.0.2"
+tiny_http = "0.12"
+structopt = "0.3.17"
