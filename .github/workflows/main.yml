@@ -24,7 +24,7 @@ env:
   ACTIONS_ALLOW_UNSECURE_COMMANDS: true
 
 jobs:
-  build-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -42,16 +42,22 @@ jobs:
           cp -R example marmitesite
           rm marmitesite/content/*
           rm -rf marmitesite/site
-          echo "---\ntitle:Markdown Makes Sites\ndate:2024-10-16\ntags:marmite,ssg\n---\n" > marmitesite/content/markdown-makes-sites.md
+          echo -n -e "---\ntitle: Markdown Makes Sites\ndate: 2024-10-16\ntags: marmite,ssg\n---\n" > marmitesite/content/markdown-makes-sites.md
           cat README.md >> marmitesite/content/markdown-makes-sites.md
-          echo "name:Marmite Site\ntagline: Site generated with marmite" > marmitesite/marmite.yaml
+          echo -n -e "name: Marmite Site\ntagline: Site generated with marmite\n" > marmitesite/marmite.yaml
 
       - name: Build site 🏗️
         run: cd marmitesite && marmite . site && cd ..
 
-      - name: Deploy to GitHub Pages 🚀
-        if: ${{ github.event_name != 'pull_request' }}
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./marmitesite/site
+          path: 'marmitesite/site'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
