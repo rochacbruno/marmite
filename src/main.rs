@@ -7,7 +7,7 @@ mod render;
 
 use cli::Cli;
 use init::init_project;
-use server::server_website;
+use server::serve_website;
 use site_data::{Site, SiteData};
 use file_processing::process_files;
 use render::render_templates;
