@@ -7,14 +7,13 @@ mod render;
 
 use cli::Cli;
 use init::init_project;
-use server::serve_website;
+use server::server_website;
 use site_data::{Site, SiteData};
 use file_processing::process_files;
 use render::render_templates;
 
 use structopt::StructOpt;
 use std::fs;
-use std::path::PathBuf;
 use std::process;
 
 fn main() {
@@ -32,19 +31,26 @@ fn main() {
         return;
     }
 
-    let marmite = fs::read_to_string(&config_path).unwrap_or_else(|e| {
-        eprintln!("Unable to read {}: {}", config_path.display(), e);
-        process::exit(1);
-    });
-
-    let site: Site = serde_yaml::from_str(&marmite).unwrap_or_else(|e| {
-        eprintln!("Failed to parse YAML: {}", e);
-        process::exit(1);
-    });
-
+    // Initialize site data
+    let marmite = match fs::read_to_string(&config_path) {
+        Ok(data) => data,
+        Err(e) => {
+            eprintln!("Unable to read {}: {}", config_path.display(), e);
+            process::exit(1);
+        }
+    };
+    let site: Site = match serde_yaml::from_str(&marmite) {
+        Ok(site) => site,
+        Err(e) => {
+            eprintln!("Failed to parse YAML: {}", e);
+            process::exit(1);
+        }
+    };
     let mut site_data = SiteData::new(&site);
+
     if let Err(e) = process_files(&folder, &mut site_data) {
         eprintln!("Failed to process files: {}", e);
+        process::exit(1);
     }
 
     if let Err(e) = render_templates(&site_data, &folder.join(&site_data.site.site_path)) {
