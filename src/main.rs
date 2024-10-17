@@ -265,7 +265,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
     for content in site_data.posts.iter().chain(&site_data.pages) {
         let mut content_context = global_context.clone();
         content_context.insert("title", &content.title);
-        content_context.insert("content", &content.html); // Corrigido aqui para usar content.html
+        content_context.insert("content", &content); 
 
         println!(
             "Rendering content.html for {} with context: {:?}",
