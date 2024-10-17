@@ -1,14 +1,16 @@
 {% extends "base.html" %}
 {% block main %}
-<article class="content">
+<article>
     <div class="content-html">{{ content.html | safe }}</div>
-    <ul class="content-tags">
+    {% if content.date %}
+    <footer>
+        <span class="content-date"> {{ content.date | date(format="%v") }}</span>
+        <ul class="content-tags">
         {% for tag in content.tags  %}
             <li><a href="/tag/{{ tag }}.html">{{ tag }}</a></li>
         {% endfor %}
-    </ul>
-    {% if content.date %}
-    <span class="content-date">{{ content.date | date(format="%Y-%m-%d") }}</span>
+        </ul>
+    </footer>
     {% endif %}
 </article>
 {% endblock %}

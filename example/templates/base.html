@@ -1,25 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <title>{{ site.name }} | {{ title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" type="text/css" href="/static/pico.min.css">
     <link rel="stylesheet" type="text/css" href="/static/style.css">
+    <title>{{ site.name }} | {{ title }}</title>
 </head>
 <body>
+    <main class="container">
     <header class="header-content">
-        <div class="header-text">
-            <h1>{{ site.name }}</h1>
-            <span> {{ site.tagline }}</span>
-        </div>
         <nav class="header-nav">
-            <ul>
-                {% for page in pages | filter(attribute="show_in_menu", value=true) %}
-                    <li><a href="/{{ page.slug }}.html">{{ page.title }}</a></li>
-                {% endfor %}
-            </ul>
+        <ul class="header-name">
+            <li>
+                <hgroup>
+                <h2><a href="/" class="contrast">{{ site.name }}</a></h2>
+                <p>{{ site.tagline }}</p>
+                </hgroup>
+            </li>
+        </ul>
+        <ul class="header-menu">
+            {% for item in menu %}
+            <li><a href="{{ item.1 | safe }}" class="secondary">{{ item.0 | safe }}</a></li>
+            {% endfor %}
+        </ul>
         </nav>
     </header>
-    <main class="main-content">{% block main %}{% endblock %}</main>
-    <footer class="footer-content">{{ site.footer | safe }}</footer>
+    <section class="main-content">
+        {% block main -%}{%- endblock %}
+    </section>
+    <footer class="footer-content">
+        <nav>
+           <ul>
+                <li>{{ site.footer | safe }}</li>
+           </ul>
+           <ul>
+                <li><a href="#" data-theme-switcher="dark" class="secondary">&#9789;</a></li>
+                <li><a href="#" data-theme-switcher="light" class="secondary">&#9788;</a></li>
+           </ul>
+        </nav>
+    </footer>
+    </main>
+    <script src="/static/theme-switcher.js"></script>
 </body>
 </html>

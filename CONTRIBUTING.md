@@ -5,12 +5,10 @@ Thank you for considering contributing to the Marmite Site Generator project! Co
 ## Table of Contents
 
 1. [Code of Conduct](#code-of-conduct)
-2. [How to Contribute](#how-to-contribute)
-3. [Pull Requests](#pull-requests)
-4. [Style Guidelines](#style-guidelines)
-5. [Setting Up the Project Locally](#setting-up-the-project-locally)
-6. [Bug Reports & Feature Requests](#bug-reports--feature-requests)
-7. [License](#license)
+2. [Prerequisites](#prerequisites)
+3. [How to Contribute](#how-to-contribute)
+4. [Pull Requests](#pull-requests)
+5. [Commit Messages](#commit-messages)
 
 ## Code of Conduct
 
