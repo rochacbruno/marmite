@@ -7,6 +7,7 @@
     <meta name="color-scheme" content="light dark" />
     <link rel="stylesheet" type="text/css" href="/static/pico.min.css">
     <link rel="stylesheet" type="text/css" href="/static/style.css">
+    <link rel="stylesheet" href="/static/github-light.min.css" id="highlightjs-theme" />
     <title>{{ site.name }} | {{ title }}</title>
 </head>
 
@@ -47,7 +48,10 @@
     </main>
     <script src="/static/theme-switcher.js"></script>
     <script src="/static/menu.js"></script>
-
+    <script src="/static/highlight.min.js"></script>
+    <script>
+        hljs.highlightAll();
+    </script>
 </body>
 
 </html>
