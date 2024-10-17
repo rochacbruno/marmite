@@ -24,13 +24,12 @@ fn main() -> io::Result<()> {
     let config_path = input_folder.join(args.config);
 
     // Initialize site data
-    let marmite = match fs::read_to_string(config_path) {
-        Ok(data) => data,
-        Err(e) => {
-            eprintln!("Unable to read config file: {}", e);
-            process::exit(1);
-        }
-    };
+    let marmite = fs::read_to_string(config_path).unwrap_or_else(|e| {
+        eprintln!("Unable to read config file: {}", e);
+        process::exit(1);
+    });
+    
+
     let site: Marmite = match serde_yaml::from_str(&marmite) {
         Ok(site) => site,
         Err(e) => {
@@ -42,19 +41,15 @@ fn main() -> io::Result<()> {
     let mut site_data = SiteData::new(&site);
     
     // Walk through the content directory
-    for entry in WalkDir::new(input_folder.join(site_data.site.content_path)) {
-        match entry {
-            Ok(entry) => {
-                let path = entry.path();
-                if path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("md") {
-                    if let Err(e) = process_file(path, &mut site_data) {
-                        eprintln!("Failed to process file {}: {}", path.display(), e);
-                    }
-                }
+    for entry in WalkDir::new(input_folder.join(site_data.site.content_path)).into_iter().filter_map(Result::ok) {
+        let path = entry.path();
+        if path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("md") {
+            if let Err(e) = process_file(path, &mut site_data) {
+                eprintln!("Failed to process file {}: {}", path.display(), e);
             }
-            Err(e) => eprintln!("Error reading entry: {}", e),
         }
     }
+    
 
     // Sort posts by date (newest first)
     site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
@@ -188,6 +183,7 @@ fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
     }
     Ok(())
 }
+
 
 fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
     if let Some(input) = frontmatter.get("date") {
