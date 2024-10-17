@@ -1,28 +1,21 @@
 use clap::Parser;
+use std::path::PathBuf;
 
-/// Marmite Site Generator
-/// Generates static websites from markdown content
+/// Command Line Argument Parser for Marmite CLI
 #[derive(Parser, Debug)]
-#[command(name = "Marmite Site Generator", about = "Generates static websites from markdown content")]
+#[command(version, about, long_about = None)]
 pub struct Cli {
-    /// The root folder of the site (input folder)
-    pub input_folder: Option<String>,
+    /// Input folder containing markdown files
+    pub input_folder: PathBuf,
 
-    /// Build the website (render markdown to HTML)
-    #[arg(long)]
-    pub build: bool,
+    /// Output folder to generate the site
+    pub output_folder: PathBuf,
 
-    /// Serve the website in editing mode
+    /// Serve the site with a built-in HTTP server
     #[arg(long)]
     pub serve: bool,
 
-    /// Custom configuration file path
-    #[arg(long, value_name = "FILE")]
-    pub config: Option<String>,
-}
-
-impl Cli {
-    pub fn parse() -> Self {
-        <Self as Parser>::parse()
-    }
+    /// Path to custom configuration file (defaults to marmite.yaml)
+    #[arg(long, default_value = "marmite.yaml")]
+    pub config: String,
 }
