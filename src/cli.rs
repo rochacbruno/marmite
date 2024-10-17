@@ -18,4 +18,8 @@ pub struct Cli {
     /// Path to custom configuration file (defaults to marmite.yaml)
     #[arg(long, default_value = "marmite.yaml")]
     pub config: String,
+
+    /// Print debug messages
+    #[arg(long)]
+    pub debug: bool,
 }

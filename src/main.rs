@@ -22,22 +22,24 @@ fn main() -> io::Result<()> {
     let input_folder = args.input_folder;
     let output_folder = Arc::new(args.output_folder); 
     let serve = args.serve;
+    let debug = args.debug;
     let config_path = input_folder.join(args.config);
 
     // Initialize site data
-    let marmite = fs::read_to_string(config_path).unwrap_or_else(|e| {
-        eprintln!("Unable to read config file: {}", e);
-        process::exit(1);
+    let marmite = fs::read_to_string(&config_path).unwrap_or_else(|e| {
+        if debug {
+            eprintln!("Unable to read '{}': {}", &config_path.display(), e);
+        }
+        // Default to empty string if config not found, so defaults are applied
+        String::new()
     });
-
     let site: Marmite = match serde_yaml::from_str(&marmite) {
         Ok(site) => site,
         Err(e) => {
-            eprintln!("Failed to parse YAML: {}", e);
+            eprintln!("Failed to parse '{}' YAML: {}", &config_path.display(), e);
             process::exit(1);
         }
     };
-
     let mut site_data = SiteData::new(&site);
 
     // Walk through the content directory
@@ -70,30 +72,24 @@ fn main() -> io::Result<()> {
     let tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("Parsing error(s) in templates: {}", e);
+            eprintln!("Error loading templates: {}", e);
             process::exit(1);
         }
     };
 
     // Render templates
-    if let Err(e) = render_templates(&site_data, &tera, &output_path) {
+    if let Err(e) = render_templates(&site_data, &tera, &output_path, debug) {
         eprintln!("Failed to render templates: {}", e);
         process::exit(1);
     }
 
     // Copy static folder if present
     let static_source = input_folder.join(site_data.site.static_path);
-    let static_destiny = output_folder.clone();
     if static_source.exists() {
-        if let Err(e) = fs::create_dir_all(&*static_destiny) {
-            eprintln!("Unable to create static directory: {}", e);
-            process::exit(1);
-        }
-
         let mut options = CopyOptions::new();
         options.overwrite = true; // Overwrite files if they already exist
 
-        if let Err(e) = copy(&static_source, &*static_destiny, &options) {
+        if let Err(e) = copy(&static_source, &*output_folder, &options) {
             eprintln!("Failed to copy static directory: {}", e);
             process::exit(1);
         }
@@ -238,40 +234,50 @@ fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
     tags
 }
 
-fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Result<(), String> {
+fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path, debug: bool) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
+    global_context.insert("site_data", &site_data);
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
-    global_context.insert("title", "Generated Site");
+    if debug {println!("Global Context: {:?}", &site_data.site)}
 
     // Render index.html from list.html template
     let mut list_context = global_context.clone();
     list_context.insert("title", site_data.site.list_title);
     list_context.insert("content_list", &site_data.posts);
+    if debug {
+        println!(
+            "Index Context: {:?}",
+            &site_data.posts.iter().map(|p| format!("{},{}",p.title, p.slug)).collect::<Vec<_>>()
+        )
+    }
     generate_html("list.html", "index.html", &tera, &list_context, output_dir)?;
-
-    println!("Rendering index.html with context: {:?}", list_context);
 
     // Render pages.html from list.html template
     let mut list_context = global_context.clone();
     list_context.insert("title", site_data.site.pages_title);
     list_context.insert("content_list", &site_data.pages);
+    if debug {
+        println!(
+            "Pages Context: {:?}",
+            &site_data.pages.iter().map(|p| format!("{},{}",p.title, p.slug)).collect::<Vec<_>>()
+        )
+    }
     generate_html("list.html", "pages.html", &tera, &list_context, output_dir)?;
-
-    println!("Rendering pages.html with context: {:?}", list_context);
 
     // Render individual content-slug.html from content.html template
     for content in site_data.posts.iter().chain(&site_data.pages) {
         let mut content_context = global_context.clone();
         content_context.insert("title", &content.title);
         content_context.insert("content", &content); 
-
-        println!(
-            "Rendering content.html for {} with context: {:?}",
-            content.slug, content_context
-        );
-
+        if debug {
+            println!(
+                "{} context: {:?}",
+                &content.slug,
+                format!("title: {},date: {:?},tags: {:?}",&content.title,&content.date,&content.tags)
+            )
+        }
         generate_html(
             "content.html",
             &format!("{}.html", &content.slug),
