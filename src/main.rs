@@ -42,8 +42,18 @@ fn main() -> io::Result<()> {
     };
     let mut site_data = SiteData::new(&site);
 
+
+    // Define the content directory
+    let default_content_dir = &input_folder.join(&site_data.site.content_path);
+    let content_dir = if default_content_dir.is_dir() {
+        default_content_dir
+    } else {
+        // If `content_path` doesn't exist, will look for markdowns on input folder
+        &input_folder.clone()
+    };
+
     // Walk through the content directory
-    WalkDir::new(input_folder.join(site_data.site.content_path))
+    WalkDir::new(input_folder.join(&content_dir))
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| {
@@ -85,7 +95,7 @@ fn main() -> io::Result<()> {
 
     // Copy static folder if present
     let static_source = input_folder.join(site_data.site.static_path);
-    if static_source.exists() {
+    if static_source.is_dir() {
         let mut options = CopyOptions::new();
         options.overwrite = true; // Overwrite files if they already exist
 
@@ -93,6 +103,8 @@ fn main() -> io::Result<()> {
             eprintln!("Failed to copy static directory: {}", e);
             process::exit(1);
         }
+
+        println!("Copied '{}' to '{}/'", &static_source.display(), &output_folder.display());
     }
 
     // Serve the site if the flag was provided

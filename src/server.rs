@@ -7,7 +7,7 @@ use tiny_http::{Response, Server};
 pub fn start_server(output_folder: Arc<PathBuf>) {
     let server = Server::http("localhost:8000").unwrap();
 
-    println!("Server started at http://localhost:8000/");
+    println!("Server started at http://localhost:8000/  - Type ^C to stop.");
 
     for request in server.incoming_requests() {
         let response = match handle_request(&request, &output_folder) {
