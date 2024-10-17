@@ -6,6 +6,7 @@ use fs_extra::dir::{copy, CopyOptions};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -61,6 +62,23 @@ fn main() -> io::Result<()> {
                 eprintln!("Failed to process file {}: {}", entry.path().display(), e);
             }
         });
+
+    // Detect slug collision
+    if let Err(duplicate) = check_for_duplicate_slugs(
+        &site_data
+            .posts
+            .iter()
+            .chain(&site_data.pages)
+            .collect::<Vec<_>>(),
+    ) {
+        eprintln!(
+            "Error: Duplicate slug found: '{}' \
+            - try setting any of `title`, `slug` as a unique text, \
+            or leave both empty so filename will be assumed.",
+            duplicate
+        );
+        process::exit(1);
+    }
 
     // Sort posts by date (newest first)
     site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
@@ -188,34 +206,35 @@ fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
             NaiveDateTime::parse_from_str(&input.as_str().unwrap(), "%Y-%m-%d %H:%M:%S")
         {
             return Some(date);
-        } else if let Ok(date) =
-            NaiveDateTime::parse_from_str(&input.as_str().unwrap(), "%Y-%m-%d %H:%M")
+        }
+        if let Ok(date) = NaiveDateTime::parse_from_str(&input.as_str().unwrap(), "%Y-%m-%d %H:%M")
         {
             return Some(date);
-        } else if let Ok(date) = NaiveDate::parse_from_str(&input.as_str().unwrap(), "%Y-%m-%d") {
-            return date.and_hms_opt(0, 0, 0);
-        } else {
-            eprintln!(
-                "ERROR: Invalid date format {} when parsing {}",
-                input.to_string_representation(),
-                path.display()
-            );
-            process::exit(1);
         }
+        if let Ok(date) = NaiveDate::parse_from_str(&input.as_str().unwrap(), "%Y-%m-%d") {
+            return date.and_hms_opt(0, 0, 0);
+        }
+        eprintln!(
+            "ERROR: Invalid date format {} when parsing {}",
+            input.to_string_representation(),
+            path.display()
+        );
+        process::exit(1);
     }
     None
 }
 
 fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
-    let slug = match frontmatter.get("slug") {
-        Some(Value::String(slug)) => slug.to_string(),
-        _ => path
-            .file_stem()
-            .and_then(|stem| stem.to_str())
-            .unwrap()
-            .to_string(),
-    };
-    slugify(&slug)
+    if let Some(slug) = frontmatter.get("slug") {
+        return slugify(&slug.to_string());
+    }
+    if let Some(title) = frontmatter.get("title") {
+        return slugify(&title.to_string());
+    }
+    path.file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap()
+        .to_string()
 }
 
 fn slugify(text: &str) -> String {
@@ -223,6 +242,18 @@ fn slugify(text: &str) -> String {
     let re = Regex::new(r"[^a-z0-9]+").unwrap();
     let slug = re.replace_all(&normalized, "-");
     slug.trim_matches('-').to_string()
+}
+
+fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String> {
+    let mut seen = HashSet::new();
+
+    for content in contents {
+        if !seen.insert(&content.slug) {
+            return Err(content.slug.clone());
+        }
+    }
+
+    Ok(())
 }
 
 fn get_title<'a>(frontmatter: &'a Frontmatter, html: &'a str) -> String {
