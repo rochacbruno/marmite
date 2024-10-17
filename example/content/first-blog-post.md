@@ -2,8 +2,9 @@
 date: 2024-01-01 12:00:01
 slug: blog-post
 title: Example Blog Post
-tags: exampletag, tag 2
+tags: exampletag, tag 2, tag 3, batata
 ---
+
 # This is the post content
 
 The content here accepts any valid `CommonMark` or **Github** _Flavoured_ markdown.
