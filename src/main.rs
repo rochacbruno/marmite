@@ -41,16 +41,17 @@ fn main() -> io::Result<()> {
     let mut site_data = SiteData::new(&site);
     
     // Walk through the content directory
-    for entry in WalkDir::new(input_folder.join(site_data.site.content_path)).into_iter().filter_map(Result::ok) {
-        let path = entry.path();
-        if path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("md") {
-            if let Err(e) = process_file(path, &mut site_data) {
-                eprintln!("Failed to process file {}: {}", path.display(), e);
-            }
+    WalkDir::new(input_folder.join(site_data.site.content_path))
+    .into_iter()
+    .filter_map(Result::ok)
+    .filter(|e| e.path().is_file() && e.path().extension().and_then(|ext| ext.to_str()) == Some("md"))
+    .for_each(|entry| {
+        if let Err(e) = process_file(entry.path(), &mut site_data) {
+            eprintln!("Failed to process file {}: {}", entry.path().display(), e);
         }
-    }
-    
+    });
 
+    
     // Sort posts by date (newest first)
     site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
     // Sort pages on title
@@ -185,6 +186,7 @@ fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
 }
 
 
+
 fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
     if let Some(input) = frontmatter.get("date") {
         if let Ok(date) =
@@ -292,9 +294,6 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
 
     Ok(())
 }
-
-
-
 
 
 fn generate_html(
