@@ -3,6 +3,7 @@ use clap::Parser;
 use comrak::{markdown_to_html, ComrakOptions};
 use frontmatter_gen::{extract, Frontmatter, Value};
 use fs_extra::dir::{copy, CopyOptions};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -11,6 +12,7 @@ use std::path::Path;
 use std::process;
 use std::sync::Arc;
 use tera::{Context, Tera};
+use unicode_normalization::UnicodeNormalization;
 use walkdir::WalkDir;
 
 mod cli; // Import the CLI module
@@ -41,7 +43,6 @@ fn main() -> io::Result<()> {
         }
     };
     let mut site_data = SiteData::new(&site);
-
 
     // Define the content directory
     let content_dir = Some(input_folder.join(&site_data.site.content_path))
@@ -100,7 +101,11 @@ fn main() -> io::Result<()> {
             process::exit(1);
         }
 
-        println!("Copied '{}' to '{}/'", &static_source.display(), &output_folder.display());
+        println!(
+            "Copied '{}' to '{}/'",
+            &static_source.display(),
+            &output_folder.display()
+        );
     }
 
     // Serve the site if the flag was provided
@@ -202,14 +207,22 @@ fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
 }
 
 fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
-    match frontmatter.get("slug") {
+    let slug = match frontmatter.get("slug") {
         Some(Value::String(slug)) => slug.to_string(),
         _ => path
             .file_stem()
             .and_then(|stem| stem.to_str())
             .unwrap()
             .to_string(),
-    }
+    };
+    slugify(&slug)
+}
+
+fn slugify(text: &str) -> String {
+    let normalized = text.nfd().collect::<String>().to_lowercase();
+    let re = Regex::new(r"[^a-z0-9]+").unwrap();
+    let slug = re.replace_all(&normalized, "-");
+    slug.trim_matches('-').to_string()
 }
 
 fn get_title<'a>(frontmatter: &'a Frontmatter, html: &'a str) -> String {
@@ -217,7 +230,7 @@ fn get_title<'a>(frontmatter: &'a Frontmatter, html: &'a str) -> String {
         Some(Value::String(t)) => t.to_string(),
         _ => html
             .lines()
-            .filter(|line|!line.is_empty())
+            .filter(|line| !line.is_empty())
             .next()
             .unwrap_or("")
             .trim_start_matches("#")
@@ -243,13 +256,20 @@ fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
     tags
 }
 
-fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path, debug: bool) -> Result<(), String> {
+fn render_templates(
+    site_data: &SiteData,
+    tera: &Tera,
+    output_dir: &Path,
+    debug: bool,
+) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
     global_context.insert("site_data", &site_data);
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
-    if debug {println!("Global Context: {:?}", &site_data.site)}
+    if debug {
+        println!("Global Context: {:?}", &site_data.site)
+    }
 
     // Render index.html from list.html template
     let mut list_context = global_context.clone();
@@ -258,7 +278,11 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path, debug:
     if debug {
         println!(
             "Index Context: {:?}",
-            &site_data.posts.iter().map(|p| format!("{},{}",p.title, p.slug)).collect::<Vec<_>>()
+            &site_data
+                .posts
+                .iter()
+                .map(|p| format!("{},{}", p.title, p.slug))
+                .collect::<Vec<_>>()
         )
     }
     generate_html("list.html", "index.html", &tera, &list_context, output_dir)?;
@@ -270,7 +294,11 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path, debug:
     if debug {
         println!(
             "Pages Context: {:?}",
-            &site_data.pages.iter().map(|p| format!("{},{}",p.title, p.slug)).collect::<Vec<_>>()
+            &site_data
+                .pages
+                .iter()
+                .map(|p| format!("{},{}", p.title, p.slug))
+                .collect::<Vec<_>>()
         )
     }
     generate_html("list.html", "pages.html", &tera, &list_context, output_dir)?;
@@ -279,12 +307,15 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path, debug:
     for content in site_data.posts.iter().chain(&site_data.pages) {
         let mut content_context = global_context.clone();
         content_context.insert("title", &content.title);
-        content_context.insert("content", &content); 
+        content_context.insert("content", &content);
         if debug {
             println!(
                 "{} context: {:?}",
                 &content.slug,
-                format!("title: {},date: {:?},tags: {:?}",&content.title,&content.date,&content.tags)
+                format!(
+                    "title: {},date: {:?},tags: {:?}",
+                    &content.title, &content.date, &content.tags
+                )
             )
         }
         generate_html(
