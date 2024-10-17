@@ -1,12 +1,13 @@
-use clap::{Parser};
 use chrono::{NaiveDate, NaiveDateTime};
+use clap::Parser;
 use comrak::{markdown_to_html, ComrakOptions};
 use frontmatter_gen::{extract, Frontmatter, Value};
+use fs_extra::dir::{copy, CopyOptions};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
-use std::path::{Path};
+use std::path::Path;
 use std::process;
 use std::sync::Arc;
 use tera::{Context, Tera};
@@ -19,7 +20,7 @@ fn main() -> io::Result<()> {
     let args = cli::Cli::parse();
 
     let input_folder = args.input_folder;
-    let output_folder = Arc::new(args.output_folder);  // Convertemos para Arc<PathBuf>
+    let output_folder = Arc::new(args.output_folder); // Convertemos para Arc<PathBuf>
     let serve = args.serve;
     let config_path = input_folder.join(args.config);
 
@@ -28,7 +29,6 @@ fn main() -> io::Result<()> {
         eprintln!("Unable to read config file: {}", e);
         process::exit(1);
     });
-    
 
     let site: Marmite = match serde_yaml::from_str(&marmite) {
         Ok(site) => site,
@@ -39,19 +39,20 @@ fn main() -> io::Result<()> {
     };
 
     let mut site_data = SiteData::new(&site);
-    
+
     // Walk through the content directory
     WalkDir::new(input_folder.join(site_data.site.content_path))
-    .into_iter()
-    .filter_map(Result::ok)
-    .filter(|e| e.path().is_file() && e.path().extension().and_then(|ext| ext.to_str()) == Some("md"))
-    .for_each(|entry| {
-        if let Err(e) = process_file(entry.path(), &mut site_data) {
-            eprintln!("Failed to process file {}: {}", entry.path().display(), e);
-        }
-    });
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| {
+            e.path().is_file() && e.path().extension().and_then(|ext| ext.to_str()) == Some("md")
+        })
+        .for_each(|entry| {
+            if let Err(e) = process_file(entry.path(), &mut site_data) {
+                eprintln!("Failed to process file {}: {}", entry.path().display(), e);
+            }
+        });
 
-    
     // Sort posts by date (newest first)
     site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
     // Sort pages on title
@@ -73,7 +74,7 @@ fn main() -> io::Result<()> {
             process::exit(1);
         }
     };
-    
+
     // Render templates
     if let Err(e) = render_templates(&site_data, &tera, &output_path) {
         eprintln!("Failed to render templates: {}", e);
@@ -88,32 +89,20 @@ fn main() -> io::Result<()> {
             eprintln!("Unable to create static directory: {}", e);
             process::exit(1);
         }
-        for entry in WalkDir::new(&static_source) {
-            match entry {
-                Ok(entry) => {
-                    let static_filename = match entry.path().strip_prefix(&static_source) {
-                        Ok(filename) => filename,
-                        Err(e) => {
-                            eprintln!("Error building static_filename: {}", e);
-                            process::exit(1);
-                        }
-                    };
-                    let target_path = static_destiny.join(&static_filename);
-                    if entry.file_type().is_dir() {
-                        fs::create_dir_all(&target_path)?;
-                    } else {
-                        fs::copy(entry.path(), target_path)?;
-                    }
-                }
-                Err(e) => eprintln!("Error copying static file: {}", e),
-            }
+
+        let mut options = CopyOptions::new();
+        options.overwrite = true; // Overwrite files if they already exist
+
+        if let Err(e) = copy(&static_source, &static_destiny, &options) {
+            eprintln!("Failed to copy static directory: {}", e);
+            process::exit(1);
         }
     }
 
     // Serve the site if the flag was provided
     if serve {
         println!("Starting built-in HTTP server...");
-        server::start_server(output_folder.clone().into()); // Corrige o tipo usando .into()
+        server::start_server(output_folder.clone().into());
     }
 
     println!("Site generated at: {}/", output_folder.display());
@@ -184,8 +173,6 @@ fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
     }
     Ok(())
 }
-
-
 
 fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
     if let Some(input) = frontmatter.get("date") {
@@ -279,9 +266,12 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
     for content in site_data.posts.iter().chain(&site_data.pages) {
         let mut content_context = global_context.clone();
         content_context.insert("title", &content.title);
-        content_context.insert("content", &content.html);  // Corrigido aqui para usar content.html
+        content_context.insert("content", &content.html); // Corrigido aqui para usar content.html
 
-        println!("Rendering content.html for {} with context: {:?}", content.slug, content_context);
+        println!(
+            "Rendering content.html for {} with context: {:?}",
+            content.slug, content_context
+        );
 
         generate_html(
             "content.html",
@@ -295,7 +285,6 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
     Ok(())
 }
 
-
 fn generate_html(
     template: &str,
     filename: &str,
@@ -307,7 +296,7 @@ fn generate_html(
         eprintln!("Error rendering template `{}`: {}", template, e);
         e.to_string()
     })?;
-    
+
     fs::write(output_dir.join(filename), rendered).map_err(|e| e.to_string())?;
     println!("Generated {filename}");
     Ok(())
@@ -424,9 +413,7 @@ fn default_logo_image() -> &'static str {
 }
 
 fn default_menu() -> Option<Vec<(String, String)>> {
-    vec![
-        ("Pages".to_string(), "/pages.html".to_string()),
-    ].into()
+    vec![("Pages".to_string(), "/pages.html".to_string())].into()
 }
 
 fn default_data() -> Option<HashMap<String, String>> {
