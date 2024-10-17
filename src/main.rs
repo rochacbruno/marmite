@@ -20,7 +20,7 @@ fn main() -> io::Result<()> {
     let args = cli::Cli::parse();
 
     let input_folder = args.input_folder;
-    let output_folder = Arc::new(args.output_folder); // Convertemos para Arc<PathBuf>
+    let output_folder = Arc::new(args.output_folder); 
     let serve = args.serve;
     let config_path = input_folder.join(args.config);
 
@@ -83,9 +83,9 @@ fn main() -> io::Result<()> {
 
     // Copy static folder if present
     let static_source = input_folder.join(site_data.site.static_path);
-    let static_destiny = output_folder.join("static");
+    let static_destiny = output_folder.clone();
     if static_source.exists() {
-        if let Err(e) = fs::create_dir_all(&static_destiny) {
+        if let Err(e) = fs::create_dir_all(&*static_destiny) {
             eprintln!("Unable to create static directory: {}", e);
             process::exit(1);
         }
@@ -93,7 +93,7 @@ fn main() -> io::Result<()> {
         let mut options = CopyOptions::new();
         options.overwrite = true; // Overwrite files if they already exist
 
-        if let Err(e) = copy(&static_source, &static_destiny, &options) {
+        if let Err(e) = copy(&static_source, &*static_destiny, &options) {
             eprintln!("Failed to copy static directory: {}", e);
             process::exit(1);
         }
