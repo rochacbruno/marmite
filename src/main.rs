@@ -488,7 +488,7 @@ fn default_logo_image() -> &'static str {
 }
 
 fn default_menu() -> Option<Vec<(String, String)>> {
-    vec![("Pages".to_string(), "/pages.html".to_string())].into()
+    vec![("Pages".to_string(), "pages.html".to_string())].into()
 }
 
 fn default_data() -> Option<HashMap<String, String>> {
