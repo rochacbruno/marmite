@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -8,40 +9,45 @@
     <link rel="stylesheet" type="text/css" href="/static/style.css">
     <title>{{ site.name }} | {{ title }}</title>
 </head>
+
 <body>
     <main class="container">
-    <header class="header-content">
-        <nav class="header-nav">
-        <ul class="header-name">
-            <li>
-                <hgroup>
-                <h2><a href="/" class="contrast">{{ site.name }}</a></h2>
-                <p>{{ site.tagline }}</p>
-                </hgroup>
-            </li>
-        </ul>
-        <ul class="header-menu">
-            {% for item in menu %}
-            <li><a href="{{ item.1 | safe }}" class="secondary">{{ item.0 | safe }}</a></li>
-            {% endfor %}
-        </ul>
-        </nav>
-    </header>
-    <section class="main-content">
-        {% block main -%}{%- endblock %}
-    </section>
-    <footer class="footer-content">
-        <nav>
-           <ul>
-                <li>{{ site.footer | safe }}</li>
-           </ul>
-           <ul>
-                <li><a href="#" data-theme-switcher="dark" class="secondary">&#9789;</a></li>
-                <li><a href="#" data-theme-switcher="light" class="secondary">&#9788;</a></li>
-           </ul>
-        </nav>
-    </footer>
+        <header class="header-content">
+            <nav class="header-nav">
+                <ul class="header-name">
+                    <li>
+                        <hgroup>
+                            <h2><a href="/" class="contrast">{{ site.name }}</a></h2>
+                            <p>{{ site.tagline }}</p>
+                        </hgroup>
+                    </li>
+                </ul>
+                <button id="menu-toggle" class="hamburger">&#9776;</button>
+                
+                <ul class="header-menu" id="header-menu">
+                    {% for item in menu %}
+                    <li><a href="{{ item.1 | safe }}" class="secondary">{{ item.0 | safe }}</a></li>
+                    {% endfor %}
+                </ul>
+            </nav>
+        </header>
+        <section class="main-content">
+            {% block main -%}{%- endblock %}
+        </section>
+        <footer class="footer-content">
+            <nav>
+                <ul>
+                    <li>{{ site.footer | safe }}</li>
+                </ul>
+                <ul>
+                    <li><a href="#" id="theme-toggle" class="secondary">&#9789;</a></li>
+                </ul>
+            </nav>
+        </footer>
     </main>
     <script src="/static/theme-switcher.js"></script>
+    <script src="/static/menu.js"></script>
+
 </body>
+
 </html>

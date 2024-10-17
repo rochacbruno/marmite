@@ -2,7 +2,7 @@
 date: 2024-01-01 12:00:01
 slug: blog-post
 title: Example Blog Post
-tags: exampletag
+tags: exampletag, tag 2
 ---
 # This is the post content
 

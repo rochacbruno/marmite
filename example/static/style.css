@@ -1,9 +1,105 @@
 @font-face {
-    font-family: "Atkinson Hyperlegible";
-    src: url("/static/Atkinson-Hyperlegible-Regular-102.woff");
+  font-family: "Atkinson Hyperlegible";
+  src: url("/static/Atkinson-Hyperlegible-Regular-102.woff");
 }
 /* https://picocss.com/docs */
 :root {
-    --pico-typography-spacing-vertical: 1.5rem;
-    --pico-font-family: "Atkinson Hyperlegible", sans-serif;
+  --pico-typography-spacing-vertical: 1.5rem;
+  --pico-font-family: "Atkinson Hyperlegible", sans-serif;
+  --pico-color-grey-50: #f1f1f1;
+  --pico-color-grey-700: #474747;
+  --pico-border-radius: 0.5rem;
+}
+
+*{
+    text-decoration: none;
+    background-color: 100vw;
+}
+
+/* Menu Hamburguer */
+.header-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative; 
+}
+
+.header-menu {
+    list-style: none;
+    display: flex;
+    gap: 15px;
+}
+
+.header-menu li a:hover {
+    scale: 1.1;
+    transition: .3s;
+}
+
+.hamburger {
+    font-size: 30px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: none;
+    color: var(--pico-color-grey-700);
+    position: relative; 
+}
+
+#menu-toggle:focus {
+    outline: none;
+}
+
+@media (max-width: 768px) {
+    .header-menu {
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+        position: absolute;
+        top: 100px; 
+        right: 0; 
+        background-color: #fff;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: var(--pico-border-radius);
+        z-index: 100; 
+    }
+
+    .header-menu.active {
+        display: flex; 
+    }
+
+    .hamburger {
+        display: block;
+    }
+}
+
+/* Tags */
+
+
+.content-tags {
+    display: flex;
+    width: auto;
+    flex-direction: row;
+    margin: 0 0;
+}
+
+.content-tags li {
+    background-color: var(--pico-color-grey-50);
+    padding: 8px 16px;
+    border-radius: var(--pico-border-radius);
+    margin: 4px 8px;
+}
+
+.content-tags li:first-child {
+    margin-left: -40px;
+}
+
+.content-tags li::marker {
+    content: '';
+}
+
+article footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
