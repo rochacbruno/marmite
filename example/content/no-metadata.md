@@ -1,3 +1,5 @@
+
+
 # This is a page with no front matter
 
 The page must work even without `frontmatter` specified, the `slug` to build the

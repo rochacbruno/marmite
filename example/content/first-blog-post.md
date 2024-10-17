@@ -4,7 +4,6 @@ slug: blog-post
 title: Example Blog Post
 tags: exampletag
 ---
-
 # This is the post content
 
 The content here accepts any valid `CommonMark` or **Github** _Flavoured_ markdown.

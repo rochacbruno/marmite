@@ -49,7 +49,7 @@ fn main() -> io::Result<()> {
         .unwrap_or_else(|| input_folder.clone()); // Fallback to input_folder if not
 
     // Walk through the content directory
-    WalkDir::new(input_folder.join(&content_dir))
+    WalkDir::new(&content_dir)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| {
@@ -217,6 +217,7 @@ fn get_title<'a>(frontmatter: &'a Frontmatter, html: &'a str) -> String {
         Some(Value::String(t)) => t.to_string(),
         _ => html
             .lines()
+            .filter(|line|!line.is_empty())
             .next()
             .unwrap_or("")
             .trim_start_matches("#")
