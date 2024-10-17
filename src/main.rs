@@ -111,7 +111,6 @@ fn main() -> io::Result<()> {
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
-#[serde(rename_all = "lowercase")]
 struct Content {
     title: String,
     slug: String,
@@ -303,7 +302,6 @@ fn generate_html(
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
 struct Marmite<'a> {
     #[serde(default = "default_name")]
     name: &'a str,
