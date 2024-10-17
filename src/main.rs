@@ -44,13 +44,9 @@ fn main() -> io::Result<()> {
 
 
     // Define the content directory
-    let default_content_dir = &input_folder.join(&site_data.site.content_path);
-    let content_dir = if default_content_dir.is_dir() {
-        default_content_dir
-    } else {
-        // If `content_path` doesn't exist, will look for markdowns on input folder
-        &input_folder.clone()
-    };
+    let content_dir = Some(input_folder.join(&site_data.site.content_path))
+        .filter(|path| path.is_dir()) // Take if exists
+        .unwrap_or_else(|| input_folder.clone()); // Fallback to input_folder if not
 
     // Walk through the content directory
     WalkDir::new(input_folder.join(&content_dir))
