@@ -1,32 +1,35 @@
 use chrono::{NaiveDate, NaiveDateTime};
+use clap::Parser;
 use comrak::{markdown_to_html, ComrakOptions};
 use frontmatter_gen::{extract, Frontmatter, Value};
+use fs_extra::dir::{copy, CopyOptions};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process;
+use std::sync::Arc;
 use tera::{Context, Tera};
 use walkdir::WalkDir;
 
+mod cli; // Import the CLI module
+mod server; // Import the server module
+
 fn main() -> io::Result<()> {
-    // Argument Parsing
-    let args: Vec<String> = std::env::args().collect();
-    if args.len() < 2 {
-        eprintln!("Usage: program <folder>");
-        process::exit(1);
-    }
-    let folder = PathBuf::from(&args[1]);
+    let args = cli::Cli::parse();
+
+    let input_folder = args.input_folder;
+    let output_folder = Arc::new(args.output_folder); // Convertemos para Arc<PathBuf>
+    let serve = args.serve;
+    let config_path = input_folder.join(args.config);
 
     // Initialize site data
-    let marmite = match fs::read_to_string("marmite.yaml") {
-        Ok(data) => data,
-        Err(e) => {
-            eprintln!("Unable to read marmite.yaml: {}", e);
-            process::exit(1);
-        }
-    };
+    let marmite = fs::read_to_string(config_path).unwrap_or_else(|e| {
+        eprintln!("Unable to read config file: {}", e);
+        process::exit(1);
+    });
+
     let site: Marmite = match serde_yaml::from_str(&marmite) {
         Ok(site) => site,
         Err(e) => {
@@ -34,22 +37,21 @@ fn main() -> io::Result<()> {
             process::exit(1);
         }
     };
+
     let mut site_data = SiteData::new(&site);
 
     // Walk through the content directory
-    for entry in WalkDir::new(folder.join(site_data.site.content_path)) {
-        match entry {
-            Ok(entry) => {
-                let path = entry.path();
-                if path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("md") {
-                    if let Err(e) = process_file(path, &mut site_data) {
-                        eprintln!("Failed to process file {}: {}", path.display(), e);
-                    }
-                }
+    WalkDir::new(input_folder.join(site_data.site.content_path))
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| {
+            e.path().is_file() && e.path().extension().and_then(|ext| ext.to_str()) == Some("md")
+        })
+        .for_each(|entry| {
+            if let Err(e) = process_file(entry.path(), &mut site_data) {
+                eprintln!("Failed to process file {}: {}", entry.path().display(), e);
             }
-            Err(e) => eprintln!("Error reading entry: {}", e),
-        }
-    }
+        });
 
     // Sort posts by date (newest first)
     site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
@@ -57,64 +59,58 @@ fn main() -> io::Result<()> {
     site_data.pages.sort_by(|a, b| b.title.cmp(&a.title));
 
     // Create the output directory
-    let output_path = folder.join(&site_data.site.site_path);
+    let output_path = output_folder.join(&site_data.site.site_path);
     if let Err(e) = fs::create_dir_all(&output_path) {
         eprintln!("Unable to create output directory: {}", e);
         process::exit(1);
     }
 
     // Initialize Tera templates
-    let tera = match Tera::new(format!("{}/**/*", site_data.site.templates_path).as_str()) {
+    let templates_path = input_folder.join(&site_data.site.templates_path);
+    let tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("Parsing error(s): {}", e);
+            eprintln!("Parsing error(s) in templates: {}", e);
             process::exit(1);
         }
     };
+
     // Render templates
-    if let Err(e) = render_templates(&site_data, &tera, &folder.join(&site_data.site.site_path)) {
+    if let Err(e) = render_templates(&site_data, &tera, &output_path) {
         eprintln!("Failed to render templates: {}", e);
         process::exit(1);
     }
 
     // Copy static folder if present
-    let static_source = Path::new(site_data.site.static_path);
-    let static_destiny = output_path.join(Path::new("static"));
+    let static_source = input_folder.join(site_data.site.static_path);
+    let static_destiny = output_folder.join("static");
     if static_source.exists() {
         if let Err(e) = fs::create_dir_all(&static_destiny) {
             eprintln!("Unable to create static directory: {}", e);
             process::exit(1);
         }
-        for entry in WalkDir::new(&static_source) {
-            match entry {
-                Ok(entry) => {
-                    let static_filename = match entry.path().strip_prefix(&static_source) {
-                        Ok(filename) => filename,
-                        Err(e) => {
-                            eprintln!("Error building static_filename: {}", e);
-                            process::exit(1);
-                        }
-                    };
-                    let target_path = static_destiny.join(&static_filename);
-                    if entry.file_type().is_dir() {
-                        fs::create_dir_all(&target_path)?;
-                    } else {
-                        fs::copy(entry.path(), target_path)?;
-                    }
-                }
-                Err(e) => eprintln!("Error copying static file: {}", e),
-            }
+
+        let mut options = CopyOptions::new();
+        options.overwrite = true; // Overwrite files if they already exist
+
+        if let Err(e) = copy(&static_source, &static_destiny, &options) {
+            eprintln!("Failed to copy static directory: {}", e);
+            process::exit(1);
         }
     }
-    // TODO: ^same above for content/media folder to site/media
 
-    println!("Site generated at: {}/", site_data.site.site_path);
+    // Serve the site if the flag was provided
+    if serve {
+        println!("Starting built-in HTTP server...");
+        server::start_server(output_folder.clone().into());
+    }
+
+    println!("Site generated at: {}/", output_folder.display());
 
     Ok(())
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
-#[serde(rename_all = "lowercase")]
 struct Content {
     title: String,
     slug: String,
@@ -151,7 +147,6 @@ fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
 fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
     let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
     let (frontmatter, markdown) = parse_front_matter(&file_content)?;
-    // TODO: Trim empty first and trailing lines of markdown
 
     let mut options = ComrakOptions::default();
     options.render.unsafe_ = true; // Allow raw html
@@ -189,7 +184,6 @@ fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
         {
             return Some(date);
         } else if let Ok(date) = NaiveDate::parse_from_str(&input.as_str().unwrap(), "%Y-%m-%d") {
-            // Add a default time (00:00:00)
             return date.and_hms_opt(0, 0, 0);
         } else {
             eprintln!(
@@ -245,38 +239,43 @@ fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
 }
 
 fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Result<(), String> {
-    // Build the context of variable that are global on every template
+    // Build the context of variables that are global on every template
     let mut global_context = Context::new();
-    global_context.insert("global", &site_data);
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
-    global_context.insert("data", &site_data.site.data);
+    global_context.insert("title", "Generated Site");
 
     // Render index.html from list.html template
     let mut list_context = global_context.clone();
     list_context.insert("title", site_data.site.list_title);
     list_context.insert("content_list", &site_data.posts);
-    generate_html("list.html", "index.html", tera, &list_context, output_dir)?;
+    generate_html("list.html", "index.html", &tera, &list_context, output_dir)?;
+
+    println!("Rendering index.html with context: {:?}", list_context);
 
     // Render pages.html from list.html template
     let mut list_context = global_context.clone();
     list_context.insert("title", site_data.site.pages_title);
     list_context.insert("content_list", &site_data.pages);
-    generate_html("list.html", "pages.html", tera, &list_context, output_dir)?;
+    generate_html("list.html", "pages.html", &tera, &list_context, output_dir)?;
 
-    // TODO: Render tags/index.html to list all tags (from group.html)
-    // archive/index.html to list all dates grouped by year/month (from group.html)
-    // render each individual /tags/tag.html and /archive/year|month.html (from list.html)
+    println!("Rendering pages.html with context: {:?}", list_context);
 
     // Render individual content-slug.html from content.html template
     for content in site_data.posts.iter().chain(&site_data.pages) {
         let mut content_context = global_context.clone();
         content_context.insert("title", &content.title);
-        content_context.insert("content", &content);
+        content_context.insert("content", &content); 
+
+        println!(
+            "Rendering content.html for {} with context: {:?}",
+            content.slug, content_context
+        );
+
         generate_html(
             "content.html",
             &format!("{}.html", &content.slug),
-            tera,
+            &tera,
             &content_context,
             output_dir,
         )?;
@@ -292,14 +291,17 @@ fn generate_html(
     context: &Context,
     output_dir: &Path,
 ) -> Result<(), String> {
-    let rendered = tera.render(template, &context).map_err(|e| e.to_string())?;
+    let rendered = tera.render(template, context).map_err(|e| {
+        eprintln!("Error rendering template `{}`: {}", template, e);
+        e.to_string()
+    })?;
+
     fs::write(output_dir.join(filename), rendered).map_err(|e| e.to_string())?;
     println!("Generated {filename}");
     Ok(())
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
 struct Marmite<'a> {
     #[serde(default = "default_name")]
     name: &'a str,
@@ -321,12 +323,10 @@ struct Marmite<'a> {
     #[serde(default = "default_archives_title")]
     archives_title: &'a str,
 
-    // To be removed
     #[serde(default = "default_content_path")]
     content_path: &'a str,
     #[serde(default = "default_site_path")]
     site_path: &'a str,
-    // to be removed
     #[serde(default = "default_templates_path")]
     templates_path: &'a str,
     #[serde(default = "default_static_path")]
@@ -383,7 +383,7 @@ fn default_archives_title() -> &'static str {
 }
 
 fn default_site_path() -> &'static str {
-    "site"
+    ""
 }
 
 fn default_content_path() -> &'static str {
@@ -411,12 +411,7 @@ fn default_logo_image() -> &'static str {
 }
 
 fn default_menu() -> Option<Vec<(String, String)>> {
-    vec![
-        ("Pages".to_string(), "/pages.html".to_string()),
-        // ("Tags".to_string(), "/tags.html".to_string()),
-        // ("Archive".to_string(), "/archive.html".to_string()),
-    ]
-    .into()
+    vec![("Pages".to_string(), "/pages.html".to_string())].into()
 }
 
 fn default_data() -> Option<HashMap<String, String>> {
