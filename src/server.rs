@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Cursor;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tiny_http::{Server, Response};
+use tiny_http::{Response, Server};
 
 pub fn start_server(output_folder: Arc<PathBuf>) {
     let server = Server::http("localhost:8000").unwrap();
@@ -10,7 +10,7 @@ pub fn start_server(output_folder: Arc<PathBuf>) {
     println!("Server started at http://localhost:8000/");
 
     for request in server.incoming_requests() {
-        let response = match handle_request(&request, &output_folder) {  // Passa a referência do request
+        let response = match handle_request(&request, &output_folder) {
             Ok(response) => response,
             Err(err) => {
                 eprintln!("Error handling request: {}", err);
@@ -24,7 +24,10 @@ pub fn start_server(output_folder: Arc<PathBuf>) {
     }
 }
 
-fn handle_request(request: &tiny_http::Request, output_folder: &PathBuf) -> Result<Response<Cursor<Vec<u8>>>, String> {
+fn handle_request(
+    request: &tiny_http::Request,
+    output_folder: &PathBuf,
+) -> Result<Response<Cursor<Vec<u8>>>, String> {
     let request_path = match request.url() {
         "/" => "index.html",
         url => &url[1..], // Remove the leading '/'
