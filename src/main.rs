@@ -135,10 +135,10 @@ fn main() -> io::Result<()> {
 
     // Possible paths where favicon.ico might exist
     let favicon_src_paths = [
-        input_folder.join("static").join("favicon.ico"),  // User's favicon.ico
-        // on #20 we may have embedded statics
+        input_folder.join("static").join("favicon.ico"), // User's favicon.ico
+                                                         // on #20 we may have embedded statics
     ];
-    
+
     for favicon_src in &favicon_src_paths {
         if favicon_src.exists() {
             match fs::copy(&favicon_src, &favicon_dst) {
@@ -195,7 +195,6 @@ impl<'a> SiteData<'a> {
     }
 }
 
-
 fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
     if content.starts_with("---") {
         extract(&content).map_err(|e| e.to_string())
@@ -233,6 +232,14 @@ fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
     Ok(())
 }
 
+fn extract_date_from_filename(path: &Path) -> Option<NaiveDateTime> {
+    let date_re = Regex::new(r"\d{4}-\d{2}-\d{2}").unwrap();
+    date_re
+        .find(path.to_str().unwrap())
+        .and_then(|m| NaiveDate::parse_from_str(m.as_str(), "%Y-%m-%d").ok())
+        .and_then(|dt| dt.and_hms_opt(0, 0, 0))
+}
+
 fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
     if let Some(input) = frontmatter.get("date") {
         if let Ok(date) =
@@ -254,6 +261,11 @@ fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
         );
         process::exit(1);
     }
+
+    if let Some(date) = extract_date_from_filename(path) {
+        return Some(date);
+    }
+
     None
 }
 
@@ -264,10 +276,15 @@ fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
     if let Some(title) = frontmatter.get("title") {
         return slugify(&title.to_string());
     }
-    path.file_stem()
-        .and_then(|stem| stem.to_str())
-        .unwrap()
-        .to_string()
+
+    let slug = path.file_stem().and_then(|stem| stem.to_str()).unwrap();
+    if let Some(date) = extract_date_from_filename(path) {
+        return slug
+            .replace(&format!("{}-", date.date().to_string()), "")
+            .to_string();
+    }
+
+    slug.to_string()
 }
 
 fn slugify(text: &str) -> String {
