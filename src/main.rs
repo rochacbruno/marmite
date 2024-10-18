@@ -135,10 +135,10 @@ fn main() -> io::Result<()> {
 
     // Possible paths where favicon.ico might exist
     let favicon_src_paths = [
-        input_folder.join("static").join("favicon.ico"),  // User's favicon.ico
-        // on #20 we may have embedded statics
+        input_folder.join("static").join("favicon.ico"), // User's favicon.ico
+                                                         // on #20 we may have embedded statics
     ];
-    
+
     for favicon_src in &favicon_src_paths {
         if favicon_src.exists() {
             match fs::copy(&favicon_src, &favicon_dst) {
@@ -195,7 +195,6 @@ impl<'a> SiteData<'a> {
     }
 }
 
-
 fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
     if content.starts_with("---") {
         extract(&content).map_err(|e| e.to_string())
@@ -214,8 +213,15 @@ fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
 
     let title = get_title(&frontmatter, markdown);
     let tags = get_tags(&frontmatter);
-    let slug = get_slug(&frontmatter, &path);
-    let date = get_date(&frontmatter, &path);
+    let mut slug = get_slug(&frontmatter, &path);
+    let mut date = get_date(&frontmatter, &path);
+
+    if date.is_none() {
+        if let Ok((alternative_date, alternative_slug)) = get_alternative_date_and_slug(&path) {
+            date = Some(alternative_date);
+            slug = alternative_slug;
+        }
+    }
 
     let content = Content {
         title,
@@ -231,6 +237,24 @@ fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
         site_data.pages.push(content);
     }
     Ok(())
+}
+
+fn get_alternative_date_and_slug(path: &Path) -> Result<(NaiveDateTime, String), String> {
+    let date_re = Regex::new(r"\d{4}-\d{2}-\d{2}").unwrap();
+    let date = date_re
+        .find(path.to_str().unwrap())
+        .and_then(|m| NaiveDate::parse_from_str(m.as_str(), "%Y-%m-%d").ok());
+
+    if let Some(dt) = date {
+        let slug = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap()
+            .replace(&format!("{}-", dt.to_string()), "")
+            .to_string();
+        return Ok((dt.and_hms_opt(0, 0, 0).unwrap(), slug));
+    }
+    Err("No valid date found in filename".to_string())
 }
 
 fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
