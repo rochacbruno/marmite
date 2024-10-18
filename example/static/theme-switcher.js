@@ -61,6 +61,7 @@ const themeSwitcher = {
   // Apply scheme
   applyScheme() {
     document.querySelector("html")?.setAttribute(this.rootAttribute, this.scheme);
+    document.querySelector("#highlightjs-theme")?.setAttribute("href", `/static/github-${this.scheme}.min.css`);
   },
 
   // Store scheme to local storage
