@@ -135,8 +135,8 @@ fn main() -> io::Result<()> {
 
     // Possible paths where favicon.ico might exist
     let favicon_src_paths = [
-        input_folder.join("static").join("favicon.ico"),           // User's favicon.ico
-        Path::new("example/static/favicon.ico").to_path_buf(),     // Default favicon.ico in project
+        input_folder.join("static").join("favicon.ico"),  // User's favicon.ico
+        // on #20 we may have embedded statics
     ];
     
     for favicon_src in &favicon_src_paths {
