@@ -13,7 +13,7 @@ keywords = ["web", "blog", "static", "site", "html"]
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 tera = "1.20"
-comrak = "0.17"
+comrak = "0.29"
 walkdir = "2.5"
 chrono = { version = "0.4", features = ["serde"] }
 frontmatter-gen = "0.0.2"
