@@ -19,6 +19,7 @@ use walkdir::WalkDir;
 mod cli; // Import the CLI module
 mod robots;
 mod server; // Import the server module // Import the robots module
+mod embedded;
 
 fn main() -> io::Result<()> {
     let args = cli::Cli::parse();
@@ -95,6 +96,14 @@ fn main() -> io::Result<()> {
     }
 
     robots::handle_robots(&content_dir, &output_path);
+
+    let base = embedded::Templates::get("base.html").unwrap();
+    println!("{:?}", std::str::from_utf8(base.data.as_ref()));
+    let fav = embedded::Static::get("favicon.ico").unwrap();
+    println!("{:?}", fav.data.as_ref());
+    for item in embedded::Templates::iter() {
+        dbg!(item);
+    }
 
     // Initialize Tera templates
     let templates_path = input_folder.join(&site_data.site.templates_path);
