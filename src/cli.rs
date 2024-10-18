@@ -15,6 +15,9 @@ pub struct Cli {
     #[arg(long)]
     pub serve: bool,
 
+    #[arg(long, default_value = "localhost:8000")]
+    pub bind: String,
+
     /// Path to custom configuration file (defaults to marmite.yaml)
     #[arg(long, default_value = "marmite.yaml")]
     pub config: String,

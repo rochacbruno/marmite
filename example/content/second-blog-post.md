@@ -1,6 +1,8 @@
 ---
 date: 2024-01-02
 ---
+
+
 # Another blog post
 
 Very simple post showing on this website

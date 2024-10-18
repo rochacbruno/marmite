@@ -4,20 +4,18 @@
  * Pico.css - https://picocss.com
  * Copyright 2019-2024 - Licensed under MIT
  */
-
 const themeSwitcher = {
   // Config
   _scheme: "auto",
-  menuTarget: "details.dropdown",
-  buttonsTarget: "a[data-theme-switcher]",
-  buttonAttribute: "data-theme-switcher",
+  toggleButton: document.getElementById("theme-toggle"),
   rootAttribute: "data-theme",
   localStorageKey: "picoPreferredColorScheme",
 
   // Init
   init() {
     this.scheme = this.schemeFromLocalStorage;
-    this.initSwitchers();
+    this.initToggle();
+    this.updateIcon();
   },
 
   // Get color scheme from local storage
@@ -30,22 +28,18 @@ const themeSwitcher = {
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   },
 
-  // Init switchers
-  initSwitchers() {
-    const buttons = document.querySelectorAll(this.buttonsTarget);
-    buttons.forEach((button) => {
-      button.addEventListener(
-        "click",
-        (event) => {
-          event.preventDefault();
-          // Set scheme
-          this.scheme = button.getAttribute(this.buttonAttribute);
-          // Close dropdown
-          document.querySelector(this.menuTarget)?.removeAttribute("open");
-        },
-        false
-      );
-    });
+  // Init toggle
+  initToggle() {
+    this.toggleButton.addEventListener(
+      "click",
+      (event) => {
+        event.preventDefault();
+        // Toggle scheme
+        this.scheme = this.scheme === "dark" ? "light" : "dark";
+        this.updateIcon();
+      },
+      false
+    );
   },
 
   // Set scheme
@@ -67,11 +61,21 @@ const themeSwitcher = {
   // Apply scheme
   applyScheme() {
     document.querySelector("html")?.setAttribute(this.rootAttribute, this.scheme);
+    document.querySelector("#highlightjs-theme")?.setAttribute("href", `/static/github-${this.scheme}.min.css`);
   },
 
   // Store scheme to local storage
   schemeToLocalStorage() {
     window.localStorage?.setItem(this.localStorageKey, this.scheme);
+  },
+
+  // Update icon based on the current scheme
+  updateIcon() {
+    if (this.scheme === "dark") {
+      this.toggleButton.innerHTML = "&#9788;"; // Sun icon for light mode
+    } else {
+      this.toggleButton.innerHTML = "&#9789;"; // Moon icon for dark mode
+    }
   },
 };
 
