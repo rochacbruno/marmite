@@ -4,7 +4,7 @@
 # footer: This is an example site generated with Marmite
 # pagination: 10
 
-list_title: Blog Posts
+list_title: Recent Posts
 # tags_title: Tags
 # archives_title: Archive
 
@@ -17,9 +17,8 @@ list_title: Blog Posts
 
 menu:
   - ["About", "about.html"]
-  - ["Path", "/relative-path"]
   - ["External", "https://example.com"]
-  - ["Pages", "/pages.html"]
+  - ["Pages", "pages.html"]
 
 
 # data:

@@ -1,7 +1,6 @@
 **WARNING** This project is in its very initial development stage, not all
 features are implemented yet, usage API still subjected to change until `1.0.0`
 
-
 ![Logo](/assets/_resized/logo_160x120.png)
 
 # Marmite
@@ -33,30 +32,85 @@ cargo install marmite
 Or download the pre-built binary from the [releases](https://github.com/rochacbruno/marmite/releases) page. 
 -->
 
-## Usage
+## Usage now
 
-It's simple, really!
+> For now templates are not embedded yet, so requires manual step to put it on the input_folder, see [#20](https://github.com/rochacbruno/marmite/issues/20)
 
-```bash
-marmite path_to_markdown_files path_to_generated_site
+Clone the repo
+```
+git clone https://github.com/rochacbruno/marmite/
+```
+Create your input_folder
+```
+mkdir my_content
+```
+Copy the templates and static to the folder
+```
+cp -r marmite/example/{templates,static} my_content
+```
+Add some markdown
+
+`my_content/first-post.md`
+```markdown
+---
+date: 2024-10-24
+tags: marmite,example
+---
+# Hello World
+
+Just write markdown here!
+```
+`my_content/about.md`
+```markdown
+# About me
+
+I am a person that likes to write!
 ```
 
-> **WARNING** CLI not completely implemented yet, see: [#1](https://github.com/rochacbruno/marmite/issues/1)
+Build the site
 
-```bash
-marmite [input_folder] [output_folder] [OPTIONS]
+```console
+$ marmite my_content my_site --serve
+Generated index.html
+Generated pages.html
+Generated first-post.html
+Generated about.html
+Copied 'my_content/static' to 'my_site/'
+Starting built-in HTTP server...
+Server started at http://localhost:8000/  - Type ^C to stop.
+```
 
-input_folder: A folder containing `.md` files.
-  and optionally: marmite.yaml, templates, static, media folders
+Access [http://localhost:8000/](http://localhost:8000/)
 
-output_folder: Directory where the static site will be rendered.
+## Usage soon
 
-OPTIONS:
-  --serve    Build and Serve with embedded http server
-  --config   Optional path to a config file
-  --name     Site name
-  --tagline  Text shown in the site header
-  --url      Url where site will be deployed (used when generating feeds)
+~It's~ [(Will be)](https://github.com/rochacbruno/marmite/issues/20) simple, really!
+
+```console
+$ marmite path_to_markdown_files path_to_generated_site
+Site generated at path_to_generated_site/
+```
+
+CLI
+
+```console
+❯ marmite --help
+MARkdown Makes sITEs is a very simple static site generator, mainly for simple blogs.
+
+Usage: marmite_ [OPTIONS] <INPUT_FOLDER> <OUTPUT_FOLDER>
+
+Arguments:
+  <INPUT_FOLDER>   Input folder containing markdown files
+  <OUTPUT_FOLDER>  Output folder to generate the site
+
+Options:
+      --serve            Serve the site with a built-in HTTP server
+      --config <CONFIG>  Path to custom configuration file (defaults to marmite.yaml)
+                         [default: marmite.yaml]
+      --debug            Print debug messages
+  -h, --help             Print help
+  -V, --version          Print version
+
 ```
 
 ### Build a site from markdown content
