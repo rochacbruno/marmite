@@ -17,13 +17,14 @@ use unicode_normalization::UnicodeNormalization;
 use walkdir::WalkDir;
 
 mod cli; // Import the CLI module
-mod server; // Import the server module
+mod robots;
+mod server; // Import the server module // Import the robots module
 
 fn main() -> io::Result<()> {
     let args = cli::Cli::parse();
 
     let input_folder = args.input_folder;
-    let output_folder = Arc::new(args.output_folder); // Convertemos para Arc<PathBuf>
+    let output_folder = Arc::new(args.output_folder);
     let serve = args.serve;
     let debug = args.debug;
     let config_path = input_folder.join(args.config);
@@ -92,6 +93,8 @@ fn main() -> io::Result<()> {
         eprintln!("Unable to create output directory: {}", e);
         process::exit(1);
     }
+
+    robots::handle_robots(&content_dir, &output_path);
 
     // Initialize Tera templates
     let templates_path = input_folder.join(&site_data.site.templates_path);
