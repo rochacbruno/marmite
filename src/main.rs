@@ -130,6 +130,34 @@ fn main() -> io::Result<()> {
         );
     }
 
+    // Copy or create favicon.ico
+    let favicon_dst = output_folder.join("favicon.ico");
+
+    // Possible paths where favicon.ico might exist
+    let favicon_src_paths = [
+        input_folder.join("static").join("favicon.ico"),  // User's favicon.ico
+        // on #20 we may have embedded statics
+    ];
+    
+    for favicon_src in &favicon_src_paths {
+        if favicon_src.exists() {
+            match fs::copy(&favicon_src, &favicon_dst) {
+                Ok(_) => {
+                    println!(
+                        "Copied favicon.ico from '{}' to output folder",
+                        favicon_src.display()
+                    );
+                    break;
+                }
+                Err(e) => eprintln!(
+                    "Failed to copy favicon.ico from '{}': {}",
+                    favicon_src.display(),
+                    e
+                ),
+            }
+        }
+    }
+
     // Serve the site if the flag was provided
     if serve {
         println!("Starting built-in HTTP server...");
@@ -166,6 +194,7 @@ impl<'a> SiteData<'a> {
         }
     }
 }
+
 
 fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
     if content.starts_with("---") {
