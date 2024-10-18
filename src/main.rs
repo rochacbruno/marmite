@@ -96,7 +96,7 @@ fn main() -> io::Result<()> {
 
     robots::handle_robots(&content_dir, &output_path);
 
-    // Initialize Tera templates
+    // Intialize Tera templates
     let templates_path = input_folder.join(&site_data.site.templates_path);
     let tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
         Ok(t) => t,
@@ -128,6 +128,34 @@ fn main() -> io::Result<()> {
             &static_source.display(),
             &output_folder.display()
         );
+    }
+
+    // Copy or create favicon.ico
+    let favicon_dst = output_folder.join("favicon.ico");
+
+    // Possible paths where favicon.ico might exist
+    let favicon_src_paths = [
+        input_folder.join("static").join("favicon.ico"),           // User's favicon.ico
+        Path::new("example/static/favicon.ico").to_path_buf(),     // Default favicon.ico in project
+    ];
+    
+    for favicon_src in &favicon_src_paths {
+        if favicon_src.exists() {
+            match fs::copy(&favicon_src, &favicon_dst) {
+                Ok(_) => {
+                    println!(
+                        "Copied favicon.ico from '{}' to output folder",
+                        favicon_src.display()
+                    );
+                    break;
+                }
+                Err(e) => eprintln!(
+                    "Failed to copy favicon.ico from '{}': {}",
+                    favicon_src.display(),
+                    e
+                ),
+            }
+        }
     }
 
     // Serve the site if the flag was provided
@@ -166,6 +194,7 @@ impl<'a> SiteData<'a> {
         }
     }
 }
+
 
 fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
     if content.starts_with("---") {
