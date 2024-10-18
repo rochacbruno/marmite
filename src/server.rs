@@ -4,10 +4,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tiny_http::{Response, Server};
 
-pub fn start_server(output_folder: Arc<PathBuf>) {
-    let server = Server::http("localhost:8000").unwrap();
+pub fn start_server(bind_address: &str, output_folder: Arc<PathBuf>) {
+    let server = Server::http(bind_address).unwrap();
 
-    println!("Server started at http://localhost:8000/  - Type ^C to stop.");
+    println!(
+        "Server started at http://{}/ - Type ^C to stop.",
+        bind_address
+    );
 
     for request in server.incoming_requests() {
         let response = match handle_request(&request, &output_folder) {

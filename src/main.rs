@@ -27,6 +27,7 @@ fn main() -> io::Result<()> {
     let serve = args.serve;
     let debug = args.debug;
     let config_path = input_folder.join(args.config);
+    let bind_address: &str = args.bind.as_str();
 
     // Initialize site data
     let marmite = fs::read_to_string(&config_path).unwrap_or_else(|e| {
@@ -129,7 +130,7 @@ fn main() -> io::Result<()> {
     // Serve the site if the flag was provided
     if serve {
         println!("Starting built-in HTTP server...");
-        server::start_server(output_folder.clone().into());
+        server::start_server(&bind_address, output_folder.clone().into());
     }
 
     println!("Site generated at: {}/", output_folder.display());
