@@ -1,8 +1,8 @@
 [package]
 name = "marmite"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
-license-file = "LICENSE"
+license = "AGPL-3.0-or-later"
 description = "MARkdown Makes sITEs is a very simple static site generator, mainly for simple blogs."
 homepage = "https://rochacbruno.github.io/marmite"
 repository = "https://github.com/rochacbruno/marmite"

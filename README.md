@@ -18,7 +18,9 @@ It does **"one"** simple thing only:
 - Outputs the rendered static site to the `output` folder.
 
 [![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
-![Crates.io Version](https://img.shields.io/crates/v/marmite)
+[![Crates.io Version](https://img.shields.io/crates/v/marmite)](https://crates.io/crates/marmite)
+
+[Demo](https://rochacbruno.github.io/marmite/)
 
 ## Installation
 
@@ -50,10 +52,9 @@ cp -r marmite/example/{templates,static} my_content
 ```
 Add some markdown
 
-`my_content/first-post.md`
+`my_content/2024-10-20-first-post.md`
 ```markdown
 ---
-date: 2024-10-24
 tags: marmite,example
 ---
 # Hello World
