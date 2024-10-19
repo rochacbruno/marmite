@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
+use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Marmite<'a> {
@@ -21,6 +21,8 @@ pub struct Marmite<'a> {
     pub pages_title: &'a str,
     #[serde(default = "default_tags_title")]
     pub tags_title: &'a str,
+    #[serde(default = "default_tags_content_title")]
+    pub tags_content_title: &'a str,
     #[serde(default = "default_archives_title")]
     pub archives_title: &'a str,
 
@@ -75,6 +77,10 @@ fn default_tags_title() -> &'static str {
     "Tags"
 }
 
+fn default_tags_content_title() -> &'static str {
+    "Posts tagged with '$tag'"
+}
+
 fn default_pages_title() -> &'static str {
     "Pages"
 }
@@ -112,7 +118,11 @@ fn default_logo_image() -> &'static str {
 }
 
 fn default_menu() -> Option<Vec<(String, String)>> {
-    vec![("Pages".to_string(), "pages.html".to_string())].into()
+    vec![
+        ("Pages".to_string(), "pages.html".to_string()),
+        ("Tags".to_string(), "tags.html".to_string()),
+    ]
+    .into()
 }
 
 fn default_data() -> Option<HashMap<String, Value>> {

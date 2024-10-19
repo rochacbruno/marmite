@@ -1,3 +1,4 @@
+use crate::config::Marmite;
 use chrono::{NaiveDate, NaiveDateTime};
 use clap::Parser;
 use comrak::{markdown_to_html, ComrakOptions};
@@ -7,6 +8,7 @@ use fs_extra::dir::{copy, CopyOptions};
 use log::{debug, error, info};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs;
 use std::io;
@@ -16,13 +18,12 @@ use std::sync::Arc;
 use tera::{Context, Tera};
 use unicode_normalization::UnicodeNormalization;
 use walkdir::WalkDir;
-use crate::config::Marmite;
 
 mod cli;
+mod config;
 mod robots;
 mod server;
 mod tera_functions;
-mod config;
 
 fn main() -> io::Result<()> {
     let args = cli::Cli::parse();
@@ -209,6 +210,26 @@ struct Content {
     html: String,
     tags: Vec<String>,
     date: Option<NaiveDateTime>,
+}
+
+fn group_by_tags(posts: Vec<Content>) -> Vec<(String, Vec<Content>)> {
+    // Create a HashMap to store the tags and the corresponding Content items.
+    let mut tag_map: HashMap<String, Vec<Content>> = HashMap::new();
+
+    // Iterate over the posts
+    for post in posts.into_iter() {
+        // For each tag in the current post
+        for tag in post.tags.clone() {
+            // Insert the tag into the map or push the post into the existing vector
+            tag_map
+                .entry(tag)
+                .or_insert_with(Vec::new)
+                .push(post.clone());
+        }
+    }
+
+    // Convert the HashMap into a Vec<(String, Vec<Content>)>
+    tag_map.into_iter().collect()
 }
 
 #[derive(Serialize)]
@@ -431,6 +452,56 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
         )?;
     }
 
+    // Render tagged_contents
+    let mut unique_tags: Vec<(String, usize)> = Vec::new();
+    let tags_dir = output_dir.join("tag");
+    if let Err(e) = fs::create_dir_all(&tags_dir) {
+        error!("Unable to create tag directory: {}", e);
+        process::exit(1);
+    }
+    for (tag, tagged_contents) in group_by_tags(site_data.posts.clone()) {
+        // aggregate unique tags to render the tags list later
+        unique_tags.push((tag.clone(), tagged_contents.len()));
+
+        let mut tag_context = global_context.clone();
+        tag_context.insert(
+            "title",
+            &site_data.site.tags_content_title.replace("$tag", &tag),
+        );
+        tag_context.insert("content_list", &tagged_contents);
+        let tag_slug = slugify(&tag);
+        tag_context.insert("current_page", &format!("tag/{}.html", &tag_slug));
+        debug!(
+            "Tag {} Context: {:?}",
+            &tag,
+            &site_data
+                .pages
+                .iter()
+                .map(|p| format!("{},{}", p.title, p.slug))
+                .collect::<Vec<_>>()
+        );
+        generate_html(
+            "list.html",
+            &format!("{}.html", &tag_slug),
+            &tera,
+            &tag_context,
+            &tags_dir,
+        )?;
+    }
+    // Render Main tags.html list page from group.html template
+    let mut tag_list_context = global_context.clone();
+    tag_list_context.insert("title", &site_data.site.tags_title);
+    unique_tags.sort_by(|a, b| a.0.cmp(&b.0));
+    tag_list_context.insert("group_content", &unique_tags);
+    tag_list_context.insert("current_page", "tags.html");
+    generate_html(
+        "group.html",
+        "tags.html",
+        &tera,
+        &tag_list_context,
+        &output_dir,
+    )?;
+
     Ok(())
 }
 
@@ -445,8 +516,8 @@ fn generate_html(
         error!("Error rendering template `{}`: {}", template, e);
         e.to_string()
     })?;
-
-    fs::write(output_dir.join(filename), rendered).map_err(|e| e.to_string())?;
-    info!("Generated {}", filename);
+    let output_file = output_dir.join(filename);
+    fs::write(&output_file, rendered).map_err(|e| e.to_string())?;
+    info!("Generated {}", &output_file.display());
     Ok(())
 }
