@@ -3,6 +3,9 @@
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="{{url_for(path='/static/github-light.min.css')}}" id="highlightjs-theme" />
+<script>
+   const staticBase = "{{ url_for(path='static')}}";
+</script>
 {% endblock %}
 
 {% block main %}

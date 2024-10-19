@@ -9,6 +9,12 @@
     {%- block head %}
     <title>{{ site.name }} | {{ title }}</title>
     <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/pico.min.css')}}">
+    <style>
+    @font-face {
+        font-family: "Atkinson Hyperlegible";
+        src: url("{{url_for(path='/static/Atkinson-Hyperlegible-Regular-102.woff')}}");
+    }
+    </style>
     <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/marmite.css')}}">
     {% endblock -%}
 </head>
