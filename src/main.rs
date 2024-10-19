@@ -136,6 +136,24 @@ fn main() -> io::Result<()> {
         );
     }
 
+    // Copy content/media folder if present
+    let media_source = content_dir.join(site_data.site.media_path);
+    if media_source.is_dir() {
+        let mut options = CopyOptions::new();
+        options.overwrite = true; // Overwrite files if they already exist
+
+        if let Err(e) = copy(&media_source, &*output_folder, &options) {
+            error!("Failed to copy media directory: {}", e);
+            process::exit(1);
+        }
+
+        info!(
+            "Copied '{}' to '{}/'",
+            &media_source.display(),
+            &output_folder.display()
+        );
+    }
+
     // Copy or create favicon.ico
     let favicon_dst = output_folder.join("favicon.ico");
 
@@ -522,7 +540,7 @@ fn default_static_path() -> &'static str {
 }
 
 fn default_media_path() -> &'static str {
-    "content/media"
+    "media"
 }
 
 fn default_card_image() -> &'static str {
