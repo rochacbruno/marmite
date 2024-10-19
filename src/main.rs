@@ -1,8 +1,10 @@
 use chrono::{NaiveDate, NaiveDateTime};
 use clap::Parser;
 use comrak::{markdown_to_html, ComrakOptions};
+use env_logger::{Env, Builder};
 use frontmatter_gen::{extract, Frontmatter, Value};
 use fs_extra::dir::{copy, CopyOptions};
+use log::{error, info};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -21,8 +23,8 @@ mod robots;
 mod server; // Import the server module // Import the robots module
 
 fn main() -> io::Result<()> {
-    let args = cli::Cli::parse();
 
+    let args = cli::Cli::parse();
     let input_folder = args.input_folder;
     let output_folder = Arc::new(args.output_folder);
     let serve = args.serve;
@@ -30,10 +32,15 @@ fn main() -> io::Result<()> {
     let config_path = input_folder.join(args.config);
     let bind_address: &str = args.bind.as_str();
 
+    let env = Env::default().default_filter_or(if debug { "debug" } else { "info" });
+    if let Err(e) = Builder::from_env(env).try_init() {
+        error!("Logger already initialized: {}", e);
+    }
+
     // Initialize site data
     let marmite = fs::read_to_string(&config_path).unwrap_or_else(|e| {
         if debug {
-            eprintln!("Unable to read '{}': {}", &config_path.display(), e);
+            error!("Unable to read '{}': {}", &config_path.display(), e);
         }
         // Default to empty string if config not found, so defaults are applied
         String::new()
@@ -41,7 +48,7 @@ fn main() -> io::Result<()> {
     let site: Marmite = match serde_yaml::from_str(&marmite) {
         Ok(site) => site,
         Err(e) => {
-            eprintln!("Failed to parse '{}' YAML: {}", &config_path.display(), e);
+            error!("Failed to parse '{}' YAML: {}", &config_path.display(), e);
             process::exit(1);
         }
     };
@@ -61,7 +68,7 @@ fn main() -> io::Result<()> {
         })
         .for_each(|entry| {
             if let Err(e) = process_file(entry.path(), &mut site_data) {
-                eprintln!("Failed to process file {}: {}", entry.path().display(), e);
+                error!("Failed to process file {}: {}", entry.path().display(), e);
             }
         });
 
@@ -73,7 +80,7 @@ fn main() -> io::Result<()> {
             .chain(&site_data.pages)
             .collect::<Vec<_>>(),
     ) {
-        eprintln!(
+        error!(
             "Error: Duplicate slug found: '{}' \
             - try setting any of `title`, `slug` as a unique text, \
             or leave both empty so filename will be assumed.",
@@ -90,7 +97,7 @@ fn main() -> io::Result<()> {
     // Create the output directory
     let output_path = output_folder.join(&site_data.site.site_path);
     if let Err(e) = fs::create_dir_all(&output_path) {
-        eprintln!("Unable to create output directory: {}", e);
+        error!("Unable to create output directory: {}", e);
         process::exit(1);
     }
 
@@ -101,14 +108,14 @@ fn main() -> io::Result<()> {
     let tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("Error loading templates: {}", e);
+            error!("Error loading templates: {}", e);
             process::exit(1);
         }
     };
 
     // Render templates
     if let Err(e) = render_templates(&site_data, &tera, &output_path, debug) {
-        eprintln!("Failed to render templates: {}", e);
+        error!("Failed to render templates: {}", e);
         process::exit(1);
     }
 
@@ -119,11 +126,11 @@ fn main() -> io::Result<()> {
         options.overwrite = true; // Overwrite files if they already exist
 
         if let Err(e) = copy(&static_source, &*output_folder, &options) {
-            eprintln!("Failed to copy static directory: {}", e);
+            error!("Failed to copy static directory: {}", e);
             process::exit(1);
         }
 
-        println!(
+        info!(
             "Copied '{}' to '{}/'",
             &static_source.display(),
             &output_folder.display()
@@ -135,21 +142,21 @@ fn main() -> io::Result<()> {
 
     // Possible paths where favicon.ico might exist
     let favicon_src_paths = [
-        input_folder.join("static").join("favicon.ico"),  // User's favicon.ico
-        // on #20 we may have embedded statics
+        input_folder.join("static").join("favicon.ico"), // User's favicon.ico
+                                                         // on #20 we may have embedded statics
     ];
-    
+
     for favicon_src in &favicon_src_paths {
         if favicon_src.exists() {
             match fs::copy(&favicon_src, &favicon_dst) {
                 Ok(_) => {
-                    println!(
+                    info!(
                         "Copied favicon.ico from '{}' to output folder",
                         favicon_src.display()
                     );
                     break;
                 }
-                Err(e) => eprintln!(
+                Err(e) => error!(
                     "Failed to copy favicon.ico from '{}': {}",
                     favicon_src.display(),
                     e
@@ -160,11 +167,11 @@ fn main() -> io::Result<()> {
 
     // Serve the site if the flag was provided
     if serve {
-        println!("Starting built-in HTTP server...");
+        info!("Starting built-in HTTP server...");
         server::start_server(&bind_address, output_folder.clone().into());
     }
 
-    println!("Site generated at: {}/", output_folder.display());
+    info!("Site generated at: {}/", output_folder.display());
 
     Ok(())
 }
@@ -194,7 +201,6 @@ impl<'a> SiteData<'a> {
         }
     }
 }
-
 
 fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
     if content.starts_with("---") {
@@ -247,7 +253,7 @@ fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
         if let Ok(date) = NaiveDate::parse_from_str(&input.as_str().unwrap(), "%Y-%m-%d") {
             return date.and_hms_opt(0, 0, 0);
         }
-        eprintln!(
+        error!(
             "ERROR: Invalid date format {} when parsing {}",
             input.to_string_representation(),
             path.display()
@@ -332,7 +338,7 @@ fn render_templates(
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
     if debug {
-        println!("Global Context: {:?}", &site_data.site)
+        info!("Global Context: {:?}", &site_data.site)
     }
 
     // Render index.html from list.html template
@@ -340,7 +346,7 @@ fn render_templates(
     list_context.insert("title", site_data.site.list_title);
     list_context.insert("content_list", &site_data.posts);
     if debug {
-        println!(
+        info!(
             "Index Context: {:?}",
             &site_data
                 .posts
@@ -356,7 +362,7 @@ fn render_templates(
     list_context.insert("title", site_data.site.pages_title);
     list_context.insert("content_list", &site_data.pages);
     if debug {
-        println!(
+        info!(
             "Pages Context: {:?}",
             &site_data
                 .pages
@@ -373,7 +379,7 @@ fn render_templates(
         content_context.insert("title", &content.title);
         content_context.insert("content", &content);
         if debug {
-            println!(
+            info!(
                 "{} context: {:?}",
                 &content.slug,
                 format!(
@@ -402,14 +408,16 @@ fn generate_html(
     output_dir: &Path,
 ) -> Result<(), String> {
     let rendered = tera.render(template, context).map_err(|e| {
-        eprintln!("Error rendering template `{}`: {}", template, e);
+        error!("Error rendering template `{}`: {}", template, e);
         e.to_string()
     })?;
 
     fs::write(output_dir.join(filename), rendered).map_err(|e| e.to_string())?;
-    println!("Generated {filename}");
+    info!("Generated {}", filename);
     Ok(())
 }
+
+
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Marmite<'a> {
