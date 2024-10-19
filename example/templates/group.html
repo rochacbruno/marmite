@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block main %}
+        <div class="list-title">
+            <article><strong> {{ title }} </strong></article>
+        </div>
+        <article class="group-list">
+        <ul class="content-tags">
+            {% for content in group_content -%}
+                <li><a href="{{url_for(path='/tag/')}}{{ content.0 | trim }}.html">{{ content.0 | capitalize }}</a> [{{content.1}}]</li>
+            {%- endfor %}
+        </ul>
+        </article>
+{% endblock %}
