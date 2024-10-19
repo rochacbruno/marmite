@@ -40,12 +40,15 @@ jobs:
       - name: Prepare site 🏗️
         run: |
           cp -R example marmitesite
-          echo -n -e "---\ntitle: Markdown Makes Sites\ndate: 2024-10-20\ntags: marmite,ssg\n---\n" > marmitesite/content/markdown-makes-sites.md
-          cat README.md >> marmitesite/content/markdown-makes-sites.md
-          echo -n -e "name: Marmite Site\ntagline: Site generated with marmite\nurl: https://rochacbruno.github.io/marmite/\n" > marmitesite/marmite.yaml
+          cp README.md marmitesite/content/docs.md
+          echo -n -e "name: Marmite SSG\n" >> marmitesite/marmite.yaml
+          echo -n -e "tagline: The easiest static site generator\n" >> marmitesite/marmite.yaml
+          echo -n -e "url: https://rochacbruno.github.io/marmite/\n" >> marmitesite/marmite.yaml
+          echo -n -e "url: https://rochacbruno.github.io/marmite/\n" >> marmitesite/marmite.yaml
+          echo -n -e "menu: [['Docs', 'docs.html'], ['Pages', 'pages.html'], ['Github', 'https://github.com/rochacbruno/marmite/']]\n" >> marmitesite/marmite.yaml
 
       - name: Build site 🏗️
-        run: cd marmitesite && marmite . site && cd ..
+        run: marmite marmitesite site --debug
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -53,7 +56,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'marmitesite/site'
+          path: 'site'
 
       - name: Deploy to GitHub Pages
         id: deployment
