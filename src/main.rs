@@ -103,7 +103,7 @@ fn main() -> io::Result<()> {
 
     robots::handle_robots(&content_dir, &output_path);
 
-    // Intialize Tera templates
+    // Initialize Tera templates
     let templates_path = input_folder.join(&site_data.site.templates_path);
     let tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
         Ok(t) => t,
