@@ -1,8 +1,10 @@
 {% extends "base.html" %}
 {% block main %}
+        {%if current_page != "index.html" %}
         <div class="list-title">
-            <strong> {{ title }} </strong>
+            <article><strong> {{ title }} </strong></article>
         </div>
+        {% endif %}
         <div class="content-list">
             {%- for content in content_list %}
             <article class="content-list-item">

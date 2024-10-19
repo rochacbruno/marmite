@@ -1,4 +1,10 @@
 {% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="/static/github-light.min.css" id="highlightjs-theme" />
+{% endblock %}
+
 {% block main %}
 <article>
     <div class="content-html">{{ content.html | safe }}</div>
@@ -13,4 +19,12 @@
     </footer>
     {% endif %}
 </article>
+{% endblock %}
+
+{% block tail %}
+{{ super() }}
+<script src="/static/highlight.min.js"></script>
+<script>
+    hljs.highlightAll();
+</script>
 {% endblock %}

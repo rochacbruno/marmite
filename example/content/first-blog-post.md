@@ -1,7 +1,7 @@
 ---
 date: 2024-01-01 12:00:01
 slug: blog-post
-title: Example Blog Post
+title: Markdown Powered Blog Post (with code blocks)
 tags: exampletag, tag 2, tag 3, batata
 ---
 

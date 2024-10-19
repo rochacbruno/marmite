@@ -17,8 +17,8 @@ list_title: Recent Posts
 
 menu:
   - ["About", "about.html"]
-  - ["External", "https://example.com"]
   - ["Pages", "pages.html"]
+  - ["Github", "https://github.com/rochacbruno/marmite"]
 
 
 # data:

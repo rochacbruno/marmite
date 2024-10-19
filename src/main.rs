@@ -350,10 +350,12 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
     debug!("Global Context: {:?}", &site_data.site);
+
     // Render index.html from list.html template
     let mut list_context = global_context.clone();
     list_context.insert("title", site_data.site.list_title);
     list_context.insert("content_list", &site_data.posts);
+    list_context.insert("current_page", "index.html");
     debug!(
         "Index Context: {:?}",
         &site_data
@@ -368,6 +370,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
     let mut list_context = global_context.clone();
     list_context.insert("title", site_data.site.pages_title);
     list_context.insert("content_list", &site_data.pages);
+    list_context.insert("current_page", "pages.html");
     debug!(
         "Pages Context: {:?}",
         &site_data
@@ -383,6 +386,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
         let mut content_context = global_context.clone();
         content_context.insert("title", &content.title);
         content_context.insert("content", &content);
+        content_context.insert("current_page", &format!("{}.html", &content.slug));
         debug!(
             "{} context: {:?}",
             &content.slug,

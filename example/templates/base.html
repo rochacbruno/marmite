@@ -1,14 +1,16 @@
+<!-- website generated with Marmite SSG - https://github.com/rochacbruno/marmite -->
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark" />
-    <link rel="stylesheet" type="text/css" href="/static/pico.min.css">
-    <link rel="stylesheet" type="text/css" href="/static/style.css">
-    <link rel="stylesheet" href="/static/github-light.min.css" id="highlightjs-theme" />
+    {%- block head %}
     <title>{{ site.name }} | {{ title }}</title>
+    <link rel="stylesheet" type="text/css" href="/static/pico.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/marmite.css">
+    {% endblock -%}
 </head>
 
 <body>
@@ -27,7 +29,13 @@
                 
                 <ul class="header-menu" id="header-menu">
                     {% for item in menu %}
-                    <li><a href="{{ item.1 | safe }}" class="secondary">{{ item.0 | safe }}</a></li>
+                    <li>
+                        {% if current_page == item.1 %}
+                        <button class="secondary">{{item.0 | safe }}</button>
+                        {% else %}
+                        <a href="{{ item.1 | safe }}" class="secondary" {%if item.1 is starting_with("http") %}target="_blank"{% endif %}>{{ item.0 | safe }}</a>
+                        {% endif %}
+                    </li>
                     {% endfor %}
                 </ul>
             </nav>
@@ -46,12 +54,10 @@
             </nav>
         </footer>
     </main>
+    {%- block tail %}
     <script src="/static/theme-switcher.js"></script>
     <script src="/static/menu.js"></script>
-    <script src="/static/highlight.min.js"></script>
-    <script>
-        hljs.highlightAll();
-    </script>
+    {% endblock -%}
 </body>
 
 </html>
