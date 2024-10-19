@@ -1,7 +1,7 @@
 **WARNING** This project is in its very initial development stage, not all
 features are implemented yet, usage API still subjected to change until `1.0.0`
 
-![Logo](/assets/_resized/logo_160x120.png)
+![Logo](https://github.com/rochacbruno/marmite/raw/main/assets/_resized/logo_160x120.png)
 
 # Marmite
 
