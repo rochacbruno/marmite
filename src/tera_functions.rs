@@ -16,6 +16,11 @@ impl Function for UrlFor {
             .ok_or_else(|| tera::Error::msg("Missing `path` argument"))?
             .to_string();
 
+        let abs_prefixes = ["http", "https", "mailto"];
+        if abs_prefixes.iter().any(|&prefix| path.starts_with(prefix)) {
+            return to_value(path).map_err(tera::Error::from);
+        }
+
         // Ensure the path starts with "/" by adding it if necessary
         if !path.starts_with('/') {
             path = format!("/{}", path);
