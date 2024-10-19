@@ -1,3 +1,4 @@
+use log::{error, info};
 use std::fs::File;
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -7,7 +8,7 @@ use tiny_http::{Response, Server};
 pub fn start_server(bind_address: &str, output_folder: Arc<PathBuf>) {
     let server = Server::http(bind_address).unwrap();
 
-    println!(
+    info!(
         "Server started at http://{}/ - Type ^C to stop.",
         bind_address
     );
@@ -16,13 +17,13 @@ pub fn start_server(bind_address: &str, output_folder: Arc<PathBuf>) {
         let response = match handle_request(&request, &output_folder) {
             Ok(response) => response,
             Err(err) => {
-                eprintln!("Error handling request: {}", err);
+                error!("Error handling request: {}", err);
                 Response::from_string("Internal Server Error").with_status_code(500)
             }
         };
 
         if let Err(err) = request.respond(response) {
-            eprintln!("Failed to send response: {}", err);
+            error!("Failed to send response: {}", err);
         }
     }
 }
@@ -46,12 +47,12 @@ fn handle_request(
                 Ok(Response::from_data(buffer))
             }
             Err(err) => {
-                eprintln!("Failed to read file {}: {}", file_path.display(), err);
+                error!("Failed to read file {}: {}", file_path.display(), err);
                 Err(format!("Error reading file: {}", err))
             }
         }
     } else {
-        eprintln!("File not found: {}", file_path.display());
+        error!("File not found: {}", file_path.display());
         Ok(Response::from_string("404 Not Found").with_status_code(404))
     }
 }

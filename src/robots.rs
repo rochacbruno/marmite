@@ -1,3 +1,4 @@
+use log::{error, info};
 use std::fs;
 use std::path::Path;
 
@@ -14,16 +15,16 @@ pub fn handle_robots(content_dir: &Path, output_path: &Path) {
     match robots_src.exists() {
         true => {
             if let Err(e) = fs::copy(&robots_src, &robots_dst) {
-                eprintln!("Failed to copy robots.txt: {}", e);
+                error!("Failed to copy robots.txt: {}", e);
             } else {
-                println!("Copied robots.txt to output folder");
+                info!("Copied robots.txt to output folder");
             }
         }
         false => {
             if let Err(e) = fs::write(&robots_dst, DEFAULT_ROBOTS) {
-                eprintln!("Failed to create default robots.txt: {}", e);
+                error!("Failed to create default robots.txt: {}", e);
             } else {
-                println!("Generated default robots.txt in output folder");
+                info!("Generated default robots.txt in output folder");
             }
         }
     }

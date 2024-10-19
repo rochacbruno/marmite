@@ -1,10 +1,10 @@
 use chrono::{NaiveDate, NaiveDateTime};
 use clap::Parser;
 use comrak::{markdown_to_html, ComrakOptions};
-use env_logger::{Env, Builder};
+use env_logger::{Builder, Env};
 use frontmatter_gen::{extract, Frontmatter, Value};
 use fs_extra::dir::{copy, CopyOptions};
-use log::{error, info};
+use log::{debug, error, info};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -23,26 +23,25 @@ mod robots;
 mod server; // Import the server module // Import the robots module
 
 fn main() -> io::Result<()> {
-
     let args = cli::Cli::parse();
     let input_folder = args.input_folder;
     let output_folder = Arc::new(args.output_folder);
     let serve = args.serve;
-    let debug = args.debug;
     let config_path = input_folder.join(args.config);
     let bind_address: &str = args.bind.as_str();
 
-    let env = Env::default().default_filter_or(if debug { "debug" } else { "info" });
+    let env = Env::default().default_filter_or(if args.debug { "debug" } else { "info" });
     if let Err(e) = Builder::from_env(env).try_init() {
         error!("Logger already initialized: {}", e);
     }
 
     // Initialize site data
     let marmite = fs::read_to_string(&config_path).unwrap_or_else(|e| {
-        if debug {
-            error!("Unable to read '{}': {}", &config_path.display(), e);
-        }
-        // Default to empty string if config not found, so defaults are applied
+        debug!(
+            "Unable to read '{}', assuming defaults.: {}",
+            &config_path.display(),
+            e
+        );
         String::new()
     });
     let site: Marmite = match serde_yaml::from_str(&marmite) {
@@ -114,7 +113,7 @@ fn main() -> io::Result<()> {
     };
 
     // Render templates
-    if let Err(e) = render_templates(&site_data, &tera, &output_path, debug) {
+    if let Err(e) = render_templates(&site_data, &tera, &output_path) {
         error!("Failed to render templates: {}", e);
         process::exit(1);
     }
@@ -344,51 +343,39 @@ fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
     tags
 }
 
-fn render_templates(
-    site_data: &SiteData,
-    tera: &Tera,
-    output_dir: &Path,
-    debug: bool,
-) -> Result<(), String> {
+fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
     global_context.insert("site_data", &site_data);
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
-    if debug {
-        info!("Global Context: {:?}", &site_data.site)
-    }
-
+    debug!("Global Context: {:?}", &site_data.site);
     // Render index.html from list.html template
     let mut list_context = global_context.clone();
     list_context.insert("title", site_data.site.list_title);
     list_context.insert("content_list", &site_data.posts);
-    if debug {
-        info!(
-            "Index Context: {:?}",
-            &site_data
-                .posts
-                .iter()
-                .map(|p| format!("{},{}", p.title, p.slug))
-                .collect::<Vec<_>>()
-        )
-    }
+    debug!(
+        "Index Context: {:?}",
+        &site_data
+            .posts
+            .iter()
+            .map(|p| format!("{},{}", p.title, p.slug))
+            .collect::<Vec<_>>()
+    );
     generate_html("list.html", "index.html", &tera, &list_context, output_dir)?;
 
     // Render pages.html from list.html template
     let mut list_context = global_context.clone();
     list_context.insert("title", site_data.site.pages_title);
     list_context.insert("content_list", &site_data.pages);
-    if debug {
-        info!(
-            "Pages Context: {:?}",
-            &site_data
-                .pages
-                .iter()
-                .map(|p| format!("{},{}", p.title, p.slug))
-                .collect::<Vec<_>>()
-        )
-    }
+    debug!(
+        "Pages Context: {:?}",
+        &site_data
+            .pages
+            .iter()
+            .map(|p| format!("{},{}", p.title, p.slug))
+            .collect::<Vec<_>>()
+    );
     generate_html("list.html", "pages.html", &tera, &list_context, output_dir)?;
 
     // Render individual content-slug.html from content.html template
@@ -396,16 +383,14 @@ fn render_templates(
         let mut content_context = global_context.clone();
         content_context.insert("title", &content.title);
         content_context.insert("content", &content);
-        if debug {
-            info!(
-                "{} context: {:?}",
-                &content.slug,
-                format!(
-                    "title: {},date: {:?},tags: {:?}",
-                    &content.title, &content.date, &content.tags
-                )
+        debug!(
+            "{} context: {:?}",
+            &content.slug,
+            format!(
+                "title: {},date: {:?},tags: {:?}",
+                &content.title, &content.date, &content.tags
             )
-        }
+        );
         generate_html(
             "content.html",
             &format!("{}.html", &content.slug),
@@ -434,8 +419,6 @@ fn generate_html(
     info!("Generated {}", filename);
     Ok(())
 }
-
-
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Marmite<'a> {
