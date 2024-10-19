@@ -40,11 +40,9 @@ jobs:
       - name: Prepare site 🏗️
         run: |
           cp -R example marmitesite
-          rm marmitesite/content/*
-          rm -rf marmitesite/site
-          echo -n -e "---\ntitle: Markdown Makes Sites\ndate: 2024-10-16\ntags: marmite,ssg\n---\n" > marmitesite/content/markdown-makes-sites.md
+          echo -n -e "---\ntitle: Markdown Makes Sites\ndate: 2024-10-20\ntags: marmite,ssg\n---\n" > marmitesite/content/markdown-makes-sites.md
           cat README.md >> marmitesite/content/markdown-makes-sites.md
-          echo -n -e "name: Marmite Site\ntagline: Site generated with marmite\n" > marmitesite/marmite.yaml
+          echo -n -e "name: Marmite Site\ntagline: Site generated with marmite\nurl: https://rochacbruno.github.io/marmite/\n" > marmitesite/marmite.yaml
 
       - name: Build site 🏗️
         run: cd marmitesite && marmite . site && cd ..
