@@ -8,8 +8,8 @@
     <meta name="color-scheme" content="light dark" />
     {%- block head %}
     <title>{{ site.name }} | {{ title }}</title>
-    <link rel="stylesheet" type="text/css" href="/static/pico.min.css">
-    <link rel="stylesheet" type="text/css" href="/static/marmite.css">
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/pico.min.css')}}">
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/marmite.css')}}">
     {% endblock -%}
 </head>
 
@@ -20,7 +20,7 @@
                 <ul class="header-name">
                     <li>
                         <hgroup>
-                            <h2><a href="/" class="contrast">{{ site.name }}</a></h2>
+                            <h2><a href="{{url_for(path='/')}}" class="contrast">{{ site.name }}</a></h2>
                             <p>{{ site.tagline }}</p>
                         </hgroup>
                     </li>
@@ -33,7 +33,7 @@
                         {% if current_page == item.1 %}
                         <button class="secondary">{{item.0 | safe }}</button>
                         {% else %}
-                        <a href="{{ item.1 | safe }}" class="secondary" {%if item.1 is starting_with("http") %}target="_blank"{% endif %}>{{ item.0 | safe }}</a>
+                        <a href="{{ url_for(path=item.1) }}" class="secondary" {%if item.1 is starting_with("http") %}target="_blank"{% endif %}>{{ item.0 | safe }}</a>
                         {% endif %}
                     </li>
                     {% endfor %}
@@ -55,8 +55,8 @@
         </footer>
     </main>
     {%- block tail %}
-    <script src="/static/theme-switcher.js"></script>
-    <script src="/static/menu.js"></script>
+    <script src="{{url_for(path='/static/theme-switcher.js')}}"></script>
+    <script src="{{url_for(path='/static/menu.js')}}"></script>
     {% endblock -%}
 </body>
 

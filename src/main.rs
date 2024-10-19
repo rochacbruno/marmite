@@ -18,9 +18,10 @@ use tera::{Context, Tera};
 use unicode_normalization::UnicodeNormalization;
 use walkdir::WalkDir;
 
-mod cli; // Import the CLI module
+mod cli;
 mod robots;
-mod server; // Import the server module // Import the robots module
+mod server;
+mod tera_functions;
 
 fn main() -> io::Result<()> {
     let args = cli::Cli::parse();
@@ -104,13 +105,20 @@ fn main() -> io::Result<()> {
 
     // Initialize Tera templates
     let templates_path = input_folder.join(&site_data.site.templates_path);
-    let tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
+    let mut tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
         Ok(t) => t,
         Err(e) => {
             error!("Error loading templates: {}", e);
             process::exit(1);
         }
     };
+    tera.autoescape_on(vec![]); // the person writing a static site knows what is doing!
+    tera.register_function(
+        "url_for",
+        tera_functions::UrlFor {
+            base_url: site_data.site.url.to_string(),
+        },
+    );
 
     // Render templates
     if let Err(e) = render_templates(&site_data, &tera, &output_path) {
@@ -496,7 +504,7 @@ fn default_tagline() -> &'static str {
 }
 
 fn default_url() -> &'static str {
-    "https://example.com"
+    ""
 }
 
 fn default_footer() -> &'static str {

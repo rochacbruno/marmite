@@ -1,16 +1,16 @@
 # name: My Blog
 # tagline: This blog is awesome
-# url: https://www.myblog.com
+# url: https://www.myblog.com/blog/
 # footer: This is an example site generated with Marmite
 # pagination: 10
 
-list_title: Recent Posts
 # tags_title: Tags
 # archives_title: Archive
+# pages_title: pages
 
 # templates_path: templates
 # static_path: static
-# media_path: content/media
+# media_path: media
 
 # card_image: name of site card image, relative to media or absolute
 # logo_image: name of site logo image, relative to media or absolute
@@ -21,5 +21,6 @@ menu:
   - ["Github", "https://github.com/rochacbruno/marmite"]
 
 
+# extra data for template customization
 # data:
 #  foo: bar
