@@ -2,18 +2,18 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="/static/github-light.min.css" id="highlightjs-theme" />
+<link rel="stylesheet" href="{{url_for(path='/static/github-light.min.css')}}" id="highlightjs-theme" />
 {% endblock %}
 
 {% block main %}
 <article>
-    <div class="content-html">{{ content.html | safe }}</div>
+    <div class="content-html">{{ content.html }}</div>
     {% if content.date %}
     <footer>
         <span class="content-date"> {{ content.date | date(format="%v") }}</span>
         <ul class="content-tags">
         {% for tag in content.tags  %}
-            <li><a href="/tag/{{ tag }}.html">{{ tag }}</a></li>
+            <li><a href="{{url_for(path='/tag/')}}{{ tag | trim }}.html">{{ tag }}</a></li>
         {% endfor %}
         </ul>
     </footer>
@@ -23,7 +23,7 @@
 
 {% block tail %}
 {{ super() }}
-<script src="/static/highlight.min.js"></script>
+<script src="{{url_for(path='/static/highlight.min.js')}}"></script>
 <script>
     hljs.highlightAll();
 </script>
