@@ -7,7 +7,6 @@ use fs_extra::dir::{copy, CopyOptions};
 use log::{debug, error, info};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs;
 use std::io;
@@ -17,11 +16,13 @@ use std::sync::Arc;
 use tera::{Context, Tera};
 use unicode_normalization::UnicodeNormalization;
 use walkdir::WalkDir;
+use crate::config::Marmite;
 
 mod cli;
 mod robots;
 mod server;
 mod tera_functions;
+mod config;
 
 fn main() -> io::Result<()> {
     let args = cli::Cli::parse();
@@ -448,121 +449,4 @@ fn generate_html(
     fs::write(output_dir.join(filename), rendered).map_err(|e| e.to_string())?;
     info!("Generated {}", filename);
     Ok(())
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct Marmite<'a> {
-    #[serde(default = "default_name")]
-    name: &'a str,
-    #[serde(default = "default_tagline")]
-    tagline: &'a str,
-    #[serde(default = "default_url")]
-    url: &'a str,
-    #[serde(default = "default_footer")]
-    footer: &'a str,
-    #[serde(default = "default_pagination")]
-    pagination: u32,
-
-    #[serde(default = "default_list_title")]
-    list_title: &'a str,
-    #[serde(default = "default_pages_title")]
-    pages_title: &'a str,
-    #[serde(default = "default_tags_title")]
-    tags_title: &'a str,
-    #[serde(default = "default_archives_title")]
-    archives_title: &'a str,
-
-    #[serde(default = "default_content_path")]
-    content_path: &'a str,
-    #[serde(default = "default_site_path")]
-    site_path: &'a str,
-    #[serde(default = "default_templates_path")]
-    templates_path: &'a str,
-    #[serde(default = "default_static_path")]
-    static_path: &'a str,
-    #[serde(default = "default_media_path")]
-    media_path: &'a str,
-
-    #[serde(default = "default_card_image")]
-    card_image: &'a str,
-    #[serde(default = "default_logo_image")]
-    logo_image: &'a str,
-
-    #[serde(default = "default_menu")]
-    menu: Option<Vec<(String, String)>>,
-
-    #[serde(default = "default_data")]
-    data: Option<HashMap<String, String>>,
-}
-
-fn default_name() -> &'static str {
-    "Home"
-}
-
-fn default_tagline() -> &'static str {
-    "Site generated from markdown content"
-}
-
-fn default_url() -> &'static str {
-    ""
-}
-
-fn default_footer() -> &'static str {
-    r#"<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a> | Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a>"#
-}
-
-fn default_pagination() -> u32 {
-    10
-}
-
-fn default_list_title() -> &'static str {
-    "Posts"
-}
-
-fn default_tags_title() -> &'static str {
-    "Tags"
-}
-
-fn default_pages_title() -> &'static str {
-    "Pages"
-}
-
-fn default_archives_title() -> &'static str {
-    "Archive"
-}
-
-fn default_site_path() -> &'static str {
-    ""
-}
-
-fn default_content_path() -> &'static str {
-    "content"
-}
-
-fn default_templates_path() -> &'static str {
-    "templates"
-}
-
-fn default_static_path() -> &'static str {
-    "static"
-}
-
-fn default_media_path() -> &'static str {
-    "media"
-}
-
-fn default_card_image() -> &'static str {
-    ""
-}
-
-fn default_logo_image() -> &'static str {
-    ""
-}
-
-fn default_menu() -> Option<Vec<(String, String)>> {
-    vec![("Pages".to_string(), "pages.html".to_string())].into()
-}
-
-fn default_data() -> Option<HashMap<String, String>> {
-    None
 }
