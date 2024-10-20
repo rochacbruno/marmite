@@ -3,6 +3,8 @@ name: GH Pages Deploy
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -45,20 +47,23 @@ jobs:
           echo -n -e "name: Marmite SSG\n" >> marmitesite/marmite.yaml
           echo -n -e "tagline: Simply create a static blog from markdown files.\n" >> marmitesite/marmite.yaml
           echo -n -e "url: https://rochacbruno.github.io/marmite/\n" >> marmitesite/marmite.yaml
-          echo -n -e "menu: [['Docs', 'docs.html'], ['Pages', 'pages.html'], ['Github', 'https://github.com/rochacbruno/marmite/']]\n" >> marmitesite/marmite.yaml
+          echo -n -e "menu: [['Docs', 'docs.html'], ['Pages', 'pages.html'], ['Tags', 'tags.html'], ['Github', 'https://github.com/rochacbruno/marmite/']]\n" >> marmitesite/marmite.yaml
 
       - name: Build site 🏗️
         run: marmite marmitesite site --debug
 
       - name: Setup Pages
+        if: github.event_name == 'push'
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
+        if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'site'
 
       - name: Deploy to GitHub Pages
+        if: github.event_name == 'push'
         id: deployment
         uses: actions/deploy-pages@v4
 

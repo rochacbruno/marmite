@@ -1,3 +1,4 @@
+use crate::config::Marmite;
 use chrono::{NaiveDate, NaiveDateTime};
 use clap::Parser;
 use comrak::{markdown_to_html, ComrakOptions};
@@ -19,6 +20,7 @@ use unicode_normalization::UnicodeNormalization;
 use walkdir::WalkDir;
 
 mod cli;
+mod config;
 mod robots;
 mod server;
 mod tera_functions;
@@ -208,6 +210,26 @@ struct Content {
     html: String,
     tags: Vec<String>,
     date: Option<NaiveDateTime>,
+}
+
+fn group_by_tags(posts: Vec<Content>) -> Vec<(String, Vec<Content>)> {
+    // Create a HashMap to store the tags and the corresponding Content items.
+    let mut tag_map: HashMap<String, Vec<Content>> = HashMap::new();
+
+    // Iterate over the posts
+    for post in posts.into_iter() {
+        // For each tag in the current post
+        for tag in post.tags.clone() {
+            // Insert the tag into the map or push the post into the existing vector
+            tag_map
+                .entry(tag)
+                .or_insert_with(Vec::new)
+                .push(post.clone());
+        }
+    }
+
+    // Convert the HashMap into a Vec<(String, Vec<Content>)>
+    tag_map.into_iter().collect()
 }
 
 #[derive(Serialize)]
@@ -430,6 +452,56 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
         )?;
     }
 
+    // Render tagged_contents
+    let mut unique_tags: Vec<(String, usize)> = Vec::new();
+    let tags_dir = output_dir.join("tag");
+    if let Err(e) = fs::create_dir_all(&tags_dir) {
+        error!("Unable to create tag directory: {}", e);
+        process::exit(1);
+    }
+    for (tag, tagged_contents) in group_by_tags(site_data.posts.clone()) {
+        // aggregate unique tags to render the tags list later
+        unique_tags.push((tag.clone(), tagged_contents.len()));
+
+        let mut tag_context = global_context.clone();
+        tag_context.insert(
+            "title",
+            &site_data.site.tags_content_title.replace("$tag", &tag),
+        );
+        tag_context.insert("content_list", &tagged_contents);
+        let tag_slug = slugify(&tag);
+        tag_context.insert("current_page", &format!("tag/{}.html", &tag_slug));
+        debug!(
+            "Tag {} Context: {:?}",
+            &tag,
+            &site_data
+                .pages
+                .iter()
+                .map(|p| format!("{},{}", p.title, p.slug))
+                .collect::<Vec<_>>()
+        );
+        generate_html(
+            "list.html",
+            &format!("{}.html", &tag_slug),
+            &tera,
+            &tag_context,
+            &tags_dir,
+        )?;
+    }
+    // Render Main tags.html list page from group.html template
+    let mut tag_list_context = global_context.clone();
+    tag_list_context.insert("title", &site_data.site.tags_title);
+    unique_tags.sort_by(|a, b| a.0.cmp(&b.0));
+    tag_list_context.insert("group_content", &unique_tags);
+    tag_list_context.insert("current_page", "tags.html");
+    generate_html(
+        "group.html",
+        "tags.html",
+        &tera,
+        &tag_list_context,
+        &output_dir,
+    )?;
+
     Ok(())
 }
 
@@ -444,125 +516,8 @@ fn generate_html(
         error!("Error rendering template `{}`: {}", template, e);
         e.to_string()
     })?;
-
-    fs::write(output_dir.join(filename), rendered).map_err(|e| e.to_string())?;
-    info!("Generated {}", filename);
+    let output_file = output_dir.join(filename);
+    fs::write(&output_file, rendered).map_err(|e| e.to_string())?;
+    info!("Generated {}", &output_file.display());
     Ok(())
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct Marmite<'a> {
-    #[serde(default = "default_name")]
-    name: &'a str,
-    #[serde(default = "default_tagline")]
-    tagline: &'a str,
-    #[serde(default = "default_url")]
-    url: &'a str,
-    #[serde(default = "default_footer")]
-    footer: &'a str,
-    #[serde(default = "default_pagination")]
-    pagination: u32,
-
-    #[serde(default = "default_list_title")]
-    list_title: &'a str,
-    #[serde(default = "default_pages_title")]
-    pages_title: &'a str,
-    #[serde(default = "default_tags_title")]
-    tags_title: &'a str,
-    #[serde(default = "default_archives_title")]
-    archives_title: &'a str,
-
-    #[serde(default = "default_content_path")]
-    content_path: &'a str,
-    #[serde(default = "default_site_path")]
-    site_path: &'a str,
-    #[serde(default = "default_templates_path")]
-    templates_path: &'a str,
-    #[serde(default = "default_static_path")]
-    static_path: &'a str,
-    #[serde(default = "default_media_path")]
-    media_path: &'a str,
-
-    #[serde(default = "default_card_image")]
-    card_image: &'a str,
-    #[serde(default = "default_logo_image")]
-    logo_image: &'a str,
-
-    #[serde(default = "default_menu")]
-    menu: Option<Vec<(String, String)>>,
-
-    #[serde(default = "default_data")]
-    data: Option<HashMap<String, String>>,
-}
-
-fn default_name() -> &'static str {
-    "Home"
-}
-
-fn default_tagline() -> &'static str {
-    "Site generated from markdown content"
-}
-
-fn default_url() -> &'static str {
-    ""
-}
-
-fn default_footer() -> &'static str {
-    r#"<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a> | Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a>"#
-}
-
-fn default_pagination() -> u32 {
-    10
-}
-
-fn default_list_title() -> &'static str {
-    "Posts"
-}
-
-fn default_tags_title() -> &'static str {
-    "Tags"
-}
-
-fn default_pages_title() -> &'static str {
-    "Pages"
-}
-
-fn default_archives_title() -> &'static str {
-    "Archive"
-}
-
-fn default_site_path() -> &'static str {
-    ""
-}
-
-fn default_content_path() -> &'static str {
-    "content"
-}
-
-fn default_templates_path() -> &'static str {
-    "templates"
-}
-
-fn default_static_path() -> &'static str {
-    "static"
-}
-
-fn default_media_path() -> &'static str {
-    "media"
-}
-
-fn default_card_image() -> &'static str {
-    ""
-}
-
-fn default_logo_image() -> &'static str {
-    ""
-}
-
-fn default_menu() -> Option<Vec<(String, String)>> {
-    vec![("Pages".to_string(), "pages.html".to_string())].into()
-}
-
-fn default_data() -> Option<HashMap<String, String>> {
-    None
 }
