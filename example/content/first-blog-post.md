@@ -2,7 +2,7 @@
 date: 2024-01-01 12:00:01
 slug: blog-post
 title: Markdown Powered Blog Post (with code blocks)
-tags: markdown, python, rust, outra tag, batata
+tags: markdown, python, rust, another tag
 ---
 
 # This is the post content
