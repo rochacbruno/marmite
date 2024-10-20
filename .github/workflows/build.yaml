@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - '*'
-  pull_request:
-    branches: [main]
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -15,8 +13,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        target: [x86_64]
+        # os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
 
     steps:
     - name: Checkout repository
@@ -28,34 +26,32 @@ jobs:
         toolchain: stable
         override: true
 
-    - name: Add target for cross-compilation
-      run: |
-          rustup target add x86_64-unknown-linux-gnu
-          rustup target add x86_64-apple-darwin
-          rustup target add x86_64-pc-windows-gnu
-
-    - name: Install cross (for building cross-platform binaries)
-      run: cargo install cross
-
     - name: Build release
-      run: cross build --target ${{ matrix.target }} --release
-
-    - name: Archive the build output
-      if: success()
       run: |
-        mkdir -p build
-        if [ ${{ matrix.os }} == 'windows-latest' ]; then
-          cp target/${{ matrix.target }}/release/*.exe ./build/
-        else
-          cp target/${{ matrix.target }}/release/* ./build/
-        fi
+          mkdir -p build
+          if [ ${{ matrix.os }} == 'windows-latest' ]; then
+              rustup target add x86_64-pc-windows-gnu
+              cargo install cross
+              cross build --target x86_64-pc-windows-gnu --release;
+              cp target/x86_64-pc-windows-gnu/release/marmite.exe ./build/
+          elif [ ${{ matrix.os }} == 'ubuntu-latest' ]; then
+              rustup target add x86_64-unknown-linux-gnu
+              cargo install cross
+              cross build --target x86_64-unknown-linux-gnu --release;
+              cp target/x86_64-unknown-linux-gnu/release/marmite ./build/
+          elif [ ${{ matrix.os }} == 'macos-latest' ]; then
+              rustup target add x86_64-apple-darwin
+              cargo install cross
+              cross build --target x86_64-apple-darwin --release;
+              cp target/x86_64-apple-darwin/release/marmite ./build/
+          fi
       shell: bash
 
     - name: Upload binary as artifact
       uses: actions/upload-artifact@v3
       with:
         name: ${{ matrix.os }}-binary
-        path: ./build/
+        path: ./build/marmite*
 
   release:
     needs: build
@@ -82,7 +78,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./build/linux-latest-binary
+        asset_path: ubuntu-latest-binary
         asset_name: linux_binary
         asset_content_type: application/octet-stream
 
@@ -92,16 +88,16 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./build/macos-latest-binary
+        asset_path: macos-latest-binary
         asset_name: macos_binary
         asset_content_type: application/octet-stream
 
-    - name: Upload Windows binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./build/windows-latest-binary
-        asset_name: windows_binary
-        asset_content_type: application/octet-stream
+    # - name: Upload Windows binary
+    #   uses: actions/upload-release-asset@v1
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #   with:
+    #     upload_url: ${{ steps.create_release.outputs.upload_url }}
+    #     asset_path: windows-latest-binary
+    #     asset_name: windows_binary
+    #     asset_content_type: application/octet-stream
