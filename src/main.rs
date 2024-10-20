@@ -517,7 +517,7 @@ fn render_404_page(content_dir: &Path) -> String {
             let markdown_content = fs::read_to_string(&path_404_md)
                 .expect("Failed to read the 404.md file");
 
-            let options = ComrakOptions::default(); // `mut` removido
+            let options = ComrakOptions::default();
             markdown_to_html(&markdown_content, &options)
         },
         false => String::from("<h1>404 - Page Not Found</h1>"),
