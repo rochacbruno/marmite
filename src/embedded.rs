@@ -28,17 +28,30 @@ lazy_static! {
     };
 }
 
+lazy_static! {
+    pub static ref EMBEDDED_STATIC: Vec<(String, Vec<u8>)> = {
+        let mut files: Vec<(String, Vec<u8>)> = Vec::new();
+
+        for name in Static::iter() {
+            let static_file = Static::get(name.as_ref()).unwrap();
+            let file_data = static_file.data;
+            files.push((name.clone().to_string(), file_data.clone().to_vec()));
+        }
+
+        files
+    };
+}
+
 pub fn generate_static(static_folder: &Path) {
     if let Err(e) = fs::create_dir_all(&static_folder) {
         error!("Unable to create static directory: {}", e);
         return;
     }
-    for name in Static::iter() {
-        let static_file = Static::get(name.as_ref()).unwrap();
-        let file_data = static_file.data;
-        let file_path = static_folder.join(name.as_ref());
 
-        match write_bytes_to_file(&static_folder.join(file_path.as_path()), &file_data) {
+    for (name, file_data) in EMBEDDED_STATIC.iter() {
+        let file_path = static_folder.join(name); // static/foo.ext
+
+        match write_bytes_to_file(file_path.as_path(), &file_data) {
             Ok(_) => info!("Generated {}", &file_path.display()),
             Err(e) => eprintln!("Error writing file: {}", e),
         }
