@@ -25,6 +25,8 @@ unicode-normalization = "0.1"
 log = "0.4"
 env_logger = "0.11.5"
 url = "2.5.2"
+rust-embed = { version = "8.5.0", features = ["interpolate-folder-path"]}
+lazy_static = "1.5.0"
 
 [profile.dev]
 incremental = false

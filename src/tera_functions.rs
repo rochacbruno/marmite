@@ -1,6 +1,5 @@
-use crate::content::slugify;
 use std::collections::HashMap;
-use tera::{from_value, to_value, Error, Function, Result as TeraResult, Value};
+use tera::{to_value, Function, Result as TeraResult, Value};
 use url::Url;
 
 #[derive(Default)]
@@ -63,16 +62,18 @@ impl Function for UrlFor {
     }
 }
 
-pub fn slugify_filter(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    // Convert the Tera Value to a String
-    let text = match from_value::<String>(value.clone()) {
-        Ok(s) => s,
-        Err(_) => return Err(Error::msg("Filter expects a string")),
-    };
-
-    // Call your slugify function
-    let slug = slugify(&text);
-
-    // Convert the result back to a Tera Value
-    to_value(slug).map_err(|_| Error::msg("Failed to convert to Tera value"))
-}
+// NOTE: Tera already comes with a built-in slugify function
+// keeping this commented out here as reference for future filters
+// pub fn _slugify_filter(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
+//     // Convert the Tera Value to a String
+//     let text = match from_value::<String>(value.clone()) {
+//         Ok(s) => s,
+//         Err(_) => return Err(Error::msg("Filter expects a string")),
+//     };
+//
+//     // Call your slugify function
+//     let slug = slugify(&text);
+//
+//     // Convert the result back to a Tera Value
+//     to_value(slug).map_err(|_| Error::msg("Failed to convert to Tera value"))
+// }
