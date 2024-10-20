@@ -1,9 +1,6 @@
-**WARNING** This project is in its very initial development stage, not all
-features are implemented yet, usage API still subjected to change until `1.0.0`
+# Marmite
 
 ![Logo](https://github.com/rochacbruno/marmite/raw/main/assets/_resized/logo_160x120.png)
-
-# Marmite
 
 [**Mar**kdown **M**akes s**ite**s] is a **very!** simple static site generator.
 
@@ -11,11 +8,13 @@ features are implemented yet, usage API still subjected to change until `1.0.0`
 
 It does **"one"** simple thing only:
 
-- Reads all `.md` files on the directory.
+- Reads all `.md` files on the `input` directory.
 - Using `CommonMark` parse it to `HTML` content.
-- Extract metadata from `frontmatter` or `filename`.
-- Renders each content to `html` (templates are customizable).
+- Extract optional metadata from `frontmatter` or `filename`.
+- Generated `html` file for each page (templates are customizable).
 - Outputs the rendered static site to the `output` folder.
+
+It also handles generating or copying `static/` `media/` to the `output` dir.
 
 [![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
 [![Crates.io Version](https://img.shields.io/crates/v/marmite)](https://crates.io/crates/marmite)
@@ -30,65 +29,15 @@ Install with cargo
 cargo install marmite
 ```
 
-<!--
-Or download the pre-built binary from the [releases](https://github.com/rochacbruno/marmite/releases) page. 
--->
+Or download the pre-built binary from the [releases](https://github.com/rochacbruno/marmite/releases)
 
-## Usage now
 
-> For now templates are not embedded yet, so requires manual step to put it on the input_folder, see [#20](https://github.com/rochacbruno/marmite/issues/20)
+## Usage
 
-Clone the repo
-```
-git clone https://github.com/rochacbruno/marmite/
-```
-Create your input_folder
-```
-mkdir my_content
-```
-Copy the templates and static to the folder
-```
-cp -r marmite/example/{templates,static} my_content
-```
-Add some markdown
-
-`my_content/2024-10-20-first-post.md`
-```markdown
----
-tags: marmite,example
----
-# Hello World
-
-Just write markdown here!
-```
-`my_content/about.md`
-```markdown
-# About me
-
-I am a person that likes to write!
-```
-
-Build the site
+~It's simple, really!
 
 ```console
-$ marmite my_content my_site --serve
-Generated index.html
-Generated pages.html
-Generated first-post.html
-Generated about.html
-Copied 'my_content/static' to 'my_site/'
-Starting built-in HTTP server...
-Server started at http://localhost:8000/  - Type ^C to stop.
-```
-
-Access [http://localhost:8000/](http://localhost:8000/)
-
-## Usage soon
-
-~It's~ [(Will be)](https://github.com/rochacbruno/marmite/issues/20) simple, really!
-
-```console
-$ marmite path_to_markdown_files path_to_generated_site
+$ marmite folder_with_markdown_files path_to_generated_site
 Site generated at path_to_generated_site/
 ```
 
@@ -98,7 +47,7 @@ CLI
 ❯ marmite --help
 MARkdown Makes sITEs is a very simple static site generator, mainly for simple blogs.
 
-Usage: marmite_ [OPTIONS] <INPUT_FOLDER> <OUTPUT_FOLDER>
+Usage: marmite [OPTIONS] <INPUT_FOLDER> <OUTPUT_FOLDER>
 
 Arguments:
   <INPUT_FOLDER>   Input folder containing markdown files
@@ -106,12 +55,11 @@ Arguments:
 
 Options:
       --serve            Serve the site with a built-in HTTP server
-      --config <CONFIG>  Path to custom configuration file (defaults to marmite.yaml)
-                         [default: marmite.yaml]
+      --bind <BIND>      [default: localhost:8000]
+      --config <CONFIG>  Path to custom configuration file (defaults to marmite.yaml) [default: marmite.yaml]
       --debug            Print debug messages
   -h, --help             Print help
   -V, --version          Print version
-
 ```
 
 ### Build a site from markdown content
@@ -119,12 +67,13 @@ Options:
 Put some markdown in a folder.
 
 ```console
-$ mkdir myblog
-$ echo "# page ..." > myblog/my-page.md
-$ echo "# post ..." > myblog/2024-01-31-my-first-post.md
+myblog
+|__ about.md
+|__ 2024-01-31-my-first-post.md
+|__ another-post.md
 ```
 
-Or use your favorite markdown editor.
+Or use your favorite markdown editor to edit.
 
 Then, build:
 
@@ -141,6 +90,7 @@ building 404.html
 
 building my-page.html
 building my-first-post.html
+building another-post.html
 
 Site generated at: site/
 ```
@@ -215,6 +165,8 @@ myblog
 
 ### Optional configuration
 
+the `marmite.yaml` is optional, you simply omit and use defaults.
+
 > All keys are optional, but you probably want to set at least `name`,`tagline`, `url`
 
 `marmite.yaml`
@@ -232,10 +184,9 @@ url: https://www.myblog.com
 # templates_path: templates
 # static_path: static
 # media_path: media
-# card_image: name of site card image, relative to media or absolute
-# logo_image: name of site logo image, relative to media or absolute
 
-# menu: Optional menu items
+# menu:
+#  - ["Title", "link.html"]
 # data: Custom key:pair values to be exposed to template context.
 ```
 
@@ -266,9 +217,11 @@ Content Text ...
 ```
 
 - **date**: If informed, the content is considered a `Post` and shows in index list.
+  - Date formats supported are `%Y-%m-%d` and `%Y-%m-%d %H:%M`
+  - Date can be defined as `date` on frontmatter or in the filename `%Y-%m-%d-name.md`
 - **title**: If not defined, the first line of the markdown content is used.
-- **slug**: If not defined, the filename is used to build the url.
-- **tags**: If not defined en empty list of tags will be added.
+- **slug**: If not defined, the title or filename is used to build the url.
+- **tags**: Optional list or comma separated string of tags.
 
 All fields are optional, if nothing is declared then the content is considered an unlisted `Page`.
 
@@ -304,6 +257,8 @@ de foo():
 ```
 
 Everything CommonMark and Github flavoured markdown supports.
+
+</strong>Raw HTML also allowed</strong>
 ````
 
 ## editors and deployment
