@@ -7,6 +7,7 @@ use std::sync::Arc;
 mod cli;
 mod config;
 mod content;
+mod embedded;
 mod markdown;
 mod robots;
 mod server;

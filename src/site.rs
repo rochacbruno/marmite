@@ -1,8 +1,9 @@
 use crate::config::Marmite;
 use crate::content::{check_for_duplicate_slugs, group_by_tags, slugify, Content};
+use crate::embedded::{generate_static, EMBEDDED_TERA};
 use crate::markdown::process_file;
 use crate::robots::handle_robots;
-use crate::tera_functions::{slugify_filter, UrlFor};
+use crate::tera_functions::UrlFor;
 use fs_extra::dir::{copy, CopyOptions};
 use log::{debug, error, info};
 use serde::Serialize;
@@ -249,7 +250,7 @@ pub fn generate_site(
             base_url: site_data.site.url.to_string(),
         },
     );
-    tera.register_filter("slugify", slugify_filter);
+    tera.extend(&EMBEDDED_TERA).unwrap();
 
     // Render templates
     if let Err(e) = render_templates(&site_data, &tera, &output_path) {
@@ -273,6 +274,8 @@ pub fn generate_site(
             &static_source.display(),
             &output_folder.display()
         );
+    } else {
+        generate_static(&output_folder.join(site_data.site.static_path));
     }
 
     // Copy content/media folder if present
