@@ -1,5 +1,6 @@
+use crate::content::slugify;
 use std::collections::HashMap;
-use tera::{to_value, Function, Result as TeraResult, Value};
+use tera::{from_value, to_value, Error, Function, Result as TeraResult, Value};
 use url::Url;
 
 #[derive(Default)]
@@ -60,4 +61,18 @@ impl Function for UrlFor {
         // Return the URL as a Tera Value
         to_value(url).map_err(tera::Error::from)
     }
+}
+
+pub fn slugify_filter(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
+    // Convert the Tera Value to a String
+    let text = match from_value::<String>(value.clone()) {
+        Ok(s) => s,
+        Err(_) => return Err(Error::msg("Filter expects a string")),
+    };
+
+    // Call your slugify function
+    let slug = slugify(&text);
+
+    // Convert the result back to a Tera Value
+    to_value(slug).map_err(|_| Error::msg("Failed to convert to Tera value"))
 }
