@@ -115,27 +115,27 @@ the embedded webserver.
 <summary> CLICK HERE TO SEE SOME SCREENSHOTS </summary>
 
 The following screenshots are using the default embedded
-templates (from [/example](/example) folder)
+templates (from [/example](https://github.com/rochacbruno/marmite/blob/main/example) folder)
 
 **Light Mode**
 
 Index:
 
-![Index Light](/assets/screenshots/index-light.png)
+![Index Light](https://github.com/rochacbruno/marmite/raw/main/assets/screenshots/index-light.png)
 
 Content:
 
-![Post Light](/assets/screenshots/post-light.png)
+![Post Light](https://github.com/rochacbruno/marmite/raw/main/assets/screenshots/post-light.png)
 
 **Dark mode**
 
 Index:
 
-![Index Dark](/assets/screenshots/index-dark.png)
+![Index Dark](https://github.com/rochacbruno/marmite/raw/main/assets/screenshots/index-dark.png)
 
 Content:
 
-![Post Dark](/assets/screenshots/post-dark.png)
+![Post Dark](https://github.com/rochacbruno/marmite/raw/main/assets/screenshots/post-dark.png)
 
 </details>
 
