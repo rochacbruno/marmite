@@ -52,7 +52,24 @@ fn handle_request(
             }
         }
     } else {
-        error!("File not found: {}", file_path.display());
-        Ok(Response::from_string("404 Not Found").with_status_code(404))
+        info!("404 Not Found: {}", request.url());
+        // Try to serve the 404.html file
+        let error_page_path = output_folder.join("404.html");
+        if error_page_path.is_file() {
+            match File::open(&error_page_path) {
+                Ok(mut file) => {
+                    let mut buffer = Vec::new();
+                    std::io::copy(&mut file, &mut buffer).map_err(|e| e.to_string())?;
+                    Ok(Response::from_data(buffer).with_status_code(404))
+                }
+                Err(err) => {
+                    error!("Failed to read 404.html: {}", err);
+                    Ok(Response::from_string("404 Not Found").with_status_code(404))
+                }
+            }
+        } else {
+            // If 404.html does not exist, return the default message
+            Ok(Response::from_string("404 Not Found").with_status_code(404))
+        }
     }
 }

@@ -54,12 +54,16 @@ fn main() -> io::Result<()> {
             process::exit(1);
         }
     };
+
     let mut site_data = SiteData::new(&site);
 
     // Define the content directory
     let content_dir = Some(input_folder.join(&site_data.site.content_path))
         .filter(|path| path.is_dir()) // Take if exists
         .unwrap_or_else(|| input_folder.clone()); // Fallback to input_folder if not
+
+    // Calling the 404
+    let _error_page = render_404_page(&content_dir);
 
     // Walk through the content directory
     WalkDir::new(&content_dir)
@@ -504,6 +508,23 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
 
     Ok(())
 }
+
+fn render_404_page(content_dir: &Path) -> String {
+    let path_404_md = content_dir.join("404.md");
+
+    match path_404_md.exists() {
+        true => {
+            let markdown_content = fs::read_to_string(&path_404_md)
+                .expect("Failed to read the 404.md file");
+
+            let options = ComrakOptions::default(); // `mut` removido
+            markdown_to_html(&markdown_content, &options)
+        },
+        false => String::from("<h1>404 - Page Not Found</h1>"),
+    }
+}
+
+
 
 fn generate_html(
     template: &str,
