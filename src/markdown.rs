@@ -1,11 +1,11 @@
 use crate::content::{get_date, get_slug, get_tags, get_title, Content};
-use crate::site::SiteData;
+use crate::site::Data;
 use comrak::{markdown_to_html, ComrakOptions};
 use frontmatter_gen::{extract, Frontmatter};
 use std::fs;
 use std::path::Path;
 
-pub fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String> {
+pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
     let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
     let (frontmatter, markdown) = parse_front_matter(&file_content)?;
 

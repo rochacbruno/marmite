@@ -34,12 +34,12 @@ impl Function for UrlFor {
         };
 
         // Parse the base_url to extract the path part if not empty
-        let base_path = if !base_url.is_empty() {
+        let base_path = if base_url.is_empty() {
+            String::new()
+        } else {
             Url::parse(&base_url)
                 .map(|parsed_url| parsed_url.path().trim_end_matches('/').to_string())
                 .unwrap_or_default()
-        } else {
-            String::new()
         };
 
         // Check if the "abs" argument is provided and set to true

@@ -1,11 +1,11 @@
 use log::{error, info};
-use std::fs::File;
+use std::{fs::File, path::Path};
 use std::io::Cursor;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tiny_http::{Response, Server};
 
-pub fn start_server(bind_address: &str, output_folder: Arc<PathBuf>) {
+pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>) {
     let server = Server::http(bind_address).unwrap();
 
     info!(
@@ -30,7 +30,7 @@ pub fn start_server(bind_address: &str, output_folder: Arc<PathBuf>) {
 
 fn handle_request(
     request: &tiny_http::Request,
-    output_folder: &PathBuf,
+    output_folder: &Path,
 ) -> Result<Response<Cursor<Vec<u8>>>, String> {
     let request_path = match request.url() {
         "/" => "index.html",

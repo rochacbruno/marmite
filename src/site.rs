@@ -2,7 +2,7 @@ use crate::config::Marmite;
 use crate::content::{check_for_duplicate_slugs, group_by_tags, slugify, Content};
 use crate::embedded::{generate_static, EMBEDDED_TERA};
 use crate::markdown::process_file;
-use crate::robots::handle_robots;
+use crate::robots;
 use crate::tera_functions::UrlFor;
 use fs_extra::dir::{copy, CopyOptions};
 use log::{debug, error, info};
@@ -13,13 +13,13 @@ use tera::{Context, Tera};
 use walkdir::WalkDir;
 
 #[derive(Serialize)]
-pub struct SiteData<'a> {
+pub struct Data<'a> {
     pub site: Marmite<'a>,
     pub posts: Vec<Content>,
     pub pages: Vec<Content>,
 }
 
-impl<'a> SiteData<'a> {
+impl<'a> Data<'a> {
     pub fn new(config_content: &'a str) -> Self {
         let site: Marmite = match serde_yaml::from_str(config_content) {
             Ok(site) => site,
@@ -29,7 +29,7 @@ impl<'a> SiteData<'a> {
             }
         };
 
-        SiteData {
+        Data {
             site,
             posts: Vec::new(),
             pages: Vec::new(),
@@ -37,7 +37,7 @@ impl<'a> SiteData<'a> {
     }
 }
 
-fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Result<(), String> {
+fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
     global_context.insert("site_data", &site_data);
@@ -58,7 +58,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
             .map(|p| format!("{},{}", p.title, p.slug))
             .collect::<Vec<_>>()
     );
-    generate_html("list.html", "index.html", tera, &list_context, output_dir)?;
+    render_html("list.html", "index.html", tera, &list_context, output_dir)?;
 
     // Render pages.html from list.html template
     let mut list_context = global_context.clone();
@@ -73,7 +73,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
             .map(|p| format!("{},{}", p.title, p.slug))
             .collect::<Vec<_>>()
     );
-    generate_html("list.html", "pages.html", tera, &list_context, output_dir)?;
+    render_html("list.html", "pages.html", tera, &list_context, output_dir)?;
 
     // Render individual content-slug.html from content.html template
     for content in site_data.posts.iter().chain(&site_data.pages) {
@@ -89,7 +89,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
                 &content.title, &content.date, &content.tags
             )
         );
-        generate_html(
+        render_html(
             "content.html",
             &format!("{}.html", &content.slug),
             tera,
@@ -126,7 +126,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
                 .map(|p| format!("{},{}", p.title, p.slug))
                 .collect::<Vec<_>>()
         );
-        generate_html(
+        render_html(
             "list.html",
             &format!("{}.html", &tag_slug),
             tera,
@@ -140,7 +140,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
     unique_tags.sort_by(|a, b| a.0.cmp(&b.0));
     tag_list_context.insert("group_content", &unique_tags);
     tag_list_context.insert("current_page", "tags.html");
-    generate_html(
+    render_html(
         "group.html",
         "tags.html",
         tera,
@@ -151,7 +151,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
     Ok(())
 }
 
-fn generate_html(
+fn render_html(
     template: &str,
     filename: &str,
     tera: &Tera,
@@ -168,9 +168,9 @@ fn generate_html(
     Ok(())
 }
 
-pub fn generate_site(
-    config_path: std::path::PathBuf,
-    input_folder: std::path::PathBuf,
+pub fn generate(
+    config_path: &std::path::PathBuf,
+    input_folder: &std::path::PathBuf,
     output_folder: &Arc<std::path::PathBuf>,
 ) {
     let config_str = fs::read_to_string(&config_path).unwrap_or_else(|e| {
@@ -181,7 +181,7 @@ pub fn generate_site(
         );
         String::new()
     });
-    let mut site_data = SiteData::new(&config_str);
+    let mut site_data = Data::new(&config_str);
 
     // Define the content directory
     let content_dir = Some(input_folder.join(site_data.site.content_path))
@@ -231,7 +231,7 @@ pub fn generate_site(
         process::exit(1);
     }
 
-    handle_robots(&content_dir, &output_path);
+    robots::handle(&content_dir, &output_path);
 
     // Initialize Tera templates
     let templates_path = input_folder.join(site_data.site.templates_path);
