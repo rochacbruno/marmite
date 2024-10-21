@@ -32,6 +32,6 @@ fn main() {
     // Serve the site if the flag was provided
     if serve {
         info!("Starting built-in HTTP server...");
-        server::start_server(&bind_address, output_folder.clone().into());
+        server::start_server(bind_address, output_folder.clone());
     }
 }

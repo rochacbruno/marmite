@@ -48,7 +48,7 @@ fn handle_request(
             }
             Err(err) => {
                 error!("Failed to read file {}: {}", file_path.display(), err);
-                Err(format!("Error reading file: {}", err))
+                Err(format!("Error reading file: {err}"))
             }
         }
     } else {

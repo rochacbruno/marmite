@@ -23,12 +23,12 @@ impl Function for UrlFor {
 
         // Ensure the path starts with "/" by adding it if necessary
         if !path.starts_with('/') {
-            path = format!("/{}", path);
+            path = format!("/{path}");
         }
 
         // Trim trailing slashes from base_url if it's not empty
         let base_url = if self.base_url.is_empty() {
-            "".to_string()
+            String::new()
         } else {
             self.base_url.trim_end_matches('/').to_string()
         };
@@ -39,7 +39,7 @@ impl Function for UrlFor {
                 .map(|parsed_url| parsed_url.path().trim_end_matches('/').to_string())
                 .unwrap_or_default()
         } else {
-            "".to_string()
+            String::new()
         };
 
         // Check if the "abs" argument is provided and set to true
@@ -51,7 +51,7 @@ impl Function for UrlFor {
             format!("{}/{}", base_url, path.trim_start_matches('/'))
         } else if !base_path.is_empty() {
             // Relative URL with base path from base_url
-            format!("{}{}", base_path, path)
+            format!("{base_path}{path}")
         } else {
             // Just the path if no base_url or base_path
             path

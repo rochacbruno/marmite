@@ -21,7 +21,7 @@ pub struct SiteData<'a> {
 
 impl<'a> SiteData<'a> {
     pub fn new(config_content: &'a str) -> Self {
-        let site: Marmite = match serde_yaml::from_str(&config_content) {
+        let site: Marmite = match serde_yaml::from_str(config_content) {
             Ok(site) => site,
             Err(e) => {
                 error!("Failed to parse config YAML: {}", e);
@@ -58,7 +58,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
             .map(|p| format!("{},{}", p.title, p.slug))
             .collect::<Vec<_>>()
     );
-    generate_html("list.html", "index.html", &tera, &list_context, output_dir)?;
+    generate_html("list.html", "index.html", tera, &list_context, output_dir)?;
 
     // Render pages.html from list.html template
     let mut list_context = global_context.clone();
@@ -73,7 +73,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
             .map(|p| format!("{},{}", p.title, p.slug))
             .collect::<Vec<_>>()
     );
-    generate_html("list.html", "pages.html", &tera, &list_context, output_dir)?;
+    generate_html("list.html", "pages.html", tera, &list_context, output_dir)?;
 
     // Render individual content-slug.html from content.html template
     for content in site_data.posts.iter().chain(&site_data.pages) {
@@ -92,7 +92,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
         generate_html(
             "content.html",
             &format!("{}.html", &content.slug),
-            &tera,
+            tera,
             &content_context,
             output_dir,
         )?;
@@ -129,7 +129,7 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
         generate_html(
             "list.html",
             &format!("{}.html", &tag_slug),
-            &tera,
+            tera,
             &tag_context,
             &tags_dir,
         )?;
@@ -143,9 +143,9 @@ fn render_templates(site_data: &SiteData, tera: &Tera, output_dir: &Path) -> Res
     generate_html(
         "group.html",
         "tags.html",
-        &tera,
+        tera,
         &tag_list_context,
-        &output_dir,
+        output_dir,
     )?;
 
     Ok(())
@@ -184,7 +184,7 @@ pub fn generate_site(
     let mut site_data = SiteData::new(&config_str);
 
     // Define the content directory
-    let content_dir = Some(input_folder.join(&site_data.site.content_path))
+    let content_dir = Some(input_folder.join(site_data.site.content_path))
         .filter(|path| path.is_dir()) // Take if exists
         .unwrap_or_else(|| input_folder.clone());
     // Fallback to input_folder if not
@@ -225,7 +225,7 @@ pub fn generate_site(
     site_data.pages.sort_by(|a, b| b.title.cmp(&a.title));
 
     // Create the output directory
-    let output_path = output_folder.join(&site_data.site.site_path);
+    let output_path = output_folder.join(site_data.site.site_path);
     if let Err(e) = fs::create_dir_all(&output_path) {
         error!("Unable to create output directory: {}", e);
         process::exit(1);
@@ -234,7 +234,7 @@ pub fn generate_site(
     handle_robots(&content_dir, &output_path);
 
     // Initialize Tera templates
-    let templates_path = input_folder.join(&site_data.site.templates_path);
+    let templates_path = input_folder.join(site_data.site.templates_path);
     let mut tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
         Ok(t) => t,
         Err(e) => {
@@ -307,7 +307,7 @@ pub fn generate_site(
 
     for favicon_src in &favicon_src_paths {
         if favicon_src.exists() {
-            match fs::copy(&favicon_src, &favicon_dst) {
+            match fs::copy(favicon_src, &favicon_dst) {
                 Ok(_) => {
                     info!(
                         "Copied favicon.ico from '{}' to output folder",

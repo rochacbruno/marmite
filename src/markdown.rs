@@ -15,16 +15,10 @@ pub fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String>
 
     let title = get_title(&frontmatter, markdown);
     let tags = get_tags(&frontmatter);
-    let slug = get_slug(&frontmatter, &path);
-    let date = get_date(&frontmatter, &path);
+    let slug = get_slug(&frontmatter, path);
+    let date = get_date(&frontmatter, path);
 
-    let content = Content {
-        title,
-        slug,
-        tags,
-        html,
-        date,
-    };
+    let content = Content { title, slug, html, tags, date };
 
     if date.is_some() {
         site_data.posts.push(content);
@@ -36,7 +30,7 @@ pub fn process_file(path: &Path, site_data: &mut SiteData) -> Result<(), String>
 
 fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
     if content.starts_with("---") {
-        extract(&content).map_err(|e| e.to_string())
+        extract(content).map_err(|e| e.to_string())
     } else {
         Ok((Frontmatter::new(), content))
     }
