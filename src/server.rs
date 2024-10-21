@@ -14,7 +14,7 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>) {
     );
 
     for request in server.incoming_requests() {
-        let response = match handle_request(&request, &output_folder) {
+        let response = match handle_request(&request, output_folder) {
             Ok(response) => response,
             Err(err) => {
                 error!("Error handling request: {}", err);

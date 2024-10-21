@@ -17,11 +17,9 @@ pub fn handle(content_dir: &Path, output_path: &Path) {
         } else {
             info!("Copied robots.txt to output folder");
         }
+    } else if let Err(e) = fs::write(&robots_dst, DEFAULT_ROBOTS) {
+        error!("Failed to create default robots.txt: {}", e);
     } else {
-        if let Err(e) = fs::write(&robots_dst, DEFAULT_ROBOTS) {
-            error!("Failed to create default robots.txt: {}", e);
-        } else {
-            info!("Generated default robots.txt in output folder");
-        }
+        info!("Generated default robots.txt in output folder");
     }
 }

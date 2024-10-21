@@ -170,10 +170,10 @@ fn render_html(
 
 pub fn generate(
     config_path: &std::path::PathBuf,
-    input_folder: &std::path::PathBuf,
+    input_folder: &std::path::Path,
     output_folder: &Arc<std::path::PathBuf>,
 ) {
-    let config_str = fs::read_to_string(&config_path).unwrap_or_else(|e| {
+    let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
         debug!(
             "Unable to read '{}', assuming defaults.: {}",
             &config_path.display(),
@@ -186,7 +186,7 @@ pub fn generate(
     // Define the content directory
     let content_dir = Some(input_folder.join(site_data.site.content_path))
         .filter(|path| path.is_dir()) // Take if exists
-        .unwrap_or_else(|| input_folder.clone());
+        .unwrap_or_else(|| input_folder.to_path_buf());
     // Fallback to input_folder if not
 
     // Walk through the content directory
