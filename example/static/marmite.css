@@ -5,6 +5,7 @@
   --pico-color-grey-50: #f1f1f1;
   --pico-color-grey-700: #474747;
   --pico-border-radius: 0.5rem;
+  --pico-typography-spacing-vertical: 1rem;
 }
 
 [data-theme="light"],
@@ -22,8 +23,16 @@
     --pico-tag: #2a2f3a;
 }
 
-* {
+a {
   text-decoration: none;
+}
+
+blockquote {
+  padding: 0;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  padding-top: 1rem;
+  padding-bottom: 0.01rem;
 }
 
 /* Menu Hamburguer */
