@@ -105,6 +105,7 @@ Arguments:
 
 Options:
       --serve            Serve the site with a built-in HTTP server
+      --watch            Watch for file changes and rebuild site
       --config <CONFIG>  Path to custom configuration file (defaults to marmite.yaml)
                          [default: marmite.yaml]
       --debug            Print debug messages

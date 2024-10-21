@@ -3,6 +3,7 @@ use clap::Parser;
 use comrak::{markdown_to_html, ComrakOptions};
 use frontmatter_gen::{extract, Frontmatter, Value};
 use fs_extra::dir::{copy, CopyOptions};
+use hotwatch::Hotwatch; // Import hotwatch
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -11,21 +12,23 @@ use std::fs;
 use std::io;
 use std::path::Path;
 use std::process;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex}; // For sharing data across threads
+use std::thread;
 use tera::{Context, Tera};
 use unicode_normalization::UnicodeNormalization;
 use walkdir::WalkDir;
 
-mod cli; // Import the CLI module
+mod cli;
 mod robots;
-mod server; // Import the server module // Import the robots module
+mod server;
 
 fn main() -> io::Result<()> {
     let args = cli::Cli::parse();
 
-    let input_folder = args.input_folder;
+    let input_folder = Arc::new(args.input_folder);
     let output_folder = Arc::new(args.output_folder);
     let serve = args.serve;
+    let watch = args.watch; // Added watch flag
     let debug = args.debug;
     let config_path = input_folder.join(args.config);
     let bind_address: &str = args.bind.as_str();
@@ -35,7 +38,6 @@ fn main() -> io::Result<()> {
         if debug {
             eprintln!("Unable to read '{}': {}", &config_path.display(), e);
         }
-        // Default to empty string if config not found, so defaults are applied
         String::new()
     });
     let site: Marmite = match serde_yaml::from_str(&marmite) {
@@ -45,98 +47,118 @@ fn main() -> io::Result<()> {
             process::exit(1);
         }
     };
+    let site = Arc::new(site);
     let mut site_data = SiteData::new(&site);
 
     // Define the content directory
     let content_dir = Some(input_folder.join(&site_data.site.content_path))
-        .filter(|path| path.is_dir()) // Take if exists
-        .unwrap_or_else(|| input_folder.clone()); // Fallback to input_folder if not
+        .filter(|path| path.is_dir())
+        .unwrap_or_else(|| input_folder.clone().to_path_buf());
 
-    // Walk through the content directory
-    WalkDir::new(&content_dir)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|e| {
-            e.path().is_file() && e.path().extension().and_then(|ext| ext.to_str()) == Some("md")
-        })
-        .for_each(|entry| {
-            if let Err(e) = process_file(entry.path(), &mut site_data) {
-                eprintln!("Failed to process file {}: {}", entry.path().display(), e);
-            }
-        });
+    // Function to build the site
+    let mut build_site = move || {
+        // Walk through the content directory
+        WalkDir::new(&content_dir)
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter(|e| e.path().is_file() && e.path().extension().and_then(|ext| ext.to_str()) == Some("md"))
+            .for_each(|entry| {
+                if let Err(e) = process_file(entry.path(), &mut site_data) {
+                    eprintln!("Failed to process file {}: {}", entry.path().display(), e);
+                }
+            });
 
-    // Detect slug collision
-    if let Err(duplicate) = check_for_duplicate_slugs(
-        &site_data
-            .posts
-            .iter()
-            .chain(&site_data.pages)
-            .collect::<Vec<_>>(),
-    ) {
-        eprintln!(
-            "Error: Duplicate slug found: '{}' \
-            - try setting any of `title`, `slug` as a unique text, \
-            or leave both empty so filename will be assumed.",
-            duplicate
-        );
-        process::exit(1);
-    }
-
-    // Sort posts by date (newest first)
-    site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
-    // Sort pages on title
-    site_data.pages.sort_by(|a, b| b.title.cmp(&a.title));
-
-    // Create the output directory
-    let output_path = output_folder.join(&site_data.site.site_path);
-    if let Err(e) = fs::create_dir_all(&output_path) {
-        eprintln!("Unable to create output directory: {}", e);
-        process::exit(1);
-    }
-
-    robots::handle_robots(&content_dir, &output_path);
-
-    // Initialize Tera templates
-    let templates_path = input_folder.join(&site_data.site.templates_path);
-    let tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("Error loading templates: {}", e);
+        // Detect slug collision
+        if let Err(duplicate) = check_for_duplicate_slugs(
+            &site_data
+                .posts
+                .iter()
+                .chain(&site_data.pages)
+                .collect::<Vec<_>>(),
+        ) {
+            eprintln!("Error: Duplicate slug found: '{}'", duplicate);
             process::exit(1);
         }
+
+        // Sort posts by date (newest first) and pages by title
+        site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
+        site_data.pages.sort_by(|a, b| b.title.cmp(&a.title));
+
+        // Create the output directory
+        let output_path = output_folder.join(&site_data.site.site_path);
+        if let Err(e) = fs::create_dir_all(&output_path) {
+            eprintln!("Unable to create output directory: {}", e);
+            process::exit(1);
+        }
+
+        robots::handle_robots(&content_dir, &output_path);
+
+        // Initialize Tera templates
+        let templates_path = input_folder.join(&site_data.site.templates_path);
+        let tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
+            Ok(t) => t,
+            Err(e) => {
+                eprintln!("Error loading templates: {}", e);
+                process::exit(1);
+            }
+        };
+
+        // Render templates
+        if let Err(e) = render_templates(&site_data, &tera, &output_path, debug) {
+            eprintln!("Failed to render templates: {}", e);
+            process::exit(1);
+        }
+
+        // Copy static folder if present
+        let static_source = input_folder.join(site_data.site.static_path);
+        if static_source.is_dir() {
+            let mut options = CopyOptions::new();
+            options.overwrite = true;
+
+            if let Err(e) = copy(&static_source, &*output_folder, &options) {
+                eprintln!("Failed to copy static directory: {}", e);
+                process::exit(1);
+            }
+
+            println!(
+                "Copied '{}' to '{}/'",
+                &static_source.display(),
+                &output_folder.display()
+            );
+        }
+
+        println!("Site generated at: {}/", output_folder.display());
     };
 
-    // Render templates
-    if let Err(e) = render_templates(&site_data, &tera, &output_path, debug) {
-        eprintln!("Failed to render templates: {}", e);
-        process::exit(1);
+    // Build the site initially
+    build_site();
+
+    // Clone output_folder for later use
+    let output_folder_clone = Arc::clone(&output_folder);
+
+    // Watch for changes if the --watch flag is provided
+    if watch {
+        let input_folder_clone = Arc::clone(&input_folder);
+        let build_site = Arc::new(Mutex::new(build_site));
+
+        // Initialize Hotwatch
+        let mut hotwatch = Hotwatch::new().expect("Hotwatch failed to initialize!");
+        println!("Watching for changes in {:?}", input_folder_clone);
+
+        // Watch the content directory for changes
+        hotwatch.watch(&*input_folder_clone, move |_event| {
+            println!("Change detected, rebuilding the site...");
+            let build_site = Arc::clone(&build_site);
+            let build_site = build_site.lock().unwrap();
+            (build_site)(); // Trigger site rebuild
+        }).map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
     }
 
-    // Copy static folder if present
-    let static_source = input_folder.join(site_data.site.static_path);
-    if static_source.is_dir() {
-        let mut options = CopyOptions::new();
-        options.overwrite = true; // Overwrite files if they already exist
-
-        if let Err(e) = copy(&static_source, &*output_folder, &options) {
-            eprintln!("Failed to copy static directory: {}", e);
-            process::exit(1);
-        }
-
-        println!(
-            "Copied '{}' to '{}/'",
-            &static_source.display(),
-            &output_folder.display()
-        );
-    }
-
-    // Serve the site if the flag was provided
+        server::start_server(&bind_address, output_folder_clone.into());
     if serve {
         println!("Starting built-in HTTP server...");
         server::start_server(&bind_address, output_folder.clone().into());
     }
-
-    println!("Site generated at: {}/", output_folder.display());
 
     Ok(())
 }
@@ -152,7 +174,7 @@ struct Content {
 
 #[derive(Serialize)]
 struct SiteData<'a> {
-    site: &'a Marmite<'a>,
+    site: &'a Marmite,
     posts: Vec<Content>,
     pages: Vec<Content>,
 }
@@ -308,7 +330,7 @@ fn render_templates(
 
     // Render index.html from list.html template
     let mut list_context = global_context.clone();
-    list_context.insert("title", site_data.site.list_title);
+    list_context.insert("title", &site_data.site.list_title);
     list_context.insert("content_list", &site_data.posts);
     if debug {
         println!(
@@ -324,7 +346,7 @@ fn render_templates(
 
     // Render pages.html from list.html template
     let mut list_context = global_context.clone();
-    list_context.insert("title", site_data.site.pages_title);
+    list_context.insert("title", &site_data.site.pages_title);
     list_context.insert("content_list", &site_data.pages);
     if debug {
         println!(
@@ -383,42 +405,42 @@ fn generate_html(
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct Marmite<'a> {
+struct Marmite {
     #[serde(default = "default_name")]
-    name: &'a str,
+    name: String,
     #[serde(default = "default_tagline")]
-    tagline: &'a str,
+    tagline: String,
     #[serde(default = "default_url")]
-    url: &'a str,
+    url: String,
     #[serde(default = "default_footer")]
-    footer: &'a str,
+    footer: String,
     #[serde(default = "default_pagination")]
     pagination: u32,
 
     #[serde(default = "default_list_title")]
-    list_title: &'a str,
+    list_title: String,
     #[serde(default = "default_pages_title")]
-    pages_title: &'a str,
+    pages_title: String,
     #[serde(default = "default_tags_title")]
-    tags_title: &'a str,
+    tags_title: String,
     #[serde(default = "default_archives_title")]
-    archives_title: &'a str,
+    archives_title: String,
 
     #[serde(default = "default_content_path")]
-    content_path: &'a str,
+    content_path: String,
     #[serde(default = "default_site_path")]
-    site_path: &'a str,
+    site_path: String,
     #[serde(default = "default_templates_path")]
-    templates_path: &'a str,
+    templates_path: String,
     #[serde(default = "default_static_path")]
-    static_path: &'a str,
+    static_path: String,
     #[serde(default = "default_media_path")]
-    media_path: &'a str,
+    media_path: String,
 
     #[serde(default = "default_card_image")]
-    card_image: &'a str,
+    card_image: String,
     #[serde(default = "default_logo_image")]
-    logo_image: &'a str,
+    logo_image: String,
 
     #[serde(default = "default_menu")]
     menu: Option<Vec<(String, String)>>,
@@ -427,68 +449,68 @@ struct Marmite<'a> {
     data: Option<HashMap<String, String>>,
 }
 
-fn default_name() -> &'static str {
-    "Home"
+fn default_name() -> String {
+    "Home".to_string()
 }
 
-fn default_tagline() -> &'static str {
-    "Site generated from markdown content"
+fn default_tagline() -> String {
+    "Site generated from markdown content".to_string()
 }
 
-fn default_url() -> &'static str {
-    "https://example.com"
+fn default_url() -> String {
+    "https://example.com".to_string()
 }
 
-fn default_footer() -> &'static str {
-    r#"<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a> | Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a>"#
+fn default_footer() -> String {
+    r#"<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a> | Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a>"#.to_string()
 }
 
 fn default_pagination() -> u32 {
     10
 }
 
-fn default_list_title() -> &'static str {
-    "Posts"
+fn default_list_title() -> String {
+    "Posts".to_string()
 }
 
-fn default_tags_title() -> &'static str {
-    "Tags"
+fn default_tags_title() -> String {
+    "Tags".to_string()
 }
 
-fn default_pages_title() -> &'static str {
-    "Pages"
+fn default_pages_title() -> String {
+    "Pages".to_string()
 }
 
-fn default_archives_title() -> &'static str {
-    "Archive"
+fn default_archives_title() -> String {
+    "Archive".to_string()
 }
 
-fn default_site_path() -> &'static str {
-    ""
+fn default_site_path() -> String {
+    "".to_string()
 }
 
-fn default_content_path() -> &'static str {
-    "content"
+fn default_content_path() -> String {
+    "content".to_string()
 }
 
-fn default_templates_path() -> &'static str {
-    "templates"
+fn default_templates_path() -> String {
+    "templates".to_string()
 }
 
-fn default_static_path() -> &'static str {
-    "static"
+fn default_static_path() -> String {
+    "static".to_string()
 }
 
-fn default_media_path() -> &'static str {
-    "content/media"
+fn default_media_path() -> String {
+    "content/media".to_string()
 }
 
-fn default_card_image() -> &'static str {
-    ""
+fn default_card_image() -> String {
+    "".to_string()
 }
 
-fn default_logo_image() -> &'static str {
-    ""
+fn default_logo_image() -> String {
+    "".to_string()
 }
 
 fn default_menu() -> Option<Vec<(String, String)>> {
