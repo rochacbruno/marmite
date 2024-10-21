@@ -217,18 +217,18 @@ pub fn generate(
     }
 
     // Copy static folder if present
-    handle_static_artifacts(input_folder, site_data, output_folder, content_dir);
+    handle_static_artifacts(input_folder, &site_data, output_folder, &content_dir);
 
     info!("Site generated at: {}/", output_folder.display());
 }
 
 fn handle_static_artifacts(
     input_folder: &Path,
-    site_data: Data,
+    site_data: &Data,
     output_folder: &Arc<std::path::PathBuf>,
-    content_dir: std::path::PathBuf,
+    content_dir: &std::path::Path,
 ) {
-    robots::handle(&content_dir, &output_folder);
+    robots::handle(content_dir, output_folder);
 
     let static_source = input_folder.join(site_data.site.static_path);
     if static_source.is_dir() {
