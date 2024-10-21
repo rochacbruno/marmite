@@ -307,6 +307,65 @@ Same but containing a tooltip if you hover the mouse on
 ![Photo](./media/marmite.jpg "A jar of Marmite")
 ```
 
+### Embed
+
+Just use raw HTML for now, in future we may have a shorcode.
+
+<iframe width="360" height="215" src="https://www.youtube.com/embed/MjrBTcnnK6c?si=PmQWsGiTh5XguSpb" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+```html
+<iframe width="360" height="215" src="https://www.youtube.com/embed/MjrBTcnnK6c?si=PmQWsGiTh5XguSpb" title="YouTube video player"></iframe>
+```
+
+### Pico CSS components
+
+<small>The default embedded template uses [picocss](https://picocss.com) so it is possible to write raw HTML like this:</small>
+
+#### FAQ
+
+<details>
+<summary>Why is it named Marmite?</summary>
+
+The creator of this project was looking for some cool name
+to use for a **mark**down related project.
+Then while having bread with Marmite spread for breakfast
+it looked like a good idea!
+
+</details>
+
+<hr />
+
+<details>
+<summary>Why Rust?</summary>
+
+**Why not?**
+
+</details>
+
+<hr />
+
+
+```html
+<details>
+<summary>Why is it named Marmite?</summary>
+
+The ...
+
+</details>
+
+<hr />
+
+<details>
+<summary>Why Rust?</summary>
+
+**Why not?**
+
+</details>
+
+<hr />
+
+```
+
 ### Symbols
 
 
