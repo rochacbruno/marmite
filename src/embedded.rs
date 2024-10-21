@@ -53,7 +53,7 @@ pub fn generate_static(static_folder: &Path) {
 
         match write_bytes_to_file(file_path.as_path(), file_data) {
             Ok(()) => info!("Generated {}", &file_path.display()),
-            Err(e) => eprintln!("Error writing file: {e}"),
+            Err(e) => error!("Error writing file: {}", e),
         }
     }
 }
