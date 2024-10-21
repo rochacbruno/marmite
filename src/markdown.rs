@@ -10,7 +10,25 @@ pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
     let (frontmatter, markdown) = parse_front_matter(&file_content)?;
 
     let mut options = ComrakOptions::default();
+
+    // TODO: Make the following options configurable?
     options.render.unsafe_ = true; // Allow raw html
+    options.extension.tagfilter = false;
+    options.extension.strikethrough = true; // ~~text~~
+    options.extension.table = true;
+    options.extension.autolink = true;
+    options.extension.tasklist = true; // - [ ] item
+    options.extension.superscript = true; // 3^2^
+    options.extension.footnotes = true; // note[^1]
+    options.extension.description_lists = true;
+    options.extension.multiline_block_quotes = true; // >>>\ntext\n>>>
+    options.extension.math_dollars = true; // depends on css
+    options.extension.math_code = true; // depends on css
+    options.extension.underline = true; // __under__
+    options.extension.spoiler = true; // this is ||secret|| (depends on css)
+    options.extension.greentext = true; // >not a quote
+    options.extension.shortcodes = true; // >not a quote
+
     let html = markdown_to_html(markdown, &options);
 
     let title = get_title(&frontmatter, markdown);
