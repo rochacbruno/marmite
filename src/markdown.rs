@@ -37,10 +37,7 @@ pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
     let slug = get_slug(&frontmatter, path);
     let date = get_date(&frontmatter, path);
 
-    let extra = match frontmatter.get("extra") {
-        Some(v) => Some(v.to_owned()),
-        _ => None,
-    };
+    let extra = frontmatter.get("extra").map(std::borrow::ToOwned::to_owned);
 
     let content = Content {
         title,
