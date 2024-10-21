@@ -43,7 +43,7 @@ lazy_static! {
 }
 
 pub fn generate_static(static_folder: &Path) {
-    if let Err(e) = fs::create_dir_all(&static_folder) {
+    if let Err(e) = fs::create_dir_all(static_folder) {
         error!("Unable to create static directory: {}", e);
         return;
     }
@@ -51,9 +51,9 @@ pub fn generate_static(static_folder: &Path) {
     for (name, file_data) in EMBEDDED_STATIC.iter() {
         let file_path = static_folder.join(name); // static/foo.ext
 
-        match write_bytes_to_file(file_path.as_path(), &file_data) {
-            Ok(_) => info!("Generated {}", &file_path.display()),
-            Err(e) => eprintln!("Error writing file: {}", e),
+        match write_bytes_to_file(file_path.as_path(), file_data) {
+            Ok(()) => info!("Generated {}", &file_path.display()),
+            Err(e) => error!("Error writing file: {}", e),
         }
     }
 }
