@@ -39,6 +39,9 @@ jobs:
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Clippy
+        run: cargo clippy -- -W clippy::pedantic
+
       - name: Build 🔧
         run: cargo build --release
 
