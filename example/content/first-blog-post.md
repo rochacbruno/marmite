@@ -3,6 +3,8 @@ date: 2024-01-01 12:00:01
 slug: blog-post
 title: Markdown Powered Blog Post (with code blocks)
 tags: markdown, python, rust, Common Mark
+extra:
+  math: true
 ---
 
 # This is the post content
@@ -159,17 +161,18 @@ Rich quotes
 
 ## Math
 
+FrontMatter defines `extra: {"math": true}` then **MathJax** is loaded.
+
+
+When $a \ne 0$, there are two solutions to \\(ax^2 + bx + c = 0\\) and they are
+$$x = {-b \pm \sqrt{b^2-4ac} \over 2a}.$$
+
 Inline math $1 + 2$ and display math $$x + y$$
 
+
 $$
 x^2
 $$
-
-Inline math $`1 + 2`$
-
-```math
-x^2
-```
 
 ## Underline
 

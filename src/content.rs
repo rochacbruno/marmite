@@ -16,6 +16,7 @@ pub struct Content {
     pub html: String,
     pub tags: Vec<String>,
     pub date: Option<NaiveDateTime>,
+    pub extra: Option<Value>,
 }
 
 pub fn get_title<'a>(frontmatter: &'a Frontmatter, html: &'a str) -> String {
