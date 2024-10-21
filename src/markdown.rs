@@ -18,7 +18,13 @@ pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
     let slug = get_slug(&frontmatter, path);
     let date = get_date(&frontmatter, path);
 
-    let content = Content { title, slug, html, tags, date };
+    let content = Content {
+        title,
+        slug,
+        html,
+        tags,
+        date,
+    };
 
     if date.is_some() {
         site_data.posts.push(content);

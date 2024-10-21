@@ -1,8 +1,8 @@
 use log::{error, info};
-use std::{fs::File, path::Path};
 use std::io::Cursor;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::{fs::File, path::Path};
 use tiny_http::{Response, Server};
 
 pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>) {

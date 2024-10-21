@@ -190,34 +190,10 @@ pub fn generate(
     // Fallback to input_folder if not
 
     // Walk through the content directory
-    WalkDir::new(&content_dir)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|e| {
-            e.path().is_file() && e.path().extension().and_then(|ext| ext.to_str()) == Some("md")
-        })
-        .for_each(|entry| {
-            if let Err(e) = process_file(entry.path(), &mut site_data) {
-                error!("Failed to process file {}: {}", entry.path().display(), e);
-            }
-        });
+    collect_content(&content_dir, &mut site_data);
 
     // Detect slug collision
-    if let Err(duplicate) = check_for_duplicate_slugs(
-        &site_data
-            .posts
-            .iter()
-            .chain(&site_data.pages)
-            .collect::<Vec<_>>(),
-    ) {
-        error!(
-            "Error: Duplicate slug found: '{}' \
-            - try setting any of `title`, `slug` as a unique text, \
-            or leave both empty so filename will be assumed.",
-            duplicate
-        );
-        process::exit(1);
-    }
+    detect_slug_collision(&site_data);
 
     // Sort posts by date (newest first)
     site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
@@ -231,26 +207,8 @@ pub fn generate(
         process::exit(1);
     }
 
-    robots::handle(&content_dir, &output_path);
-
     // Initialize Tera templates
-    let templates_path = input_folder.join(site_data.site.templates_path);
-    let mut tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
-        Ok(t) => t,
-        Err(e) => {
-            error!("Error loading templates: {}", e);
-            process::exit(1);
-        }
-    };
-    tera.autoescape_on(vec![]);
-    // the person writing a static site knows what is doing!
-    tera.register_function(
-        "url_for",
-        UrlFor {
-            base_url: site_data.site.url.to_string(),
-        },
-    );
-    tera.extend(&EMBEDDED_TERA).unwrap();
+    let tera = initialize_tera(input_folder, &site_data);
 
     // Render templates
     if let Err(e) = render_templates(&site_data, &tera, &output_path) {
@@ -259,6 +217,19 @@ pub fn generate(
     }
 
     // Copy static folder if present
+    handle_static_artifacts(input_folder, site_data, output_folder, content_dir);
+
+    info!("Site generated at: {}/", output_folder.display());
+}
+
+fn handle_static_artifacts(
+    input_folder: &Path,
+    site_data: Data,
+    output_folder: &Arc<std::path::PathBuf>,
+    content_dir: std::path::PathBuf,
+) {
+    robots::handle(&content_dir, &output_folder);
+
     let static_source = input_folder.join(site_data.site.static_path);
     if static_source.is_dir() {
         let mut options = CopyOptions::new();
@@ -323,6 +294,57 @@ pub fn generate(
             }
         }
     }
+}
 
-    info!("Site generated at: {}/", output_folder.display());
+fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
+    let templates_path = input_folder.join(site_data.site.templates_path);
+    let mut tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
+        Ok(t) => t,
+        Err(e) => {
+            error!("Error loading templates: {}", e);
+            process::exit(1);
+        }
+    };
+    tera.autoescape_on(vec![]);
+    // the person writing a static site knows what is doing!
+    tera.register_function(
+        "url_for",
+        UrlFor {
+            base_url: site_data.site.url.to_string(),
+        },
+    );
+    tera.extend(&EMBEDDED_TERA).unwrap();
+    tera
+}
+
+fn detect_slug_collision(site_data: &Data) {
+    if let Err(duplicate) = check_for_duplicate_slugs(
+        &site_data
+            .posts
+            .iter()
+            .chain(&site_data.pages)
+            .collect::<Vec<_>>(),
+    ) {
+        error!(
+            "Error: Duplicate slug found: '{}' \
+            - try setting any of `title`, `slug` as a unique text, \
+            or leave both empty so filename will be assumed.",
+            duplicate
+        );
+        process::exit(1);
+    }
+}
+
+fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
+    WalkDir::new(content_dir)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| {
+            e.path().is_file() && e.path().extension().and_then(|ext| ext.to_str()) == Some("md")
+        })
+        .for_each(|entry| {
+            if let Err(e) = process_file(entry.path(), site_data) {
+                error!("Failed to process file {}: {}", entry.path().display(), e);
+            }
+        });
 }
