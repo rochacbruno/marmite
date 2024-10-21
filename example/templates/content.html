@@ -6,11 +6,21 @@
 <script>
    const staticBase = "{{ url_for(path='static')}}";
 </script>
+
+{%if content.extra.math %}
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
+</script>
+<script type="text/javascript"
+  src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+{% endif %}
+
 {% endblock %}
 
 {% block main %}
 <article>
-    <div class="content-html">{{ content.html }}</div>
+    <div class="content-html">{{ content.html | safe }}</div>
     {% if content.date %}
     <footer>
         <span class="content-date"> {{ content.date | date(format="%v") }}</span>
