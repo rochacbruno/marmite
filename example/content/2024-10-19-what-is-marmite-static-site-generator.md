@@ -88,7 +88,7 @@ as a `{slug}.html` and make it accessible only via the link directly.
 By default marmite includes 3 items in the main menu:
 
 - Pages -> pages.html
-  - List of posts in chronological order.
+  - List of pages in alphabetical order.
 - Tags -> tags.html
   - List of tags and a link to each tag group page.
 - Archive -> archive.html
