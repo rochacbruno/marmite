@@ -1,35 +1,36 @@
-use std::fs::File;
+use log::{error, info};
 use std::io::Cursor;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::{fs::File, path::Path};
 use tiny_http::{Response, Server};
 
-pub fn start_server(bind_address: &str, output_folder: Arc<PathBuf>) {
+pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>) {
     let server = Server::http(bind_address).unwrap();
 
-    println!(
+    info!(
         "Server started at http://{}/ - Type ^C to stop.",
         bind_address
     );
 
     for request in server.incoming_requests() {
-        let response = match handle_request(&request, &output_folder) {
+        let response = match handle_request(&request, output_folder) {
             Ok(response) => response,
             Err(err) => {
-                eprintln!("Error handling request: {}", err);
+                error!("Error handling request: {}", err);
                 Response::from_string("Internal Server Error").with_status_code(500)
             }
         };
 
         if let Err(err) = request.respond(response) {
-            eprintln!("Failed to send response: {}", err);
+            error!("Failed to send response: {}", err);
         }
     }
 }
 
 fn handle_request(
     request: &tiny_http::Request,
-    output_folder: &PathBuf,
+    output_folder: &Path,
 ) -> Result<Response<Cursor<Vec<u8>>>, String> {
     let request_path = match request.url() {
         "/" => "index.html",
@@ -43,15 +44,26 @@ fn handle_request(
             Ok(mut file) => {
                 let mut buffer = Vec::new();
                 std::io::copy(&mut file, &mut buffer).map_err(|e| e.to_string())?;
+                info!(
+                    "\"{} {} HTTP/{}\" 200 -",
+                    request.method(),
+                    request_path,
+                    request.http_version()
+                );
                 Ok(Response::from_data(buffer))
             }
             Err(err) => {
-                eprintln!("Failed to read file {}: {}", file_path.display(), err);
-                Err(format!("Error reading file: {}", err))
+                error!("Failed to read file {}: {}", file_path.display(), err);
+                Err(format!("Error reading file: {err}"))
             }
         }
     } else {
-        eprintln!("File not found: {}", file_path.display());
+        error!(
+            "\"{} {} HTTP/{}\" 404 -",
+            request.method(),
+            request_path,
+            request.http_version()
+        );
         Ok(Response::from_string("404 Not Found").with_status_code(404))
     }
 }

@@ -1,14 +1,23 @@
+<!-- website generated with Marmite SSG - https://github.com/rochacbruno/marmite -->
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark" />
-    <link rel="stylesheet" type="text/css" href="/static/pico.min.css">
-    <link rel="stylesheet" type="text/css" href="/static/style.css">
-    <link rel="stylesheet" href="/static/github-light.min.css" id="highlightjs-theme" />
+    {%- block head %}
     <title>{{ site.name }} | {{ title }}</title>
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/pico.min.css')}}">
+    <style>
+    @font-face {
+        font-family: "Atkinson Hyperlegible";
+        src: url("{{url_for(path='/static/Atkinson-Hyperlegible-Regular-102.woff')}}");
+    }
+    </style>
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/marmite.css')}}">
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/style.css')}}">
+    {% endblock -%}
 </head>
 
 <body>
@@ -18,7 +27,7 @@
                 <ul class="header-name">
                     <li>
                         <hgroup>
-                            <h2><a href="/" class="contrast">{{ site.name }}</a></h2>
+                            <h2><a href="{{url_for(path='/')}}" class="contrast">{{ site.name }}</a></h2>
                             <p>{{ site.tagline }}</p>
                         </hgroup>
                     </li>
@@ -27,7 +36,13 @@
                 
                 <ul class="header-menu" id="header-menu">
                     {% for item in menu %}
-                    <li><a href="{{ item.1 | safe }}" class="secondary">{{ item.0 | safe }}</a></li>
+                    <li>
+                        {% if current_page == item.1 %}
+                        <button class="secondary">{{item.0 | safe }}</button>
+                        {% else %}
+                        <a href="{{ url_for(path=item.1) }}" class="secondary" {%if item.1 is starting_with("http") %}target="_blank"{% endif %}>{{ item.0 | safe }}</a>
+                        {% endif %}
+                    </li>
                     {% endfor %}
                 </ul>
             </nav>
@@ -46,12 +61,10 @@
             </nav>
         </footer>
     </main>
-    <script src="/static/theme-switcher.js"></script>
-    <script src="/static/menu.js"></script>
-    <script src="/static/highlight.min.js"></script>
-    <script>
-        hljs.highlightAll();
-    </script>
+    {%- block tail %}
+    <script src="{{url_for(path='/static/theme-switcher.js')}}"></script>
+    <script src="{{url_for(path='/static/menu.js')}}"></script>
+    {% endblock -%}
 </body>
 
 </html>

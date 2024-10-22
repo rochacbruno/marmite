@@ -6,7 +6,7 @@ The page must work even without `frontmatter` specified, the `slug` to build the
  `url` is extracted from the filename and page `title` is extracted from the
 first line of the markdown.
 
-By default this page doesn't show in menu, unless explititly added to the `menu:`
+By default this page doesn't show in menu, unless explicitly added to the `menu:`
 in the configuration file `marmite.yaml`
 
 ```yaml
