@@ -15,13 +15,13 @@ use hotwatch::{Hotwatch, EventKind , Event};
 
 #[derive(Serialize)]
 #[derive(Clone)]
-pub struct Data<'a> {
-    pub site: Marmite<'a>,
+pub struct Data {
+    pub site: Marmite,
     pub posts: Vec<Content>,
     pub pages: Vec<Content>,
 }
 
-impl <'a>Data<'a> {
+impl Data {
     pub fn new(config_content: String) -> Self {
         let site: Marmite = match serde_yaml::from_str::<Marmite>(&config_content) {
             Ok(site) => site,
@@ -49,7 +49,7 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
 
     // Render index.html from list.html template
     let mut list_context = global_context.clone();
-    list_context.insert("title", site_data.site.list_title);
+    list_context.insert("title", &site_data.site.list_title);
     list_context.insert("content_list", &site_data.posts);
     list_context.insert("current_page", "index.html");
     debug!(
@@ -64,7 +64,7 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
 
     // Render pages.html from list.html template
     let mut list_context = global_context.clone();
-    list_context.insert("title", site_data.site.pages_title);
+    list_context.insert("title", &site_data.site.pages_title);
     list_context.insert("content_list", &site_data.pages);
     list_context.insert("current_page", "pages.html");
     debug!(
@@ -185,10 +185,11 @@ pub fn generate(
         );
         String::new()
     });
-    let mut site_data = Data::new(config_str);
+    let site_data = Data::new(config_str);
+    let site_data_clone = site_data.clone();
 
     // Define the content directory
-    let content_dir = Some(input_folder.join(site_data.site.content_path))
+    let content_dir = Some(input_folder.join(site_data_clone.site.content_path))
         .filter(|path| path.is_dir()) // Take if exists
         .unwrap_or_else(|| input_folder.to_path_buf());
     // Fallback to input_folder if not
@@ -212,7 +213,8 @@ pub fn generate(
             site_data.pages.sort_by(|a, b| b.title.cmp(&a.title));
 
             // Create the output directory
-            let output_path = output_folder.join(site_data.site.site_path);
+            let site_path = site_data.site.site_path.clone();
+            let output_path = output_folder.join(site_path);
             if let Err(e) = fs::create_dir_all(&output_path) {
                 error!("Unable to create output directory: {}", e);
                 process::exit(1);
@@ -271,7 +273,7 @@ fn handle_static_artifacts(
 ) {
     robots::handle(content_dir, output_folder);
 
-    let static_source = input_folder.join(site_data.site.static_path);
+    let static_source = input_folder.join(site_data.site.static_path.clone());
     if static_source.is_dir() {
         let mut options = CopyOptions::new();
         options.overwrite = true; // Overwrite files if they already exist
@@ -287,11 +289,11 @@ fn handle_static_artifacts(
             &output_folder.display()
         );
     } else {
-        generate_static(&output_folder.join(site_data.site.static_path));
+        generate_static(&output_folder.join(site_data.site.static_path.clone()));
     }
 
     // Copy content/media folder if present
-    let media_source = content_dir.join(site_data.site.media_path);
+    let media_source = content_dir.join(site_data.site.media_path.clone());
     if media_source.is_dir() {
         let mut options = CopyOptions::new();
         options.overwrite = true; // Overwrite files if they already exist
@@ -338,7 +340,7 @@ fn handle_static_artifacts(
 }
 
 fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
-    let templates_path = input_folder.join(site_data.site.templates_path);
+    let templates_path = input_folder.join(site_data.site.templates_path.clone());
     let mut tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
         Ok(t) => t,
         Err(e) => {
