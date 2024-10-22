@@ -16,7 +16,7 @@
     }
     </style>
     <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/marmite.css')}}">
-    <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/style.css')}}">
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/custom.css')}}">
     {% endblock -%}
 </head>
 
@@ -62,8 +62,8 @@
         </footer>
     </main>
     {%- block tail %}
-    <script src="{{url_for(path='/static/theme-switcher.js')}}"></script>
-    <script src="{{url_for(path='/static/menu.js')}}"></script>
+    <script src="{{url_for(path='/static/marmite.js')}}"></script>
+    <script src="{{url_for(path='/static/custom.js')}}"></script>
     {% endblock -%}
 </body>
 

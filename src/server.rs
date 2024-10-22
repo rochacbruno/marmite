@@ -3,7 +3,7 @@ use std::io::Cursor;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::{fs::File, path::Path};
-use tiny_http::{Response, Server};
+use tiny_http::{Header, Response, Server};
 
 pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>) {
     let server = Server::http(bind_address).unwrap();
@@ -28,6 +28,7 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>) {
     }
 }
 
+#[allow(clippy::case_sensitive_file_extension_comparisons)]
 fn handle_request(
     request: &tiny_http::Request,
     output_folder: &Path,
@@ -50,7 +51,12 @@ fn handle_request(
                     request_path,
                     request.http_version()
                 );
-                Ok(Response::from_data(buffer))
+                let mut resp = Response::from_data(buffer);
+                let js_header = Header::from_bytes("Content-Type", "text/javascript").unwrap();
+                if request_path.ends_with(".js") {
+                    resp.add_header(js_header);
+                }
+                Ok(resp)
             }
             Err(err) => {
                 error!("Failed to read file {}: {}", file_path.display(), err);

@@ -2,9 +2,8 @@ use crate::config::Marmite;
 use crate::content::{check_for_duplicate_slugs, group_by_tags, slugify, Content};
 use crate::embedded::{generate_static, EMBEDDED_TERA};
 use crate::markdown::process_file;
-use crate::robots;
 use crate::tera_functions::UrlFor;
-use fs_extra::dir::{copy, CopyOptions};
+use fs_extra::dir::{copy as dircopy, CopyOptions};
 use log::{debug, error, info};
 use serde::Serialize;
 use std::path::Path;
@@ -228,14 +227,13 @@ fn handle_static_artifacts(
     output_folder: &Arc<std::path::PathBuf>,
     content_dir: &std::path::Path,
 ) {
-    robots::handle(content_dir, output_folder);
-
+    // Copy static files
     let static_source = input_folder.join(site_data.site.static_path);
     if static_source.is_dir() {
         let mut options = CopyOptions::new();
         options.overwrite = true; // Overwrite files if they already exist
 
-        if let Err(e) = copy(&static_source, &**output_folder, &options) {
+        if let Err(e) = dircopy(&static_source, &**output_folder, &options) {
             error!("Failed to copy static directory: {}", e);
             process::exit(1);
         }
@@ -246,6 +244,7 @@ fn handle_static_artifacts(
             &output_folder.display()
         );
     } else {
+        // generate from embedded
         generate_static(&output_folder.join(site_data.site.static_path));
     }
 
@@ -255,7 +254,7 @@ fn handle_static_artifacts(
         let mut options = CopyOptions::new();
         options.overwrite = true; // Overwrite files if they already exist
 
-        if let Err(e) = copy(&media_source, &**output_folder, &options) {
+        if let Err(e) = dircopy(&media_source, &**output_folder, &options) {
             error!("Failed to copy media directory: {}", e);
             process::exit(1);
         }
@@ -267,30 +266,38 @@ fn handle_static_artifacts(
         );
     }
 
-    // Copy or create favicon.ico
-    let favicon_dst = output_folder.join("favicon.ico");
-
-    // Possible paths where favicon.ico might exist
-    let favicon_src_paths = [
-        input_folder.join("static").join("favicon.ico"), // User's favicon.ico
-                                                         // on #20 we may have embedded statics
+    // we want to check if the file exists in `input_folder` and `content_dir`
+    // if not then we want to check if exists in `output_folder/static` (came from embedded)
+    // the first we find we want to copy to the `output_folder/{destiny_path}`
+    let custom_files = [
+        // name, destination
+        ("custom.css", site_data.site.static_path),
+        ("custom.js", site_data.site.static_path),
+        ("favicon.ico", ""),
+        ("robots.txt", ""),
     ];
-
-    for favicon_src in &favicon_src_paths {
-        if favicon_src.exists() {
-            match fs::copy(favicon_src, &favicon_dst) {
-                Ok(_) => {
-                    info!(
-                        "Copied favicon.ico from '{}' to output folder",
-                        favicon_src.display()
-                    );
-                    break;
+    let output_static_destiny = output_folder.join(site_data.site.static_path);
+    let possible_sources = [input_folder, content_dir, output_static_destiny.as_path()];
+    let mut copied_custom_files = Vec::new();
+    for possible_source in &possible_sources {
+        for custom_file in custom_files {
+            let source_file = possible_source.join(custom_file.0);
+            if copied_custom_files.contains(&custom_file.0.to_string()) {
+                continue;
+            }
+            if source_file.exists() {
+                let destiny_path = output_folder.join(custom_file.1).join(custom_file.0);
+                match fs::copy(&source_file, &destiny_path) {
+                    Ok(_) => {
+                        copied_custom_files.push(custom_file.0.to_string());
+                        info!(
+                            "Copied {} to {}",
+                            source_file.display(),
+                            &destiny_path.display()
+                        );
+                    }
+                    Err(e) => error!("Failed to copy {}: {}", source_file.display(), e),
                 }
-                Err(e) => error!(
-                    "Failed to copy favicon.ico from '{}': {}",
-                    favicon_src.display(),
-                    e
-                ),
             }
         }
     }
