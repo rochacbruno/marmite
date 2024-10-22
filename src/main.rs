@@ -9,7 +9,6 @@ mod config;
 mod content;
 mod embedded;
 mod markdown;
-mod robots;
 mod server;
 mod site;
 mod tera_functions;
