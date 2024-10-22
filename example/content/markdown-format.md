@@ -5,6 +5,8 @@ title: Markdown Formatting Options
 tags: docs, markdown, Common Mark, GFM
 extra:
   math: true
+  mermaid: true
+  mermaid_theme: neutral
 ---
 
 # Writing content in Markdown
@@ -201,6 +203,119 @@ x^2
 $$
 ```
 
+### Diagrams
+
+> Depends on `extra: {"mermaid": true}` defined on frontmatter, then **MermaidJS** is loaded.
+>  
+> `mermaid_theme` is also configurable with values `forest,neutral*,dark,forest,base,default`
+
+```mermaid
+sequenceDiagram
+    Alice ->> Bob: Hello Bob, how are you?
+    Bob-->>John: How about you John?
+    Bob--x Alice: I am good thanks!
+    Bob-x John: I am good thanks!
+    Note right of John: Bob thinks a long<br/>long time, so long<br/>that the text does<br/>not fit on a row.
+
+    Bob-->Alice: Checking with John...
+    Alice->John: Yes... John, how are you?
+
+```
+
+```mermaid
+graph LR
+    A[Square Rect] -- Link text --> B((Circle))
+    A --> C(Round Rect)
+    B --> D{Rhombus}
+    C --> D
+
+```
+
+```mermaid
+xychart-beta
+    title "Sales Revenue"
+    x-axis [jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec]
+    y-axis "Revenue (in $)" 4000 --> 11000
+    bar [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]
+    line [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]
+
+```
+
+```mermaid
+pie title Pets adopted by volunteers
+    "Dogs" : 386
+    "Cats" : 85
+    "Rats" : 15
+
+```
+
+```mermaid
+timeline
+    title History of marmite
+    2024-10-13 : Created
+    2024-10-14 : First Release
+               : First Contribution
+    2024-10-20 : Big refactor
+    2024-10-22 : Diagram support
+```
+
+<details>
+<summary> Click to see the raw mermaid </summary>
+
+````markdown
+```mermaid
+sequenceDiagram
+    Alice ->> Bob: Hello Bob, how are you?
+    Bob-->>John: How about you John?
+    Bob--x Alice: I am good thanks!
+    Bob-x John: I am good thanks!
+    Note right of John: Bob thinks a long<br/>long time, so long<br/>that the text does<br/>not fit on a row.
+
+    Bob-->Alice: Checking with John...
+    Alice->John: Yes... John, how are you?
+
+```
+
+```mermaid
+graph LR
+    A[Square Rect] -- Link text --> B((Circle))
+    A --> C(Round Rect)
+    B --> D{Rhombus}
+    C --> D
+
+```
+
+```mermaid
+xychart-beta
+    title "Sales Revenue"
+    x-axis [jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec]
+    y-axis "Revenue (in $)" 4000 --> 11000
+    bar [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]
+    line [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]
+
+```
+
+```mermaid
+pie title Pets adopted by volunteers
+    "Dogs" : 386
+    "Cats" : 85
+    "Rats" : 15
+
+```
+
+```mermaid
+timeline
+    title History of marmite
+    2024-10-13 : Created
+    2024-10-14 : First Release
+               : First Contribution
+    2024-10-20 : Big refactor
+    2024-10-22 : Diagram support
+```
+````
+
+</details>
+
 ## Underline
 
 __dunder__
@@ -396,6 +511,7 @@ title: Markdown Formatting Options
 tags: markdown, python, rust, Common Mark
 extra:
   math: true
+  mermaid: true
 ---
 ```
 

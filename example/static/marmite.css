@@ -125,3 +125,8 @@ article footer {
 .spoiler, .spoiler > * { transition: color 0.5s, opacity 0.5s }
 .spoiler:not(:hover) { color: transparent;background-color: #808080}
 .spoiler:not(:hover) > * { opacity: 0 }
+
+
+pre:has(> code.language-mermaid) {
+  background-color: transparent;
+}
