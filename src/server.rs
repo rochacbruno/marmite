@@ -44,6 +44,12 @@ fn handle_request(
             Ok(mut file) => {
                 let mut buffer = Vec::new();
                 std::io::copy(&mut file, &mut buffer).map_err(|e| e.to_string())?;
+                info!(
+                    "\"{} {} HTTP/{}\" 200 -",
+                    request.method(),
+                    request_path,
+                    request.http_version()
+                );
                 Ok(Response::from_data(buffer))
             }
             Err(err) => {
@@ -52,7 +58,12 @@ fn handle_request(
             }
         }
     } else {
-        error!("File not found: {}", file_path.display());
+        error!(
+            "\"{} {} HTTP/{}\" 404 -",
+            request.method(),
+            request_path,
+            request.http_version()
+        );
         Ok(Response::from_string("404 Not Found").with_status_code(404))
     }
 }
