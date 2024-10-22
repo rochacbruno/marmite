@@ -2,7 +2,13 @@
 
 ![Logo](https://github.com/rochacbruno/marmite/raw/main/assets/_resized/logo_160x120.png)
 
-[**Mar**kdown **M**akes s**ite**s] is a **very!** simple static site generator.
+Marmite [**Mar**kdown **m**akes s**ite**s] is a **very!** simple static site generator.
+
+[![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
+[![Crates.io Version](https://img.shields.io/crates/v/marmite)](https://crates.io/crates/marmite)
+[![Docs and Demo](https://img.shields.io/badge/docs-demo-blue)](https://rochacbruno.github.io/marmite/)  
+  
+[![Create blog](https://img.shields.io/badge/CREATE%20YOUR%20BLOG%20WITH%20ONE%20CLICK-20B2AA?style=for-the-badge)](https://github.com/rochacbruno/make-me-a-blog)
 
 ## How it works
 
@@ -15,11 +21,6 @@ It does **"one"** simple thing only:
 - Outputs the rendered static site to the `output` folder.
 
 It also handles generating or copying `static/` `media/` to the `output` dir.
-
-[![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
-[![Crates.io Version](https://img.shields.io/crates/v/marmite)](https://crates.io/crates/marmite)
-[![Docs and Demo](https://img.shields.io/badge/docs-demo-blue)](https://rochacbruno.github.io/marmite/)  
-[![Create blog](https://img.shields.io/badge/CREATE%20YOUR%20BLOG%20WITH%20ONE%20CLICK-20B2AA?style=for-the-badge)](https://github.com/rochacbruno/make-me-a-blog)
 
 ## Installation
 
