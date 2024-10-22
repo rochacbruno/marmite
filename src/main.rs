@@ -29,34 +29,7 @@ fn main() {
 
     site::generate(&config_path, &input_folder, &output_folder);
 
-        println!("Site generated at: {}/", output_folder.display());
-    };
-
-    // Build the site initially
-    build_site();
-
-    // Clone output_folder for later use
-    let output_folder_clone = Arc::clone(&output_folder);
-
-    // Watch for changes if the --watch flag is provided
-    if watch {
-        let input_folder_clone = Arc::clone(&input_folder);
-        let build_site = Arc::new(Mutex::new(build_site));
-
-        // Initialize Hotwatch
-        let mut hotwatch = Hotwatch::new().expect("Hotwatch failed to initialize!");
-        println!("Watching for changes in {:?}", input_folder_clone);
-
-        // Watch the content directory for changes
-        hotwatch.watch(&*input_folder_clone, move |_event| {
-            println!("Change detected, rebuilding the site...");
-            let build_site = Arc::clone(&build_site);
-            let build_site = build_site.lock().unwrap();
-            (build_site)(); // Trigger site rebuild
-        }).map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
-    }
-
-        server::start_server(&bind_address, output_folder_clone.into());
+    // Serve the site if the flag was provided
     if serve {
         info!("Starting built-in HTTP server...");
         server::start(bind_address, &output_folder);
