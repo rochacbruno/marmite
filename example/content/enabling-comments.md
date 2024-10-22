@@ -1,6 +1,6 @@
 ---
 date: 2024-10-15
-tags: comments, customization
+tags: docs, comments, customization
 ---
 
 # Enabling comments

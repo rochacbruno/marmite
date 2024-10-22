@@ -1,6 +1,6 @@
 ---
 date: 2024-10-16
-tags: hosting
+tags: docs, hosting
 ---
 ## Hosting
 

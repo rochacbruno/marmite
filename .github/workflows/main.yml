@@ -53,10 +53,7 @@ jobs:
           cp -R example marmitesite
           cp README.md marmitesite/content/docs.md
           rm marmitesite/marmite.yaml
-          echo -n -e "name: Marmite SSG\n" >> marmitesite/marmite.yaml
-          echo -n -e "tagline: Simply create a static blog from markdown files.\n" >> marmitesite/marmite.yaml
-          echo -n -e "url: https://rochacbruno.github.io/marmite/\n" >> marmitesite/marmite.yaml
-          echo -n -e "menu: [['Docs', 'docs.html'], ['Pages', 'pages.html'], ['Tags', 'tags.html'], ['Github', 'https://github.com/rochacbruno/marmite/']]\n" >> marmitesite/marmite.yaml
+          cp .github/marmite.yaml marmitesite/marmite.yaml
 
       - name: Build site 🏗️
         run: marmite marmitesite site --debug

@@ -2,7 +2,7 @@
 date: 2024-10-17 12:00:01
 slug: markdown-format
 title: Markdown Formatting Options
-tags: markdown, Common Mark, GFM
+tags: docs, markdown, Common Mark, GFM
 extra:
   math: true
 ---
