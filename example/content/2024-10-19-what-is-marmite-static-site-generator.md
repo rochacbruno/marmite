@@ -211,8 +211,10 @@ Other options are available and can be viewed on [repository](https://github.com
 ## Theme customization
 
 The embedded templates are created with [picocss.com](https://picocss.com/) and 
-it is easy to customize, just put a `style.css` in the same folder where the markdown 
-files are located and use anything that pico supports or just be creative with css.
+it is easy to customize, just put a `custom.css` and a `custom.js` 
+in your root folder and use anything that pico supports or just be creative with css.
+
+If customizing the css and js is not enough then you can create your own theme.
 
 ## Creating a new Theme
 
