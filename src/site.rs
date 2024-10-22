@@ -270,8 +270,6 @@ fn handle_static_artifacts(
     output_folder: &Arc<std::path::PathBuf>,
     content_dir: &std::path::Path,
 ) {
-    robots::handle(content_dir, output_folder);
-
     let static_source = input_folder.join(site_data.site.static_path.clone());
     if static_source.is_dir() {
         let mut options = CopyOptions::new();
@@ -314,22 +312,22 @@ fn handle_static_artifacts(
     // the first we find we want to copy to the `output_folder/{destiny_path}`
     let custom_files = [
         // name, destination
-        ("custom.css", site_data.site.static_path),
-        ("custom.js", site_data.site.static_path),
-        ("favicon.ico", ""),
-        ("robots.txt", ""),
+        ("custom.css", site_data.site.static_path.clone()),
+        ("custom.js", site_data.site.static_path.clone()),
+        ("favicon.ico", "".to_string()),
+        ("robots.txt", "".to_string()),
     ];
-    let output_static_destiny = output_folder.join(site_data.site.static_path);
+    let output_static_destiny = output_folder.join(site_data.site.static_path.clone());
     let possible_sources = [input_folder, content_dir, output_static_destiny.as_path()];
     let mut copied_custom_files = Vec::new();
     for possible_source in &possible_sources {
-        for custom_file in custom_files {
+        for custom_file in &custom_files {
             let source_file = possible_source.join(custom_file.0);
             if copied_custom_files.contains(&custom_file.0.to_string()) {
                 continue;
             }
             if source_file.exists() {
-                let destiny_path = output_folder.join(custom_file.1).join(custom_file.0);
+                let destiny_path = output_folder.join(custom_file.1.clone()).join(custom_file.0);
                 match fs::copy(&source_file, &destiny_path) {
                     Ok(_) => {
                         copied_custom_files.push(custom_file.0.to_string());
