@@ -7,6 +7,20 @@ tags: templates, theme
 Marmite uses [Tera](https://keats.github.io/tera/docs/#templates) as its template
 parser, the language is very similar to **Jinja** or **Twig**.
 
+Example on `templates/list.html`
+
+```html
+{% extends "base.html" %}
+{% block main %}
+  <div class="content-list">
+  {%- for content in content_list %}
+    <h2 class="content-title"><a href="{{url_for(path=content.slug)}}.html">{{ content.title | capitalize }}</a></h2>
+    <p class="content-excerpt">{{ content.html | striptags | truncate(length=100, end="...") }}</p>
+  {%- endfor %}
+  </div>
+{% endblock %}
+```
+
 ## Templates
 
 all templates are rendered with the global context.

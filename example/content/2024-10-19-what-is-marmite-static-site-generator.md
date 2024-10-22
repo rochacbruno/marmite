@@ -29,7 +29,13 @@ Generated /mysite/second-post.html
 Site generated at: /mysite
 ```
 
-That is all you need to have a blog like this generated:
+That is all you need to have a blog generated, now you just need to take the 
+`mysite` folder and publish it in a webserver, read more on [hosting](./hosting.html).
+
+## Layout
+
+By default the site is generated using marmite embedded theme (this one you are reading right now)
+it is based on picocss and supports ligh/dark themes.
 
 <details>
 <summary> <strong>CLICK HERE</strong> TO SEE SOME SCREENSHOTS </summary>
@@ -59,48 +65,57 @@ Content:
 
 </details>
 
+You can of course, customize your own look and feel by adding `templates` and `static` files to 
+your `mycontent` folder, read more on [customizing templates](./customizing-templates.html).
+
 ---
 
 ## Content Types
 
 Marmite separates content in two kinds, **posts** and **pages**.
 
-An **opinionated** decision of marmite is how it makes this distinction,
+An **opinionated** decision of marmite is how it makes the distinction.
 
-### Post
+### Posts
 
-If content has a **date** it is a **Post**
+If content has a **date** it is a **Post**!
 
 If the `file.md` has a **FrontMatter** (metadata on its first lines) defining a
 `date: YYYY-MM-DD` field, or the date field is extracted from the file name `YYYY-MM-DD-file.md`
+then marmite will consider it as a **post**.
 
 Posts are shown on `index.html` page sorted by date, and also shown on `tag/{tag}.html` page,
 and included on the `RSS` and `JSON` **feeds**.
 
-### Page
+### Pages
 
-If the markdown file does't define a date, then `marmite` can't list it on index or feeds, because
+If the markdown file doesn't define a date, then `marmite` can't list it on index or feeds, because
 it doesn't know where to include it in the chronological order, so it makes sense to render this content
-as a `{slug}.html` and make it accessible only via the link directly.
+as a page named `{slug}.html` and make it accessible only via the link directly, so it can optionally
+added to the main menu or linked in other content.
 
 ## Menu
 
 By default marmite includes 3 items in the main menu:
 
-- Pages -> pages.html
-  - List of pages in alphabetical order.
-- Tags -> tags.html
-  - List of tags and a link to each tag group page.
-- Archive -> archive.html
-  - List of YEAR and link to each year group page.
-  
-  
+**Pages** -> `pages.html`
+
+  : List of pages in alphabetical order.
+
+**Tags** -> `tags.html`
+
+  :List of tags and a link to each tag group page.
+
+**Archive** -> `archive.html`
+
+  :List of YEAR and link to each year group page.
+
 Menu can be optionally customized in the configuration file, it is possible
 to add any **post**, **page** or external **link** to the menu.
   
 ## Metadata
 
-On each markdown file it is possible to define metadata on the **FrontMatter**,
+On each markdown file it is possible (and optional) to define metadata on the **FrontMatter**,
 the first lines of the file separated by `---`.
 
 ```markdown
@@ -115,15 +130,46 @@ Content
 
 `marmite` supports 5 fields:
 
-- `title: This is the post title`
-  - default: extracted from the first line of markdown.
-- `slug: this-is-the-post-slug`
-  - default: title or filename slugified.
-- `date: YYYY-MM-DD`
-  - default: extracted from filename or null.
-- `tags: tag1, tag2, tag3`
-- `extra: {}`
-  - arbitrary extra key:value pair in YAML format (for template customization)
+**title**
+
+  : str: Title of the post  
+  **default**: extracted from the first line of markdown.
+
+**slug** 
+
+  : str: this-is-the-post-slug`  
+  **default**: slugfied `title` or `filename`.
+
+**date**
+
+  : str: `YYYY-MM-DD`  
+  **formats** `YYYY-MM-DD`, `YYYY-MM-DD HH:MM`, `YYYY-MM-DD HH:MM:SS`  
+  **default**: extracted from filename or null.
+
+**tags** 
+
+  : Comma separated list of tags, or YAML list of tags  
+  **formats**  
+    ```yaml
+    tags: tag1, tag2, tag3
+    tags:
+      - tag1
+      - tag2
+    ```
+  **default** empty
+
+**extra**
+
+  : arbitrary extra `key:value` pair in YAML format (for template customization)  
+  **format**
+    ```yaml
+    extra:
+      math: true
+      comments: true
+      draft: true
+      top_banner_image: ./media/image.png
+    ```
+  
 
 ## Media
 
@@ -175,20 +221,7 @@ the `templates` and `static` directories and then customize in the way you like.
 
 To learn more about how to create a new theme check this post:
 
-[Customizing Templates](https://rochacbruno.github.io/marmite/customizing-templates.html)
-
-
-## Hosting
-
-The result is a static site, so you can host it in any web server, examples:
-
-- Github pages
-- Gitlab pages
-- Netlify
-- Vercel
-- Nginx
-- Apache
-
+[Customizing Templates](./customizing-templates.html)
 
 ## More features
 

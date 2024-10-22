@@ -1,13 +1,13 @@
 ---
-date: 2024-01-01 12:00:01
+date: 2024-10-17 12:00:01
 slug: markdown-format
 title: Markdown Formatting Options
-tags: markdown, python, rust, Common Mark
+tags: markdown, Common Mark, GFM
 extra:
   math: true
 ---
 
-# This is the post content
+# Writing content in Markdown
 
 The content here accepts any valid `CommonMark` or **Github** _Flavoured_ markdown
 and some `GFM` extensions.
@@ -15,7 +15,7 @@ and some `GFM` extensions.
 Simple paragraph and usual formatting like **bold**, __underline__, *italic*
 and also all sorts of formatting elements.
 
-### Strikethrough
+### Strike-through
 
 The following is ~~no more~~.
 ```markdown
@@ -36,7 +36,7 @@ The following is ~~no more~~.
 | List        | Here's a list! <ul><li>Item one.</li><li>Item two.</li></ul> |
 ```
 
-### Autolink
+### Auto-link
 
 https://github.com/rochacbruno/marmite  
 [A link with a tooltip](https://pudim.com.br "A picture of a pudim")  
@@ -168,7 +168,7 @@ Rich quotes
 >  *Everything* is going according to **plan**.
 ```
 
-## Emojis
+## Emoji
 
 :smile: - :crab: - :snake:
 
@@ -311,10 +311,10 @@ Same but containing a tooltip if you hover the mouse on
 
 Just use raw HTML for now, in future we may have a shorcode.
 
-<iframe width="360" height="215" src="https://www.youtube.com/embed/MjrBTcnnK6c?si=PmQWsGiTh5XguSpb" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<iframe width="260" height="160" src="https://www.youtube.com/embed/MjrBTcnnK6c?si=PmQWsGiTh5XguSpb" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
 ```html
-<iframe width="360" height="215" src="https://www.youtube.com/embed/MjrBTcnnK6c?si=PmQWsGiTh5XguSpb" title="YouTube video player"></iframe>
+<iframe width="260" height="160" src="https://www.youtube.com/embed/MjrBTcnnK6c?si=PmQWsGiTh5XguSpb" title="YouTube video player"></iframe>
 ```
 
 ### Pico CSS components

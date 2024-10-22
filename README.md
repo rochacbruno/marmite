@@ -19,7 +19,11 @@ It also handles generating or copying `static/` `media/` to the `output` dir.
 [![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
 [![Crates.io Version](https://img.shields.io/crates/v/marmite)](https://crates.io/crates/marmite)
 
-[Demo](https://rochacbruno.github.io/marmite/)
+[Demo and Docs](https://rochacbruno.github.io/marmite/)  
+
+---
+
+[Create your blog in one click using github actions](https://github.com/rochacbruno/make-me-a-blog)  
 
 ## Installation
 

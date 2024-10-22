@@ -24,7 +24,7 @@
     {% if content.date %}
     <footer>
         <span class="content-date"> {{ content.date | date(format="%v") }}</span>
-        <ul class="content-tags">
+        <ul class="content-tags overflow-auto">
         {% for tag in content.tags  %}
             <li><a href="{{url_for(path='/tag/')}}{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
         {% endfor %}
