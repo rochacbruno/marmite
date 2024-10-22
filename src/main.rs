@@ -19,6 +19,7 @@ fn main() {
     let input_folder = args.input_folder;
     let output_folder = Arc::new(args.output_folder);
     let serve = args.serve;
+    let watch = args.watch;
     let config_path = input_folder.join(args.config);
     let bind_address: &str = args.bind.as_str();
 
@@ -27,7 +28,7 @@ fn main() {
         error!("Logger already initialized: {}", e);
     }
 
-    site::generate(&config_path, &input_folder, &output_folder);
+    site::generate(&config_path, &input_folder, &output_folder , watch);
 
     // Serve the site if the flag was provided
     if serve {

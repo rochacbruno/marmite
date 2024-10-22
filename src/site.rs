@@ -11,17 +11,19 @@ use std::path::Path;
 use std::{fs, process, sync::Arc};
 use tera::{Context, Tera};
 use walkdir::WalkDir;
+use hotwatch::{Hotwatch, EventKind , Event};
 
 #[derive(Serialize)]
+#[derive(Clone)]
 pub struct Data<'a> {
     pub site: Marmite<'a>,
     pub posts: Vec<Content>,
     pub pages: Vec<Content>,
 }
 
-impl<'a> Data<'a> {
-    pub fn new(config_content: &'a str) -> Self {
-        let site: Marmite = match serde_yaml::from_str(config_content) {
+impl <'a>Data<'a> {
+    pub fn new(config_content: String) -> Self {
+        let site: Marmite = match serde_yaml::from_str::<Marmite>(&config_content) {
             Ok(site) => site,
             Err(e) => {
                 error!("Failed to parse config YAML: {}", e);
@@ -168,10 +170,12 @@ fn render_html(
     Ok(())
 }
 
+
 pub fn generate(
     config_path: &std::path::PathBuf,
     input_folder: &std::path::Path,
     output_folder: &Arc<std::path::PathBuf>,
+    watch: bool, // New parameter for watching
 ) {
     let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
         debug!(
@@ -181,7 +185,7 @@ pub fn generate(
         );
         String::new()
     });
-    let mut site_data = Data::new(&config_str);
+    let mut site_data = Data::new(config_str);
 
     // Define the content directory
     let content_dir = Some(input_folder.join(site_data.site.content_path))
@@ -189,37 +193,74 @@ pub fn generate(
         .unwrap_or_else(|| input_folder.to_path_buf());
     // Fallback to input_folder if not
 
-    // Walk through the content directory
-    collect_content(&content_dir, &mut site_data);
+    // Function to trigger site regeneration
+    let mut rebuild_site = {
+        let content_dir = content_dir.clone();
+        let output_folder = Arc::clone(output_folder);
+        let input_folder = input_folder.to_path_buf();
+        let mut site_data = site_data.clone();
 
-    // Detect slug collision
-    detect_slug_collision(&site_data);
+        move || {
+            collect_content(&content_dir, &mut site_data);
 
-    // Sort posts by date (newest first)
-    site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
-    // Sort pages on title
-    site_data.pages.sort_by(|a, b| b.title.cmp(&a.title));
+            // Detect slug collision
+            detect_slug_collision(&site_data);
 
-    // Create the output directory
-    let output_path = output_folder.join(site_data.site.site_path);
-    if let Err(e) = fs::create_dir_all(&output_path) {
-        error!("Unable to create output directory: {}", e);
-        process::exit(1);
+            // Sort posts by date (newest first)
+            site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
+            // Sort pages on title
+            site_data.pages.sort_by(|a, b| b.title.cmp(&a.title));
+
+            // Create the output directory
+            let output_path = output_folder.join(site_data.site.site_path);
+            if let Err(e) = fs::create_dir_all(&output_path) {
+                error!("Unable to create output directory: {}", e);
+                process::exit(1);
+            }
+
+            // Initialize Tera templates
+            let tera = initialize_tera(&input_folder, &site_data);
+
+            // Render templates
+            if let Err(e) = render_templates(&site_data, &tera, &output_path) {
+                error!("Failed to render templates: {}", e);
+                process::exit(1);
+            }
+
+            // Copy static folder if present
+            handle_static_artifacts(&input_folder, &site_data, &output_folder, &content_dir);
+
+            info!("Site generated at: {}/", output_folder.display());
+        }
+    };
+
+    // Initial site generation
+    rebuild_site();
+
+    // If watch flag is enabled, start hotwatch
+    if watch {
+        let mut hotwatch = Hotwatch::new().expect("Failed to initialize hotwatch!");
+
+        // Watch the input folder for changes
+        hotwatch
+            .watch(input_folder, move |event: Event| {
+                match event.kind {
+                    EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                        info!("Change detected. Rebuilding site...");
+                        rebuild_site();
+                    }
+                    _ => {}
+                }
+            })
+            .expect("Failed to watch the input folder!");
+
+        info!("Watching for changes in folder: {}", input_folder.display());
+
+        // Keep the thread alive for watching
+        loop {
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
     }
-
-    // Initialize Tera templates
-    let tera = initialize_tera(input_folder, &site_data);
-
-    // Render templates
-    if let Err(e) = render_templates(&site_data, &tera, &output_path) {
-        error!("Failed to render templates: {}", e);
-        process::exit(1);
-    }
-
-    // Copy static folder if present
-    handle_static_artifacts(input_folder, &site_data, output_folder, &content_dir);
-
-    info!("Site generated at: {}/", output_folder.display());
 }
 
 fn handle_static_artifacts(

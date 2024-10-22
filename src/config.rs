@@ -3,6 +3,7 @@ use serde_yaml::Value;
 use std::collections::HashMap;
 
 #[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone)]
 pub struct Marmite<'a> {
     #[serde(default = "default_name")]
     pub name: &'a str,
