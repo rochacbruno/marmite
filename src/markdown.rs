@@ -12,6 +12,10 @@ pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
 
     // TODO: Make the following options configurable?
     options.render.unsafe_ = true; // Allow raw html
+    options.render.ignore_empty_links = true;
+    options.render.figure_with_caption = true;
+    // options.render.escape = false;
+    // options.render.full_info_string = true;
     options.extension.tagfilter = false;
     options.extension.strikethrough = true; // ~~text~~
     options.extension.table = true;
@@ -24,6 +28,7 @@ pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
     options.extension.spoiler = true; // this is ||secret|| (depends on css)
     options.extension.greentext = true; // >not a quote
     options.extension.shortcodes = true; // >not a quote
+    options.extension.header_ids = Some("tos-".to_string());
 
     // The following 3 options breaks MathJax on themes
     // options.extension.superscript = true; // 3^2^
