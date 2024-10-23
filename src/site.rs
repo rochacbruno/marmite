@@ -11,6 +11,8 @@ use std::{fs, process, sync::Arc};
 use tera::{Context, Tera};
 use walkdir::WalkDir;
 
+const NAME_BASED_SLUG_FILES: [&str; 1] = ["404.md"];
+
 #[derive(Serialize)]
 pub struct Data<'a> {
     pub site: Marmite<'a>,
@@ -91,6 +93,29 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
         render_html(
             "content.html",
             &format!("{}.html", &content.slug),
+            tera,
+            &content_context,
+            output_dir,
+        )?;
+    }
+
+    // Check and guarantees that page 404 was generated even if 404.md is removed
+    let file_404_path = output_dir.join("404.html");
+    if !file_404_path.exists() {
+        let mut content_context = global_context.clone();
+        let page_404_content = Content {
+            html: String::from("Page not found :/"),
+            title: String::from("Page not found"),
+            date: None,
+            slug: String::from(""),
+            extra: None,
+            tags: vec![]
+        };
+        content_context.insert("title", &page_404_content.title);
+        content_context.insert("content", &page_404_content);
+        render_html(
+            "content.html",
+            "404.html",
             tera,
             &content_context,
             output_dir,
@@ -347,11 +372,24 @@ fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| {
-            e.path().is_file() && e.path().extension().and_then(|ext| ext.to_str()) == Some("md")
+            let file_name = e.path().file_name().and_then(|ext| ext.to_str()).expect("Could not get file name");
+            let file_extension = e.path().extension().and_then(|ext| ext.to_str());
+            e.path().is_file() && !NAME_BASED_SLUG_FILES.contains(&file_name) && file_extension == Some("md")
         })
         .for_each(|entry| {
-            if let Err(e) = process_file(entry.path(), site_data) {
+            if let Err(e) = process_file(entry.path(), site_data, false) {
                 error!("Failed to process file {}: {}", entry.path().display(), e);
             }
         });
+
+        NAME_BASED_SLUG_FILES
+        .into_iter()
+        .for_each(|slugged_file| {
+            let slugged_path = content_dir.join(slugged_file);
+            if slugged_path.exists() {
+                if let Err(e) = process_file(slugged_path.as_path(), site_data, true) {
+                    error!("Failed to process file {}: {}", slugged_path.as_path().display(), e);
+                }
+            }
+        })
 }
