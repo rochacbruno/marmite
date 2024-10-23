@@ -45,8 +45,8 @@ pub struct Marmite<'a> {
     #[serde(default = "default_menu")]
     pub menu: Option<Vec<(String, String)>>,
 
-    #[serde(default = "default_data")]
-    pub data: Option<HashMap<String, Value>>,
+    #[serde(default = "default_extra")]
+    pub extra: Option<HashMap<String, Value>>,
 }
 
 fn default_name() -> &'static str {
@@ -125,6 +125,6 @@ fn default_menu() -> Option<Vec<(String, String)>> {
     .into()
 }
 
-fn default_data() -> Option<HashMap<String, Value>> {
+fn default_extra() -> Option<HashMap<String, Value>> {
     None
 }

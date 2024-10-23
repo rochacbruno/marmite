@@ -6,7 +6,7 @@ menu:
   - ['Create a blog', "https://github.com/rochacbruno/blog/"]
   - ['Github', 'https://github.com/rochacbruno/marmite/']
   - ['Tags', 'tags.html']
-data:
+extra:
   comments:
     title: Comments
     source: |

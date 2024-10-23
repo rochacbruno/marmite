@@ -23,14 +23,14 @@ menu:
 
 
 # extra data for template customization
-# data:
+# extra:
 #  foo: bar
 
 # Example, to enable comments:
 # Go to: https://giscus.app/ and generate your config and replace below.
 # If you prefer to use a different commenting system just replace accordingly
 # disqus, utterance.s and others works.
-# data:
+# extra:
 #   comments:
 #     title: Comentários
 #     source: |
