@@ -40,7 +40,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Clippy
-        run: cargo clippy -- -W clippy::pedantic
+        # Relaxed on clippy requirement, will run it manually from time to time.
+        # run: cargo clippy -- -W clippy::pedantic
+        run: cargo clippy
 
       - name: Build 🔧
         run: cargo build --release

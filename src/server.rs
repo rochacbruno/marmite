@@ -76,7 +76,7 @@ fn handle_request(
 }
 
 fn render_not_found(error_path: &PathBuf) -> Result<Response<Cursor<Vec<u8>>>, String> {
-    match File::open(&error_path) {
+    match File::open(error_path) {
         Ok(mut file) => {
             let mut buffer = Vec::new();
             std::io::copy(&mut file, &mut buffer).map_err(|e| e.to_string())?;

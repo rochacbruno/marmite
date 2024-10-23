@@ -9,6 +9,7 @@ Thank you for considering contributing to the Marmite Site Generator project! Co
 3. [How to Contribute](#how-to-contribute)
 4. [Pull Requests](#pull-requests)
 5. [Commit Messages](#commit-messages)
+6. [Code Quality](#code-quality)
 
 ## Code of Conduct
 
@@ -78,4 +79,38 @@ Your commit messages should be descriptive and concise. Use the following format
 ```bash
 fix: Corrected YAML parsing error when loading the configuration
 feat: Added support for multiple markdown templates
+```
+
+### Code Quality
+
+Before pushing your changes ensure it meets the minimal code quality.
+
+1. Format the code **Required**
+
+```bash
+cargo fmt
+```
+
+2. Apply clippy fixes **optional**
+
+```
+cargo clippy
+```
+or
+```
+cargo clippy -- -W clippy:pedantic
+```
+
+> **hint**: you can add `--fix` for clippy to try to apply fixes.
+
+#### Just
+
+There is a `justfile` in the root of repo, you can use it for checkings.
+
+```bash
+cargo install just
+just check
+
+# Ensure your changes are committed before running.
+just fix
 ```
