@@ -100,27 +100,7 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
     }
 
     // Check and guarantees that page 404 was generated even if 404.md is removed
-    let file_404_path = output_dir.join("404.html");
-    if !file_404_path.exists() {
-        let mut content_context = global_context.clone();
-        let page_404_content = Content {
-            html: String::from("Page not found :/"),
-            title: String::from("Page not found"),
-            date: None,
-            slug: String::from(""),
-            extra: None,
-            tags: vec![],
-        };
-        content_context.insert("title", &page_404_content.title);
-        content_context.insert("content", &page_404_content);
-        render_html(
-            "content.html",
-            "404.html",
-            tera,
-            &content_context,
-            output_dir,
-        )?;
-    }
+    handle_404(&global_context, tera, output_dir)?;
 
     // Render tagged_contents
     let mut unique_tags: Vec<(String, usize)> = Vec::new();
@@ -172,6 +152,25 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
         output_dir,
     )?;
 
+    Ok(())
+}
+
+fn handle_404(global_context: &Context, tera: &Tera, output_dir: &Path) -> Result<(), String> {
+    let file_404_path = output_dir.join("404.html");
+    if !file_404_path.exists() {
+        let mut context = global_context.clone();
+        let page_404_content = Content {
+            html: String::from("Page not found :/"),
+            title: String::from("Page not found"),
+            date: None,
+            slug: String::new(),
+            extra: None,
+            tags: vec![],
+        };
+        context.insert("title", &page_404_content.title);
+        context.insert("content", &page_404_content);
+        render_html("content.html", "404.html", tera, &context, output_dir)?;
+    };
     Ok(())
 }
 
@@ -388,7 +387,7 @@ fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
             }
         });
 
-    NAME_BASED_SLUG_FILES.into_iter().for_each(|slugged_file| {
+    for slugged_file in NAME_BASED_SLUG_FILES {
         let slugged_path = content_dir.join(slugged_file);
         if slugged_path.exists() {
             if let Err(e) = process_file(slugged_path.as_path(), site_data, true) {
@@ -399,5 +398,5 @@ fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
                 );
             }
         }
-    })
+    }
 }
