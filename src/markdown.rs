@@ -5,7 +5,11 @@ use frontmatter_gen::{extract, Frontmatter};
 use std::fs;
 use std::path::Path;
 
-pub fn process_file(path: &Path, site_data: &mut Data, use_filename_as_slug: bool) -> Result<(), String> {
+pub fn process_file(
+    path: &Path,
+    site_data: &mut Data,
+    use_filename_as_slug: bool,
+) -> Result<(), String> {
     let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
     let (frontmatter, markdown) = parse_front_matter(&file_content)?;
     let mut options = ComrakOptions::default();
@@ -41,7 +45,12 @@ pub fn process_file(path: &Path, site_data: &mut Data, use_filename_as_slug: boo
     let tags = get_tags(&frontmatter);
     let slug = {
         if use_filename_as_slug {
-            path.file_name().expect("Error on getting file name").to_str().expect("Error on converting file name to string").to_string().replace(".md", "")
+            path.file_name()
+                .expect("Error on getting file name")
+                .to_str()
+                .expect("Error on converting file name to string")
+                .to_string()
+                .replace(".md", "")
         } else {
             get_slug(&frontmatter, path)
         }

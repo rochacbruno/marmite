@@ -109,7 +109,7 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
             date: None,
             slug: String::from(""),
             extra: None,
-            tags: vec![]
+            tags: vec![],
         };
         content_context.insert("title", &page_404_content.title);
         content_context.insert("content", &page_404_content);
@@ -372,9 +372,15 @@ fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| {
-            let file_name = e.path().file_name().and_then(|ext| ext.to_str()).expect("Could not get file name");
+            let file_name = e
+                .path()
+                .file_name()
+                .and_then(|ext| ext.to_str())
+                .expect("Could not get file name");
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
-            e.path().is_file() && !NAME_BASED_SLUG_FILES.contains(&file_name) && file_extension == Some("md")
+            e.path().is_file()
+                && !NAME_BASED_SLUG_FILES.contains(&file_name)
+                && file_extension == Some("md")
         })
         .for_each(|entry| {
             if let Err(e) = process_file(entry.path(), site_data, false) {
@@ -382,14 +388,16 @@ fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
             }
         });
 
-        NAME_BASED_SLUG_FILES
-        .into_iter()
-        .for_each(|slugged_file| {
-            let slugged_path = content_dir.join(slugged_file);
-            if slugged_path.exists() {
-                if let Err(e) = process_file(slugged_path.as_path(), site_data, true) {
-                    error!("Failed to process file {}: {}", slugged_path.as_path().display(), e);
-                }
+    NAME_BASED_SLUG_FILES.into_iter().for_each(|slugged_file| {
+        let slugged_path = content_dir.join(slugged_file);
+        if slugged_path.exists() {
+            if let Err(e) = process_file(slugged_path.as_path(), site_data, true) {
+                error!(
+                    "Failed to process file {}: {}",
+                    slugged_path.as_path().display(),
+                    e
+                );
             }
-        })
+        }
+    })
 }
