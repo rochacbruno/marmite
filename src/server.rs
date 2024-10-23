@@ -84,7 +84,7 @@ fn render_not_found(error_path: &PathBuf) -> Result<Response<Cursor<Vec<u8>>>, S
             Ok(resp)
         }
         Err(err) => {
-            error!("Error on generating page 404 - {}", err);
+            error!("Error on rendering page 404 - {}", err);
             Ok(Response::from_string("404 Not Found").with_status_code(404))
         }
     }
