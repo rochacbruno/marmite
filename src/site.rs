@@ -204,6 +204,11 @@ pub fn generate(
         );
         String::new()
     });
+    if config_str.is_empty() {
+        info!("Config loaded from: defaults");
+    } else {
+        info!("Config loaded from: {}", config_path.display());
+    }
     let mut site_data = Data::new(&config_str);
 
     // Define the content directory

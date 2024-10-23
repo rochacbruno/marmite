@@ -91,17 +91,17 @@ Before pushing your changes ensure it meets the minimal code quality.
 cargo fmt
 ```
 
-2. Apply clippy fixes **optional**
+2. Check clippy suggestions **Required**
 
-```
+```bash
 cargo clippy
 ```
-or
-```
-cargo clippy -- -W clippy:pedantic
-```
 
-> **hint**: you can add `--fix` for clippy to try to apply fixes.
+2. Apply clippy fixes **optional**
+
+```bash
+cargo clippy --fix
+```
 
 #### Just
 
@@ -113,4 +113,8 @@ just check
 
 # Ensure your changes are committed before running.
 just fix
+
+# If you have free time :)
+just pedantic 
+just pedantic_fix
 ```
