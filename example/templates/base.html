@@ -37,7 +37,7 @@
                 <ul class="header-menu" id="header-menu">
                     {% for item in menu %}
                     <li>
-                        {% if current_page == item.1 %}
+                        {% if current_page and current_page == item.1 %}
                         <button class="secondary">{{item.0 | safe }}</button>
                         {% else %}
                         <a href="{{ url_for(path=item.1) }}" class="secondary" {%if item.1 is starting_with("http") %}target="_blank"{% endif %}>{{ item.0 | safe }}</a>
