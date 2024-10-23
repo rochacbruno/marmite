@@ -2,7 +2,7 @@ use clap::Parser;
 use env_logger::{Builder, Env};
 
 use log::{error, info};
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 
 mod cli;
 mod config;
@@ -18,7 +18,13 @@ fn main() {
     let input_folder = args.input_folder;
     let output_folder = Arc::new(args.output_folder);
     let serve = args.serve;
-    let config_path = input_folder.join(args.config);
+
+    let config_path = if args.config.starts_with('.') || args.config.starts_with('/') {
+        PathBuf::new().join(args.config)
+    } else {
+        input_folder.join(args.config)
+    };
+
     let bind_address: &str = args.bind.as_str();
 
     let env = Env::default().default_filter_or(if args.debug { "debug" } else { "info" });
