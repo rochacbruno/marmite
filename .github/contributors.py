@@ -24,13 +24,13 @@ contributors_sorted = reversed(
 
 with open(filename, "w") as file:
     file.write("# Contributors\n\n")
-
+    file.write('<div class="grid" style="display: flex;flex-flow:wrap;">\n')
     for i, contributor in enumerate(contributors_sorted):
-        # Start a new grid after every 5 contributors
-        if i % 5 == 0:
-            if i != 0:
-                file.write("</div>\n")
-            file.write('<div class="grid" style="display: flex;">\n')
+        # # Start a new grid after every 5 contributors
+        # if i % 5 == 0:
+        #     if i != 0:
+        #         file.write("</div>\n")
+        #     file.write('<div class="grid" style="display: flex;">\n')
 
         username = contributor["login"]
         profile_url = contributor["html_url"]
