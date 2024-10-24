@@ -7,22 +7,23 @@ use fs_extra::dir::{copy as dircopy, CopyOptions};
 use log::{debug, error, info};
 use serde::Serialize;
 use std::path::Path;
-use std::{fs, process, sync::Arc};
+use std::{fs, process, sync::Arc, sync::Mutex};
 use tera::{Context, Tera};
 use walkdir::WalkDir;
 
 const NAME_BASED_SLUG_FILES: [&str; 1] = ["404.md"];
+use hotwatch::{Event, EventKind, Hotwatch};
 
-#[derive(Serialize)]
-pub struct Data<'a> {
-    pub site: Marmite<'a>,
+#[derive(Serialize, Clone)]
+pub struct Data {
+    pub site: Marmite,
     pub posts: Vec<Content>,
     pub pages: Vec<Content>,
 }
 
-impl<'a> Data<'a> {
-    pub fn new(config_content: &'a str) -> Self {
-        let site: Marmite = match serde_yaml::from_str(config_content) {
+impl Data {
+    pub fn new(config_content: &str) -> Self {
+        let site: Marmite = match serde_yaml::from_str::<Marmite>(config_content) {
             Ok(site) => site,
             Err(e) => {
                 error!("Failed to parse config YAML: {}", e);
@@ -48,7 +49,7 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
 
     // Render index.html from list.html template
     let mut list_context = global_context.clone();
-    list_context.insert("title", site_data.site.list_title);
+    list_context.insert("title", &site_data.site.list_title);
     list_context.insert("content_list", &site_data.posts);
     list_context.insert("current_page", "index.html");
     debug!(
@@ -63,7 +64,7 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
 
     // Render pages.html from list.html template
     let mut list_context = global_context.clone();
-    list_context.insert("title", site_data.site.pages_title);
+    list_context.insert("title", &site_data.site.pages_title);
     list_context.insert("content_list", &site_data.pages);
     list_context.insert("current_page", "pages.html");
     debug!(
@@ -195,6 +196,7 @@ pub fn generate(
     config_path: &std::path::PathBuf,
     input_folder: &std::path::Path,
     output_folder: &Arc<std::path::PathBuf>,
+    watch: bool, // New parameter for watching
 ) {
     let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
         debug!(
@@ -209,45 +211,88 @@ pub fn generate(
     } else {
         info!("Config loaded from: {}", config_path.display());
     }
-    let mut site_data = Data::new(&config_str);
+    let site_data = Arc::new(Mutex::new(Data::new(&config_str)));
 
     // Define the content directory
-    let content_dir = Some(input_folder.join(site_data.site.content_path))
-        .filter(|path| path.is_dir()) // Take if exists
-        .unwrap_or_else(|| input_folder.to_path_buf());
+    let content_dir = {
+        let site_data = site_data.lock().unwrap();
+        Some(input_folder.join(site_data.site.content_path.clone()))
+    }
+    .filter(|path| path.is_dir()) // Take if exists
+    .unwrap_or_else(|| input_folder.to_path_buf());
     // Fallback to input_folder if not
 
-    // Walk through the content directory
-    collect_content(&content_dir, &mut site_data);
+    // Function to trigger site regeneration
+    let rebuild_site = {
+        let content_dir = content_dir.clone();
+        let output_folder = Arc::clone(output_folder);
+        let input_folder = input_folder.to_path_buf();
+        let site_data = site_data.clone();
 
-    // Detect slug collision
-    detect_slug_collision(&site_data);
+        move || {
+            let mut site_data = site_data.lock().unwrap();
+            // cleanup before rebuilding, otherwise we get duplicated slug
+            site_data.posts = Vec::new();
+            site_data.pages = Vec::new();
+            collect_content(&content_dir, &mut site_data);
 
-    // Sort posts by date (newest first)
-    site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
-    // Sort pages on title
-    site_data.pages.sort_by(|a, b| b.title.cmp(&a.title));
+            // Detect slug collision
+            detect_slug_collision(&site_data);
 
-    // Create the output directory
-    let output_path = output_folder.join(site_data.site.site_path);
-    if let Err(e) = fs::create_dir_all(&output_path) {
-        error!("Unable to create output directory: {}", e);
-        process::exit(1);
+            // Sort posts by date (newest first)
+            site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
+            // Sort pages on title
+            site_data.pages.sort_by(|a, b| b.title.cmp(&a.title));
+
+            // Create the output directory
+            let site_path = site_data.site.site_path.clone();
+            let output_path = output_folder.join(site_path);
+            if let Err(e) = fs::create_dir_all(&output_path) {
+                error!("Unable to create output directory: {}", e);
+                process::exit(1);
+            }
+
+            // Initialize Tera templates
+            let tera = initialize_tera(&input_folder, &site_data);
+
+            // Render templates
+            if let Err(e) = render_templates(&site_data, &tera, &output_path) {
+                error!("Failed to render templates: {}", e);
+                process::exit(1);
+            }
+
+            // Copy static folder if present
+            handle_static_artifacts(&input_folder, &site_data, &output_folder, &content_dir);
+
+            info!("Site generated at: {}/", output_folder.display());
+        }
+    };
+
+    // Initial site generation
+    rebuild_site();
+
+    // If watch flag is enabled, start hotwatch
+    if watch {
+        let mut hotwatch = Hotwatch::new().expect("Failed to initialize hotwatch!");
+
+        // Watch the input folder for changes
+        hotwatch
+            .watch(input_folder, move |event: Event| match event.kind {
+                EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                    info!("Change detected. Rebuilding site...");
+                    rebuild_site();
+                }
+                _ => {}
+            })
+            .expect("Failed to watch the input folder!");
+
+        info!("Watching for changes in folder: {}", input_folder.display());
+
+        // Keep the thread alive for watching
+        loop {
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
     }
-
-    // Initialize Tera templates
-    let tera = initialize_tera(input_folder, &site_data);
-
-    // Render templates
-    if let Err(e) = render_templates(&site_data, &tera, &output_path) {
-        error!("Failed to render templates: {}", e);
-        process::exit(1);
-    }
-
-    // Copy static folder if present
-    handle_static_artifacts(input_folder, &site_data, output_folder, &content_dir);
-
-    info!("Site generated at: {}/", output_folder.display());
 }
 
 fn handle_static_artifacts(
@@ -256,8 +301,7 @@ fn handle_static_artifacts(
     output_folder: &Arc<std::path::PathBuf>,
     content_dir: &std::path::Path,
 ) {
-    // Copy static files
-    let static_source = input_folder.join(site_data.site.static_path);
+    let static_source = input_folder.join(site_data.site.static_path.clone());
     if static_source.is_dir() {
         let mut options = CopyOptions::new();
         options.overwrite = true; // Overwrite files if they already exist
@@ -273,12 +317,11 @@ fn handle_static_artifacts(
             &output_folder.display()
         );
     } else {
-        // generate from embedded
-        generate_static(&output_folder.join(site_data.site.static_path));
+        generate_static(&output_folder.join(site_data.site.static_path.clone()));
     }
 
     // Copy content/media folder if present
-    let media_source = content_dir.join(site_data.site.media_path);
+    let media_source = content_dir.join(site_data.site.media_path.clone());
     if media_source.is_dir() {
         let mut options = CopyOptions::new();
         options.overwrite = true; // Overwrite files if they already exist
@@ -300,22 +343,24 @@ fn handle_static_artifacts(
     // the first we find we want to copy to the `output_folder/{destiny_path}`
     let custom_files = [
         // name, destination
-        ("custom.css", site_data.site.static_path),
-        ("custom.js", site_data.site.static_path),
-        ("favicon.ico", ""),
-        ("robots.txt", ""),
+        ("custom.css", site_data.site.static_path.clone()),
+        ("custom.js", site_data.site.static_path.clone()),
+        ("favicon.ico", String::new()),
+        ("robots.txt", String::new()),
     ];
-    let output_static_destiny = output_folder.join(site_data.site.static_path);
+    let output_static_destiny = output_folder.join(site_data.site.static_path.clone());
     let possible_sources = [input_folder, content_dir, output_static_destiny.as_path()];
     let mut copied_custom_files = Vec::new();
     for possible_source in &possible_sources {
-        for custom_file in custom_files {
+        for custom_file in &custom_files {
             let source_file = possible_source.join(custom_file.0);
             if copied_custom_files.contains(&custom_file.0.to_string()) {
                 continue;
             }
             if source_file.exists() {
-                let destiny_path = output_folder.join(custom_file.1).join(custom_file.0);
+                let destiny_path = output_folder
+                    .join(custom_file.1.clone())
+                    .join(custom_file.0);
                 match fs::copy(&source_file, &destiny_path) {
                     Ok(_) => {
                         copied_custom_files.push(custom_file.0.to_string());
@@ -333,7 +378,7 @@ fn handle_static_artifacts(
 }
 
 fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
-    let templates_path = input_folder.join(site_data.site.templates_path);
+    let templates_path = input_folder.join(site_data.site.templates_path.clone());
     let mut tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
         Ok(t) => t,
         Err(e) => {
