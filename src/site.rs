@@ -213,10 +213,10 @@ pub fn generate(
     } else {
         info!("Config loaded from: {}", config_path.display());
     }
-    let mut site_data = Data::new(&config_str);
+    let site_data = Data::new(config_str);
 
     // Define the content directory
-    let content_dir = Some(input_folder.join(site_data_clone.site.content_path))
+    let content_dir = Some(input_folder.join(site_data.site.content_path.clone()))
         .filter(|path| path.is_dir()) // Take if exists
         .unwrap_or_else(|| input_folder.to_path_buf());
     // Fallback to input_folder if not
