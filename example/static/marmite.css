@@ -7,6 +7,7 @@
   --pico-color-slate-750: #333c4e;
   --pico-color-slate-800: #2a3140;
   --pico-color-slate-850: #202632;
+  --pico-color-azure-550: #0172ad;
   --pico-color-azure-650: #015887;
   --pico-border-radius: 0.5rem;
   --pico-typography-spacing-vertical: 1rem;
@@ -75,30 +76,6 @@ blockquote {
   outline: none;
 }
 
-@media (max-width: 768px) {
-  .header-menu {
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-    position: absolute;
-    top: 100px;
-    right: 0;
-    background-color: var(--pico-bg-menu);
-    padding: 15px;
-    border-radius: 0.5rem;
-    z-index: 100;
-    box-shadow: 0px 4px 4px 0px #0000001F;
-  }
-
-  .header-menu.active {
-    display: flex;
-  }
-
-  .hamburger {
-    display: block;
-  }
-}
-
 /* Tags */
 
 .content-tags {
@@ -114,6 +91,25 @@ blockquote {
   margin: 4px 8px;
   background-color: var(--pico-tag);
   text-wrap: nowrap;
+}
+
+.group-list .content-tags {
+  display: flex;
+  width: auto;
+  flex-direction: row;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+}
+
+.tag-count {
+  color: var(--pico-color-azure-550);
+}
+
+.group-list .content-tags li:first-child {
+  margin-left: 10px;
 }
 
 .content-tags li:first-child {
@@ -144,4 +140,28 @@ article footer {
 
 pre:has(> code.language-mermaid) {
   background-color: transparent;
+}
+
+@media (max-width: 768px) {
+  .header-menu {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    position: absolute;
+    top: 100px;
+    right: 0;
+    background-color: var(--pico-bg-menu);
+    padding: 15px;
+    border-radius: 0.5rem;
+    z-index: 100;
+    box-shadow: 0px 4px 4px 0px #0000001f;
+  }
+
+  .header-menu.active {
+    display: flex;
+  }
+
+  .hamburger {
+    display: block;
+  }
 }
