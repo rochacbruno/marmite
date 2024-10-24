@@ -7,7 +7,7 @@ use fs_extra::dir::{copy as dircopy, CopyOptions};
 use log::{debug, error, info};
 use serde::Serialize;
 use std::path::Path;
-use std::{fs, process, sync::Arc};
+use std::{fs, process, sync::Arc , sync::Mutex};
 use tera::{Context, Tera};
 use walkdir::WalkDir;
 
@@ -213,22 +213,26 @@ pub fn generate(
     } else {
         info!("Config loaded from: {}", config_path.display());
     }
-    let site_data = Data::new(config_str);
+    let site_data = Arc::new(Mutex::new(Data::new(config_str)));
 
     // Define the content directory
-    let content_dir = Some(input_folder.join(site_data.site.content_path.clone()))
+    let content_dir = {
+        let site_data = site_data.lock().unwrap();
+        Some(input_folder.join(site_data.site.content_path.clone()))
+    }
         .filter(|path| path.is_dir()) // Take if exists
         .unwrap_or_else(|| input_folder.to_path_buf());
     // Fallback to input_folder if not
 
     // Function to trigger site regeneration
-    let mut rebuild_site = {
+    let  rebuild_site = {
         let content_dir = content_dir.clone();
         let output_folder = Arc::clone(output_folder);
         let input_folder = input_folder.to_path_buf();
-        let mut site_data = site_data.clone();
+        let site_data = site_data.clone();
 
         move || {
+            let mut site_data = site_data.lock().unwrap();
             collect_content(&content_dir, &mut site_data);
 
             // Detect slug collision
