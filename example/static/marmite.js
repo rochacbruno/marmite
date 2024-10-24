@@ -116,11 +116,6 @@ document.addEventListener("DOMContentLoaded", function () {
             this.classList.add('active');
             
             setUnderline(this);
-
-            const link = this.getAttribute('href');
-            setTimeout(() => {
-                window.location.href = link; 
-            }, 400); 
         });
     });
 });
