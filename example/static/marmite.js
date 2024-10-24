@@ -88,3 +88,39 @@ menuToggle.addEventListener('click', function () {
 });
 
 
+// Selected menu animation
+document.addEventListener("DOMContentLoaded", function () {
+    const menuItems = document.querySelectorAll('.menu-item');
+    const underline = document.querySelector('.underline');
+
+    function setUnderline(item) {
+        underline.style.width = `${item.offsetWidth}px`; 
+        underline.style.transform = `translateX(${item.offsetLeft}px)`; 
+    }
+
+    const activeItem = document.querySelector('.menu-item.active');
+    if (activeItem) {
+        setUnderline(activeItem); 
+    }
+
+    menuItems.forEach(item => {
+        item.addEventListener('click', function (event) {
+            if (this.classList.contains('active')) {
+                return; 
+            }
+
+            menuItems.forEach(i => {
+                i.classList.remove('active');
+            });
+
+            this.classList.add('active');
+            
+            setUnderline(this);
+
+            const link = this.getAttribute('href');
+            setTimeout(() => {
+                window.location.href = link; 
+            }, 400); 
+        });
+    });
+});

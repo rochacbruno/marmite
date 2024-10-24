@@ -3,31 +3,43 @@
   --pico-typography-spacing-vertical: 1.5rem;
   --pico-font-family: "Atkinson Hyperlegible", sans-serif;
   --pico-color-grey-50: #f1f1f1;
+  --pico-color-azure-50:#E9F2FC;
+  --pico-color-azure-200:#9BCCFD;
   --pico-color-grey-700: #474747;
+  --pico-color-slate-500: ##687899;
   --pico-color-slate-750: #333c4e;
   --pico-color-slate-800: #2a3140;
   --pico-color-slate-850: #202632;
+  --pico-color-azure-550: #0172ad;
   --pico-color-azure-650: #015887;
-  --pico-border-radius: 0.5rem;
+  --pico-border-radius: 4px;
   --pico-typography-spacing-vertical: 1rem;
 }
 
 [data-theme="light"],
 :root:not([data-theme="dark"]) {
-  --pico-tag: var(--pico-color-grey-50);
+  --pico-tag:var(--pico-color-azure-50);
   --pico-bg-menu: #fff;
+  --pico-home: var(--pico-color-slate-500);
+  --pico-menu-selected: #48536B;
 }
 
 @media only screen and (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     --pico-tag: var(--pico-color-slate-850);
     --pico-bg-menu: var(--pico-color-slate-850);
+    --pico-home: var(--pico-color-slate-500);
+  --pico-menu-selected: #B3B9C5;
+
   }
 }
 
 [data-theme="dark"] {
   --pico-tag: var(--pico-color-slate-850);
   --pico-bg-menu: var(--pico-color-slate-850);
+  --pico-home: var(--pico-color-slate-500);
+  --pico-menu-selected: #B3B9C5;
+
 }
 
 a {
@@ -42,6 +54,10 @@ blockquote {
   padding-bottom: 0.01rem;
 }
 
+.header-name a.contrast {
+  color: var(--pico-home);
+}
+
 /* Menu Hamburguer */
 .header-nav {
   display: flex;
@@ -54,11 +70,44 @@ blockquote {
   list-style: none;
   display: flex;
   gap: 15px;
+  position: relative;
+}
+
+.header-menu li {
+  text-decoration: none;
+  padding: 8px 16px;
+  color: #333;
+  display: inline-block;
+}
+
+.header-menu .selected {
+  background-color: transparent;
+  color: var(--pico-menu-selected);
+  border: none;
+  border-radius: 0;
+}
+
+.header-menu .menu-item {
+  transition: color 0.3s ease;
+}
+
+.underline {
+  position: absolute;
+  height: 2px;
+  background-color: var(--pico-color-azure-550);
+  transition: transform 0.4s ease-in-out, width 0.4s ease-in-out;
+  bottom: 8px;
+  left: 0;
+  width: 0;
+}
+
+.menu-item.active + .underline {
+  transform: translateX(0);
 }
 
 .header-menu li a:hover {
-  scale: 1.1;
-  transition: 0.3s;
+  color: var(--pico-menu-selected);
+  transition: 0.3s ease-in-out;
 }
 
 .hamburger {
@@ -75,30 +124,6 @@ blockquote {
   outline: none;
 }
 
-@media (max-width: 768px) {
-  .header-menu {
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-    position: absolute;
-    top: 100px;
-    right: 0;
-    background-color: var(--pico-bg-menu);
-    padding: 15px;
-    border-radius: 0.5rem;
-    z-index: 100;
-    box-shadow: 0px 4px 4px 0px #0000001F;
-  }
-
-  .header-menu.active {
-    display: flex;
-  }
-
-  .hamburger {
-    display: block;
-  }
-}
-
 /* Tags */
 
 .content-tags {
@@ -106,18 +131,52 @@ blockquote {
   width: auto;
   flex-direction: row;
   margin: 0 0;
+  justify-content: flex-start;
+  list-style: none;
+  gap: 8px;
 }
 
 .content-tags li {
   padding: 8px 16px;
-  border-radius: var(--pico-border-radius);
+  border-radius: 4px;
   margin: 4px 8px;
   background-color: var(--pico-tag);
   text-wrap: nowrap;
+  position: relative;
+  padding: 4px 12px 4px 8px;
+  border-radius: 4px;
+  background-color: var(--pico-tag);
+  white-space: nowrap;
+  list-style: none;
+  display: inline-block;
+  color: #333;
 }
 
-.content-tags li:first-child {
-  margin-left: -40px;
+.content-tags li:before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 16px solid transparent;
+  border-bottom: 16px solid transparent;
+  border-right: 16px solid var(--pico-tag);
+}
+
+.group-list .content-tags {
+  display: flex;
+  width: auto;
+  flex-direction: row;
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tag-count {
+  color: var(--pico-color-azure-550);
 }
 
 .content-tags li::marker {
@@ -144,4 +203,28 @@ article footer {
 
 pre:has(> code.language-mermaid) {
   background-color: transparent;
+}
+
+@media (max-width: 768px) {
+  .header-menu {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    position: absolute;
+    top: 100px;
+    right: 0;
+    background-color: var(--pico-bg-menu);
+    padding: 15px;
+    border-radius: 4px;
+    z-index: 100;
+    box-shadow: 0px 4px 4px 0px #0000001f;
+  }
+
+  .header-menu.active {
+    display: flex;
+  }
+
+  .hamburger {
+    display: block;
+  }
 }
