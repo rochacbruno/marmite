@@ -39,6 +39,7 @@ fn handle_request(
     };
 
     let file_path = output_folder.join(request_path);
+    let error_path = output_folder.join("404.html");
 
     if file_path.is_file() {
         match File::open(&file_path) {
@@ -70,6 +71,21 @@ fn handle_request(
             request_path,
             request.http_version()
         );
-        Ok(Response::from_string("404 Not Found").with_status_code(404))
+        render_not_found(&error_path)
+    }
+}
+
+fn render_not_found(error_path: &PathBuf) -> Result<Response<Cursor<Vec<u8>>>, String> {
+    match File::open(error_path) {
+        Ok(mut file) => {
+            let mut buffer = Vec::new();
+            std::io::copy(&mut file, &mut buffer).map_err(|e| e.to_string())?;
+            let resp = Response::from_data(buffer);
+            Ok(resp)
+        }
+        Err(err) => {
+            error!("Error on rendering page 404 - {}", err);
+            Ok(Response::from_string("404 Not Found").with_status_code(404))
+        }
     }
 }

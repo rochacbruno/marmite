@@ -10,6 +10,8 @@ use std::path::Path;
 use std::{fs, process, sync::Arc};
 use tera::{Context, Tera};
 use walkdir::WalkDir;
+
+const NAME_BASED_SLUG_FILES: [&str; 1] = ["404.md"];
 use hotwatch::{Hotwatch, EventKind , Event};
 
 #[derive(Serialize)]
@@ -99,6 +101,9 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
         )?;
     }
 
+    // Check and guarantees that page 404 was generated even if 404.md is removed
+    handle_404(&global_context, tera, output_dir)?;
+
     // Render tagged_contents
     let mut unique_tags: Vec<(String, usize)> = Vec::new();
     let tags_dir = output_dir.join("tag");
@@ -152,6 +157,25 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
     Ok(())
 }
 
+fn handle_404(global_context: &Context, tera: &Tera, output_dir: &Path) -> Result<(), String> {
+    let file_404_path = output_dir.join("404.html");
+    if !file_404_path.exists() {
+        let mut context = global_context.clone();
+        let page_404_content = Content {
+            html: String::from("Page not found :/"),
+            title: String::from("Page not found"),
+            date: None,
+            slug: String::new(),
+            extra: None,
+            tags: vec![],
+        };
+        context.insert("title", &page_404_content.title);
+        context.insert("content", &page_404_content);
+        render_html("content.html", "404.html", tera, &context, output_dir)?;
+    };
+    Ok(())
+}
+
 fn render_html(
     template: &str,
     filename: &str,
@@ -184,8 +208,12 @@ pub fn generate(
         );
         String::new()
     });
-    let site_data = Data::new(config_str);
-    let site_data_clone = site_data.clone();
+    if config_str.is_empty() {
+        info!("Config loaded from: defaults");
+    } else {
+        info!("Config loaded from: {}", config_path.display());
+    }
+    let mut site_data = Data::new(&config_str);
 
     // Define the content directory
     let content_dir = Some(input_folder.join(site_data_clone.site.content_path))
@@ -388,11 +416,32 @@ fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| {
-            e.path().is_file() && e.path().extension().and_then(|ext| ext.to_str()) == Some("md")
+            let file_name = e
+                .path()
+                .file_name()
+                .and_then(|ext| ext.to_str())
+                .expect("Could not get file name");
+            let file_extension = e.path().extension().and_then(|ext| ext.to_str());
+            e.path().is_file()
+                && !NAME_BASED_SLUG_FILES.contains(&file_name)
+                && file_extension == Some("md")
         })
         .for_each(|entry| {
-            if let Err(e) = process_file(entry.path(), site_data) {
+            if let Err(e) = process_file(entry.path(), site_data, false) {
                 error!("Failed to process file {}: {}", entry.path().display(), e);
             }
         });
+
+    for slugged_file in NAME_BASED_SLUG_FILES {
+        let slugged_path = content_dir.join(slugged_file);
+        if slugged_path.exists() {
+            if let Err(e) = process_file(slugged_path.as_path(), site_data, true) {
+                error!(
+                    "Failed to process file {}: {}",
+                    slugged_path.as_path().display(),
+                    e
+                );
+            }
+        }
+    }
 }

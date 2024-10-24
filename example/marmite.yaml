@@ -25,3 +25,28 @@ menu:
 # extra data for template customization
 # data:
 #  foo: bar
+
+# Example, to enable comments:
+# Go to: https://giscus.app/ and generate your config and replace below.
+# If you prefer to use a different commenting system just replace accordingly
+# disqus, utterance.s and others works.
+# data:
+#   comments:
+#     title: Comentários
+#     source: |
+#         <script src="https://giscus.app/client.js"
+#         data-repo="yourrepo/blog"
+#         data-repo-id="sdsdsd"
+#         data-category="Announcements"
+#         data-category-id="dfsffsdfsdfsdfsdf"
+#         data-mapping="pathname"
+#         data-strict="0"
+#         data-reactions-enabled="1"
+#         data-emit-metadata="0"
+#         data-input-position="top"
+#         data-theme="preferred_color_scheme"
+#         data-lang="en"
+#         data-loading="lazy"
+#         crossorigin="anonymous"
+#         async>
+#         </script>

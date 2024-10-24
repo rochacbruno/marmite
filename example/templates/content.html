@@ -32,6 +32,11 @@
     </footer>
     {% endif %}
 </article>
+
+{% if site.data.comments.source is defined and content.date %}
+   {%include "comments.html"%}
+{% endif %}
+
 {% endblock %}
 
 {% block tail %}
@@ -40,4 +45,18 @@
 <script>
     hljs.highlightAll();
 </script>
+
+{%if content.extra.mermaid %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.3.0/mermaid.min.js"></script>
+<script>
+var config = {
+    startOnLoad:true,
+    theme: '{{content.extra.mermaid_theme | default(value="neutral") }}',
+    flowchart:{useMaxWidth:false, htmlLabels:true}
+};
+mermaid.initialize(config);
+window.mermaid.init(undefined, document.querySelectorAll('.language-mermaid'));
+</script>
+{% endif %}
+
 {% endblock %}
