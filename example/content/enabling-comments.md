@@ -42,7 +42,7 @@ Now go to https://giscus.app/ and find the **configuration** section.
 Copy the `<script ... /script>` that was presented and put it in your `marmite.yaml`
 
 ```yaml
-data:
+extra:
   comments:
     title: Comments
     source: |
@@ -69,7 +69,7 @@ data:
 The process will be very similar, you just need to grab the required `script` and tags.
 
 ```yaml
-data:
+extra:
   comments:
     title: Comments
     source: |
@@ -83,7 +83,7 @@ Add `templates/comments.html` to your project.
 
 ```html
 <article>
-<header>{{site.data.comments.title | default(value="Comments") }}</header>
-{{site.data.comments.source}}
+<header>{{site.extra.comments.title | default(value="Comments") }}</header>
+{{site.extra.comments.source}}
 </article>
 ```

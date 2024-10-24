@@ -33,7 +33,7 @@
     {% endif %}
 </article>
 
-{% if site.data.comments.source is defined and content.date %}
+{% if site.extra.comments.source is defined and content.date %}
    {%include "comments.html"%}
 {% endif %}
 

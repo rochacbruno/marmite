@@ -34,6 +34,7 @@ site:
   url: str
   tagline: str
   pagination: int
+  extra: {k, v}
   ...the keys on site configuration.
 menu: [[name, link]]
 ```
@@ -89,17 +90,17 @@ On templates use the `url_for` function to refer to urls.
 
 ## Extra data
 
-On site config `marmite.yaml` there is an arbitrary field `data` that can be accessed
+On site config `marmite.yaml` there is an arbitrary field `extra` that can be accessed
 on any template.
 
 ```yaml
-data:
+extra:
   myname: Bruno
 ```
 Then on an template.
 
 ```html
-{{site.data.myname}}
+{{site.extra.myname}}
 ```
 
 On each individual post there is a `extra` arbitrary field, so on `list.html` and

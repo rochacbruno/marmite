@@ -189,7 +189,7 @@ url: https://www.myblog.com
 
 # menu:
 #  - ["Title", "link.html"]
-# data: Custom key:pair values to be exposed to template context.
+# extra: Custom key:pair values to be exposed to template context.
 ```
 
 ### Content types
