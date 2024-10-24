@@ -7,15 +7,14 @@ use fs_extra::dir::{copy as dircopy, CopyOptions};
 use log::{debug, error, info};
 use serde::Serialize;
 use std::path::Path;
-use std::{fs, process, sync::Arc , sync::Mutex};
+use std::{fs, process, sync::Arc, sync::Mutex};
 use tera::{Context, Tera};
 use walkdir::WalkDir;
 
 const NAME_BASED_SLUG_FILES: [&str; 1] = ["404.md"];
-use hotwatch::{Hotwatch, EventKind , Event};
+use hotwatch::{Event, EventKind, Hotwatch};
 
-#[derive(Serialize)]
-#[derive(Clone)]
+#[derive(Serialize, Clone)]
 pub struct Data {
     pub site: Marmite,
     pub posts: Vec<Content>,
@@ -23,8 +22,8 @@ pub struct Data {
 }
 
 impl Data {
-    pub fn new(config_content: String) -> Self {
-        let site: Marmite = match serde_yaml::from_str::<Marmite>(&config_content) {
+    pub fn new(config_content: &str) -> Self {
+        let site: Marmite = match serde_yaml::from_str::<Marmite>(config_content) {
             Ok(site) => site,
             Err(e) => {
                 error!("Failed to parse config YAML: {}", e);
@@ -193,7 +192,6 @@ fn render_html(
     Ok(())
 }
 
-
 pub fn generate(
     config_path: &std::path::PathBuf,
     input_folder: &std::path::Path,
@@ -213,19 +211,19 @@ pub fn generate(
     } else {
         info!("Config loaded from: {}", config_path.display());
     }
-    let site_data = Arc::new(Mutex::new(Data::new(config_str)));
+    let site_data = Arc::new(Mutex::new(Data::new(&config_str)));
 
     // Define the content directory
     let content_dir = {
         let site_data = site_data.lock().unwrap();
         Some(input_folder.join(site_data.site.content_path.clone()))
     }
-        .filter(|path| path.is_dir()) // Take if exists
-        .unwrap_or_else(|| input_folder.to_path_buf());
+    .filter(|path| path.is_dir()) // Take if exists
+    .unwrap_or_else(|| input_folder.to_path_buf());
     // Fallback to input_folder if not
 
     // Function to trigger site regeneration
-    let  rebuild_site = {
+    let rebuild_site = {
         let content_dir = content_dir.clone();
         let output_folder = Arc::clone(output_folder);
         let input_folder = input_folder.to_path_buf();
@@ -233,6 +231,9 @@ pub fn generate(
 
         move || {
             let mut site_data = site_data.lock().unwrap();
+            // cleanup before rebuilding, otherwise we get duplicated slug
+            site_data.posts = Vec::new();
+            site_data.pages = Vec::new();
             collect_content(&content_dir, &mut site_data);
 
             // Detect slug collision
@@ -276,14 +277,12 @@ pub fn generate(
 
         // Watch the input folder for changes
         hotwatch
-            .watch(input_folder, move |event: Event| {
-                match event.kind {
-                    EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
-                        info!("Change detected. Rebuilding site...");
-                        rebuild_site();
-                    }
-                    _ => {}
+            .watch(input_folder, move |event: Event| match event.kind {
+                EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                    info!("Change detected. Rebuilding site...");
+                    rebuild_site();
                 }
+                _ => {}
             })
             .expect("Failed to watch the input folder!");
 
@@ -346,8 +345,8 @@ fn handle_static_artifacts(
         // name, destination
         ("custom.css", site_data.site.static_path.clone()),
         ("custom.js", site_data.site.static_path.clone()),
-        ("favicon.ico", "".to_string()),
-        ("robots.txt", "".to_string()),
+        ("favicon.ico", String::new()),
+        ("robots.txt", String::new()),
     ];
     let output_static_destiny = output_folder.join(site_data.site.static_path.clone());
     let possible_sources = [input_folder, content_dir, output_static_destiny.as_path()];
@@ -359,7 +358,9 @@ fn handle_static_artifacts(
                 continue;
             }
             if source_file.exists() {
-                let destiny_path = output_folder.join(custom_file.1.clone()).join(custom_file.0);
+                let destiny_path = output_folder
+                    .join(custom_file.1.clone())
+                    .join(custom_file.0);
                 match fs::copy(&source_file, &destiny_path) {
                     Ok(_) => {
                         copied_custom_files.push(custom_file.0.to_string());

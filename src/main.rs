@@ -33,7 +33,7 @@ fn main() {
         error!("Logger already initialized: {}", e);
     }
 
-    site::generate(&config_path, &input_folder, &output_folder , watch);
+    site::generate(&config_path, &input_folder, &output_folder, watch);
 
     // Serve the site if the flag was provided
     if serve {

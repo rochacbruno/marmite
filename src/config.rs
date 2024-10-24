@@ -58,7 +58,7 @@ fn default_tagline() -> String {
 }
 
 fn default_url() -> String {
-    "".to_string()
+    String::new()
 }
 
 fn default_footer() -> String {
@@ -90,7 +90,7 @@ fn default_archives_title() -> String {
 }
 
 fn default_site_path() -> String {
-    "".to_string()
+    String::new()
 }
 
 fn default_content_path() -> String {
@@ -110,11 +110,11 @@ fn default_media_path() -> String {
 }
 
 fn default_card_image() -> String {
-    "".to_string()
+    String::new()
 }
 
 fn default_logo_image() -> String {
-    "".to_string()
+    String::new()
 }
 
 fn default_menu() -> Option<Vec<(String, String)>> {

@@ -18,7 +18,7 @@ pub struct Cli {
     /// Detect changes and rebuild the site automatically
     #[arg(long)]
     pub watch: bool,
- 
+
     #[arg(long, default_value = "localhost:8000")]
     pub bind: String,
 
