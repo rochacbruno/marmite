@@ -3,9 +3,9 @@ tagline: Simply create a static blog from markdown files
 url: https://rochacbruno.github.io/marmite/
 menu: 
   - ['Docs', 'tag/docs.html']
-  - ['Create a blog', "https://github.com/rochacbruno/blog/"]
-  - ['Github', 'https://github.com/rochacbruno/marmite/']
+  - ['Contributors', 'contributors.html']
   - ['Tags', 'tags.html']
+  - ['Github', 'https://github.com/rochacbruno/marmite/']
 extra:
   comments:
     title: Comments
