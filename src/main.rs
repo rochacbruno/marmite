@@ -33,10 +33,17 @@ fn main() {
         error!("Logger already initialized: {}", e);
     }
 
-    site::generate(&config_path, &input_folder, &output_folder, watch);
+    site::generate(
+        &config_path,
+        &input_folder,
+        &output_folder,
+        watch,
+        serve,
+        bind_address,
+    );
 
     // Serve the site if the flag was provided
-    if serve {
+    if serve && !watch {
         info!("Starting built-in HTTP server...");
         server::start(bind_address, &output_folder);
     }

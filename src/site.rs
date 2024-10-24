@@ -2,6 +2,7 @@ use crate::config::Marmite;
 use crate::content::{check_for_duplicate_slugs, group_by_tags, slugify, Content};
 use crate::embedded::{generate_static, EMBEDDED_TERA};
 use crate::markdown::process_file;
+use crate::server;
 use crate::tera_functions::UrlFor;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
 use log::{debug, error, info};
@@ -196,7 +197,9 @@ pub fn generate(
     config_path: &std::path::PathBuf,
     input_folder: &std::path::Path,
     output_folder: &Arc<std::path::PathBuf>,
-    watch: bool, // New parameter for watching
+    watch: bool, // New parameter for watching,
+    serve: bool, // Is running on server mode
+    bind_address: &str,
 ) {
     let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
         debug!(
@@ -289,8 +292,13 @@ pub fn generate(
         info!("Watching for changes in folder: {}", input_folder.display());
 
         // Keep the thread alive for watching
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(1));
+        if serve {
+            info!("Starting built-in HTTP server...");
+            server::start(bind_address, output_folder);
+        } else {
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+            }
         }
     }
 }
