@@ -1,8 +1,7 @@
 use clap::Parser;
 use env_logger::{Builder, Env};
-
 use log::{error, info};
-use std::{path::PathBuf, sync::Arc};
+use std::{fs, path::PathBuf, sync::Arc};
 
 mod cli;
 mod config;
@@ -10,6 +9,7 @@ mod content;
 mod embedded;
 mod markdown;
 mod server;
+mod templates;
 mod site;
 mod tera_functions;
 
@@ -18,8 +18,8 @@ fn main() {
     let input_folder = args.input_folder;
     let output_folder = Arc::new(args.output_folder);
     let serve = args.serve;
-
     let watch = args.watch;
+
     let config_path = if args.config.starts_with('.') || args.config.starts_with('/') {
         PathBuf::new().join(args.config)
     } else {
@@ -33,6 +33,22 @@ fn main() {
         error!("Logger already initialized: {}", e);
     }
 
+    // Handle `init_templates` flag
+    if args.init_templates {
+        templates::initialize_templates(&output_folder);
+        info!("Initialized templates.");
+        return; // Exit early if only initializing templates
+    }
+
+    // Handle `start_theme` flag
+    if args.start_theme {
+        templates::initialize_templates(&output_folder);
+        templates::initialize_theme_assets(&output_folder);
+        info!("Initialized templates and theme assets.");
+        return; // Exit early if only initializing theme
+    }
+
+    // Generate site content
     site::generate(
         &config_path,
         &input_folder,
