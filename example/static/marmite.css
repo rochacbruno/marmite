@@ -227,4 +227,8 @@ pre:has(> code.language-mermaid) {
   .hamburger {
     display: block;
   }
+
+  .underline {
+    display: none;
+  }
 }
