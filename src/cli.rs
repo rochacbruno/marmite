@@ -19,6 +19,7 @@ pub struct Cli {
     #[arg(long)]
     pub watch: bool,
 
+    /// Address to bind the server (defaults to localhost:8000)
     #[arg(long, default_value = "localhost:8000")]
     pub bind: String,
 
@@ -29,4 +30,12 @@ pub struct Cli {
     /// Print debug messages
     #[arg(long)]
     pub debug: bool,
+
+    /// Initialize templates in the project
+    #[arg(long)]
+    pub init_templates: bool,
+
+    /// Initialize a theme with templates and static assets
+    #[arg(long)]
+    pub start_theme: bool,
 }
