@@ -25,6 +25,20 @@ Example on `templates/list.html`
 {% endblock %}
 ```
 
+## Starting a new theme
+
+```console
+$ marmite input_folder output_folder --start-theme
+Generated input_folder/templates
+Generated input_folder/static
+```
+
+Then you can start customizing those assets.
+
+If instead, you just want to customize the templates use `--init-templates`
+and the `custom.css` and `custom.js` in the root of the project.
+
+
 ## Templates
 
 all templates are rendered with the global context.
