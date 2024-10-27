@@ -48,37 +48,82 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
     global_context.insert("menu", &site_data.site.menu);
     debug!("Global Context: {:?}", &site_data.site);
 
-    // Render index.html from list.html template
-    let mut list_context = global_context.clone();
-    list_context.insert("title", &site_data.site.list_title);
-    list_context.insert("content_list", &site_data.posts);
-    list_context.insert("current_page", "index.html");
-    debug!(
-        "Index Context: {:?}",
-        &site_data
-            .posts
-            .iter()
-            .map(|p| format!("{},{}", p.title, p.slug))
-            .collect::<Vec<_>>()
-    );
-    render_html("list.html", "index.html", tera, &list_context, output_dir)?;
+    handle_list_page(
+        &global_context,
+        &site_data.site.list_title,
+        &site_data.posts,
+        site_data,
+        tera,
+        output_dir,
+        "index",
+    )?;
 
-    // Render pages.html from list.html template
-    let mut list_context = global_context.clone();
-    list_context.insert("title", &site_data.site.pages_title);
-    list_context.insert("content_list", &site_data.pages);
-    list_context.insert("current_page", "pages.html");
-    debug!(
-        "Pages Context: {:?}",
-        &site_data
-            .pages
-            .iter()
-            .map(|p| format!("{},{}", p.title, p.slug))
-            .collect::<Vec<_>>()
-    );
-    render_html("list.html", "pages.html", tera, &list_context, output_dir)?;
+    handle_list_page(
+        &global_context,
+        &site_data.site.pages_title,
+        &site_data.pages,
+        site_data,
+        tera,
+        output_dir,
+        "pages",
+    )?;
 
     // Render individual content-slug.html from content.html template
+    handle_content_pages(site_data, &global_context, tera, output_dir)?;
+
+    // Check and guarantees that page 404 was generated even if 404.md is removed
+    handle_404(&global_context, tera, output_dir)?;
+
+    // Render tagged_contents
+    handle_tag_pages(output_dir, site_data, &global_context, tera)?;
+
+    Ok(())
+}
+
+fn handle_tag_pages(
+    output_dir: &Path,
+    site_data: &Data,
+    global_context: &Context,
+    tera: &Tera,
+) -> Result<(), String> {
+    let mut unique_tags: Vec<(String, usize)> = Vec::new();
+    for (tag, tagged_contents) in group_by_tags(site_data.posts.clone()) {
+        // aggregate unique tags to render the tags list later
+        unique_tags.push((tag.clone(), tagged_contents.len()));
+        let tag_slug = slugify(&tag);
+        handle_list_page(
+            global_context,
+            &site_data.site.tags_content_title.replace("$tag", &tag),
+            &tagged_contents,
+            site_data,
+            tera,
+            output_dir,
+            format!("tag-{}", &tag_slug).as_ref(),
+        )?;
+    }
+
+    // Render tags.html group page
+    let mut tag_list_context = global_context.clone();
+    tag_list_context.insert("title", &site_data.site.tags_title);
+    unique_tags.sort_by(|a, b| a.0.cmp(&b.0));
+    tag_list_context.insert("group_content", &unique_tags);
+    tag_list_context.insert("current_page", "tags.html");
+    render_html(
+        "group.html",
+        "tags.html",
+        tera,
+        &tag_list_context,
+        output_dir,
+    )?;
+    Ok(())
+}
+
+fn handle_content_pages(
+    site_data: &Data,
+    global_context: &Context,
+    tera: &Tera,
+    output_dir: &Path,
+) -> Result<(), String> {
     for content in site_data.posts.iter().chain(&site_data.pages) {
         let mut content_context = global_context.clone();
         content_context.insert("title", &content.title);
@@ -100,60 +145,74 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
             output_dir,
         )?;
     }
+    Ok(())
+}
 
-    // Check and guarantees that page 404 was generated even if 404.md is removed
-    handle_404(&global_context, tera, output_dir)?;
+fn handle_list_page(
+    global_context: &Context,
+    title: &str,
+    all_content: &[Content],
+    site_data: &Data,
+    tera: &Tera,
+    output_dir: &Path,
+    output_filename: &str,
+) -> Result<(), String> {
+    let per_page = &site_data.site.pagination;
+    let total_content = all_content.len();
+    let total_pages = (total_content + per_page - 1) / per_page;
+    for page_num in 0..total_pages {
+        let mut context = global_context.clone();
 
-    // Render tagged_contents
-    let mut unique_tags: Vec<(String, usize)> = Vec::new();
-    let tags_dir = output_dir.join("tag");
-    if let Err(e) = fs::create_dir_all(&tags_dir) {
-        error!("Unable to create tag directory: {}", e);
-        process::exit(1);
-    }
-    for (tag, tagged_contents) in group_by_tags(site_data.posts.clone()) {
-        // aggregate unique tags to render the tags list later
-        unique_tags.push((tag.clone(), tagged_contents.len()));
+        // Slice the content list for this page
+        let page_content =
+            &all_content[page_num * per_page..(page_num * per_page + per_page).min(total_content)];
 
-        let mut tag_context = global_context.clone();
-        tag_context.insert(
-            "title",
-            &site_data.site.tags_content_title.replace("$tag", &tag),
-        );
-        tag_context.insert("content_list", &tagged_contents);
-        let tag_slug = slugify(&tag);
-        tag_context.insert("current_page", &format!("tag/{}.html", &tag_slug));
+        // Set up context for pagination
+        context.insert("title", title);
+        context.insert("content_list", page_content);
+        context.insert("total_pages", &total_pages);
+        context.insert("per_page", &per_page);
+        context.insert("total_content", &total_content);
+
+        // Determine filename and pagination values
+        let (current_page_number, filename) = if page_num == 0 {
+            (1, format!("{output_filename}.html"))
+        } else {
+            (
+                page_num + 1,
+                format!("{}-{}.html", output_filename, page_num + 1),
+            )
+        };
+        context.insert("current_page", &filename);
+        context.insert("current_page_number", &current_page_number);
+
+        if page_num > 0 {
+            let prev_page = if page_num == 1 {
+                format!("{output_filename}.html")
+            } else {
+                format!("{output_filename}-{page_num}.html")
+            };
+            context.insert("previous_page", &prev_page);
+        }
+
+        if page_num < total_pages - 1 {
+            let next_page = format!("{}-{}.html", output_filename, page_num + 2);
+            context.insert("next_page", &next_page);
+        }
+
+        // Debug print
         debug!(
-            "Tag {} Context: {:?}",
-            &tag,
-            &site_data
-                .pages
+            "List Context for {}: {:?}",
+            filename,
+            page_content
                 .iter()
                 .map(|p| format!("{},{}", p.title, p.slug))
                 .collect::<Vec<_>>()
         );
-        render_html(
-            "list.html",
-            &format!("{}.html", &tag_slug),
-            tera,
-            &tag_context,
-            &tags_dir,
-        )?;
-    }
-    // Render Main tags.html list page from group.html template
-    let mut tag_list_context = global_context.clone();
-    tag_list_context.insert("title", &site_data.site.tags_title);
-    unique_tags.sort_by(|a, b| a.0.cmp(&b.0));
-    tag_list_context.insert("group_content", &unique_tags);
-    tag_list_context.insert("current_page", "tags.html");
-    render_html(
-        "group.html",
-        "tags.html",
-        tera,
-        &tag_list_context,
-        output_dir,
-    )?;
 
+        // Render the HTML file for this page
+        render_html("list.html", &filename, tera, &context, output_dir)?;
+    }
     Ok(())
 }
 
@@ -184,7 +243,10 @@ fn render_html(
     output_dir: &Path,
 ) -> Result<(), String> {
     let rendered = tera.render(template, context).map_err(|e| {
-        error!("Error rendering template `{}`: {}", template, e);
+        debug!(
+            "Error rendering template `{}` -> {}: {:#?}",
+            template, filename, e
+        );
         e.to_string()
     })?;
     let output_file = output_dir.join(filename);

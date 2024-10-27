@@ -13,7 +13,7 @@ pub struct Marmite {
     #[serde(default = "default_footer")]
     pub footer: String,
     #[serde(default = "default_pagination")]
-    pub pagination: u32,
+    pub pagination: usize,
 
     #[serde(default = "default_list_title")]
     pub list_title: String,
@@ -65,8 +65,8 @@ fn default_footer() -> String {
     r#"<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a> | Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a>"#.to_string()
 }
 
-fn default_pagination() -> u32 {
-    10
+fn default_pagination() -> usize {
+    10usize
 }
 
 fn default_list_title() -> String {

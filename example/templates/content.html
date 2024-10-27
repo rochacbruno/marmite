@@ -26,7 +26,7 @@
         <span class="content-date"> {{ content.date | date(format="%v") }}</span>
         <ul class="content-tags overflow-auto">
         {% for tag in content.tags  %}
-            <li><a href="{{url_for(path='/tag/')}}{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
+            <li><a href="./tag-{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
         {% endfor %}
         </ul>
     </footer>
@@ -34,7 +34,7 @@
 </article>
 
 {% if site.extra.comments.source is defined and content.date %}
-   {%include "comments.html"%}
+   {%include "comments.html" ignore missing %}
 {% endif %}
 
 {% endblock %}

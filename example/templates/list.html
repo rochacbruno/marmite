@@ -16,7 +16,7 @@
                     {% if content.tags -%}
                     <ul class="content-tags overflow-auto">
                         {% for tag in content.tags | slice(end=3) -%}
-                            <li><a href="{{url_for(path='/tag/')}}{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
+                            <li><a href="./tag-{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
                         {%- endfor %}
                     </ul>
                     {%- endif %}
@@ -25,4 +25,7 @@
             </article>
             {%- endfor %}
         </div>
+        {% if total_pages is defined and total_pages > 1 %}
+          {% include "pagination.html" ignore missing %}
+        {% endif %}
 {% endblock %}
