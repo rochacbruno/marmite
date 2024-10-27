@@ -1,7 +1,7 @@
 use clap::Parser;
 use env_logger::{Builder, Env};
 use log::{error, info};
-use std::{fs, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 mod cli;
 mod config;
@@ -9,8 +9,8 @@ mod content;
 mod embedded;
 mod markdown;
 mod server;
-mod templates;
 mod site;
+mod templates;
 mod tera_functions;
 
 fn main() {
