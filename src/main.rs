@@ -35,15 +35,15 @@ fn main() {
 
     // Handle `init_templates` flag
     if args.init_templates {
-        templates::initialize_templates(&output_folder);
+        templates::initialize_templates(&input_folder);
         info!("Initialized templates.");
         return; // Exit early if only initializing templates
     }
 
     // Handle `start_theme` flag
     if args.start_theme {
-        templates::initialize_templates(&output_folder);
-        templates::initialize_theme_assets(&output_folder);
+        templates::initialize_templates(&input_folder);
+        templates::initialize_theme_assets(&input_folder);
         info!("Initialized templates and theme assets.");
         return; // Exit early if only initializing theme
     }
