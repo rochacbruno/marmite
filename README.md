@@ -1,6 +1,6 @@
 # Marmite
 
-![Logo](https://github.com/rochacbruno/marmite/raw/main/assets/_resized/logo_160x120.png)
+<img src="https://github.com/rochacbruno/marmite/raw/main/assets/_resized/logo_160x120.png" align="left" alt="marmite">
 
 Marmite [**Mar**kdown **m**akes s**ite**s] is a **very!** simple static site generator.
 
