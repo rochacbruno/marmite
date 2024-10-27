@@ -237,5 +237,5 @@ If you have ideas please open issues on the repository.
 
 That's all!
 
-[Read the Docs](./tag/docs.html)
+[Read the Docs](./tag-docs.html)
 

@@ -202,12 +202,28 @@ fn handle_list_page(
 
         // Debug print
         debug!(
-            "List Context for {}: {:?}",
+            "List Context for {}: {:#?} - Pagination({:#?})",
             filename,
             page_content
                 .iter()
-                .map(|p| format!("{},{}", p.title, p.slug))
-                .collect::<Vec<_>>()
+                .map(|p| format!("title:{}, slug:{}", p.title, p.slug))
+                .collect::<Vec<_>>(),
+            [
+                "total_pages",
+                "per_page",
+                "total_content",
+                "current_page",
+                "current_page_number",
+                "previous_page",
+                "next_page"
+            ]
+            .iter()
+            .map(|name| format!(
+                "{}:{}",
+                name,
+                context.get(name).unwrap_or(&tera::Value::Null)
+            ))
+            .collect::<Vec<_>>()
         );
 
         // Render the HTML file for this page
