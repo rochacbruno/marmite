@@ -35,7 +35,7 @@ fn main() {
 
     // Handle `init_templates` flag
     if args.init_templates {
-        templates::initialize_templates(&output_folder);
+        templates::initialize_templates(&input_folder);
         info!("Initialized templates.");
         return; // Exit early if only initializing templates
     }
