@@ -2,11 +2,7 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{url_for(path='/static/github-light.min.css')}}" id="highlightjs-theme" />
-<script>
-   const staticBase = "{{ url_for(path='static')}}";
-</script>
-
+<link rel="stylesheet" href="./static/github-light.min.css" id="highlightjs-theme" />
 {%if content.extra.math %}
 <script type="text/x-mathjax-config">
   MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
@@ -26,7 +22,7 @@
         <span class="content-date"> {{ content.date | date(format="%v") }}</span>
         <ul class="content-tags overflow-auto">
         {% for tag in content.tags  %}
-            <li><a href="{{url_for(path='/tag/')}}{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
+            <li><a href="./tag-{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
         {% endfor %}
         </ul>
     </footer>
@@ -34,14 +30,14 @@
 </article>
 
 {% if site.extra.comments.source is defined and content.date %}
-   {%include "comments.html"%}
+   {%include "comments.html" ignore missing %}
 {% endif %}
 
 {% endblock %}
 
 {% block tail %}
 {{ super() }}
-<script src="{{url_for(path='/static/highlight.min.js')}}"></script>
+<script src="./static/highlight.min.js"></script>
 <script>
     hljs.highlightAll();
 </script>

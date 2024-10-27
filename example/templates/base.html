@@ -8,15 +8,9 @@
     <meta name="color-scheme" content="light dark" />
     {%- block head %}
     <title>{{ site.name }} | {{ title }}</title>
-    <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/pico.min.css')}}">
-    <style>
-    @font-face {
-        font-family: "Atkinson Hyperlegible";
-        src: url("{{url_for(path='/static/Atkinson-Hyperlegible-Regular-102.woff')}}");
-    }
-    </style>
-    <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/marmite.css')}}">
-    <link rel="stylesheet" type="text/css" href="{{url_for(path='/static/custom.css')}}">
+    <link rel="stylesheet" type="text/css" href="./static/pico.min.css">
+    <link rel="stylesheet" type="text/css" href="./static/marmite.css">
+    <link rel="stylesheet" type="text/css" href="./static/custom.css">
     {% endblock -%}
 </head>
 
@@ -27,7 +21,7 @@
                 <ul class="header-name">
                     <li>
                         <hgroup>
-                            <h2><a href="{{url_for(path='/')}}" class="contrast">{{ site.name }}</a></h2>
+                            <h2><a href="./index.html" class="contrast">{{ site.name }}</a></h2>
                             <p>{{ site.tagline }}</p>
                         </hgroup>
                     </li>
@@ -40,7 +34,7 @@
                         {% if current_page and current_page == item.1 %}
                         <button class="menu-item active selected">{{item.0 | safe }}</button>
                         {% else %}
-                        <a href="{{ url_for(path=item.1) }}" class="menu-item secondary" {% if item.1 is starting_with("http") %}target="_blank"{% endif %}>{{ item.0 | safe }}</a>
+                        <a class="menu-item secondary" {% if item.1 is starting_with("http") %} href="{{item.1}}" target="_blank" {% else %} href="./{{item.1}}"{% endif %}>{{ item.0 | safe }}</a>
                         {% endif %}
                     </li>
                     {% endfor %}
@@ -63,8 +57,8 @@
         </footer>
     </main>
     {%- block tail %}
-    <script src="{{url_for(path='/static/marmite.js')}}"></script>
-    <script src="{{url_for(path='/static/custom.js')}}"></script>
+    <script src="./static/marmite.js"></script>
+    <script src="./static/custom.js"></script>
     {% endblock -%}
 </body>
 

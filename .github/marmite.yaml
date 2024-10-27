@@ -2,7 +2,7 @@ name: Marmite SSG
 tagline: Simply create a static blog from markdown files
 url: https://rochacbruno.github.io/marmite/
 menu: 
-  - ['Docs', 'tag/docs.html']
+  - ['Docs', 'tag-docs.html']
   - ['Contributors', 'contributors.html']
   - ['Tags', 'tags.html']
   - ['Github', 'https://github.com/rochacbruno/marmite/']

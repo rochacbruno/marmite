@@ -56,8 +56,7 @@ const themeSwitcher = {
     // Apply scheme
     applyScheme() {
         document.querySelector("html")?.setAttribute(this.rootAttribute, this.scheme);
-        // staticBase is defined on content.html template
-        document.querySelector("#highlightjs-theme")?.setAttribute("href", `${staticBase}/github-${this.scheme}.min.css`);
+        document.querySelector("#highlightjs-theme")?.setAttribute("href", `./static/github-${this.scheme}.min.css`);
     },
     
     // Store scheme to local storage

@@ -7,6 +7,10 @@ tags: docs, templates, theme, customization
 Marmite uses [Tera](https://keats.github.io/tera/docs/#templates) as its template
 parser, the language is very similar to **Jinja** or **Twig**.
 
+> [!IMPORTANT]  
+> always link relative to the current path starting with `./`  
+> If absolute url is needed then use `{{ url_for(path="path", abs=true) }}` template function.
+
 Example on `templates/list.html`
 
 ```html
@@ -14,7 +18,7 @@ Example on `templates/list.html`
 {% block main %}
   <div class="content-list">
   {%- for content in content_list %}
-    <h2 class="content-title"><a href="{{url_for(path=content.slug)}}.html">{{ content.title | capitalize }}</a></h2>
+    <h2 class="content-title"><a href="./{{content.slug}}.html">{{ content.title | capitalize }}</a></h2>
     <p class="content-excerpt">{{ content.html | striptags | truncate(length=100, end="...") }}</p>
   {%- endfor %}
   </div>
@@ -47,15 +51,18 @@ slug: str
 html: str
 tags: [str] or []
 date: DateTimeObject or None
+extra: {key: value}
 ```
 
-There are 4 templates inside the `templates` folder, each adds more data to context.
+There are 6 templates inside the `templates` folder, each adds more data to context.
 
 - base.html
   - All other templates inherits blocks from this one.
 - list.html
   - Renders `index.html`, `pages.html`, `tags.html`
-  - adds `title:str`, `content_list: [Content]`, `current_page: str`
+  - adds `title:str`, `content_list: [Content]`, 
+  - pagination: `current_page: str`, `next_page:str`, `previous_page:str`, 
+    `total_pages:int`, `current_page_number:int`, `total_content:int`
 - content.html
   - Renders individual content page `my-post.html`
   - adds `title:str`, `content: [Content]`, `current_page: str`
@@ -81,12 +88,21 @@ marmite will then copy the embedded static files to the static folder.
 
 ## URL 
 
-On templates use the `url_for` function to refer to urls.
+Prefer to use relative paths for URLS, examples:
+
+- `./my-blog-post.html`
+- `./static/style.css`
+- `./media/photo.png`
+
+This is recommended because **marmite** will always generate a **flat** html website,
+there is no subpaths.
+
+If you need absolute url use the `url_for` function to refer to urls.
 
 ```html
-{{ url_for(path='static/mystyle.css') }}
 {{ url_for(path='static/mystyle.css', abs=true) }}
 ```
+
 
 ## Extra data
 
