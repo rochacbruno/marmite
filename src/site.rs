@@ -504,7 +504,7 @@ fn handle_tag_pages(
     // Render tags.html group page
     let mut tag_list_context = global_context.clone();
     tag_list_context.insert("title", &site_data.site.tags_title);
-    unique_tags.sort_by(|a, b| a.0.cmp(&b.0));
+    unique_tags.sort_by(|a, b| b.1.cmp(&a.1));
     tag_list_context.insert("group_content", &unique_tags);
     tag_list_context.insert("current_page", "tags.html");
     render_html(

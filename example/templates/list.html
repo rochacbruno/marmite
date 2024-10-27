@@ -8,7 +8,7 @@
         <div class="content-list">
             {%- for content in content_list %}
             <article class="content-list-item">
-                <h2 class="content-title"><a href="{{url_for(path=content.slug)}}.html">{{ content.title | capitalize }}</a></h2>
+                <h2 class="content-title"><a href="./{{content.slug}}.html">{{ content.title | capitalize }}</a></h2>
                 <p class="content-excerpt">{{ content.html | striptags | truncate(length=100, end="...") }}</p>
                 {% if content.date -%}
                 <footer class="">

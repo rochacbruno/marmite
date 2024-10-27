@@ -1,4 +1,8 @@
 /* https://picocss.com/docs */
+@font-face {
+    font-family: "Atkinson Hyperlegible";
+    src: url("./Atkinson-Hyperlegible-Regular-102.woff");
+}
 :root {
   --pico-typography-spacing-vertical: 1.5rem;
   --pico-font-family: "Atkinson Hyperlegible", sans-serif;
