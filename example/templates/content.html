@@ -18,8 +18,8 @@
 <article>
     <div class="content-html">{{ content.html | safe }}</div>
     {% if content.date %}
-    <footer>
-        <span class="content-date"> {{ content.date | date(format="%v") }}</span>
+    <footer class="data-tags-footer">
+        <span class="content-date"> {{ content.date | date(format="%b %e, %Y") }}</span>
         <ul class="content-tags overflow-auto">
         {% for tag in content.tags  %}
             <li><a href="./tag-{{ tag | trim | slugify }}.html">{{ tag }}</a></li>

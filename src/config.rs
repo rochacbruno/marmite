@@ -62,7 +62,7 @@ fn default_url() -> String {
 }
 
 fn default_footer() -> String {
-    r#"<a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a> | Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a>"#.to_string()
+    r#"<div>Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a> | <small><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a></small></div>"#.to_string()
 }
 
 fn default_pagination() -> usize {

@@ -84,6 +84,13 @@ There are 6 templates inside the `templates` folder, each adds more data to cont
   - Renders grouped information such as `tag/sometag.html` and `archive/2024.html`
   - adds `title:str`, `group_content: [[group, [Content]]]`, `current_page: str`
 
+Include templates:
+
+- pagination.html
+  - Render the pagination controls
+- comments.html
+  - Render the comment box
+
 When customizing the templates you can create new templates to use as `include` or `macro`
 but the 4 listed above are required.
 

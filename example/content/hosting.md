@@ -103,17 +103,14 @@ jobs:
         run: marmite . site --debug
 
       - name: Setup Pages
-        if: github.event_name == 'push'
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
-        if: github.event_name == 'push'
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'site'
 
       - name: Deploy to GitHub Pages
-        if: github.event_name == 'push'
         id: deployment
         uses: actions/deploy-pages@v4
 ```
