@@ -38,6 +38,7 @@
                         {% endif %}
                     </li>
                     {% endfor %}
+                    <li><a href="#" id="theme-toggle" class="secondary">&#9789;</a></li>
                     <div class="underline"></div>
                 </ul>
             </nav>
@@ -46,14 +47,7 @@
             {% block main -%}{%- endblock %}
         </section>
         <footer class="footer-content">
-            <nav>
-                <ul>
-                    <li>{{ site.footer | safe }}</li>
-                </ul>
-                <ul>
-                    <li><a href="#" id="theme-toggle" class="secondary">&#9789;</a></li>
-                </ul>
-            </nav>
+            {{ site.footer | safe }}
         </footer>
     </main>
     {%- block tail %}

@@ -1,19 +1,17 @@
 use crate::config::Marmite;
 use crate::content::{check_for_duplicate_slugs, group_by_tags, slugify, Content};
 use crate::embedded::{generate_static, EMBEDDED_TERA};
-use crate::markdown::process_file;
+use crate::markdown::{get_content, process_file};
 use crate::server;
 use crate::tera_functions::UrlFor;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
+use hotwatch::{Event, EventKind, Hotwatch};
 use log::{debug, error, info};
 use serde::Serialize;
 use std::path::Path;
 use std::{fs, process, sync::Arc, sync::Mutex};
 use tera::{Context, Tera};
 use walkdir::WalkDir;
-
-const NAME_BASED_SLUG_FILES: [&str; 1] = ["404.md"];
-use hotwatch::{Event, EventKind, Hotwatch};
 
 #[derive(Serialize, Clone)]
 pub struct Data {
@@ -106,7 +104,7 @@ pub fn generate(
             let tera = initialize_tera(&input_folder, &site_data);
 
             // Render templates
-            if let Err(e) = render_templates(&site_data, &tera, &output_path) {
+            if let Err(e) = render_templates(&content_dir, &site_data, &tera, &output_path) {
                 error!("Failed to render templates: {}", e);
                 process::exit(1);
             }
@@ -161,28 +159,13 @@ fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
                 .and_then(|ext| ext.to_str())
                 .expect("Could not get file name");
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
-            e.path().is_file()
-                && !NAME_BASED_SLUG_FILES.contains(&file_name)
-                && file_extension == Some("md")
+            e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
         })
         .for_each(|entry| {
-            if let Err(e) = process_file(entry.path(), site_data, false) {
+            if let Err(e) = process_file(entry.path(), site_data) {
                 error!("Failed to process file {}: {}", entry.path().display(), e);
             }
         });
-
-    for slugged_file in NAME_BASED_SLUG_FILES {
-        let slugged_path = content_dir.join(slugged_file);
-        if slugged_path.exists() {
-            if let Err(e) = process_file(slugged_path.as_path(), site_data, true) {
-                error!(
-                    "Failed to process file {}: {}",
-                    slugged_path.as_path().display(),
-                    e
-                );
-            }
-        }
-    }
 }
 
 fn detect_slug_collision(site_data: &Data) {
@@ -224,13 +207,24 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
     tera
 }
 
-fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<(), String> {
+fn render_templates(
+    content_dir: &Path,
+    site_data: &Data,
+    tera: &Tera,
+    output_dir: &Path,
+) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
     global_context.insert("site_data", &site_data);
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
-    debug!("Global Context: {:?}", &site_data.site);
+
+    let hero_fragment = get_html_fragment("_hero.md", content_dir);
+    if !hero_fragment.is_empty() {
+        global_context.insert("hero", &hero_fragment);
+        debug!("Hero fragment {}", &hero_fragment);
+    }
+    debug!("Global Context site: {:?}", &site_data.site);
 
     handle_list_page(
         &global_context,
@@ -256,7 +250,7 @@ fn render_templates(site_data: &Data, tera: &Tera, output_dir: &Path) -> Result<
     handle_content_pages(site_data, &global_context, tera, output_dir)?;
 
     // Check and guarantees that page 404 was generated even if 404.md is removed
-    handle_404(&global_context, tera, output_dir)?;
+    handle_404(content_dir, &global_context, tera, output_dir)?;
 
     // Render tagged_contents
     handle_tag_pages(output_dir, site_data, &global_context, tera)?;
@@ -460,23 +454,46 @@ fn handle_content_pages(
     Ok(())
 }
 
-fn handle_404(global_context: &Context, tera: &Tera, output_dir: &Path) -> Result<(), String> {
-    let file_404_path = output_dir.join("404.html");
-    if !file_404_path.exists() {
-        let mut context = global_context.clone();
-        let page_404_content = Content {
-            html: String::from("Page not found :/"),
-            title: String::from("Page not found"),
-            date: None,
-            slug: String::new(),
-            extra: None,
-            tags: vec![],
-        };
-        context.insert("title", &page_404_content.title);
-        context.insert("content", &page_404_content);
-        render_html("content.html", "404.html", tera, &context, output_dir)?;
+#[allow(clippy::similar_names)]
+fn handle_404(
+    content_dir: &Path,
+    global_context: &Context,
+    tera: &Tera,
+    output_dir: &Path,
+) -> Result<(), String> {
+    let input_404_path = content_dir.join("_404.md");
+    let mut context = global_context.clone();
+    let mut content = Content {
+        html: String::from("Page not found :/"),
+        title: String::from("Page not found"),
+        date: None,
+        slug: "404".to_string(),
+        extra: None,
+        tags: vec![],
     };
+    if input_404_path.exists() {
+        let custom_content = get_content(&input_404_path)?;
+        content.html.clone_from(&custom_content.html);
+        content.title.clone_from(&custom_content.title);
+    }
+    context.insert("title", &content.title);
+    context.insert("content", &content);
+    render_html("content.html", "404.html", tera, &context, output_dir)?;
     Ok(())
+}
+
+fn get_html_fragment(filename: &str, content_dir: &Path) -> String {
+    let filepath = content_dir.join(filename);
+    let mut fragment = String::new();
+    if filepath.exists() {
+        match get_content(&filepath) {
+            Ok(content) => fragment.push_str(&content.html),
+            Err(e) => {
+                error!("Error parsing {}: {}", filepath.display(), e);
+            }
+        }
+    }
+    fragment
 }
 
 fn handle_tag_pages(

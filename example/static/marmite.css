@@ -240,3 +240,18 @@ pre:has(> code.language-mermaid) {
 .pagination nav li a {
   font-size: 2rem;
 }
+
+.data-tags-footer {
+  padding: 0;
+}
+.data-tags-footer .content-date {
+  margin-left: .5rem;
+}
+
+.footer-content div {
+  text-align: center;
+}
+
+.hero article {
+  overflow: auto;
+}
