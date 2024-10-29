@@ -49,6 +49,9 @@ fn get_links_to(html: &str) -> Option<Vec<String>> {
             result.push(m.as_str().to_string());
         }
     }
+    if result.is_empty() {
+        return None;
+    }
     Some(result)
 }
 

@@ -151,6 +151,35 @@ pub fn generate(
     }
 }
 
+fn collect_back_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
+    let other_contents = site_data
+        .posts
+        .clone()
+        .iter()
+        .chain(&site_data.pages.clone())
+        .map(|i| i.to_owned())
+        .collect::<Vec<Content>>();
+
+    _collect_back_links(&mut site_data.posts, &other_contents);
+    _collect_back_links(&mut site_data.pages, &other_contents);
+}
+
+fn _collect_back_links(contents: &mut Vec<Content>, other_contents: &Vec<Content>) {
+    for content in contents.iter_mut() {
+        content.back_links.clear();
+    }
+    for i in 0..contents.len() {
+        let slug = contents[i].slug.clone();
+        for other_content in other_contents.iter() {
+            if let Some(ref links_to) = other_content.links_to {
+                if links_to.contains(&slug) {
+                    contents[i].back_links.push(other_content.clone());
+                }
+            }
+        }
+    }
+}
+
 fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
     WalkDir::new(content_dir)
         .into_iter()
