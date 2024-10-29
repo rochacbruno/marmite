@@ -436,9 +436,9 @@ You can ask **Marmite** related questions or suggest features on [Discussions] p
 
 𐚮 Marmite.
 
-[docs]: <https://rochacbruno.github.io/marmite/tag-docs.html> "Marmite Docs"
-[Enabling Comments]: <https://rochacbruno.github.io/marmite/enabling-comments.html> "Enabling Comments"
+[docs]: <./tag-docs.html> "Marmite Docs"
+[Enabling Comments]: <./enabling-comments.html> "Enabling Comments"
 [PicoCSS]: <https://picocss.com> "Pico CSS"
-[Customizing Templates]: <https://rochacbruno.github.io/marmite/customizing-templates.html> "Customizing Templates"
+[Customizing Templates]: <./customizing-templates.html> "Customizing Templates"
 [Tera]: <https://keats.github.io/tera/docs/#templates> "Tera Docs"
 [Discussions]: <https://github.com/rochacbruno/marmite/discussions> "Github Discussions"

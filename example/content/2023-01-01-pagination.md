@@ -1,3 +1,18 @@
+---
+tags: docs
+---
+# Pagination
+
+Yes! we have pagination!
+
+Set `pagination: 10` on your `marmite.yaml`
+
+
+
+The pagination template is very simple
+
+
+```html
 <div class="pagination">
     <nav>
         <ul>
@@ -15,3 +30,4 @@
         </ul>
     </nav>
 </div>
+```

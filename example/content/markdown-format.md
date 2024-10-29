@@ -52,6 +52,22 @@ https://github.com/rochacbruno/marmite
 <fake@example.com>
 ```
 
+### Wikilinks 
+
+Wikilinks allows to link using `[[name|url]]` syntax.
+
+[[Read the Tutorial|./getting-started.html]]  
+
+[[Pudim|https://pudim.com.br]]
+
+```markdown
+[[Read the Tutorial|./getting-started.html]]  
+
+[[Pudim|https://pudom.com.br]]
+```
+
+
+
 ### Task
 
 - [x] Task 1

@@ -54,6 +54,7 @@ pub fn get_html(markdown: &str) -> String {
     options.extension.greentext = true;
     options.extension.shortcodes = true;
     options.extension.header_ids = Some("tos-".to_string());
+    options.extension.wikilinks_title_before_pipe = true;
 
     markdown_to_html(markdown, &options)
 }

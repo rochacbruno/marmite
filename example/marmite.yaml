@@ -2,7 +2,7 @@
 # tagline: This blog is awesome
 # url: https://www.myblog.com/blog/
 # footer: This is an example site generated with Marmite
-# pagination: 10
+pagination: 6
 
 # tags_title: Tags
 # archives_title: Archive
