@@ -6,6 +6,7 @@ menu:
   - ['Docs', 'tag-docs.html']
   - ['Contributors', 'contributors.html']
   - ['Tags', 'tags.html']
+  - ['Archive', 'archive.html']
   - ['Github', 'https://github.com/rochacbruno/marmite/']
 extra:
   comments:
