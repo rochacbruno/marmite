@@ -157,7 +157,7 @@ fn collect_back_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
         .clone()
         .iter()
         .chain(&site_data.pages.clone())
-        .map(|i| i.to_owned())
+        .map(std::borrow::ToOwned::to_owned)
         .collect::<Vec<Content>>();
 
     _collect_back_links(&mut site_data.posts, &other_contents);
@@ -170,7 +170,7 @@ fn _collect_back_links(contents: &mut Vec<Content>, other_contents: &Vec<Content
     }
     for i in 0..contents.len() {
         let slug = contents[i].slug.clone();
-        for other_content in other_contents.iter() {
+        for other_content in other_contents {
             if let Some(ref links_to) = other_content.links_to {
                 if links_to.contains(&slug) {
                     contents[i].back_links.push(other_content.clone());
