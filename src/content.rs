@@ -35,7 +35,7 @@ pub fn get_title<'a>(frontmatter: &'a Frontmatter, html: &'a str) -> String {
     }
 }
 
-pub fn get_description<'a>(frontmatter: &'a Frontmatter) -> Option<String> {
+pub fn get_description(frontmatter: &Frontmatter) -> Option<String> {
     if let Some(description) = frontmatter.get("description") {
         return Some(description.to_string());
     }
