@@ -588,7 +588,7 @@ fn handle_archive_pages(
             let year = date.year().to_string();
             grouped_posts
                 .entry(year)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(post);
         }
     }
@@ -600,8 +600,8 @@ fn handle_archive_pages(
             &site_data
                 .site
                 .archives_content_title
-                .replace("$year", &year),
-            &contents,
+                .replace("$year", year),
+            contents,
             site_data,
             tera,
             output_dir,
