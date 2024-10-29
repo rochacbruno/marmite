@@ -580,16 +580,16 @@ fn handle_archive_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-
     let mut unique_years: Vec<(String, usize)> = Vec::new();
     let mut grouped_posts: HashMap<String, Vec<Content>> = HashMap::new();
     let posts = site_data.posts.clone();
     for post in posts.into_iter() {
         if let Some(date) = post.date {
             let year = date.year().to_string();
-            grouped_posts.entry(year)
-            .or_insert_with(Vec::new)
-            .push(post);
+            grouped_posts
+                .entry(year)
+                .or_insert_with(Vec::new)
+                .push(post);
         }
     }
 
@@ -597,16 +597,19 @@ fn handle_archive_pages(
     for (year, contents) in &grouped_posts {
         handle_list_page(
             global_context,
-            &site_data.site.archives_content_title.replace("$year",&year),
+            &site_data
+                .site
+                .archives_content_title
+                .replace("$year", &year),
             &contents,
             site_data,
-            tera, 
+            tera,
             output_dir,
-            format!("archive-{}", year).as_ref()
+            format!("archive-{}", year).as_ref(),
         )?;
         unique_years.push((year.to_owned(), contents.len()));
     }
-    
+
     // Render archive.html group page
     unique_years.sort_by(|a, b| b.cmp(a));
     let mut archive_context = global_context.clone();
@@ -621,10 +624,9 @@ fn handle_archive_pages(
         &archive_context,
         output_dir,
     )?;
-    
+
     Ok(())
 }
-
 
 fn render_html(
     template: &str,

@@ -27,7 +27,7 @@ pub struct Marmite {
     pub archives_title: String,
     #[serde(default = "default_archives_content_title")]
     pub archives_content_title: String,
-    
+
     #[serde(default = "default_content_path")]
     pub content_path: String,
     #[serde(default = "default_site_path")]
