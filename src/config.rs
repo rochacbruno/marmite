@@ -25,7 +25,9 @@ pub struct Marmite {
     pub tags_content_title: String,
     #[serde(default = "default_archives_title")]
     pub archives_title: String,
-
+    #[serde(default = "default_archives_content_title")]
+    pub archives_content_title: String,
+    
     #[serde(default = "default_content_path")]
     pub content_path: String,
     #[serde(default = "default_site_path")]
@@ -89,6 +91,10 @@ fn default_archives_title() -> String {
     "Archive".to_string()
 }
 
+fn default_archives_content_title() -> String {
+    "Posts from '$year'".to_string()
+}
+
 fn default_site_path() -> String {
     String::new()
 }
@@ -121,6 +127,7 @@ fn default_menu() -> Option<Vec<(String, String)>> {
     vec![
         ("Pages".to_string(), "pages.html".to_string()),
         ("Tags".to_string(), "tags.html".to_string()),
+        ("Archive".to_string(), "archive.html".to_string()),
     ]
     .into()
 }

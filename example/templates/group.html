@@ -6,7 +6,7 @@
         <article class="group-list">
         <ul class="content-tags">
             {% for content in group_content -%}
-                <li><a href="./tag-{{ content.0 | trim | slugify }}.html">{{ content.0 }}</a><span class="tag-count"> [{{content.1}}]</span></li>
+                <li><a href="./{{link_prefix}}-{{ content.0 | trim | slugify }}.html">{{ content.0 }}</a><span class="tag-count"> [{{content.1}}]</span></li>
             {%- endfor %}
         </ul>
         </article>

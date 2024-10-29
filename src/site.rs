@@ -4,10 +4,12 @@ use crate::embedded::{generate_static, EMBEDDED_TERA};
 use crate::markdown::{get_content, process_file};
 use crate::server;
 use crate::tera_functions::UrlFor;
+use chrono::Datelike;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
 use hotwatch::{Event, EventKind, Hotwatch};
 use log::{debug, error, info};
 use serde::Serialize;
+use std::collections::HashMap;
 use std::path::Path;
 use std::{fs, process, sync::Arc, sync::Mutex};
 use tera::{Context, Tera};
@@ -287,6 +289,7 @@ fn render_templates(
 
     // Render tagged_contents
     handle_tag_pages(output_dir, site_data, &global_context, tera)?;
+    handle_archive_pages(output_dir, site_data, &global_context, tera)?;
 
     Ok(())
 }
@@ -560,6 +563,7 @@ fn handle_tag_pages(
     unique_tags.sort_by(|a, b| b.1.cmp(&a.1));
     tag_list_context.insert("group_content", &unique_tags);
     tag_list_context.insert("current_page", "tags.html");
+    tag_list_context.insert("link_prefix", "tag");
     render_html(
         "group.html",
         "tags.html",
@@ -569,6 +573,58 @@ fn handle_tag_pages(
     )?;
     Ok(())
 }
+
+fn handle_archive_pages(
+    output_dir: &Path,
+    site_data: &Data,
+    global_context: &Context,
+    tera: &Tera,
+) -> Result<(), String> {
+
+    let mut unique_years: Vec<(String, usize)> = Vec::new();
+    let mut grouped_posts: HashMap<String, Vec<Content>> = HashMap::new();
+    let posts = site_data.posts.clone();
+    for post in posts.into_iter() {
+        if let Some(date) = post.date {
+            let year = date.year().to_string();
+            grouped_posts.entry(year)
+            .or_insert_with(Vec::new)
+            .push(post);
+        }
+    }
+
+    // render each year page
+    for (year, contents) in &grouped_posts {
+        handle_list_page(
+            global_context,
+            &site_data.site.archives_content_title.replace("$year",&year),
+            &contents,
+            site_data,
+            tera, 
+            output_dir,
+            format!("archive-{}", year).as_ref()
+        )?;
+        unique_years.push((year.to_owned(), contents.len()));
+    }
+    
+    // Render archive.html group page
+    unique_years.sort_by(|a, b| b.cmp(a));
+    let mut archive_context = global_context.clone();
+    archive_context.insert("title", &site_data.site.archives_title);
+    archive_context.insert("group_content", &unique_years);
+    archive_context.insert("current_page", "archive.html");
+    archive_context.insert("link_prefix", "archive");
+    render_html(
+        "group.html",
+        "archive.html",
+        tera,
+        &archive_context,
+        output_dir,
+    )?;
+    
+    Ok(())
+}
+
 
 fn render_html(
     template: &str,
