@@ -12,6 +12,7 @@ use unicode_normalization::UnicodeNormalization;
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct Content {
     pub title: String,
+    pub description: Option<String>,
     pub slug: String,
     pub html: String,
     pub tags: Vec<String>,
@@ -30,6 +31,13 @@ pub fn get_title<'a>(frontmatter: &'a Frontmatter, html: &'a str) -> String {
             .trim()
             .to_string(),
     }
+}
+
+pub fn get_description<'a>(frontmatter: &'a Frontmatter) -> Option<String> {
+    if let Some(description) = frontmatter.get("description") {
+        return Some(description.to_string());
+    }
+    None
 }
 
 pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {

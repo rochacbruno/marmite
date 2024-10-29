@@ -16,7 +16,13 @@
             {%- for content in content_list %}
             <article class="content-list-item">
                 <h2 class="content-title"><a href="./{{content.slug}}.html">{{ content.title | capitalize }}</a></h2>
-                <p class="content-excerpt">{{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=100, end="...") }}</p>
+                <p class="content-excerpt">
+                    {% if content.description %}
+                        {{ content.description | replace(from='"', to="") | truncate(length=100, end="...") }}
+                    {% else %}
+                        {{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=100, end="...") }}
+                    {%- endif %}
+                </p>
                 {% if content.date -%}
                 <footer class="data-tags-footer">
                     <span class="content-date">{{ content.date | date(format="%b %e, %Y") }}</span>
