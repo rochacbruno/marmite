@@ -164,7 +164,7 @@ fn collect_back_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
     _collect_back_links(&mut site_data.pages, &other_contents);
 }
 
-fn _collect_back_links(contents: &mut Vec<Content>, other_contents: &Vec<Content>) {
+fn _collect_back_links(contents: &mut [Content], other_contents: &[Content]) {
     for content in contents.iter_mut() {
         content.back_links.clear();
     }
