@@ -18,6 +18,8 @@ pub struct Content {
     pub tags: Vec<String>,
     pub date: Option<NaiveDateTime>,
     pub extra: Option<Value>,
+    pub links_to: Option<Vec<String>>,
+    pub back_links: Vec<Self>,
 }
 
 pub fn get_title<'a>(frontmatter: &'a Frontmatter, html: &'a str) -> String {

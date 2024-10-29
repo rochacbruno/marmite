@@ -74,6 +74,8 @@ The second, **hello-world.md** has a `date: ...` on its **FrontMatter** so
 marmite considers it a **chronological** content, a **post** and will list it 
 on your blog front-page.
 
+Learn more about [Markdown Formatting]
+
 ### Generating the site
 
 >>>
@@ -442,3 +444,4 @@ You can ask **Marmite** related questions or suggest features on [Discussions] p
 [Customizing Templates]: <./customizing-templates.html> "Customizing Templates"
 [Tera]: <https://keats.github.io/tera/docs/#templates> "Tera Docs"
 [Discussions]: <https://github.com/rochacbruno/marmite/discussions> "Github Discussions"
+[Markdown Formatting]: <./markdown-format.html> "Markdown Formatting"

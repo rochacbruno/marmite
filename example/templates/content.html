@@ -29,6 +29,17 @@
     {% endif %}
 </article>
 
+{% if content.back_links %}
+<article>
+    Back-links
+    <ul>
+    {% for item in content.back_links | sort(attribute="date") | reverse | slice(end=10) %}
+      <li><a href="./{{item.slug }}.html">{{item.title}}</a></li>
+    {% endfor %}
+    </ul>
+</article>
+{% endif %}
+
 {% if site.extra.comments.source is defined and content.date %}
    {%include "comments.html" ignore missing %}
 {% endif %}

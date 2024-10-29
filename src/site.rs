@@ -87,6 +87,9 @@ pub fn generate(
             // Detect slug collision
             detect_slug_collision(&site_data);
 
+            // Feed back_links
+            collect_back_links(&mut site_data);
+
             // Sort posts by date (newest first)
             site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
             // Sort pages on title
@@ -143,6 +146,36 @@ pub fn generate(
         } else {
             loop {
                 std::thread::sleep(std::time::Duration::from_secs(1));
+            }
+        }
+    }
+}
+
+fn collect_back_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
+    let other_contents = site_data
+        .posts
+        .clone()
+        .iter()
+        .chain(&site_data.pages.clone())
+        .map(std::borrow::ToOwned::to_owned)
+        .collect::<Vec<Content>>();
+
+    _collect_back_links(&mut site_data.posts, &other_contents);
+    _collect_back_links(&mut site_data.pages, &other_contents);
+}
+
+#[allow(clippy::needless_range_loop)]
+fn _collect_back_links(contents: &mut [Content], other_contents: &[Content]) {
+    for content in contents.iter_mut() {
+        content.back_links.clear();
+    }
+    for i in 0..contents.len() {
+        let slug = contents[i].slug.clone();
+        for other_content in other_contents {
+            if let Some(ref links_to) = other_content.links_to {
+                if links_to.contains(&slug) {
+                    contents[i].back_links.push(other_content.clone());
+                }
             }
         }
     }
@@ -471,6 +504,8 @@ fn handle_404(
         slug: "404".to_string(),
         extra: None,
         tags: vec![],
+        links_to: None,
+        back_links: vec![],
     };
     if input_404_path.exists() {
         let custom_content = get_content(&input_404_path)?;
