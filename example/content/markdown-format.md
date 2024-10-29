@@ -66,6 +66,30 @@ Wikilinks allows to link using `[[name|url]]` syntax.
 [[Pudim|https://pudom.com.br]]
 ```
 
+### Back-links
+
+Every time you link to another page or post
+using the backreference like `./{slug}.html`
+**marmite** will track the backlinking and show
+a list of pages that links to each other.
+
+Examples:
+
+```markdown
+[Hello](./hello.html)
+[[Hello|./hello.html]]
+<./hello.html>
+<a href="./hello.html">
+```
+
+In any case the `hello.html` page will have a this page
+on its list of back-links:
+
+<figure>
+  <figcaption>Backlinks</figcaption>
+  <img src="./media/screenshots/backlink.png" width="500">
+</figure>
+
 
 
 ### Task
