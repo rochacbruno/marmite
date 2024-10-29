@@ -44,7 +44,7 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
 fn get_links_to(html: &str) -> Option<Vec<String>> {
     let mut result = Vec::new();
     let re = Regex::new(r#"href="\./(.*?)\.html""#).unwrap();
-    for cap in re.captures_iter(&html) {
+    for cap in re.captures_iter(html) {
         if let Some(m) = cap.get(1) {
             result.push(m.as_str().to_string());
         }
