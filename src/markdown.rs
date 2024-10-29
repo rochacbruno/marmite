@@ -2,6 +2,7 @@ use crate::content::{get_date, get_slug, get_tags, get_title, Content};
 use crate::site::Data;
 use comrak::{markdown_to_html, ComrakOptions};
 use frontmatter_gen::{extract, Frontmatter};
+use regex::Regex;
 use std::fs;
 use std::path::Path;
 
@@ -25,6 +26,8 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
     let slug = get_slug(&frontmatter, path);
     let date = get_date(&frontmatter, path);
     let extra = frontmatter.get("extra").map(std::borrow::ToOwned::to_owned);
+    let links_to = get_links_to(&html);
+    let back_links = Vec::new(); // will be mutated later
     let content = Content {
         title,
         slug,
@@ -32,8 +35,21 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
         tags,
         date,
         extra,
+        links_to,
+        back_links,
     };
     Ok(content)
+}
+
+fn get_links_to(html: &str) -> Option<Vec<String>> {
+    let mut result = Vec::new();
+    let re = Regex::new(r#"href="\./(.*?)\.html""#).unwrap();
+    for cap in re.captures_iter(&html) {
+        if let Some(m) = cap.get(1) {
+            result.push(m.as_str().to_string());
+        }
+    }
+    Some(result)
 }
 
 pub fn get_html(markdown: &str) -> String {

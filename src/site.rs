@@ -87,6 +87,9 @@ pub fn generate(
             // Detect slug collision
             detect_slug_collision(&site_data);
 
+            // Feed back_links
+            collect_back_links(&mut site_data);
+
             // Sort posts by date (newest first)
             site_data.posts.sort_by(|a, b| b.date.cmp(&a.date));
             // Sort pages on title
@@ -470,6 +473,8 @@ fn handle_404(
         slug: "404".to_string(),
         extra: None,
         tags: vec![],
+        links_to: None,
+        back_links: vec![],
     };
     if input_404_path.exists() {
         let custom_content = get_content(&input_404_path)?;
