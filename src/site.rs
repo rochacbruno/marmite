@@ -466,6 +466,7 @@ fn handle_404(
     let mut content = Content {
         html: String::from("Page not found :/"),
         title: String::from("Page not found"),
+        description: None,
         date: None,
         slug: "404".to_string(),
         extra: None,

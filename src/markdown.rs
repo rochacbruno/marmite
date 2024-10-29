@@ -1,4 +1,4 @@
-use crate::content::{get_date, get_slug, get_tags, get_title, Content};
+use crate::content::{get_date, get_description, get_slug, get_tags, get_title, Content};
 use crate::site::Data;
 use comrak::{markdown_to_html, ComrakOptions};
 use frontmatter_gen::{extract, Frontmatter};
@@ -21,12 +21,14 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
     let (frontmatter, markdown) = parse_front_matter(&file_content)?;
     let html = get_html(markdown);
     let title = get_title(&frontmatter, markdown);
+    let description = get_description(&frontmatter);
     let tags = get_tags(&frontmatter);
     let slug = get_slug(&frontmatter, path);
     let date = get_date(&frontmatter, path);
     let extra = frontmatter.get("extra").map(std::borrow::ToOwned::to_owned);
     let content = Content {
         title,
+        description,
         slug,
         html,
         tags,
