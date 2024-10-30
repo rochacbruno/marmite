@@ -19,14 +19,14 @@ fn main() {
     let output_folder = Arc::new(args.output_folder);
     let serve = args.serve;
     let watch = args.watch;
+    let bind_address: &str = args.bind.as_str();
+    let enable_search: bool = args.enable_search;
 
     let config_path = if args.config.starts_with('.') || args.config.starts_with('/') {
         PathBuf::new().join(args.config)
     } else {
         input_folder.join(args.config)
     };
-
-    let bind_address: &str = args.bind.as_str();
 
     let env = Env::default().default_filter_or(if args.debug { "debug" } else { "info" });
     if let Err(e) = Builder::from_env(env).try_init() {
@@ -54,6 +54,7 @@ fn main() {
         watch,
         serve,
         bind_address,
+        enable_search,
     );
 
     // Serve the site if the flag was provided

@@ -56,7 +56,8 @@ const themeSwitcher = {
     // Apply scheme
     applyScheme() {
         document.querySelector("html")?.setAttribute(this.rootAttribute, this.scheme);
-        document.querySelector("#highlightjs-theme")?.setAttribute("href", `./static/github-${this.scheme}.min.css`);
+        const githubTheme = this.scheme === "dark" ? "-dark" : "";
+        document.querySelector("#highlightjs-theme")?.setAttribute("href", `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/github${githubTheme}.min.css`);
     },
     
     // Store scheme to local storage
