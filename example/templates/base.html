@@ -42,7 +42,7 @@
                     <div class="underline"></div>
                 </ul>
             </nav>
-            {% if enable_search %}
+            {% if site.enable_search %}
             <div class="marmite-search-bar">
                 <input placeholder="Search" id="marmite-search-bar" />
                 <div class="marmite-search-bar-result">
@@ -61,7 +61,7 @@
     {%- block tail %}
     <script src="./static/marmite.js"></script>
     <script src="./static/custom.js"></script>
-    {% if enable_search %}
+    {% if site.enable_search %}
     <script type="module">
         import Fuse from "https://cdnjs.cloudflare.com/ajax/libs/fuse.js/7.0.0/fuse.basic.min.mjs";
         (async () => {
