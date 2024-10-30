@@ -255,3 +255,31 @@ pre:has(> code.language-mermaid) {
 .hero article {
   overflow: auto;
 }
+
+.marmite-search-bar {
+  position: relative;
+  width: 100%;
+  margin-bottom: var(--pico-spacing);
+}
+#marmite-search-bar {
+  width: 100%;
+  margin-bottom: 0 !important;
+  border-radius: 4px;
+  background-color: var(--pico-bg-menu);
+  font-size: 1rem;
+}
+#marmite-search-bar-result {
+  padding: 0em 1em 0em 1em;
+}
+.marmite-search-bar-result {
+  background-color: var(--pico-bg-menu);
+  border: white 2px;
+  padding: 1em 0em 0em 0em;
+  position: absolute;
+  width: 100%;
+  display: none;
+}
+.marmite-search-bar-result > ul > li {
+  list-style-type: none;
+  padding: 0.2em;
+}

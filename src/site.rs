@@ -8,7 +8,9 @@ use chrono::Datelike;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
 use hotwatch::{Event, EventKind, Hotwatch};
 use log::{debug, error, info};
+use regex::Regex;
 use serde::Serialize;
+use serde_json;
 use std::collections::HashMap;
 use std::path::Path;
 use std::{fs, process, sync::Arc, sync::Mutex};
@@ -47,6 +49,7 @@ pub fn generate(
     watch: bool, // New parameter for watching,
     serve: bool, // Is running on server mode
     bind_address: &str,
+    enable_search: bool,
 ) {
     let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
         debug!(
@@ -109,13 +112,19 @@ pub fn generate(
             let tera = initialize_tera(&input_folder, &site_data);
 
             // Render templates
-            if let Err(e) = render_templates(&content_dir, &site_data, &tera, &output_path) {
+            if let Err(e) =
+                render_templates(&content_dir, &site_data, &tera, &output_path, enable_search)
+            {
                 error!("Failed to render templates: {}", e);
                 process::exit(1);
             }
 
             // Copy static folder if present
             handle_static_artifacts(&input_folder, &site_data, &output_folder, &content_dir);
+
+            if enable_search {
+                generate_search_index(&site_data, &output_folder);
+            }
 
             info!("Site generated at: {}/", output_folder.display());
         }
@@ -247,12 +256,14 @@ fn render_templates(
     site_data: &Data,
     tera: &Tera,
     output_dir: &Path,
+    enable_search: bool,
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
     global_context.insert("site_data", &site_data);
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
+    global_context.insert("enable_search", &enable_search);
 
     let hero_fragment = get_html_fragment("_hero.md", content_dir);
     if !hero_fragment.is_empty() {
@@ -373,6 +384,55 @@ fn handle_static_artifacts(
                 }
             }
         }
+    }
+}
+
+fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBuf>) {
+    let remove_html_tags = |html: &str| -> String {
+        // Remove HTML tags, Liquid tags, and Jinja tags
+        let re = Regex::new(r"<[^>]*>|(\{\{[^>]*\}\})|(\{%[^>]*%\})").unwrap();
+        re.replace_all(html, "")
+            .replace("\n", " ")
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+    };
+
+    let convert_items_to_json = |item: &Content| {
+        serde_json::json!({
+            "title": item.title,
+            "description": item.description,
+            "tags": item.tags,
+            "slug": item.slug,
+            "html": remove_html_tags(&item.html),
+        })
+    };
+
+    // Merge posts and pages into a single list
+    let all_content_json = site_data
+        .posts
+        .iter()
+        .map(convert_items_to_json)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .chain(
+            site_data
+                .pages
+                .iter()
+                .map(convert_items_to_json)
+                .collect::<Vec<_>>()
+                .into_iter(),
+        )
+        .collect::<Vec<_>>();
+
+    let search_json_path = output_folder
+        .join(site_data.site.static_path.clone())
+        .join("search_index.json");
+    if let Err(e) = fs::write(
+        &search_json_path,
+        serde_json::to_string(&all_content_json).unwrap(),
+    ) {
+        error!("Failed to write search_index.json: {}", e);
     }
 }
 
