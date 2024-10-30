@@ -39,8 +39,4 @@ pub struct Cli {
     /// Initialize a theme with templates and static assets
     #[arg(long)]
     pub start_theme: bool,
-
-    /// Initialize static search on the site
-    #[arg(long)]
-    pub enable_search: bool,
 }

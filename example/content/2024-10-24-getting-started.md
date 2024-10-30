@@ -301,6 +301,17 @@ and how it is configured.
 Read more on [Enabling Comments] page to learn how to enable **Gisqus**, a
 commenting system based on Github discussions.
 
+## Enabling Search
+
+Marmite can generate static search index as a `JSON` file 
+and then using Javascript library [Fuse] provide full text search for posts and pages.
+
+To enable this feature add to your `marmite.yaml`
+
+```yaml
+enable_search: true
+```
+
 ## Special pages and Fragments
 
 There are some contents that are considered **special** as those are 
@@ -445,3 +456,4 @@ You can ask **Marmite** related questions or suggest features on [Discussions] p
 [Tera]: <https://keats.github.io/tera/docs/#templates> "Tera Docs"
 [Discussions]: <https://github.com/rochacbruno/marmite/discussions> "Github Discussions"
 [Markdown Formatting]: <./markdown-format.html> "Markdown Formatting"
+[Fuse] <https://fusejs.io> "Fuse JS"

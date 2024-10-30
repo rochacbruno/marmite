@@ -20,7 +20,6 @@ fn main() {
     let serve = args.serve;
     let watch = args.watch;
     let bind_address: &str = args.bind.as_str();
-    let enable_search: bool = args.enable_search;
 
     let config_path = if args.config.starts_with('.') || args.config.starts_with('/') {
         PathBuf::new().join(args.config)
@@ -54,7 +53,6 @@ fn main() {
         watch,
         serve,
         bind_address,
-        enable_search,
     );
 
     // Serve the site if the flag was provided
