@@ -29,6 +29,14 @@ url = "2.5.2"
 rust-embed = { version = "8.5.0", features = ["interpolate-folder-path"]}
 lazy_static = "1.5.0"
 
+[profile.release]
+codegen-units = 1
+incremental = false
+panic = "abort"
+lto = true
+opt-level = "s"
+strip = true
+
 [profile.dev]
 incremental = false
 

@@ -1,0 +1,108 @@
+name: Build (Release)
+
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+
+concurrency:
+  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - { runner: macos-13, rust_target: aarch64-apple-darwin }
+          - { runner: macos-13, rust_target: x86_64-apple-darwin }
+          - { runner: ubuntu-22.04, rust_target: x86_64-unknown-linux-musl }
+          - { runner: windows-2019, rust_target: x86_64-pc-windows-msvc }
+    name: Build ${{ matrix.platform.rust_target }}
+    runs-on: ${{ matrix.platform.runner }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - if: ${{ runner.os == 'Linux' }}
+        name: "[Linux] Disable initramfs and man-db update"
+        continue-on-error: true
+        run: |
+          sudo mkdir -p /etc/initramfs-tools/
+          echo -e 'update_initramfs=no\nbackup_initramfs=no' | sudo tee /etc/initramfs-tools/update-initramfs.conf
+          sudo rm -f /var/lib/man-db/auto-update
+      - if: ${{ runner.os == 'Linux'  }}
+        name: "[Linux] Install platform dependencies"
+        uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad
+        with: { packages: "musl-tools" }
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17
+        with:
+          targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.platform.rust_target }}
+          toolchain: stable
+
+      - name: Setup Cargo cache
+        uses: swatinem/rust-cache@23bce251a8cd2ffc3c1075eaa2367cf899916d84
+        with: { prefix-key: "cargo-${{ matrix.platform.rust_target }}" }
+
+      - name: Build release
+        run: |
+          cargo build --release --target ${{ matrix.platform.rust_target }}
+          mkdir -p ./build
+          exe="${{runner.os == 'Windows' && '.exe' || ''}}"
+          mv "./target/${{ matrix.platform.rust_target }}/release/marmite${exe}" ./build/
+        shell: bash
+
+      - name: Compress binary
+        run: |
+          cd ./build
+          base_filename="marmite-${{ github.base_ref || github.ref_name }}-${{ matrix.platform.rust_target }}"
+          if [ "${{ runner.os == 'Windows' }}" = "true" ]; then
+            7z a "../build/${base_filename}.zip" *
+          else
+            tar -czvf "../build/${base_filename}.tar.gz" *
+          fi
+        shell: bash
+
+      - name: Upload binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: error
+          name: marmite-${{ github.base_ref || github.ref_name }}-${{ matrix.platform.rust_target }}
+          path: |
+            ./build/*.tar.gz
+            ./build/*.zip
+
+  release:
+    name: Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: ./build
+          merge-multiple: true
+
+      - name: Generate sha256 checksums
+        run: |
+          cd build
+          shasum -a 256 * > SHA256SUMS
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191
+        with:
+          files: |
+            ./build/*
+          body: |
+            > [!TIP]
+            > Expand the "Assets" section below to download the binaries for this release.
+          name: ${{ github.base_ref || github.ref_name }}
+          make_latest: ${{ endsWith(github.ref, '-pre') == false }}
+          prerelease: ${{ endsWith(github.ref, '-pre') }}
+          generate_release_notes: true
