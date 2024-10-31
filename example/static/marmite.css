@@ -332,3 +332,8 @@ pre:has(> code.language-mermaid) {
   cursor: pointer;
   color: var(--pico-text-selection-color);
 }
+
+.hljs {
+  /* important crime must be committed here because of unknown events */
+  background: var(--pico-code-background-color) !important;  
+}
