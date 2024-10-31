@@ -88,35 +88,40 @@ pub fn group_by_tags(posts: Vec<Content>) -> Vec<(String, Vec<Content>)> {
     tag_map.into_iter().collect()
 }
 
+/// Tries to get `date` from the front-matter metadata, else from filename
+/// Input examples:
+///   frontmatter = Frontmatter {date: Value("2024-10-10")}
+///   path = "2024-01-01-myfile.md"
 pub fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime> {
-    if let Some(input) = frontmatter.get("date") {
-        if let Ok(date) =
-            NaiveDateTime::parse_from_str(input.as_str().unwrap(), "%Y-%m-%d %H:%M:%S")
-        {
-            return Some(date);
+    if let Some(input) = frontmatter.get("date").and_then(|v| v.as_str()) {
+        match try_to_parse_date(input) {
+            Ok(date) => return Some(date),
+            Err(e) => {
+                error!(
+                    "ERROR: Invalid date format {} when parsing {}, {}",
+                    input,
+                    path.display(),
+                    e.to_string()
+                );
+                process::exit(1);
+            }
         }
-        if let Ok(date) = NaiveDateTime::parse_from_str(input.as_str().unwrap(), "%Y-%m-%d %H:%M") {
-            return Some(date);
-        }
-        if let Ok(date) = NaiveDate::parse_from_str(input.as_str().unwrap(), "%Y-%m-%d") {
-            return date.and_hms_opt(0, 0, 0);
-        }
-        error!(
-            "ERROR: Invalid date format {} when parsing {}",
-            input.to_string_representation(),
-            path.display()
-        );
-        process::exit(1);
     }
-
-    if let Some(date) = extract_date_from_filename(path) {
-        return Some(date);
-    }
-
-    None
+    extract_date_from_filename(path)
 }
 
-pub fn extract_date_from_filename(path: &Path) -> Option<NaiveDateTime> {
+/// Tries to parse 3 different date formats or return Error.
+/// input: "2024-01-01 15:40:56" | "2024-01-01 15:40" | "2024-01-01"
+fn try_to_parse_date(input: &str) -> Result<NaiveDateTime, chrono::ParseError> {
+    NaiveDateTime::parse_from_str(input, "%Y-%m-%d %H:%M:%S")
+        .or_else(|_| NaiveDateTime::parse_from_str(input, "%Y-%m-%d %H:%M"))
+        .or_else(|_| {
+            NaiveDate::parse_from_str(input, "%Y-%m-%d").map(|d| d.and_hms_opt(0, 0, 0).unwrap())
+        })
+}
+
+/// Use regex to extract date from filename `2024-01-01-myfile.md`
+fn extract_date_from_filename(path: &Path) -> Option<NaiveDateTime> {
     let date_re = Regex::new(r"\d{4}-\d{2}-\d{2}").unwrap();
     date_re
         .find(path.to_str().unwrap())
