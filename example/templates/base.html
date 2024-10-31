@@ -38,13 +38,18 @@
                         {% endif %}
                     </li>
                     {% endfor %}
+                    {% if site.enable_search %}
+                    <li><a href="#" id="search-toggle" class="secondary" title="Search (Ctrl + Shift + F)">&#8981;</a></li>
+                    {% endif %}
                     <li><a href="#" id="theme-toggle" class="secondary">&#9789;</a></li>
                     <div class="underline"></div>
                 </ul>
             </nav>
             {% if site.enable_search %}
-            <div class="marmite-search-bar">
-                <input placeholder="Search" id="marmite-search-bar" />
+            <div class="marmite-background-overlay" id="overlay-close"></div>
+            <div class="marmite-search-bar hidden">
+                <button class="marmite-close-button" id="search-close">X</button>
+                <input placeholder="Search" id="marmite-search-input" />
                 <div class="marmite-search-bar-result">
                     <ul id="marmite-search-bar-result"></ul>
                 </div>
@@ -62,61 +67,7 @@
     <script src="./static/marmite.js"></script>
     <script src="./static/custom.js"></script>
     {% if site.enable_search %}
-    <script type="module">
-        import Fuse from "https://cdnjs.cloudflare.com/ajax/libs/fuse.js/7.0.0/fuse.basic.min.mjs";
-        (async () => {
-            const fuseOptions = {
-                threshold: 0.25,
-                findAllMatches: true,
-                shouldSort: true,
-                minMatchCharLength: 3,
-                ignoreLocation: true,
-                keys: ["title", "description", "tags", "html"]
-            };
-
-            try {
-                const response = await fetch('./static/search_index.json');
-                const data = await response.json();
-                const fuse = new Fuse(data, fuseOptions);
-                document.getElementById("marmite-search-bar").addEventListener("input", (event) => {
-                    event.preventDefault();
-
-                    // Clear previous results
-                    const rootElement = document.querySelector(".marmite-search-bar-result");
-                    rootElement.setAttribute("style", "display: none;");
-
-                    const resultsElement = document.querySelector("#marmite-search-bar-result");
-                    resultsElement.innerHTML = "";
-
-                    // Search for results
-                    const searchPattern = event.target.value;
-                    if (searchPattern?.length > 2) {
-                        const results = fuse.search(searchPattern);
-                        if(results?.length > 0) {
-                            // Build the results list, limiting here to 10 items
-                            results.slice(0, 10).forEach((result) => {
-                                const elementList = document.createElement("li");
-                                const resultElement = document.createElement("a");
-                                resultElement.href = `${result.item.slug}.html`;
-                                resultElement.innerText = result.item.title;
-                                elementList.appendChild(resultElement);
-                                resultsElement.appendChild(elementList);
-                            });
-                        } else {
-                            const elementList = document.createElement("li");
-                            const resultElement = document.createElement("span");
-                            resultElement.textContent = "No results found";
-                            elementList.appendChild(resultElement);
-                            resultsElement.appendChild(elementList);
-                        }
-                        rootElement.setAttribute("style", "display: block;");
-                    }
-                });
-            } catch (error) {
-                console.error('Error loading search data:', error);
-            }
-        })();
-        </script>
+    <script type="module" src="./static/search.js"></script>
     {% endif %}
     {% endblock -%}
 </body>
