@@ -1,14 +1,14 @@
 /* https://picocss.com/docs */
 @font-face {
-    font-family: "Atkinson Hyperlegible";
-    src: url("./Atkinson-Hyperlegible-Regular-102.woff");
+  font-family: "Atkinson Hyperlegible";
+  src: url("./Atkinson-Hyperlegible-Regular-102.woff");
 }
 :root {
   --pico-typography-spacing-vertical: 1.5rem;
   --pico-font-family: "Atkinson Hyperlegible", sans-serif;
   --pico-color-grey-50: #f1f1f1;
-  --pico-color-azure-50:#E9F2FC;
-  --pico-color-azure-200:#9BCCFD;
+  --pico-color-azure-50: #e9f2fc;
+  --pico-color-azure-200: #9bccfd;
   --pico-color-grey-700: #474747;
   --pico-color-slate-500: ##687899;
   --pico-color-slate-750: #333c4e;
@@ -22,10 +22,11 @@
 
 [data-theme="light"],
 :root:not([data-theme="dark"]) {
-  --pico-tag:var(--pico-color-azure-50);
+  --pico-tag: var(--pico-color-azure-50);
   --pico-bg-menu: #fff;
   --pico-home: var(--pico-color-slate-500);
-  --pico-menu-selected: #48536B;
+  --pico-menu-selected: #48536b;
+  --pico-menu: #5d6b89;
 }
 
 @media only screen and (prefers-color-scheme: dark) {
@@ -33,8 +34,8 @@
     --pico-tag: var(--pico-color-slate-850);
     --pico-bg-menu: var(--pico-color-slate-850);
     --pico-home: var(--pico-color-slate-500);
-  --pico-menu-selected: #B3B9C5;
-
+    --pico-menu-selected: #b3b9c5;
+    --pico-menu: #969eaf;
   }
 }
 
@@ -42,8 +43,8 @@
   --pico-tag: var(--pico-color-slate-850);
   --pico-bg-menu: var(--pico-color-slate-850);
   --pico-home: var(--pico-color-slate-500);
-  --pico-menu-selected: #B3B9C5;
-
+  --pico-menu-selected: #b3b9c5;
+  --pico-menu: #969eaf;
 }
 
 a {
@@ -209,43 +210,53 @@ pre:has(> code.language-mermaid) {
   background-color: transparent;
 }
 
-@media (max-width: 768px) {
-  .header-menu {
-    display: none;
-    flex-direction: column;
-    gap: 10px;
-    position: absolute;
-    top: 100px;
-    right: 0;
-    background-color: var(--pico-bg-menu);
-    padding: 15px;
-    border-radius: 4px;
-    z-index: 100;
-    box-shadow: 0px 4px 4px 0px #0000001f;
-  }
+/* Search */
 
-  .header-menu.active {
-    display: flex;
-  }
-
-  .hamburger {
-    display: block;
-  }
-
-  .underline {
-    display: none;
-  }
+#search-toggle {
+  align-items: center;
+  justify-content: center;
 }
+
+.search-magnifier {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--pico-menu); 
+  border-radius: 50%; 
+  position: relative;
+  margin-right: 5px;
+  box-sizing: content-box; 
+}
+
+/* Configurações do cabo da lupa */
+.search-magnifier::after {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 2px;
+  background-color: var(--pico-menu); 
+  position: absolute;
+  top: 80%; 
+  left: 95%; 
+  transform: rotate(45deg); 
+  transform-origin: top left; 
+}
+
+.search-txt {
+  display: none;
+}
+
+
 
 .pagination nav li a {
   font-size: 2rem;
 }
 
 .data-tags-footer {
-  padding: 0;
+  padding: 4px 8px;
 }
 .data-tags-footer .content-date {
-  margin-left: .5rem;
+  margin-left: 0.5rem;
 }
 
 .footer-content div {
@@ -283,7 +294,7 @@ pre:has(> code.language-mermaid) {
   width: 100%;
   padding: 10px;
   font-size: 16px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--pico-color-azure-550);
   border-radius: 4px;
   outline: none;
   margin-bottom: 10px;
@@ -335,5 +346,42 @@ pre:has(> code.language-mermaid) {
 
 .hljs {
   /* important crime must be committed here because of unknown events */
-  background: var(--pico-code-background-color) !important;  
+  background: var(--pico-code-background-color) !important; /* why, Bruno, Why??????*/
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header-menu {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    position: absolute;
+    top: 100px;
+    right: 0;
+    background-color: var(--pico-bg-menu);
+    padding: 15px;
+    border-radius: 4px;
+    z-index: 100;
+    box-shadow: 0px 4px 4px 0px #0000001f;
+  }
+
+  .header-menu.active {
+    display: flex;
+  }
+
+  .hamburger {
+    display: block;
+  }
+
+  .underline {
+    display: none;
+  }
+
+  .search-txt {
+    display: inline-block;
+  }
+  
+  .search-magnifier {
+    display: none;
+  }
 }
