@@ -3,11 +3,28 @@
         <div class="list-title">
             <article><strong> {{ title }} </strong></article>
         </div>
+
+        {# tag cloud commented out, uncomment if you want it.
         <article class="group-list">
         <ul class="content-tags">
             {% for content in group_content -%}
                 <li><a href="./{{link_prefix}}-{{ content.0 | trim | slugify }}.html">{{ content.0 }}</a><span class="tag-count"> [{{content.1}}]</span></li>
             {%- endfor %}
         </ul>
+        </article>
+        endcomment #}
+
+        <article class="group-details">
+            {% for content in group_content | slice(end=10) -%}
+            <details {%if loop.index == 1%}open{%endif%}>
+                <summary role="button" class="outline contrast">{{content.0}} <sup>{{content.1}}</sup></summary>
+                <ul>
+                {% for post in content.2 %}
+                    <li><a href="./{{post.slug}}.html">{{post.title}}</a></li>
+                {% endfor %}
+                <li><a href="./{{link_prefix}}-{{ content.0 | trim | slugify }}.html">more ...</a></li>
+                </ul>
+            </details>
+            {%- endfor %}
         </article>
 {% endblock %}
