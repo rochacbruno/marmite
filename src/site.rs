@@ -2,8 +2,8 @@ use crate::config::Marmite;
 use crate::content::{check_for_duplicate_slugs, group_by_tags, slugify, Content};
 use crate::embedded::{generate_static, EMBEDDED_TERA};
 use crate::markdown::{get_content, process_file};
-use crate::{server, tera_filter};
 use crate::tera_functions::UrlFor;
+use crate::{server, tera_filter};
 use chrono::Datelike;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
 use hotwatch::{Event, EventKind, Hotwatch};
@@ -245,8 +245,8 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
     );
     tera.register_filter(
         "default_date_format",
-        tera_filter::DefaultDateFormat{
-            date_format: site_data.site.default_date_format.to_string()
+        tera_filter::DefaultDateFormat {
+            date_format: site_data.site.default_date_format.to_string(),
         },
     );
     tera.extend(&EMBEDDED_TERA).unwrap();
@@ -428,7 +428,7 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
         .join(site_data.site.static_path.clone())
         .join("search_index.json");
     if let Err(e) = fs::write(
-        &search_json_path,
+        search_json_path,
         serde_json::to_string(&all_content_json).unwrap(),
     ) {
         error!("Failed to write search_index.json: {}", e);
