@@ -157,6 +157,12 @@ Content
       - tag2
     ```
   **default** empty
+  
+**card_image**
+
+  : Image url to use as social card image `og:image`  
+  **format**  `./media/file.png` or `https://path/to/img.jpg`  
+  **default** first image extracted from html content, config card_image, or None.
 
 **extra**
 

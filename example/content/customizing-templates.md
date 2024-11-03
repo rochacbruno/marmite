@@ -68,6 +68,7 @@ date: DateTimeObject or None
 extra: {key: value}
 links_to: [str] or None
 back_links: [Content] or []
+card_image: str or None
 ```
 
 There are 6 templates inside the `templates` folder, each adds more data to context.

@@ -14,6 +14,7 @@ impl Function for UrlFor {
             .get("path")
             .and_then(Value::as_str)
             .ok_or_else(|| tera::Error::msg("Missing `path` argument"))?
+            .trim_start_matches("./")
             .to_string();
 
         let abs_prefixes = ["http", "https", "mailto"];

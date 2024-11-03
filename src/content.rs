@@ -20,6 +20,7 @@ pub struct Content {
     pub extra: Option<Value>,
     pub links_to: Option<Vec<String>>,
     pub back_links: Vec<Self>,
+    pub card_image: Option<String>,
 }
 
 pub fn get_title<'a>(frontmatter: &'a Frontmatter, html: &'a str) -> String {
