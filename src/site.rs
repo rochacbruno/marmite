@@ -596,10 +596,10 @@ fn handle_tag_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-    let mut unique_tags: Vec<(String, usize)> = Vec::new();
+    let mut unique_tags: Vec<(String, usize, Vec<Content>)> = Vec::new();
     for (tag, tagged_contents) in group_by_tags(site_data.posts.clone()) {
         // aggregate unique tags to render the tags list later
-        unique_tags.push((tag.clone(), tagged_contents.len()));
+        unique_tags.push((tag.clone(), tagged_contents.len(), tagged_contents.clone()));
         let tag_slug = slugify(&tag);
         handle_list_page(
             global_context,
@@ -635,7 +635,7 @@ fn handle_archive_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-    let mut unique_years: Vec<(String, usize)> = Vec::new();
+    let mut unique_years: Vec<(String, usize, Vec<Content>)> = Vec::new();
     let mut grouped_posts: HashMap<String, Vec<Content>> = HashMap::new();
     let posts = site_data.posts.clone();
     for post in posts {
@@ -656,11 +656,11 @@ fn handle_archive_pages(
             output_dir,
             format!("archive-{year}").as_ref(),
         )?;
-        unique_years.push((year.to_owned(), contents.len()));
+        unique_years.push((year.to_owned(), contents.len(), contents.clone()));
     }
 
     // Render archive.html group page
-    unique_years.sort_by(|a, b| b.cmp(a));
+    unique_years.sort_by(|a, b| b.1.cmp(&a.1));
     let mut archive_context = global_context.clone();
     archive_context.insert("title", &site_data.site.archives_title);
     archive_context.insert("group_content", &unique_years);
