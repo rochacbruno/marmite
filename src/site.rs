@@ -564,6 +564,7 @@ fn handle_404(
         tags: vec![],
         links_to: None,
         back_links: vec![],
+        card_image: None,
     };
     if input_404_path.exists() {
         let custom_content = get_content(&input_404_path)?;

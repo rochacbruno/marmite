@@ -7,8 +7,8 @@
 {% else %}
 <meta property="og:description" content="{{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=100, end="...") }}">
 {%- endif %}
-{% if content.extra.card_image %}
-<meta property="og:image" content="{{url_for(path=content.extra.card_image, abs=true)}}">
+{% if content.card_image %}
+<meta property="og:image" content="{{url_for(path=content.card_image, abs=true)}}">
 {% elif site.card_image %}
 <meta property="og:image" content="{{url_for(path=site.card_image, abs=true)}}">
 {% endif %}

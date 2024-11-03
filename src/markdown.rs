@@ -29,6 +29,7 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
     let extra = frontmatter.get("extra").map(std::borrow::ToOwned::to_owned);
     let links_to = get_links_to(&html);
     let back_links = Vec::new(); // will be mutated later
+    let card_image = get_card_image(&frontmatter, &html);
     let content = Content {
         title,
         description,
@@ -39,8 +40,22 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
         extra,
         links_to,
         back_links,
+        card_image,
     };
     Ok(content)
+}
+
+/// Capture `card_image` from frontmatter, then if not defined
+/// take the first img src found in the post content
+fn get_card_image(frontmatter: &Frontmatter, html: &str) -> Option<String> {
+    if let Some(card_image) = frontmatter.get("card_image") {
+        return Some(card_image.to_string());
+    }
+    // first <img> src attribute
+    let img_regex = Regex::new(r#"<img[^>]*src="([^"]+)""#).unwrap();
+    img_regex
+        .captures(html)
+        .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
 }
 
 fn get_links_to(html: &str) -> Option<Vec<String>> {
