@@ -10,7 +10,7 @@
     <meta property="og:title" content="{{ site.name }}">
     <meta property="og:description" content="{{ site.tagline }}">
     {% if site.card_image %}
-    <meta property="og:image" content="{{site.card_image}}">
+    <meta property="og:image" content="{{url_for(path=site.card_image, abs=true)}}">
     {% endif %}
     {% if site.url %}
     <meta property="og:url" content="{{site.url}}">
