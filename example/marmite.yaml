@@ -12,7 +12,7 @@ pagination: 6
 # static_path: static
 # media_path: media
 
-# card_image: name of site card image, relative to media or absolute
+card_image: ./media/og_image.jpg
 # logo_image: name of site logo image, relative to media or absolute
 
 enable_search: true

@@ -1,11 +1,23 @@
 <!-- website generated with Marmite SSG - https://github.com/rochacbruno/marmite -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/x-icon" href="./static/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark" />
+    {% block seo %}
+    <meta property="og:title" content="{{ site.name }}">
+    <meta property="og:description" content="{{ site.tagline }}">
+    {% if site.card_image %}
+    <meta property="og:image" content="{{site.card_image}}">
+    {% endif %}
+    {% if site.url %}
+    <meta property="og:url" content="{{site.url}}">
+    {% endif %}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{site.name}}">
+    {% endblock %}
     {%- block head %}
     <title>{{ site.name }} | {{ title }}</title>
     <link rel="stylesheet" type="text/css" href="./static/pico.min.css">
@@ -13,7 +25,6 @@
     <link rel="stylesheet" type="text/css" href="./static/custom.css">
     {% endblock -%}
 </head>
-
 <body>
     <main class="container">
         <header class="header-content">
@@ -71,5 +82,4 @@
     {% endif %}
     {% endblock -%}
 </body>
-
 </html>
