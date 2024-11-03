@@ -1,5 +1,28 @@
 {% extends "base.html" %}
 
+{% block seo %}
+<meta property="og:title" content="{{content.title}}">
+{% if content.description %}
+<meta property="og:description" content="{{ content.description | replace(from='"', to="") | truncate(length=100, end="...") }}">
+{% else %}
+<meta property="og:description" content="{{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=100, end="...") }}">
+{%- endif %}
+{% if content.extra.card_image %}
+<meta property="og:image" content="{{content.extra.card_image}}">
+{% elif site.card_image %}
+<meta property="og:image" content="{{site.card_image}}">
+{% endif %}
+{% if site.url %}
+<meta property="og:url" content="{{url_for(path=content.slug, abs=true)}}.html">
+{% endif %}
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="{{site.name}}">
+{% if content.date %}
+<meta property="article:published_time" content="{{content.date | date(format='%+')}}">
+{% endif %}
+{# TODO: <meta property="article:author" content="https://example.com/author-page"> #}
+{% endblock %}
+
 {% block head %}
 {{ super() }}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/github.min.css" id="highlightjs-theme" />
