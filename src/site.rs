@@ -2,7 +2,7 @@ use crate::config::Marmite;
 use crate::content::{check_for_duplicate_slugs, group_by_tags, slugify, Content};
 use crate::embedded::{generate_static, EMBEDDED_TERA};
 use crate::markdown::{get_content, process_file};
-use crate::server;
+use crate::{server, tera_filter};
 use crate::tera_functions::UrlFor;
 use chrono::Datelike;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
@@ -241,6 +241,12 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
         "url_for",
         UrlFor {
             base_url: site_data.site.url.to_string(),
+        },
+    );
+    tera.register_filter(
+        "default_date_format",
+        tera_filter::DefaultDateFormat{
+            date_format: site_data.site.default_date_format.to_string()
         },
     );
     tera.extend(&EMBEDDED_TERA).unwrap();

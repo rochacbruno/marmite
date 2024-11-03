@@ -47,6 +47,9 @@ pub struct Marmite {
     #[serde(default = "default_enable_search")]
     pub enable_search: bool,
 
+    #[serde(default = "default_date_format")]
+    pub default_date_format: String,
+
     #[serde(default = "default_menu")]
     pub menu: Option<Vec<(String, String)>>,
 
@@ -128,6 +131,10 @@ fn default_logo_image() -> String {
 
 fn default_enable_search() -> bool {
     false
+}
+
+fn default_date_format() -> String {
+    "%b %e, %Y".to_string()
 }
 
 fn default_menu() -> Option<Vec<(String, String)>> {

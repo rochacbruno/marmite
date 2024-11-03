@@ -11,6 +11,7 @@ mod markdown;
 mod server;
 mod site;
 mod templates;
+mod tera_filter;
 mod tera_functions;
 
 fn main() {
