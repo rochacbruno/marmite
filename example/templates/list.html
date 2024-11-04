@@ -25,7 +25,7 @@
                 </p>
                 {% if content.date -%}
                 <footer class="data-tags-footer">
-                    <span class="content-date">{{ content.date | date(format="%b %e, %Y") }}</span>
+                    <span class="content-date">{{ content.date | default_date_format }}</span>
                     {% if content.tags -%}
                     <ul class="content-tags overflow-auto">
                         {% for tag in content.tags | slice(end=3) -%}
