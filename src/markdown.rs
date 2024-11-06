@@ -32,8 +32,10 @@ pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
 pub fn get_content(path: &Path) -> Result<Content, String> {
     let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
     let (frontmatter, markdown) = parse_front_matter(&file_content)?;
-    let html = get_html(markdown);
-    let title = get_title(&frontmatter, markdown);
+    // Process markdown content and transform [[text]] into <./text.html>
+    let markdown = process_markdown_obsidianlinks(markdown);
+    let html = get_html(&markdown);
+    let title = get_title(&frontmatter, &markdown);
     let description = get_description(&frontmatter);
     let tags = get_tags(&frontmatter);
     let slug = get_slug(&frontmatter, path);
@@ -55,6 +57,46 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
         card_image,
     };
     Ok(content)
+}
+
+
+/// TODO(rochacbruno): 
+fn process_markdown_obsidianlinks(markdown: &str) -> String {
+    // Match code blocks and inline code
+    let code_block_re = Regex::new(r"(```[\s\S]*?```|`[^`]*`)").unwrap();
+    // Match [[slug]] but not [[slug|url]]
+    let link_re = Regex::new(r"\[\[([^\|\]]+)\]\]").unwrap();
+
+    let mut result = String::new();
+    let mut last_end = 0;
+
+    for code_caps in code_block_re.captures_iter(markdown) {
+        let code_start = code_caps.get(0).unwrap().start();
+        let code_end = code_caps.get(0).unwrap().end();
+
+        // Text before the code block or inline code
+        let text_before_code = &markdown[last_end..code_start];
+        let processed_text = link_re.replace_all(text_before_code, |caps: &regex::Captures| {
+            let slug = caps.get(1).unwrap().as_str().trim_end_matches(".html").trim_end_matches(".md");
+            format!("[{}](./{}.html)", slug, slug)
+        });
+        result.push_str(&processed_text);
+
+        // Add code block or inline code without modifications
+        result.push_str(&markdown[code_start..code_end]);
+
+        last_end = code_end;
+    }
+
+    // Remaining text after the last code block or inline code
+    let remaining_text = &markdown[last_end..];
+    let processed_text = link_re.replace_all(remaining_text, |caps: &regex::Captures| {
+        let slug = caps.get(1).unwrap().as_str().trim_end_matches(".html").trim_end_matches(".md");
+        format!("[{}](./{}.html)", slug, slug)
+    });
+    result.push_str(&processed_text);
+
+    result
 }
 
 /// Capture `card_image` from frontmatter, then if not defined

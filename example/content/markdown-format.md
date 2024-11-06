@@ -53,7 +53,7 @@ https://github.com/rochacbruno/marmite
 <fake@example.com>
 ```
 
-### Wikilinks 
+### Wikilinks and Obsidian links 
 
 Wikilinks allows to link using `[[name|url]]` syntax.
 
@@ -61,10 +61,18 @@ Wikilinks allows to link using `[[name|url]]` syntax.
 
 [[Pudim|https://pudim.com.br]]
 
+Obsidian style is simple, just reference the page between double brackets `[[slug]]`
+
+[[about]] or [[about.html]] or [[about.md]]
+
 ```markdown
 [[Read the Tutorial|./getting-started.html]]  
 
-[[Pudim|https://pudom.com.br]]
+[[Pudim|https://pudim.com.br]]
+
+Obsidian style is simple, just reference the page between double brackets `[[slug]]`
+
+[[about]] or [[about.html]] or [[about.md]]
 ```
 
 ### Back-links
@@ -81,6 +89,7 @@ Examples:
 [[Hello|./hello.html]]
 <./hello.html>
 <a href="./hello.html">
+[[hello]]
 ```
 
 In any case the `hello.html` page will have a this page
