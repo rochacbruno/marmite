@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 {% block main %}
+
+
+{% for item in site_data[link_prefix] %}
+{{item.0}} {{item.1 | length}}
+{% endfor %}
+
         <div class="list-title">
             <article><strong> {{ title }} </strong></article>
         </div>

@@ -3,7 +3,6 @@ use frontmatter_gen::{Frontmatter, Value};
 use log::error;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
 use std::process;
@@ -72,22 +71,22 @@ pub fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
     tags
 }
 
-pub fn group_by_tags(posts: Vec<Content>) -> Vec<(String, Vec<Content>)> {
-    // Create a HashMap to store the tags and the corresponding Content items.
-    let mut tag_map: HashMap<String, Vec<Content>> = HashMap::new();
-
-    // Iterate over the posts
-    for post in posts {
-        // For each tag in the current post
-        for tag in post.tags.clone() {
-            // Insert the tag into the map or push the post into the existing vector
-            tag_map.entry(tag).or_default().push(post.clone());
-        }
-    }
-
-    // Convert the HashMap into a Vec<(String, Vec<Content>)>
-    tag_map.into_iter().collect()
-}
+// pub fn group_by_tags(posts: Vec<Content>) -> Vec<(String, Vec<Content>)> {
+//     // Create a HashMap to store the tags and the corresponding Content items.
+//     let mut tag_map: HashMap<String, Vec<Content>> = HashMap::new();
+//
+//     // Iterate over the posts
+//     for post in posts {
+//         // For each tag in the current post
+//         for tag in post.tags.clone() {
+//             // Insert the tag into the map or push the post into the existing vector
+//             tag_map.entry(tag).or_default().push(post.clone());
+//         }
+//     }
+//
+//     // Convert the HashMap into a Vec<(String, Vec<Content>)>
+//     tag_map.into_iter().collect()
+// }
 
 /// Tries to get `date` from the front-matter metadata, else from filename
 /// Input examples:

@@ -47,6 +47,8 @@ all templates are rendered with the global context.
 site_data:
   posts: [Content]
   pages: [Content]
+  tag: {tag: [Content]}
+  archive: {year: [Content]}
 site:
   name: str
   url: str
@@ -76,7 +78,7 @@ There are 6 templates inside the `templates` folder, each adds more data to cont
 - base.html
   - All other templates inherits blocks from this one.
 - list.html
-  - Renders `index.html`, `pages.html`, `tags.html`
+  - Renders `index.html`, `pages.html`, `tag-{name}.html`, `archive-{year}.html`
   - adds `title:str`, `content_list: [Content]`, 
   - pagination: `current_page: str`, `next_page:str`, `previous_page:str`, 
     `total_pages:int`, `current_page_number:int`, `total_content:int`
@@ -84,8 +86,10 @@ There are 6 templates inside the `templates` folder, each adds more data to cont
   - Renders individual content page `my-post.html`
   - adds `title:str`, `content: [Content]`, `current_page: str`
 - group.html
-  - Renders grouped information such as `tag/sometag.html` and `archive/2024.html`
-  - adds `title:str`, `group_content: [[group, [Content]]]`, `current_page: str`
+  - Renders grouped information such as `tags.html` and `archive.html`
+  - adds `title:str`, `current_page: str`, `prefix:str`
+  - adds for backwards compatibility `group_content: [[group_name, count, [Content]]]`
+    however more structured data can be accessed via `site_data.tag` and `site_data.archive` 
 
 Include templates:
 
@@ -94,8 +98,7 @@ Include templates:
 - comments.html
   - Render the comment box
 
-When customizing the templates you can create new templates to use as `include` or `macro`
-but the 4 listed above are required.
+When customizing the templates you can create new templates to use as `include` or `macro` but the 4 listed above are required.
 
 If you just want to customize some individual template you can add only it in the
 templates/ folder and the rest will be added by marmite.
