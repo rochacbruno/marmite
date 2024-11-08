@@ -638,13 +638,13 @@ fn handle_tag_pages(
     let mut unique_tags: Vec<(String, usize, Vec<Content>)> = Vec::new(); // BC
 
     for (tag, tagged_contents) in &site_data.tag_map {
-        let tag_slug = slugify(&tag);
+        let tag_slug = slugify(tag);
         let mut contents = tagged_contents.clone();
         contents.sort_by(|a, b| b.date.cmp(&a.date));
         unique_tags.push((tag.clone(), tagged_contents.len(), contents.clone())); // BC
         handle_list_page(
             global_context,
-            &site_data.site.tags_content_title.replace("$tag", &tag),
+            &site_data.site.tags_content_title.replace("$tag", tag),
             &contents,
             site_data,
             tera,
