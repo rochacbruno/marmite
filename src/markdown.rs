@@ -1,5 +1,6 @@
 use crate::content::{get_date, get_description, get_slug, get_tags, get_title, Content};
 use crate::site::Data;
+use chrono::Datelike;
 use comrak::{markdown_to_html, ComrakOptions};
 use frontmatter_gen::{extract, Frontmatter};
 use regex::Regex;
@@ -9,8 +10,19 @@ use std::path::Path;
 pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
     let content = get_content(path)?;
 
-    if content.date.is_some() {
-        site_data.posts.push(content);
+    if let Some(date) = content.date {
+        site_data.posts.push(content.clone());
+        // tags
+        for tag in content.tags.clone() {
+            site_data.tag.entry(tag).or_default().push(content.clone());
+        }
+        // archive by year
+        let year = date.year().to_string();
+        site_data
+            .archive
+            .entry(year)
+            .or_default()
+            .push(content.clone());
     } else {
         site_data.pages.push(content);
     }

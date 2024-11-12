@@ -47,6 +47,8 @@ all templates are rendered with the global context.
 site_data:
   posts: [Content]
   pages: [Content]
+  tag: GroupedContent
+  archive: GroupedContent
 site:
   name: str
   url: str
@@ -71,12 +73,24 @@ back_links: [Content] or []
 card_image: str or None
 ```
 
+The `GroupedContent` is a map that when iterated returns a map of `name: [Content]`, this is available on global context,
+which means `tags` and `archive` group can be accessed on any template, however it is not recommended to access it directly,
+because those are unordered, to get an ordered version use `group` function:
+
+```html
+<ul class="content-tags">
+    {% for name, items in group(kind="tag") -%}  <!-- kind can be one of [tag,archive] -->
+        <li><a href="./tag-{{ name | trim | slugify }}.html">{{ name }}</a><span class="tag-count"> [{{ items | length }}]</span></li>
+    {%- endfor %}
+</ul>
+```
+
 There are 6 templates inside the `templates` folder, each adds more data to context.
 
 - base.html
   - All other templates inherits blocks from this one.
 - list.html
-  - Renders `index.html`, `pages.html`, `tags.html`
+  - Renders `index.html`, `pages.html`, `tag-{name}.html`, `archive-{year}.html`
   - adds `title:str`, `content_list: [Content]`, 
   - pagination: `current_page: str`, `next_page:str`, `previous_page:str`, 
     `total_pages:int`, `current_page_number:int`, `total_content:int`
@@ -84,8 +98,8 @@ There are 6 templates inside the `templates` folder, each adds more data to cont
   - Renders individual content page `my-post.html`
   - adds `title:str`, `content: [Content]`, `current_page: str`
 - group.html
-  - Renders grouped information such as `tag/sometag.html` and `archive/2024.html`
-  - adds `title:str`, `group_content: [[group, [Content]]]`, `current_page: str`
+  - Renders grouped information such as `tags.html` and `archive.html`
+  - adds `title:str`, `current_page: str`, `kind:str`
 
 Include templates:
 
@@ -94,8 +108,7 @@ Include templates:
 - comments.html
   - Render the comment box
 
-When customizing the templates you can create new templates to use as `include` or `macro`
-but the 4 listed above are required.
+When customizing the templates you can create new templates to use as `include` or `macro` but the 4 listed above are required.
 
 If you just want to customize some individual template you can add only it in the
 templates/ folder and the rest will be added by marmite.
@@ -174,8 +187,15 @@ Tera {
             base.html,
             list.html,
             content.html,
+            pagination.html,
+            comments.html,
+    ]
+    functions: [
+            group,
+            url_for,
     ]
     filters: [
+            default_date_format,
             reverse,
             trim_start,
             trim,

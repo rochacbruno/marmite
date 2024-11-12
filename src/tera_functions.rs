@@ -1,6 +1,9 @@
+use indexmap::IndexMap;
 use std::collections::HashMap;
 use tera::{to_value, Function, Result as TeraResult, Value};
 use url::Url;
+
+use crate::site::Data;
 
 #[derive(Default)]
 pub struct UrlFor {
@@ -63,18 +66,37 @@ impl Function for UrlFor {
     }
 }
 
-// NOTE: Tera already comes with a built-in slugify function
-// keeping this commented out here as reference for future filters
-// pub fn _slugify_filter(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-//     // Convert the Tera Value to a String
-//     let text = match from_value::<String>(value.clone()) {
-//         Ok(s) => s,
-//         Err(_) => return Err(Error::msg("Filter expects a string")),
-//     };
-//
-//     // Call your slugify function
-//     let slug = slugify(&text);
-//
-//     // Convert the result back to a Tera Value
-//     to_value(slug).map_err(|_| Error::msg("Failed to convert to Tera value"))
-// }
+/// Tera template function that takes a `kind` argument and returns the grouped content
+/// based on the kind. The function is used to group the content by tags or archive.
+/// The grouped content is built using the `site_data` field from the `Group` struct.
+/// and converted to an `IndexMap` to preserve the order of insertion that is
+/// determined by the iter on `GroupedContent`.
+pub struct Group {
+    pub site_data: Data,
+}
+
+impl Function for Group {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let kind = args
+            .get("kind")
+            .and_then(Value::as_str)
+            .ok_or_else(|| tera::Error::msg("Missing `kind` argument"))?;
+
+        let grouped_content = match kind {
+            "tag" => &self.site_data.tag,
+            "archive" => &self.site_data.archive,
+            _ => return Err(tera::Error::msg("Invalid `kind` argument")),
+        };
+
+        // create an IndexMap from the iterated content
+        let mut ordered_map = IndexMap::new();
+        for (k, v) in grouped_content.iter() {
+            ordered_map.insert(k.clone(), v.clone());
+        }
+
+        let json_value = serde_json::to_value(&ordered_map)
+            .map_err(|e| tera::Error::msg(format!("Failed to convert to JSON: {e}")))?;
+
+        to_value(json_value).map_err(tera::Error::from)
+    }
+}
