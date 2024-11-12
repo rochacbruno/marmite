@@ -47,8 +47,8 @@ all templates are rendered with the global context.
 site_data:
   posts: [Content]
   pages: [Content]
-  tag: {tag: [Content]}
-  archive: {year: [Content]}
+  tag: GroupedContent
+  archive: GroupedContent
 site:
   name: str
   url: str
@@ -73,6 +73,18 @@ back_links: [Content] or []
 card_image: str or None
 ```
 
+The `GroupedContent` is a map that when iterated returns a map of `name: [Content]`, this is available on global context,
+which means `tags` and `archive` group can be accessed on any template, however it is not recommended to access it directly,
+because those are unordered, to get an ordered version use `group` function:
+
+```html
+<ul class="content-tags">
+    {% for name, items in group(kind="tag") -%}  <!-- kind can be one of [tag,archive] -->
+        <li><a href="./tag-{{ name | trim | slugify }}.html">{{ name }}</a><span class="tag-count"> [{{ items | length }}]</span></li>
+    {%- endfor %}
+</ul>
+```
+
 There are 6 templates inside the `templates` folder, each adds more data to context.
 
 - base.html
@@ -87,9 +99,7 @@ There are 6 templates inside the `templates` folder, each adds more data to cont
   - adds `title:str`, `content: [Content]`, `current_page: str`
 - group.html
   - Renders grouped information such as `tags.html` and `archive.html`
-  - adds `title:str`, `current_page: str`, `prefix:str`
-  - adds for backwards compatibility `group_content: [[group_name, count, [Content]]]`
-    however more structured data can be accessed via `site_data.tag` and `site_data.archive` 
+  - adds `title:str`, `current_page: str`, `kind:str`
 
 Include templates:
 
@@ -177,8 +187,15 @@ Tera {
             base.html,
             list.html,
             content.html,
+            pagination.html,
+            comments.html,
+    ]
+    functions: [
+            group,
+            url_for,
     ]
     filters: [
+            default_date_format,
             reverse,
             trim_start,
             trim,

@@ -3,10 +3,60 @@ use frontmatter_gen::{Frontmatter, Value};
 use log::error;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::process;
 use unicode_normalization::UnicodeNormalization;
+
+#[derive(Debug, Clone, Serialize)]
+pub enum Kind {
+    Tag,
+    Archive,
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, Clone, Serialize)]
+pub struct GroupedContent {
+    pub kind: Kind,
+    pub map: HashMap<String, Vec<Content>>,
+}
+
+impl GroupedContent {
+    pub fn new(kind: Kind) -> Self {
+        Self {
+            kind,
+            map: HashMap::new(),
+        }
+    }
+
+    pub fn entry(&mut self, key: String) -> Entry<String, Vec<Content>> {
+        self.map.entry(key)
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&String, Vec<Content>)> {
+        let mut vec = Vec::new();
+        match self.kind {
+            Kind::Tag => {
+                for (tag, contents) in &self.map {
+                    let mut contents = contents.clone();
+                    contents.sort_by(|a, b| b.date.cmp(&a.date));
+                    vec.push((tag, contents));
+                }
+                vec.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+            }
+            Kind::Archive => {
+                for (year, contents) in &self.map {
+                    let mut contents = contents.clone();
+                    contents.sort_by(|a, b| b.date.cmp(&a.date));
+                    vec.push((year, contents));
+                }
+                vec.sort_by(|a, b| b.0.cmp(a.0));
+            }
+        }
+        vec.into_iter()
+    }
+}
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct Content {
@@ -70,23 +120,6 @@ pub fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
     };
     tags
 }
-
-// pub fn group_by_tags(posts: Vec<Content>) -> Vec<(String, Vec<Content>)> {
-//     // Create a HashMap to store the tags and the corresponding Content items.
-//     let mut tag_map: HashMap<String, Vec<Content>> = HashMap::new();
-//
-//     // Iterate over the posts
-//     for post in posts {
-//         // For each tag in the current post
-//         for tag in post.tags.clone() {
-//             // Insert the tag into the map or push the post into the existing vector
-//             tag_map.entry(tag).or_default().push(post.clone());
-//         }
-//     }
-//
-//     // Convert the HashMap into a Vec<(String, Vec<Content>)>
-//     tag_map.into_iter().collect()
-// }
 
 /// Tries to get `date` from the front-matter metadata, else from filename
 /// Input examples:

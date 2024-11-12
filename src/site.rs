@@ -1,29 +1,26 @@
 use crate::config::Marmite;
-use crate::content::{check_for_duplicate_slugs, slugify, Content};
+use crate::content::{check_for_duplicate_slugs, slugify, Content, GroupedContent, Kind};
 use crate::embedded::{generate_static, EMBEDDED_TERA};
 use crate::markdown::{get_content, process_file};
-use crate::tera_functions::UrlFor;
+use crate::tera_functions::{Group, UrlFor};
 use crate::{server, tera_filter};
 use fs_extra::dir::{copy as dircopy, CopyOptions};
 use hotwatch::{Event, EventKind, Hotwatch};
 use log::{debug, error, info};
 use regex::Regex;
 use serde::Serialize;
-use std::collections::HashMap;
 use std::path::Path;
 use std::{fs, process, sync::Arc, sync::Mutex};
 use tera::{Context, Tera};
 use walkdir::WalkDir;
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub struct Data {
     pub site: Marmite,
     pub posts: Vec<Content>,
     pub pages: Vec<Content>,
-    pub tag_map: HashMap<String, Vec<Content>>,
-    pub archive_map: HashMap<String, Vec<Content>>,
-    pub tag: Vec<(String, Vec<Content>)>,
-    pub archive: Vec<(String, Vec<Content>)>,
+    pub tag: GroupedContent,
+    pub archive: GroupedContent,
 }
 
 impl Data {
@@ -40,40 +37,21 @@ impl Data {
             site,
             posts: Vec::new(),
             pages: Vec::new(),
-            tag_map: HashMap::new(),
-            archive_map: HashMap::new(),
-            tag: Vec::new(),
-            archive: Vec::new(),
+            tag: GroupedContent::new(Kind::Tag),
+            archive: GroupedContent::new(Kind::Archive),
         }
-    }
-
-    pub fn sort_tags_by_length(&mut self) {
-        let mut tag_vec: Vec<(String, Vec<Content>)> = self.tag_map.clone().into_iter().collect();
-        tag_vec.sort_by(|(_, v1), (_, v2)| v2.len().cmp(&v1.len()));
-        self.tag = tag_vec;
-    }
-
-    pub fn sort_archive_by_key(&mut self) {
-        let mut archive_vec: Vec<(String, Vec<Content>)> =
-            self.archive_map.clone().into_iter().collect();
-        archive_vec.sort_by(|(k1, _), (k2, _)| k2.cmp(k1));
-        self.archive = archive_vec;
     }
 
     pub fn sort_all(&mut self) {
         self.posts.sort_by(|a, b| b.date.cmp(&a.date));
         self.pages.sort_by(|a, b| b.title.cmp(&a.title));
-        self.sort_tags_by_length();
-        self.sort_archive_by_key();
     }
 
     pub fn clear_all(&mut self) {
         self.posts.clear();
         self.pages.clear();
-        self.tag_map.clear();
-        self.archive_map.clear();
-        self.tag.clear();
-        self.archive.clear();
+        self.tag.map.clear();
+        self.archive.map.clear();
     }
 }
 
@@ -273,6 +251,12 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
         "url_for",
         UrlFor {
             base_url: site_data.site.url.to_string(),
+        },
+    );
+    tera.register_function(
+        "group",
+        Group {
+            site_data: site_data.clone(),
         },
     );
     tera.register_filter(
@@ -635,17 +619,12 @@ fn handle_tag_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-    let mut unique_tags: Vec<(String, usize, Vec<Content>)> = Vec::new(); // BC
-
-    for (tag, tagged_contents) in &site_data.tag_map {
+    for (tag, tagged_contents) in site_data.tag.iter() {
         let tag_slug = slugify(tag);
-        let mut contents = tagged_contents.clone();
-        contents.sort_by(|a, b| b.date.cmp(&a.date));
-        unique_tags.push((tag.clone(), tagged_contents.len(), contents.clone())); // BC
         handle_list_page(
             global_context,
             &site_data.site.tags_content_title.replace("$tag", tag),
-            &contents,
+            &tagged_contents,
             site_data,
             tera,
             output_dir,
@@ -656,10 +635,8 @@ fn handle_tag_pages(
     // Render tags.html group page
     let mut tag_list_context = global_context.clone();
     tag_list_context.insert("title", &site_data.site.tags_title);
-    unique_tags.sort_by(|a, b| b.1.cmp(&a.1)); // BC
-    tag_list_context.insert("group_content", &unique_tags); // BC
     tag_list_context.insert("current_page", "tags.html");
-    tag_list_context.insert("link_prefix", "tag");
+    tag_list_context.insert("kind", "tag");
     render_html(
         "group.html",
         "tags.html",
@@ -676,16 +653,11 @@ fn handle_archive_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-    let mut unique_years: Vec<(String, usize, Vec<Content>)> = Vec::new(); // BC
-
-    for (year, archive_contents) in &site_data.archive_map {
-        let mut contents = archive_contents.clone();
-        contents.sort_by(|a, b| b.date.cmp(&a.date));
-        unique_years.push((year.to_owned(), archive_contents.len(), contents.clone())); // BC
+    for (year, archive_contents) in site_data.archive.iter() {
         handle_list_page(
             global_context,
             &site_data.site.archives_content_title.replace("$year", year),
-            &contents,
+            &archive_contents,
             site_data,
             tera,
             output_dir,
@@ -696,10 +668,8 @@ fn handle_archive_pages(
     // Render archive.html group page
     let mut archive_context = global_context.clone();
     archive_context.insert("title", &site_data.site.archives_title);
-    unique_years.sort_by(|a, b| b.1.cmp(&a.1)); // BC
-    archive_context.insert("group_content", &unique_years); // BC
     archive_context.insert("current_page", "archive.html");
-    archive_context.insert("link_prefix", "archive");
+    archive_context.insert("kind", "archive");
     render_html(
         "group.html",
         "archive.html",
