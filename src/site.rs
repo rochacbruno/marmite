@@ -8,7 +8,7 @@ use fs_extra::dir::{copy as dircopy, CopyOptions};
 use hotwatch::{Event, EventKind, Hotwatch};
 use log::{debug, error, info};
 use regex::Regex;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::{fs, process, sync::Arc, sync::Mutex};
 use tera::{Context, Tera};
@@ -53,6 +53,14 @@ impl Data {
         self.tag.map.clear();
         self.archive.map.clear();
     }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct BuildInfo {
+    marmite_version: String,
+    posts: usize,
+    pages: usize,
+    generated_at: String,
 }
 
 pub fn generate(
@@ -131,6 +139,8 @@ pub fn generate(
             if site_data.site.enable_search {
                 generate_search_index(&site_data, &output_folder);
             }
+
+            write_build_info(&output_path, &site_data);
 
             info!("Site generated at: {}/", output_folder.display());
         }
@@ -450,6 +460,25 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
         error!("Failed to write search_index.json: {}", e);
     } else {
         info!("Generated search_index.json");
+    }
+}
+
+fn write_build_info(output_path: &Path, site_data: &std::sync::MutexGuard<'_, Data>) {
+    let build_info = BuildInfo {
+        marmite_version: env!("CARGO_PKG_VERSION").to_string(),
+        posts: site_data.posts.len(),
+        pages: site_data.pages.len(),
+        generated_at: chrono::Local::now().to_string(),
+    };
+
+    let build_info_path = output_path.join("marmite.json");
+    if let Err(e) = fs::write(
+        &build_info_path,
+        serde_json::to_string_pretty(&build_info).unwrap(),
+    ) {
+        error!("Failed to write marmite.json: {}", e);
+    } else {
+        info!("Generated build info at marmite.json");
     }
 }
 
