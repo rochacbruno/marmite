@@ -13,6 +13,7 @@ use unicode_normalization::UnicodeNormalization;
 pub enum Kind {
     Tag,
     Archive,
+    Author,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -45,11 +46,11 @@ impl GroupedContent {
                 }
                 vec.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
             }
-            Kind::Archive => {
-                for (year, contents) in &self.map {
+            Kind::Archive | Kind::Author => {
+                for (text, contents) in &self.map {
                     let mut contents = contents.clone();
                     contents.sort_by(|a, b| b.date.cmp(&a.date));
-                    vec.push((year, contents));
+                    vec.push((text, contents));
                 }
                 vec.sort_by(|a, b| b.0.cmp(a.0));
             }

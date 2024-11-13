@@ -21,6 +21,7 @@ pub struct Data {
     pub pages: Vec<Content>,
     pub tag: GroupedContent,
     pub archive: GroupedContent,
+    pub author: GroupedContent,
 }
 
 impl Data {
@@ -39,6 +40,7 @@ impl Data {
             pages: Vec::new(),
             tag: GroupedContent::new(Kind::Tag),
             archive: GroupedContent::new(Kind::Archive),
+            author: GroupedContent::new(Kind::Author),
         }
     }
 
@@ -361,6 +363,20 @@ fn handle_author_pages(
             format!("author-{}", &author_slug).as_ref(),
         )?;
     }
+
+    // Render authors.html group page
+    let mut authors_list_context = global_context.clone();
+    authors_list_context.insert("title", &site_data.site.tags_title);
+    authors_list_context.insert("current_page", "authors.html");
+    authors_list_context.insert("kind", "author");
+    render_html(
+        "group.html",
+        "authors.html",
+        tera,
+        &authors_list_context,
+        output_dir,
+    )?;
+
     Ok(())
 }
 

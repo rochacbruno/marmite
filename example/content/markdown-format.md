@@ -4,7 +4,7 @@ date: 2024-10-17 12:00:01
 slug: markdown-format
 description: The content here accepts any valid CommonMark or Github Flavoured markdown and some GFM extensions.
 tags: docs, markdown, Common Mark, GFM
-authors: rochacbruno,karlamagueta
+authors: rochacbruno,karlamagueta,john
 extra:
   math: true
   mermaid: true

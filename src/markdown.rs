@@ -22,6 +22,14 @@ pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
         for tag in content.tags.clone() {
             site_data.tag.entry(tag).or_default().push(content.clone());
         }
+        // authors
+        for username in content.authors.clone() {
+            site_data
+                .author
+                .entry(username)
+                .or_default()
+                .push(content.clone());
+        }
         // archive by year
         let year = date.year().to_string();
         site_data
