@@ -81,6 +81,16 @@ fn get_card_image(frontmatter: &Frontmatter, html: &str) -> Option<String> {
     if let Some(card_image) = frontmatter.get("card_image") {
         return Some(card_image.to_string());
     }
+    // attempt to get extra.banner_image
+    if let Some(extra) = frontmatter.get("extra") {
+        if let Some(extra) = extra.as_object() {
+            if let Some(card_image) = extra.get("banner_image") {
+                let url = card_image.to_string();
+                // trim start and end quotes
+                return Some(url[1..url.len() - 1].to_string());
+            }
+        }
+    }
     // first <img> src attribute
     let img_regex = Regex::new(r#"<img[^>]*src="([^"]+)""#).unwrap();
     img_regex

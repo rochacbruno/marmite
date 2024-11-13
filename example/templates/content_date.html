@@ -2,5 +2,5 @@
 {% set words = content.html | striptags | split(pat=' ') | length %}
 {% set reading_time = (words / 200) | round(method='ceil') %}
 <span class="content-date">
-    <small>{% if content.date %} {{ content.date | default_date_format }} {% endif %} - {{ reading_time }} minute{% if reading_time > 1 %}s{% endif %}</small>
+    <small>{% if content.date %} {{ content.date | default_date_format }} {% endif %} - {{ reading_time }} minute{% if reading_time > 1 %}s{% endif %} read</small>
 </span>

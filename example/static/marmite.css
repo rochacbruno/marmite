@@ -435,118 +435,6 @@ td, th {
 	text-align: start;
 }
 
-
-/* <div class="hero author-hero">
-    <article>
-    <h1>{{author.name}}</h1>
-    <img src="{{ author.avatar }}" alt="{{ author.name }}" class="avatar" align="left">
-    <p>{{author.bio}}</p>
-    {% if author.links %}
-    <ul>
-        {% for link in author.links %}
-        <li><a href="{{link.1}}">{{link.0}}</a></li>
-        {% endfor %}
-    {% endif %}
-    </article>
-</div> */
-
-/* .author-hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  margin: 20px 0;
-}
-
-.author-hero h1 {
-  margin-bottom: 20px;
-}
-
-.author-hero article {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.author-hero img.avatar {
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  margin-bottom: 20px;
-}
-
-.author-hero p {
-  margin-bottom: 20px;
-}
-
-.author-hero ul {
-  display: flex;
-  gap: 10px;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.author-hero ul li {
-  display: inline;
-}
-
-.author-hero ul li a {
-  text-decoration: none;
-  color: var(--pico-color-azure-550);
-  transition: color 0.3s ease;
-}
-
-.author-hero ul li a:hover {
-  color: var(--pico-color-azure-650);
-}
-
-@media (min-width: 768px) {
-  .author-hero article {
-    flex-direction: row;
-    align-items: flex-start;
-    text-align: left;
-  }
-
-  .author-hero img.avatar {
-    margin-right: 20px;
-    margin-bottom: 0;
-  }
-
-  .author-hero p {
-    flex: 1;
-  }
-
-  .author-hero ul {
-    justify-content: flex-start;
-  }
-} */
-
-
-
-/* 
-
- <div class="hero author-hero">
-            <article>
-            <h1>{{author.name}}</h1>
-            <div class="author-hero-image">
-                <img src="{{ author.avatar }}" alt="{{ author.name }}" class="avatar">
-            </div>
-            <div class="author-hero-bio">
-                <p>{{author.bio}}</p>
-            </div>
-            {% if author.links %}
-            <div class="author-hero-links">
-                <ul>
-                    {% for link in author.links %}
-                    <li><a href="{{link.1}}">{{link.0}}</a></li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-            </article>
-        </div>
-*/
 .author-hero {
   padding: 20px;
 }
@@ -611,3 +499,7 @@ td, th {
   }
 }
 
+.content-banner-image {
+	height: 300px;
+	background-position: center;
+}

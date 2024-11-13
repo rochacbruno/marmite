@@ -20,7 +20,9 @@
 {% if content.date %}
 <meta property="article:published_time" content="{{content.date | date(format='%+')}}">
 {% endif %}
-{# TODO: <meta property="article:author" content="https://example.com/author-page"> #}
+{% if site.url and content.authors %}
+<meta property="article:author" content="{{url_for(path='author-' ~ content.authors.0 ~ '.html', abs=true)}}">
+{% endif %}
 {% endblock %}
 
 {% block head %}
@@ -40,11 +42,9 @@
 
 {% block main %}
 
-{#
-<div>
-{% if content.card_image %} <img class="content-card-image" src="{{content.card_image}}" alt="{{content.title}}"> {% endif %}
-</div>
-#}
+{% if content.extra.banner_image %}
+<div class="content-banner-image" style="background-image: url({{content.extra.banner_image}});"></div>
+{% endif %}
 
 <article>
     

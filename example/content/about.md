@@ -1,5 +1,6 @@
 ---
 title: about
+authors: rochacbruno
 ---
 
 # About me

@@ -1,7 +1,8 @@
 ---
+title: Pagination
 tags: docs
+authors: rochacbruno
 ---
-# Pagination
 
 Yes! we have pagination!
 

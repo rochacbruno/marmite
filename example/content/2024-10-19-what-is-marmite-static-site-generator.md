@@ -1,7 +1,8 @@
 ---
+title: What is marmite
 tags: docs
+authors: rochacbruno
 ---
-# What is marmite
 
 **Marmite** is a simple, easy and opinionated static site generator, 
 probably the easiest and simple to use.
