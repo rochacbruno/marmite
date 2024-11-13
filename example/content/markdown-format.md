@@ -4,19 +4,25 @@ date: 2024-10-17 12:00:01
 slug: markdown-format
 description: The content here accepts any valid CommonMark or Github Flavoured markdown and some GFM extensions.
 tags: docs, markdown, Common Mark, GFM
+authors: rochacbruno,karlamagueta
 extra:
   math: true
   mermaid: true
-  mermaid_theme: neutral
+  mermaid_theme: default
 ---
 
-# Writing content in Markdown
+The content on Marmite accepts any valid `CommonMark` or **Github** _Flavoured_ markdown
+and some `GFM` extensions, Marmite also does post processing of HTML to support features such as 
+back-links and Obsidian links.
 
-The content here accepts any valid `CommonMark` or **Github** _Flavoured_ markdown
-and some `GFM` extensions.
+### Paragraphs and formatting
 
 Simple paragraph and usual formatting like **bold**, __underline__, *italic*
-and also all sorts of formatting elements.
+and also all sorts of formatting elements, as follows.
+
+```markdown
+**bold**, __underline__, *italic*
+```
 
 ### Strike-through
 

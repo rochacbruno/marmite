@@ -1,0 +1,15 @@
+{% if content.authors %}
+<div class="content-authors">
+    <ul>
+        {% for username in content.authors %}
+            {% set author = site.authors[username] %}
+            <li>
+                <a href="author-{{username}}.html">
+                    <img src="{{ author.avatar }}" alt="{{ author.name }}" class="avatar">
+                    {{ author.name }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}

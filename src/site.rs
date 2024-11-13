@@ -328,6 +328,39 @@ fn render_templates(
     handle_tag_pages(output_dir, site_data, &global_context, tera)?;
     handle_archive_pages(output_dir, site_data, &global_context, tera)?;
 
+    // Render Author pages
+    handle_author_pages(output_dir, site_data, &global_context, tera)?;
+
+    Ok(())
+}
+
+fn handle_author_pages(
+    output_dir: &Path,
+    site_data: &Data,
+    global_context: &Context,
+    tera: &Tera,
+) -> Result<(), String> {
+    for (username, author) in &site_data.site.authors {
+        let mut author_context = global_context.clone();
+        author_context.insert("author", &author);
+        let author_slug = slugify(username);
+        let author_posts = site_data
+            .posts
+            .iter()
+            .filter(|post| post.authors.contains(username))
+            .cloned()
+            .collect::<Vec<Content>>();
+
+        handle_list_page(
+            &author_context,
+            &author.name,
+            &author_posts,
+            site_data,
+            tera,
+            output_dir,
+            format!("author-{}", &author_slug).as_ref(),
+        )?;
+    }
     Ok(())
 }
 
@@ -616,6 +649,7 @@ fn handle_404(
         links_to: None,
         back_links: vec![],
         card_image: None,
+        authors: vec![],
     };
     if input_404_path.exists() {
         let custom_content = get_content(&input_404_path)?;

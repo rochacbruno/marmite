@@ -1,4 +1,6 @@
-use crate::content::{get_date, get_description, get_slug, get_tags, get_title, Content};
+use crate::content::{
+    get_authors, get_date, get_description, get_slug, get_tags, get_title, Content,
+};
 use crate::site::Data;
 use chrono::Datelike;
 use comrak::{markdown_to_html, ComrakOptions};
@@ -48,6 +50,7 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
     let links_to = get_links_to(&html);
     let back_links = Vec::new(); // will be mutated later
     let card_image = get_card_image(&frontmatter, &html);
+    let authors = get_authors(&frontmatter);
     let content = Content {
         title,
         description,
@@ -59,6 +62,7 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
         links_to,
         back_links,
         card_image,
+        authors,
     };
     Ok(content)
 }

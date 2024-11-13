@@ -55,6 +55,17 @@ pub struct Marmite {
 
     #[serde(default = "default_extra")]
     pub extra: Option<HashMap<String, Value>>,
+
+    #[serde(default = "default_authors")]
+    pub authors: HashMap<String, Author>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Author {
+    pub name: String,
+    pub avatar: Option<String>,
+    pub bio: Option<String>,
+    pub links: Option<Vec<(String, String)>>,
 }
 
 fn default_name() -> String {
@@ -148,4 +159,8 @@ fn default_menu() -> Option<Vec<(String, String)>> {
 
 fn default_extra() -> Option<HashMap<String, Value>> {
     None
+}
+
+fn default_authors() -> HashMap<String, Author> {
+    HashMap::new()
 }
