@@ -72,10 +72,10 @@ pub struct Content {
     pub card_image: Option<String>,
 }
 
-pub fn get_title<'a>(frontmatter: &'a Frontmatter, html: &'a str) -> String {
+pub fn get_title<'a>(frontmatter: &'a Frontmatter, markdown: &'a str) -> String {
     match frontmatter.get("title") {
         Some(Value::String(t)) => t.to_string(),
-        _ => html
+        _ => markdown
             .lines()
             .find(|line| !line.is_empty())
             .unwrap_or("")
@@ -179,4 +179,332 @@ pub fn slugify(text: &str) -> String {
     let re = Regex::new(r"[^a-z0-9]+").unwrap();
     let slug = re.replace_all(&normalized, "-");
     slug.trim_matches('-').to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_title_from_frontmatter() {
+        let mut frontmatter = Frontmatter::new();
+        frontmatter.insert("title".to_string(), Value::String("Test Title".to_string()));
+        let markdown = "# HTML Title";
+
+        let title = get_title(&frontmatter, markdown);
+        assert_eq!(title, "Test Title");
+    }
+
+    #[test]
+    fn test_get_title_from_html() {
+        let frontmatter = Frontmatter::new();
+        let markdown = "# HTML Title";
+
+        let title = get_title(&frontmatter, markdown);
+        assert_eq!(title, "HTML Title");
+    }
+
+    #[test]
+    fn test_get_title_from_html_with_no_title_tag() {
+        let frontmatter = Frontmatter::new();
+        let markdown = "title here";
+
+        let title = get_title(&frontmatter, markdown);
+        assert_eq!(title, "title here");
+    }
+
+    #[test]
+    fn test_get_title_from_html_with_multiple_lines() {
+        let frontmatter = Frontmatter::new();
+        let markdown = "
+# First Title
+Second Title
+        ";
+
+        let title = get_title(&frontmatter, markdown);
+        assert_eq!(title, "First Title");
+    }
+
+    #[test]
+    fn test_get_description_from_frontmatter() {
+        let mut frontmatter = Frontmatter::new();
+        frontmatter.insert(
+            "description".to_string(),
+            Value::String("Test Description".to_string()),
+        );
+
+        let description = get_description(&frontmatter);
+        assert_eq!(description, Some("\"Test Description\"".to_string()));
+    }
+
+    #[test]
+    fn test_get_description_from_empty_frontmatter() {
+        let frontmatter = Frontmatter::new();
+
+        let description = get_description(&frontmatter);
+        assert_eq!(description, None);
+    }
+
+    #[test]
+    fn test_get_slug_from_frontmatter() {
+        let mut frontmatter = Frontmatter::new();
+        frontmatter.insert("slug".to_string(), Value::String("test-slug".to_string()));
+        let path = Path::new("2024-01-01-myfile.md");
+
+        let slug = get_slug(&frontmatter, path);
+        assert_eq!(slug, "test-slug");
+    }
+
+    #[test]
+    fn test_get_slug_from_title() {
+        let mut frontmatter = Frontmatter::new();
+        frontmatter.insert("title".to_string(), Value::String("Test Title".to_string()));
+        let path = Path::new("2024-01-01-myfile.md");
+
+        let slug = get_slug(&frontmatter, path);
+        assert_eq!(slug, "test-title");
+    }
+
+    #[test]
+    fn test_get_slug_from_filename() {
+        let frontmatter = Frontmatter::new();
+        let path = Path::new("2024-01-01-myfile.md");
+
+        let slug = get_slug(&frontmatter, path);
+        assert_eq!(slug, "myfile");
+    }
+
+    #[test]
+    fn test_get_slug_from_filename_without_date() {
+        let frontmatter = Frontmatter::new();
+        let path = Path::new("myfile.md");
+
+        let slug = get_slug(&frontmatter, path);
+        assert_eq!(slug, "myfile");
+    }
+
+    #[test]
+    fn test_get_slug_with_special_characters() {
+        let mut frontmatter = Frontmatter::new();
+        frontmatter.insert(
+            "title".to_string(),
+            Value::String("Test Title with Special Characters!@#".to_string()),
+        );
+        let path = Path::new("2024-01-01-myfile.md");
+
+        let slug = get_slug(&frontmatter, path);
+        assert_eq!(slug, "test-title-with-special-characters");
+    }
+
+    #[test]
+    fn test_get_tags_from_frontmatter_array() {
+        let mut frontmatter = Frontmatter::new();
+        frontmatter.insert(
+            "tags".to_string(),
+            Value::Array(vec![
+                Value::String("tag1".to_string()),
+                Value::String("tag2".to_string()),
+            ]),
+        );
+
+        let tags = get_tags(&frontmatter);
+        assert_eq!(tags, vec!["tag1", "tag2"]);
+    }
+
+    #[test]
+    fn test_get_tags_from_frontmatter_string() {
+        let mut frontmatter = Frontmatter::new();
+        frontmatter.insert("tags".to_string(), Value::String("tag1, tag2".to_string()));
+
+        let tags = get_tags(&frontmatter);
+        assert_eq!(tags, vec!["tag1", "tag2"]);
+    }
+
+    #[test]
+    fn test_get_tags_with_no_tags() {
+        let frontmatter = Frontmatter::new();
+
+        let tags = get_tags(&frontmatter);
+        assert!(tags.is_empty());
+    }
+
+    #[test]
+    fn test_get_date_from_frontmatter() {
+        let mut frontmatter = Frontmatter::new();
+        frontmatter.insert(
+            "date".to_string(),
+            Value::String("2024-01-01 15:40:56".to_string()),
+        );
+        let path = Path::new("myfile.md");
+
+        let date = get_date(&frontmatter, path).unwrap();
+        assert_eq!(
+            date,
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(15, 40, 56)
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_get_date_from_frontmatter_without_time() {
+        let mut frontmatter = Frontmatter::new();
+        frontmatter.insert("date".to_string(), Value::String("2024-01-01".to_string()));
+        let path = Path::new("myfile.md");
+
+        let date = get_date(&frontmatter, path).unwrap();
+        assert_eq!(
+            date,
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_get_date_from_filename() {
+        let frontmatter = Frontmatter::new();
+        let path = Path::new("2024-01-01-myfile.md");
+
+        let date = get_date(&frontmatter, path).unwrap();
+        assert_eq!(
+            date,
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_get_date_no_date() {
+        let frontmatter = Frontmatter::new();
+        let path = Path::new("myfile.md");
+
+        let date = get_date(&frontmatter, path);
+        assert!(date.is_none());
+    }
+
+    #[test]
+    fn test_slugify_simple_text() {
+        let text = "Simple Text";
+        let slug = slugify(text);
+        assert_eq!(slug, "simple-text");
+    }
+
+    #[test]
+    fn test_slugify_with_special_characters() {
+        let text = "Text with Special Characters!@#";
+        let slug = slugify(text);
+        assert_eq!(slug, "text-with-special-characters");
+    }
+
+    #[test]
+    fn test_slugify_with_accents() {
+        let text = "Téxt wíth Áccénts";
+        let slug = slugify(text);
+        assert_eq!(slug, "te-xt-wi-th-a-cce-nts");
+    }
+
+    #[test]
+    fn test_slugify_with_multiple_spaces() {
+        let text = "Text    with    multiple    spaces";
+        let slug = slugify(text);
+        assert_eq!(slug, "text-with-multiple-spaces");
+    }
+
+    #[test]
+    fn test_slugify_with_underscores() {
+        let text = "Text_with_underscores";
+        let slug = slugify(text);
+        assert_eq!(slug, "text-with-underscores");
+    }
+
+    #[test]
+    fn test_slugify_with_numbers() {
+        let text = "Text with numbers 123";
+        let slug = slugify(text);
+        assert_eq!(slug, "text-with-numbers-123");
+    }
+
+    #[test]
+    fn test_slugify_empty_string() {
+        let text = "";
+        let slug = slugify(text);
+        assert_eq!(slug, "");
+    }
+
+    #[test]
+    fn test_check_for_duplicate_slugs_no_duplicates() {
+        let content1 = Content {
+            title: "Title 1".to_string(),
+            description: None,
+            slug: "slug-1".to_string(),
+            html: String::new(),
+            tags: vec![],
+            date: None,
+            extra: None,
+            links_to: None,
+            back_links: vec![],
+            card_image: None,
+        };
+        let content2 = Content {
+            title: "Title 2".to_string(),
+            description: None,
+            slug: "slug-2".to_string(),
+            html: String::new(),
+            tags: vec![],
+            date: None,
+            extra: None,
+            links_to: None,
+            back_links: vec![],
+            card_image: None,
+        };
+        let contents = vec![&content1, &content2];
+        let result = check_for_duplicate_slugs(&contents);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_check_for_duplicate_slugs_with_duplicates() {
+        let content1 = Content {
+            title: "Title 1".to_string(),
+            description: None,
+            slug: "duplicate-slug".to_string(),
+            html: String::new(),
+            tags: vec![],
+            date: None,
+            extra: None,
+            links_to: None,
+            back_links: vec![],
+            card_image: None,
+        };
+        let content2 = Content {
+            title: "Title 2".to_string(),
+            description: None,
+            slug: "duplicate-slug".to_string(),
+            html: String::new(),
+            tags: vec![],
+            date: None,
+            extra: None,
+            links_to: None,
+            back_links: vec![],
+            card_image: None,
+        };
+        let contents = vec![&content1, &content2];
+
+        let result = check_for_duplicate_slugs(&contents);
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), "duplicate-slug".to_string());
+    }
+
+    #[test]
+    fn test_check_for_duplicate_slugs_empty_list() {
+        let contents: Vec<&Content> = vec![];
+
+        let result = check_for_duplicate_slugs(&contents);
+        assert!(result.is_ok());
+    }
 }

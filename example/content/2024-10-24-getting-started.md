@@ -456,4 +456,4 @@ You can ask **Marmite** related questions or suggest features on [Discussions] p
 [Tera]: <https://keats.github.io/tera/docs/#templates> "Tera Docs"
 [Discussions]: <https://github.com/rochacbruno/marmite/discussions> "Github Discussions"
 [Markdown Formatting]: <./markdown-format.html> "Markdown Formatting"
-[Fuse] <https://fusejs.io> "Fuse JS"
+[Fuse]: <https://fusejs.io> "Fuse JS"
