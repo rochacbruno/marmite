@@ -20,7 +20,9 @@
 {% if content.date %}
 <meta property="article:published_time" content="{{content.date | date(format='%+')}}">
 {% endif %}
-{# TODO: <meta property="article:author" content="https://example.com/author-page"> #}
+{% if site.url and content.authors %}
+<meta property="article:author" content="{{url_for(path='author-' ~ content.authors.0 ~ '.html', abs=true)}}">
+{% endif %}
 {% endblock %}
 
 {% block head %}
@@ -37,12 +39,22 @@
 
 {% endblock %}
 
+
 {% block main %}
+
+{% if content.extra.banner_image %}
+<div class="content-banner-image" style="background-image: url({{content.extra.banner_image}});"></div>
+{% endif %}
+
 <article>
-    <div class="content-html">{{ content.html | safe }}</div>
+    
+    {% include "content_title.html" ignore missing %}
+
+    <div class="content-html">{{ content.html }}</div>
     {% if content.date %}
     <footer class="data-tags-footer">
-        <span class="content-date"> {{ content.date | date(format="%b %e, %Y") }}</span>
+        {% include "content_authors.html" ignore missing %}
+        {% include "content_date.html" ignore missing %}
         <ul class="content-tags overflow-auto">
         {% for tag in content.tags  %}
             <li><a href="./tag-{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
@@ -81,7 +93,7 @@
 <script>
 var config = {
     startOnLoad:true,
-    theme: '{{content.extra.mermaid_theme | default(value="neutral") }}',
+    theme: '{{content.extra.mermaid_theme | default(value="default") }}',
     flowchart:{useMaxWidth:false, htmlLabels:true}
 };
 mermaid.initialize(config);

@@ -4,6 +4,8 @@ slug: getting-started
 tags: docs
 extra:
   mermaid: true
+  banner_image: media/og_image.jpg
+authors: rochacbruno
 ---
 Learn how to create your blog with Marmite in minutes, you can start with zero-config 
 and then customize gradually later.

@@ -7,6 +7,7 @@ pagination: 6
 # tags_title: Tags
 # archives_title: Archive
 # pages_title: pages
+# authors_title: Authors
 
 # templates_path: templates
 # static_path: static
@@ -22,9 +23,27 @@ menu:
   - ["Pages", "pages.html"]
   - ["Tags", "tags.html"]
   - ["Archive", "archive.html"]
+  - ["Authors", "authors.html"]
   - ["Github", "https://github.com/rochacbruno/marmite"]
 
 default_date_format: "%A, %d %B"
+
+authors:
+  rochacbruno:
+    name: Bruno Rocha
+    avatar: https://github.com/rochacbruno.png
+    bio: Marmite Maintainer
+    links:
+      - ["Fediverse", "https://go.rocha.social/@bruno"]
+      - ["Github", "https://github.com/rochacbruno"]
+      - ["Linkedin", "https://www.linkedin.com/in/rochacbruno/"]
+      - ["Links", "https://bruno.rocha.social"]
+  karlamagueta:
+    name: Karla Magueta
+    avatar: https://github.com/karlamagueta.png
+    links:
+      - ["Github", "https://github.com/karlamagueta"]
+
 # extra data for template customization
 # extra:
 #  foo: bar

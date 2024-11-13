@@ -28,6 +28,9 @@ pub struct Marmite {
     #[serde(default = "default_archives_content_title")]
     pub archives_content_title: String,
 
+    #[serde(default = "default_authors_title")]
+    pub authors_title: String,
+
     #[serde(default = "default_content_path")]
     pub content_path: String,
     #[serde(default = "default_site_path")]
@@ -55,6 +58,17 @@ pub struct Marmite {
 
     #[serde(default = "default_extra")]
     pub extra: Option<HashMap<String, Value>>,
+
+    #[serde(default = "default_authors")]
+    pub authors: HashMap<String, Author>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct Author {
+    pub name: String,
+    pub avatar: Option<String>,
+    pub bio: Option<String>,
+    pub links: Option<Vec<(String, String)>>,
 }
 
 fn default_name() -> String {
@@ -79,6 +93,10 @@ fn default_pagination() -> usize {
 
 fn default_list_title() -> String {
     "Posts".to_string()
+}
+
+fn default_authors_title() -> String {
+    "Authors".to_string()
 }
 
 fn default_tags_title() -> String {
@@ -148,4 +166,8 @@ fn default_menu() -> Option<Vec<(String, String)>> {
 
 fn default_extra() -> Option<HashMap<String, Value>> {
     None
+}
+
+fn default_authors() -> HashMap<String, Author> {
+    HashMap::new()
 }

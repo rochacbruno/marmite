@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block main %}
 
-        {%if current_page != "index.html" %}
+        {%if current_page != "index.html" and author is not defined %}
         <div class="list-title">
             <article><strong> {{ title }} </strong></article>
         </div>
@@ -10,6 +10,28 @@
         <div class="hero">
             <article>
             {{hero}}
+            </article>
+        </div>
+        {% endif %}
+        {% if author is defined %}
+        <div class="hero author-hero">
+            <article>
+            <h1>{{author.name}}</h1>
+            <div class="author-hero-image">
+                <img src="{{ author.avatar }}" alt="{{ author.name }}" class="avatar">
+            </div>
+            <div class="author-hero-bio">
+                <p>{{author.bio}}</p>
+            </div>
+            {% if author.links %}
+            <div class="author-hero-links">
+                <ul>
+                    {% for link in author.links %}
+                    <li><a href="{{link.1}}">{{link.0}}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
             </article>
         </div>
         {% endif %}

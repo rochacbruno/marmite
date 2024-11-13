@@ -1,8 +1,9 @@
 ---
 date: 2024-10-18
 tags: docs, templates, theme, customization
+authors: rochacbruno
+title: Customizing Templates
 ---
-# Customizing Templates
 
 Marmite uses [Tera](https://keats.github.io/tera/docs/#templates) as its template
 parser, the language is very similar to **Jinja** or **Twig**.

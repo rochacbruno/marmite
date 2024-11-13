@@ -13,6 +13,7 @@ use unicode_normalization::UnicodeNormalization;
 pub enum Kind {
     Tag,
     Archive,
+    Author,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -45,11 +46,11 @@ impl GroupedContent {
                 }
                 vec.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
             }
-            Kind::Archive => {
-                for (year, contents) in &self.map {
+            Kind::Archive | Kind::Author => {
+                for (text, contents) in &self.map {
                     let mut contents = contents.clone();
                     contents.sort_by(|a, b| b.date.cmp(&a.date));
-                    vec.push((year, contents));
+                    vec.push((text, contents));
                 }
                 vec.sort_by(|a, b| b.0.cmp(a.0));
             }
@@ -70,6 +71,7 @@ pub struct Content {
     pub links_to: Option<Vec<String>>,
     pub back_links: Vec<Self>,
     pub card_image: Option<String>,
+    pub authors: Vec<String>,
 }
 
 pub fn get_title<'a>(frontmatter: &'a Frontmatter, markdown: &'a str) -> String {
@@ -119,6 +121,23 @@ pub fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
         _ => Vec::new(),
     };
     tags
+}
+
+pub fn get_authors(frontmatter: &Frontmatter) -> Vec<String> {
+    let authors: Vec<String> = match frontmatter.get("authors") {
+        Some(Value::Array(authors)) => authors
+            .iter()
+            .map(Value::to_string)
+            .map(|t| t.trim_matches('"').to_string())
+            .collect(),
+        Some(Value::String(authors)) => authors
+            .split(',')
+            .map(str::trim)
+            .map(String::from)
+            .collect(),
+        _ => Vec::new(),
+    };
+    authors
 }
 
 /// Tries to get `date` from the front-matter metadata, else from filename
@@ -449,6 +468,7 @@ Second Title
             links_to: None,
             back_links: vec![],
             card_image: None,
+            authors: vec![],
         };
         let content2 = Content {
             title: "Title 2".to_string(),
@@ -461,6 +481,7 @@ Second Title
             links_to: None,
             back_links: vec![],
             card_image: None,
+            authors: vec![],
         };
         let contents = vec![&content1, &content2];
         let result = check_for_duplicate_slugs(&contents);
@@ -480,6 +501,7 @@ Second Title
             links_to: None,
             back_links: vec![],
             card_image: None,
+            authors: vec![],
         };
         let content2 = Content {
             title: "Title 2".to_string(),
@@ -492,6 +514,7 @@ Second Title
             links_to: None,
             back_links: vec![],
             card_image: None,
+            authors: vec![],
         };
         let contents = vec![&content1, &content2];
 

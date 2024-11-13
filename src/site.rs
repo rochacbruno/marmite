@@ -1,4 +1,4 @@
-use crate::config::Marmite;
+use crate::config::{Author, Marmite};
 use crate::content::{check_for_duplicate_slugs, slugify, Content, GroupedContent, Kind};
 use crate::embedded::{generate_static, EMBEDDED_TERA};
 use crate::markdown::{get_content, process_file};
@@ -21,6 +21,7 @@ pub struct Data {
     pub pages: Vec<Content>,
     pub tag: GroupedContent,
     pub archive: GroupedContent,
+    pub author: GroupedContent,
 }
 
 impl Data {
@@ -39,6 +40,7 @@ impl Data {
             pages: Vec::new(),
             tag: GroupedContent::new(Kind::Tag),
             archive: GroupedContent::new(Kind::Archive),
+            author: GroupedContent::new(Kind::Author),
         }
     }
 
@@ -328,6 +330,66 @@ fn render_templates(
     handle_tag_pages(output_dir, site_data, &global_context, tera)?;
     handle_archive_pages(output_dir, site_data, &global_context, tera)?;
 
+    // Render Author pages
+    handle_author_pages(output_dir, site_data, &global_context, tera)?;
+
+    Ok(())
+}
+
+fn handle_author_pages(
+    output_dir: &Path,
+    site_data: &Data,
+    global_context: &Context,
+    tera: &Tera,
+) -> Result<(), String> {
+    for (username, _) in site_data.author.iter() {
+        let mut author_context = global_context.clone();
+
+        let author = if let Some(author) = site_data.site.authors.get(username) {
+            author
+        } else {
+            &Author {
+                name: username.to_string(),
+                bio: None,
+                avatar: Some("static/avatar-placeholder.png".to_string()),
+                links: None,
+            }
+        };
+
+        author_context.insert("author", &author);
+
+        let author_slug = slugify(username);
+        let author_posts = site_data
+            .posts
+            .iter()
+            .filter(|post| post.authors.contains(username))
+            .cloned()
+            .collect::<Vec<Content>>();
+
+        handle_list_page(
+            &author_context,
+            &author.name,
+            &author_posts,
+            site_data,
+            tera,
+            output_dir,
+            format!("author-{}", &author_slug).as_ref(),
+        )?;
+    }
+
+    // Render authors.html group page
+    let mut authors_list_context = global_context.clone();
+    authors_list_context.insert("title", &site_data.site.authors_title);
+    authors_list_context.insert("current_page", "authors.html");
+    authors_list_context.insert("kind", "author");
+    render_html(
+        "group.html",
+        "authors.html",
+        tera,
+        &authors_list_context,
+        output_dir,
+    )?;
+
     Ok(())
 }
 
@@ -616,6 +678,7 @@ fn handle_404(
         links_to: None,
         back_links: vec![],
         card_image: None,
+        authors: vec![],
     };
     if input_404_path.exists() {
         let custom_content = get_content(&input_404_path)?;

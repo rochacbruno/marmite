@@ -85,6 +85,7 @@ impl Function for Group {
         let grouped_content = match kind {
             "tag" => &self.site_data.tag,
             "archive" => &self.site_data.archive,
+            "author" => &self.site_data.author,
             _ => return Err(tera::Error::msg("Invalid `kind` argument")),
         };
 
