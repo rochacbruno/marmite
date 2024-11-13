@@ -28,6 +28,9 @@ pub struct Marmite {
     #[serde(default = "default_archives_content_title")]
     pub archives_content_title: String,
 
+    #[serde(default = "default_authors_title")]
+    pub authors_title: String,
+
     #[serde(default = "default_content_path")]
     pub content_path: String,
     #[serde(default = "default_site_path")]
@@ -90,6 +93,10 @@ fn default_pagination() -> usize {
 
 fn default_list_title() -> String {
     "Posts".to_string()
+}
+
+fn default_authors_title() -> String {
+    "Authors".to_string()
 }
 
 fn default_tags_title() -> String {

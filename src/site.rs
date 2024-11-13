@@ -1,4 +1,4 @@
-use crate::config::Marmite;
+use crate::config::{Author, Marmite};
 use crate::content::{check_for_duplicate_slugs, slugify, Content, GroupedContent, Kind};
 use crate::embedded::{generate_static, EMBEDDED_TERA};
 use crate::markdown::{get_content, process_file};
@@ -342,9 +342,22 @@ fn handle_author_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-    for (username, author) in &site_data.site.authors {
+    for (username, _) in site_data.author.iter() {
         let mut author_context = global_context.clone();
+
+        let author = if let Some(author) = site_data.site.authors.get(username) {
+            author
+        } else {
+            &Author {
+                name: username.to_string(),
+                bio: None,
+                avatar: Some("static/avatar-placeholder.png".to_string()),
+                links: None,
+            }
+        };
+
         author_context.insert("author", &author);
+
         let author_slug = slugify(username);
         let author_posts = site_data
             .posts
@@ -366,7 +379,7 @@ fn handle_author_pages(
 
     // Render authors.html group page
     let mut authors_list_context = global_context.clone();
-    authors_list_context.insert("title", &site_data.site.tags_title);
+    authors_list_context.insert("title", &site_data.site.authors_title);
     authors_list_context.insert("current_page", "authors.html");
     authors_list_context.insert("kind", "author");
     render_html(

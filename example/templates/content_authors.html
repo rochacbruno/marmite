@@ -13,8 +13,8 @@
             {% else %}
             {# handle the case when author is defined on content but not on config #}
             <li >
-                <a class="secondary" href="author-{{username}}.html" title="Author information not found, register on marmite.yaml">
-                    <img src="https://robohash.org/{{username}}" alt="{{ username }}" class="avatar">
+                <a class="secondary" href="author-{{username}}.html">
+                    <img src="static/avatar-placeholder.png" alt="{{ username }}" class="avatar">
                     {{ username }}
                 </a>
             </li>

@@ -7,6 +7,7 @@ pagination: 6
 # tags_title: Tags
 # archives_title: Archive
 # pages_title: pages
+# authors_title: Authors
 
 # templates_path: templates
 # static_path: static
@@ -22,6 +23,7 @@ menu:
   - ["Pages", "pages.html"]
   - ["Tags", "tags.html"]
   - ["Archive", "archive.html"]
+  - ["Authors", "authors.html"]
   - ["Github", "https://github.com/rochacbruno/marmite"]
 
 default_date_format: "%A, %d %B"
@@ -39,6 +41,8 @@ authors:
   karlamagueta:
     name: Karla Magueta
     avatar: https://github.com/karlamagueta.png
+    links:
+      - ["Github", "https://github.com/karlamagueta"]
 
 # extra data for template customization
 # extra:

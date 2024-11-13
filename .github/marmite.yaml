@@ -8,6 +8,7 @@ menu:
   - ['Contributors', 'contributors.html']
   - ['Tags', 'tags.html']
   - ['Archive', 'archive.html']
+  - ['Authors', 'authors.html']
   - ['Github', 'https://github.com/rochacbruno/marmite/']
 card_image: ./media/og_image.jpg
 extra:
@@ -30,3 +31,18 @@ extra:
               crossorigin="anonymous"
               async>
       </script>
+authors:
+  rochacbruno:
+    name: Bruno Rocha
+    avatar: https://github.com/rochacbruno.png
+    bio: Marmite Maintainer
+    links:
+      - ["Fediverse", "https://go.rocha.social/@bruno"]
+      - ["Github", "https://github.com/rochacbruno"]
+      - ["Linkedin", "https://www.linkedin.com/in/rochacbruno/"]
+      - ["Links", "https://bruno.rocha.social"]
+  karlamagueta:
+    name: Karla Magueta
+    avatar: https://github.com/karlamagueta.png
+    links:
+      - ["Github", "https://github.com/karlamagueta"]
