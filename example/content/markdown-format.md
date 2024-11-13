@@ -1,7 +1,7 @@
 ---
+title: Markdown Formatting Options
 date: 2024-10-17 12:00:01
 slug: markdown-format
-title: Markdown Formatting Options
 description: The content here accepts any valid CommonMark or Github Flavoured markdown and some GFM extensions.
 tags: docs, markdown, Common Mark, GFM
 extra:
@@ -57,30 +57,56 @@ https://github.com/rochacbruno/marmite
 
 Wikilinks allows to link using `[[name|url]]` syntax.
 
-[[Read the Tutorial|./getting-started.html]]  
+[[Read the Tutorial|getting-started]] and [[Read the Tutorial|getting-started.md]] and [[Read the Tutorial|getting-started.html]]  
 
 [[Pudim|https://pudim.com.br]]
 
 ```markdown
-[[Read the Tutorial|./getting-started.html]]  
+[[Read the Tutorial|getting-started]] and [[Read the Tutorial|getting-started.md]] and [[Read the Tutorial|getting-started.html]]
 
-[[Pudim|https://pudom.com.br]]
+[[Pudim|https://pudim.com.br]]
 ```
+
+### Obsidian Links
+
+Obsidian links are made using `[[page-slug]]` or `[[page-slug.md]]`
+
+Example:
+
+[[about]] and [[about.md]] and [[about.html]] should point both to the about page.
+
+[[https://pudim.com.br]]
+
+```markdown
+[[about]] and [[about.md]] and [[about.html]] should point both to the about page.
+
+[[https://pudim.com.br]]
+```
+
 
 ### Back-links
 
 Every time you link to another page or post
-using the backreference like `./{slug}.html`
+using the backreference like `{slug}`, `{slug}.md` or `{slug}.html`
 **marmite** will track the backlinking and show
 a list of pages that links to each other.
 
 Examples:
 
+[[hello]]
+[Hello1](hello.html)
+[Hello2](hello.md)
+[[Hello3|hello]]
+[[Hello4|hello.md]]
+<a href="hello.html">Hello5</a>
+
 ```markdown
-[Hello](./hello.html)
-[[Hello|./hello.html]]
-<./hello.html>
-<a href="./hello.html">
+[[hello]]
+[Hello1](hello.html)
+[Hello2](hello.md)
+[[Hello3|hello]]
+[[Hello4|hello.md]]
+<a href="hello.html">Hello5</a>
 ```
 
 In any case the `hello.html` page will have a this page
@@ -88,7 +114,7 @@ on its list of back-links:
 
 <figure>
   <figcaption>Backlinks</figcaption>
-  <img src="./media/screenshots/backlink.png" width="500">
+  <img src="media/screenshots/backlink.png" width="500">
 </figure>
 
 
@@ -451,16 +477,16 @@ Starting lists with numbers requires a `number\`
 ### Images
 
 Photo  
-![Photo](./media/marmite.jpg)
+![Photo](media/marmite.jpg)
 
 Same but containing a tooltip if you hover the mouse on  
-![Photo](./media/marmite.jpg "A jar of Marmite")
+![Photo](media/marmite.jpg "A jar of Marmite")
 ```markdown
 Photo  
-![Photo](./media/marmite.jpg)
+![Photo](media/marmite.jpg)
 
 Same but containing a tooltip if you hover the mouse on  
-![Photo](./media/marmite.jpg "A jar of Marmite")
+![Photo](media/marmite.jpg "A jar of Marmite")
 ```
 
 ### Embed
