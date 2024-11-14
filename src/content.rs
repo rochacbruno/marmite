@@ -36,6 +36,10 @@ impl GroupedContent {
         self.map.entry(key)
     }
 
+    /// Sort tag map by number of contents
+    /// Sort archive map by date
+    /// Sort author map by author name
+    /// Sort stream map by stream name
     pub fn iter(&self) -> impl Iterator<Item = (&String, Vec<Content>)> {
         let mut vec = Vec::new();
         match self.kind {
@@ -47,13 +51,21 @@ impl GroupedContent {
                 }
                 vec.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
             }
-            Kind::Archive | Kind::Author | Kind::Stream => {
+            Kind::Archive => {
                 for (text, contents) in &self.map {
                     let mut contents = contents.clone();
                     contents.sort_by(|a, b| b.date.cmp(&a.date));
                     vec.push((text, contents));
                 }
                 vec.sort_by(|a, b| b.0.cmp(a.0));
+            }
+            Kind::Author | Kind::Stream => {
+                for (text, contents) in &self.map {
+                    let mut contents = contents.clone();
+                    contents.sort_by(|a, b| b.date.cmp(&a.date));
+                    vec.push((text, contents));
+                }
+                vec.sort_by(|a, b| a.0.cmp(b.0));
             }
         }
         vec.into_iter()
