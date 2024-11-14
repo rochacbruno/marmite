@@ -14,6 +14,7 @@ pub enum Kind {
     Tag,
     Archive,
     Author,
+    Stream,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -46,7 +47,7 @@ impl GroupedContent {
                 }
                 vec.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
             }
-            Kind::Archive | Kind::Author => {
+            Kind::Archive | Kind::Author | Kind::Stream => {
                 for (text, contents) in &self.map {
                     let mut contents = contents.clone();
                     contents.sort_by(|a, b| b.date.cmp(&a.date));
@@ -72,6 +73,7 @@ pub struct Content {
     pub back_links: Vec<Self>,
     pub card_image: Option<String>,
     pub authors: Vec<String>,
+    pub stream: Option<String>,
 }
 
 /// Try to get the title from the frontmatter
@@ -108,20 +110,46 @@ pub fn get_description(frontmatter: &Frontmatter) -> Option<String> {
     None
 }
 
+/// Try to get the slug from the frontmatter
+/// If not found, get the title from the frontmatter
+/// If not found, get the filename without the date
+/// If a date is found in the filename, remove it from the slug
+/// If a stream is not the default `index`, prepend it to the slug
+/// return the slug
 pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
+    let stream = get_stream(frontmatter).unwrap();
+    let mut final_slug: String;
+
     if let Some(slug) = frontmatter.get("slug") {
-        return slugify(&slug.to_string());
-    }
-    if let Some(title) = frontmatter.get("title") {
-        return slugify(&title.to_string());
+        final_slug = slugify(&slug.to_string());
+    } else if let Some(title) = frontmatter.get("title") {
+        final_slug = slugify(&title.to_string());
+    } else {
+        final_slug = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .unwrap()
+            .to_string();
+        if let Some(date) = extract_date_from_filename(path) {
+            final_slug = final_slug.replace(&format!("{}-", date.date()), "");
+        }
     }
 
-    let slug = path.file_stem().and_then(|stem| stem.to_str()).unwrap();
-    if let Some(date) = extract_date_from_filename(path) {
-        return slug.replace(&format!("{}-", date.date()), "").to_string();
+    if stream != "index" {
+        final_slug = format!("{stream}-{final_slug}");
     }
 
-    slug.to_string()
+    final_slug
+}
+
+/// Capture `stream` from frontmatter
+/// If not defined return "index" as default
+#[allow(clippy::unnecessary_wraps)]
+pub fn get_stream(frontmatter: &Frontmatter) -> Option<String> {
+    if let Some(stream) = frontmatter.get("stream") {
+        return Some(stream.as_str().unwrap().trim_matches('"').to_string());
+    }
+    Some("index".to_string())
 }
 
 pub fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
@@ -488,6 +516,7 @@ Second Title
             back_links: vec![],
             card_image: None,
             authors: vec![],
+            stream: None,
         };
         let content2 = Content {
             title: "Title 2".to_string(),
@@ -501,6 +530,7 @@ Second Title
             back_links: vec![],
             card_image: None,
             authors: vec![],
+            stream: None,
         };
         let contents = vec![&content1, &content2];
         let result = check_for_duplicate_slugs(&contents);
@@ -521,6 +551,7 @@ Second Title
             back_links: vec![],
             card_image: None,
             authors: vec![],
+            stream: None,
         };
         let content2 = Content {
             title: "Title 2".to_string(),
@@ -534,6 +565,7 @@ Second Title
             back_links: vec![],
             card_image: None,
             authors: vec![],
+            stream: None,
         };
         let contents = vec![&content1, &content2];
 
@@ -548,5 +580,58 @@ Second Title
 
         let result = check_for_duplicate_slugs(&contents);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_extract_date_from_filename_valid_date() {
+        let path = Path::new("2024-01-01-myfile.md");
+        let date = extract_date_from_filename(path).unwrap();
+        assert_eq!(
+            date,
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_extract_date_from_filename_invalid_date() {
+        let path = Path::new("not-a-date-myfile.md");
+        let date = extract_date_from_filename(path);
+        assert!(date.is_none());
+    }
+
+    #[test]
+    fn test_extract_date_from_filename_empty() {
+        let path = Path::new("");
+        let date = extract_date_from_filename(path);
+        assert!(date.is_none());
+    }
+
+    #[test]
+    fn test_extract_date_from_filename_with_time() {
+        let path = Path::new("2024-01-01-15-30-myfile.md");
+        let date = extract_date_from_filename(path).unwrap();
+        assert_eq!(
+            date,
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_extract_date_from_filename_with_multiple_dates() {
+        let path = Path::new("2024-01-01-2025-02-02-myfile.md");
+        let date = extract_date_from_filename(path).unwrap();
+        assert_eq!(
+            date,
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+        );
     }
 }

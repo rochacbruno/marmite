@@ -1,5 +1,5 @@
 use crate::content::{
-    get_authors, get_date, get_description, get_slug, get_tags, get_title, Content,
+    get_authors, get_date, get_description, get_slug, get_stream, get_tags, get_title, Content,
 };
 use crate::site::Data;
 use chrono::Datelike;
@@ -37,6 +37,14 @@ pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
             .entry(year)
             .or_default()
             .push(content.clone());
+        // stream by name
+        if let Some(stream) = &content.stream {
+            site_data
+                .stream
+                .entry(stream.to_string())
+                .or_default()
+                .push(content.clone());
+        };
     } else {
         site_data.pages.push(content);
     }
@@ -66,6 +74,13 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
     let back_links = Vec::new(); // will be mutated later
     let card_image = get_card_image(&frontmatter, &html);
     let authors = get_authors(&frontmatter);
+
+    let stream = if date.is_some() {
+        get_stream(&frontmatter)
+    } else {
+        None
+    };
+
     let content = Content {
         title,
         description,
@@ -78,6 +93,7 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
         back_links,
         card_image,
         authors,
+        stream,
     };
     Ok(content)
 }
@@ -94,7 +110,7 @@ fn get_card_image(frontmatter: &Frontmatter, html: &str) -> Option<String> {
             if let Some(card_image) = extra.get("banner_image") {
                 let url = card_image.to_string();
                 // trim start and end quotes
-                return Some(url[1..url.len() - 1].to_string());
+                return Some(url.trim_matches('"').to_string());
             }
         }
     }

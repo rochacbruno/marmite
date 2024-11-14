@@ -1,20 +1,8 @@
 {% extends "base.html" %}
 {% block main %}
-
         <div class="list-title">
             <article><strong> {{ title }} </strong></article>
         </div>
-
-        {# tag cloud commented out, uncomment if you want it.
-        <article class="group-list">
-        <ul class="content-tags">
-            {% for name, items in group(kind=kind) -%}
-                <li><a href="./{{kind}}-{{ name | trim | slugify }}.html">{{ name }}</a><span class="tag-count"> [{{ items | length }}]</span></li>
-            {%- endfor %}
-        </ul>
-        </article>
-        endcomment #}
-
         <article class="group-details">
             {% for name, items in group(kind=kind) -%}
             <details {%if loop.index == 1%}open{%endif%}>
@@ -23,10 +11,14 @@
                 {% for item in items | slice(end=10) %}
                     <li><a href="./{{item.slug}}.html">{{item.title}}</a></li>
                 {% endfor %}
-                <li><a href="./{{kind}}-{{ name | trim | slugify }}.html">more ...</a></li>
-                </ul>
+                {% if kind == "stream" %}
+                <li><a href="./{{ name | trim | slugify }}.html">more &rarr;</a></li>
+                {% else %}
+                <li><a href="./{{kind}}-{{ name | trim | slugify }}.html">more &rarr;</a></li>
+                {% endif %}
+                
+            </ul>
             </details>
             {%- endfor %}
         </article>
-        
 {% endblock %}
