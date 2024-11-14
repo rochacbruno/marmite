@@ -2,11 +2,13 @@
 date: 2024-10-15
 tags: docs, comments, customization
 authors: rochacbruno
-title: Enabling Comments
 ---
+
+# Enabling Comments
 
 Marmite as a static site generator, doesn't have commenting features,
 but there are various options of external commenting systems to integrate.
+
 
 Utterances
 
