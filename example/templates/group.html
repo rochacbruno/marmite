@@ -18,7 +18,7 @@
         <article class="group-details">
             {% for name, items in group(kind=kind) -%}
             <details {%if loop.index == 1%}open{%endif%}>
-                <summary role="button" class="outline contrast">{{name}} <sup>{{items | length}}</sup></summary>
+                <summary role="button" class="outline contrast">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{{name}} <sup>{{items | length}}</sup></summary>
                 <ul>
                 {% for item in items | slice(end=10) %}
                     <li><a href="./{{item.slug}}.html">{{item.title}}</a></li>

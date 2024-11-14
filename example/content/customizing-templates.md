@@ -50,6 +50,7 @@ site_data:
   pages: [Content]
   tag: GroupedContent
   archive: GroupedContent
+  author: GroupedContent
 site:
   name: str
   url: str
@@ -72,27 +73,29 @@ extra: {key: value}
 links_to: [str] or None
 back_links: [Content] or []
 card_image: str or None
+authors: [str] or []
 ```
 
 The `GroupedContent` is a map that when iterated returns a map of `name: [Content]`, this is available on global context,
-which means `tags` and `archive` group can be accessed on any template, however it is not recommended to access it directly,
+which means `tag`, `archive` and `author` groups can be accessed on any template, however it is not recommended to access it directly,
 because those are unordered, to get an ordered version use `group` function:
 
 ```html
 <ul class="content-tags">
-    {% for name, items in group(kind="tag") -%}  <!-- kind can be one of [tag,archive] -->
+    {% for name, items in group(kind="tag") -%}  <!-- kind can be one of [tag,archive,author] -->
         <li><a href="./tag-{{ name | trim | slugify }}.html">{{ name }}</a><span class="tag-count"> [{{ items | length }}]</span></li>
     {%- endfor %}
 </ul>
 ```
 
-There are 6 templates inside the `templates` folder, each adds more data to context.
+There are 10 templates inside the `templates` folder, each adds more data to context.
 
 - base.html
   - All other templates inherits blocks from this one.
 - list.html
-  - Renders `index.html`, `pages.html`, `tag-{name}.html`, `archive-{year}.html`
-  - adds `title:str`, `content_list: [Content]`, 
+  - Renders `index.html`, `pages.html`, `tag-{name}.html`, `archive-{year}.html`, `author-{username}.html`
+  - adds `title:str`, `content_list: [Content]`,
+  - adds `author: Author` when rendering `author-*.html` pages. 
   - pagination: `current_page: str`, `next_page:str`, `previous_page:str`, 
     `total_pages:int`, `current_page_number:int`, `total_content:int`
 - content.html
@@ -104,10 +107,26 @@ There are 6 templates inside the `templates` folder, each adds more data to cont
 
 Include templates:
 
+Those are templates that are not meant to be rendered directly, those are included on other templates.
+
 - pagination.html
   - Render the pagination controls
+  - included on `list.html`
 - comments.html
   - Render the comment box
+  - included on `content.html`
+- content_authors.html
+  - Renders the small list of authors on botton of content
+  - included on `content.html`
+- content_date.html
+  - Renders the article date
+  - included on `content.html` and `content_title.html`
+- content_title.html
+  - Renders the main title of the content + date and reading time
+  - included on `content.html`
+- group_author_avatar.html
+  - Renders the author avatar image
+  - included on `group.html` (if author is defined)
 
 When customizing the templates you can create new templates to use as `include` or `macro` but the 4 listed above are required.
 
