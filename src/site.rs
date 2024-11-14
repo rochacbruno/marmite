@@ -54,6 +54,7 @@ impl Data {
         self.pages.clear();
         self.tag.map.clear();
         self.archive.map.clear();
+        self.author.map.clear();
     }
 }
 
