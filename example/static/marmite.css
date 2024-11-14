@@ -521,7 +521,13 @@ th {
   margin-bottom: 0;
 }
 
-/* ^ Qualquer coisa que não seja de responsivo aqui pra cima ^ */
+.group-details img.avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+}
+
+/* ^ Any non-responsive code goes above here ^ */
 
 /* Responsive */
 @media (max-width: 1025px) {

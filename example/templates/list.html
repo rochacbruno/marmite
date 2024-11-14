@@ -47,14 +47,15 @@
         <h2 class="content-title"><a href="./{{content.slug}}.html">{{ content.title | capitalize }}</a></h2>
         <p class="content-excerpt">
             {% if content.description %}
-            {{ content.description | replace(from='"', to="") | truncate(length=100, end="...") }}
+            {{ content.description | replace(from='"', to="") | truncate(length=250, end=" ...") }}
             {% else %}
-            {{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=100, end="...") }}
+            {{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=250, end=" ...") }}
             {%- endif %}
+            <a class="secondary" href="./{{content.slug}}.html">read more &rarr;</a>
         </p>
         {% if content.date -%}
         <footer class="data-tags-footer">
-            <span class="content-date">{{ content.date | default_date_format }}</span>
+            <span class="content-date"><a class="secondary" href="./{{content.slug}}.html">{{ content.date | default_date_format }}</a></span>
             {% if content.tags -%}
             <ul class="content-tags overflow-auto">
                 {% for tag in content.tags | slice(end=3) -%}

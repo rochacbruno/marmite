@@ -47,9 +47,16 @@ pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
 /// then parse the markdown content to html and return a Content struct
 pub fn get_content(path: &Path) -> Result<Content, String> {
     let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
-    let (frontmatter, markdown) = parse_front_matter(&file_content)?;
-    let (title, markdown) = get_title(&frontmatter, markdown);
-    let html = get_html(&markdown);
+    let (frontmatter, raw_markdown) = parse_front_matter(&file_content)?;
+    let (title, markdown_without_title) = get_title(&frontmatter, raw_markdown);
+
+    let is_fragment = path.file_name().unwrap().to_str().unwrap().starts_with('_');
+    let html = if is_fragment {
+        get_html(raw_markdown)
+    } else {
+        get_html(&markdown_without_title)
+    };
+
     let description = get_description(&frontmatter);
     let tags = get_tags(&frontmatter);
     let slug = get_slug(&frontmatter, path);
