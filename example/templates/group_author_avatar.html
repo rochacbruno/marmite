@@ -1,0 +1,6 @@
+{% if name in site.authors %}
+{% set author = site.authors[name] %}
+<img src="{{ author.avatar }}" alt="{{ author.name }}" class="avatar">
+{% else %}
+<img src="static/avatar-placeholder.png" alt="{{ name }}" class="avatar">
+{% endif %}
