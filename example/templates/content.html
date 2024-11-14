@@ -18,7 +18,7 @@
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="{{site.name}}">
 {% if content.date %}
-<meta property="article:published_time" content="{{content.date | date(format='%+')}}">
+<meta property="article:published_time" content="{{content.date | date(format=' %+')}}">
 {% endif %}
 {% if site.url and content.authors %}
 <meta property="article:author" content="{{url_for(path='author-' ~ content.authors.0 ~ '.html', abs=true)}}">
@@ -32,8 +32,7 @@
 <script type="text/x-mathjax-config">
   MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
 </script>
-<script type="text/javascript"
-  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
 </script>
 {% endif %}
 
@@ -47,36 +46,47 @@
 {% endif %}
 
 <article>
-    
-    {% include "content_title.html" ignore missing %}
 
-    <div class="content-html">{{ content.html }}</div>
-    {% if content.date %}
-    <footer class="data-tags-footer">
+  {% include "content_title.html" ignore missing %}
+
+  <div class="content-html">{{ content.html }}</div>
+  {% if content.date %}
+  <footer class="data-tags-footer">
+
+    <div class="content-authors-flex">
+      <div class="content-authors-full">
         {% include "content_authors.html" ignore missing %}
-        {% include "content_date.html" ignore missing %}
-        <ul class="content-tags overflow-auto">
-        {% for tag in content.tags  %}
-            <li><a href="./tag-{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
-        {% endfor %}
+      </div>
+
+      <div class="date-tags-container">
+        <div class="content-date">
+          {% include "content_date.html" ignore missing %}
+        </div>
+
+        <ul class="content-tags">
+          {% for tag in content.tags %}
+          <li><a href="./tag-{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
+          {% endfor %}
         </ul>
-    </footer>
-    {% endif %}
+      </div>
+    </div>
+  </footer>
+  {% endif %}
 </article>
 
 {% if content.back_links %}
 <article>
-    Back-links
-    <ul>
+  Back-links
+  <ul>
     {% for item in content.back_links | sort(attribute="date") | reverse | slice(end=10) %}
-      <li><a href="./{{item.slug }}.html">{{item.title}}</a></li>
+    <li><a href="./{{item.slug }}.html">{{item.title}}</a></li>
     {% endfor %}
-    </ul>
+  </ul>
 </article>
 {% endif %}
 
 {% if site.extra.comments.source is defined and content.date %}
-   {%include "comments.html" ignore missing %}
+{%include "comments.html" ignore missing %}
 {% endif %}
 
 {% endblock %}
@@ -85,19 +95,19 @@
 {{ super() }}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js"></script>
 <script>
-    hljs.highlightAll();
+  hljs.highlightAll();
 </script>
 
 {%if content.extra.mermaid %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.3.0/mermaid.min.js"></script>
 <script>
-var config = {
-    startOnLoad:true,
+  var config = {
+    startOnLoad: true,
     theme: '{{content.extra.mermaid_theme | default(value="default") }}',
-    flowchart:{useMaxWidth:false, htmlLabels:true}
-};
-mermaid.initialize(config);
-window.mermaid.init(undefined, document.querySelectorAll('.language-mermaid'));
+    flowchart: { useMaxWidth: false, htmlLabels: true }
+  };
+  mermaid.initialize(config);
+  window.mermaid.init(undefined, document.querySelectorAll('.language-mermaid'));
 </script>
 {% endif %}
 
