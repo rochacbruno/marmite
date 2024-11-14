@@ -14,7 +14,6 @@ pub struct Marmite {
     pub footer: String,
     #[serde(default = "default_pagination")]
     pub pagination: usize,
-
     #[serde(default = "default_list_title")]
     pub list_title: String,
     #[serde(default = "default_pages_title")]
@@ -27,10 +26,10 @@ pub struct Marmite {
     pub archives_title: String,
     #[serde(default = "default_archives_content_title")]
     pub archives_content_title: String,
-
     #[serde(default = "default_authors_title")]
     pub authors_title: String,
-
+    #[serde(default = "default_streams_title")]
+    pub streams_title: String,
     #[serde(default = "default_content_path")]
     pub content_path: String,
     #[serde(default = "default_site_path")]
@@ -41,24 +40,18 @@ pub struct Marmite {
     pub static_path: String,
     #[serde(default = "default_media_path")]
     pub media_path: String,
-
     #[serde(default = "default_card_image")]
     pub card_image: String,
     #[serde(default = "default_logo_image")]
     pub logo_image: String,
-
     #[serde(default = "default_enable_search")]
     pub enable_search: bool,
-
     #[serde(default = "default_date_format")]
     pub default_date_format: String,
-
     #[serde(default = "default_menu")]
     pub menu: Option<Vec<(String, String)>>,
-
     #[serde(default = "default_extra")]
     pub extra: Option<HashMap<String, Value>>,
-
     #[serde(default = "default_authors")]
     pub authors: HashMap<String, Author>,
 }
@@ -113,6 +106,10 @@ fn default_pages_title() -> String {
 
 fn default_archives_title() -> String {
     "Archive".to_string()
+}
+
+fn default_streams_title() -> String {
+    "Streams".to_string()
 }
 
 fn default_archives_content_title() -> String {

@@ -113,6 +113,16 @@ By default marmite includes 3 items in the main menu:
 
 Menu can be optionally customized in the configuration file, it is possible
 to add any **post**, **page** or external **link** to the menu.
+
+## Authors 
+
+A page named `authors.html` [[authors]] is also rendered and can be included in the menu,
+it groups all content for authors.
+
+## Streams
+
+Streams are a way to have separate index on the site, you can check all available
+streams on `streams.html` page [[streams]].
   
 ## Metadata
 
@@ -136,9 +146,14 @@ Content
   : str: Title of the post  
   **default**: extracted from the first line of markdown.
 
+**description**
+
+  : str: Description text (for listing and RSS)  
+  **default**: extracted from the content.
+
 **slug** 
 
-  : str: this-is-the-post-slug`  
+  : str: this-is-the-post-slug    
   **default**: slugfied `title` or `filename`.
 
 **date**
@@ -157,13 +172,33 @@ Content
       - tag1
       - tag2
     ```
-  **default** empty
+    **default** empty
   
+**authors** 
+
+  : Single author, comma separated list of authors, or YAML list of authors  
+  **formats**  
+    ```yaml
+    authors: username1
+    authors: username1, username2, username3
+    authors:
+      - username1
+      - username2
+    ```
+    **default** empty  
+    **important** authors are extracted from the username, and if there is a mathing author in the config file then the data is used to build the `author-{username}.html` page.
+
+**stream** 
+
+  : str: something  
+  **default**: index  
+  **important**: Stream is used to define a separate index for the content, `something.html` will be the list of contents for a stream.
+
 **card_image**
 
   : Image url to use as social card image `og:image`  
   **format**  `./media/file.png` or `https://path/to/img.jpg`  
-  **default** first image extracted from html content, config card_image, or None.
+  **default** extra banner_image or first image extracted from html content or config card_image, or None.
 
 **extra**
 
@@ -172,11 +207,12 @@ Content
     ```yaml
     extra:
       math: true
-      comments: true
-      draft: true
-      top_banner_image: ./media/image.png
+      mermaid: true
+      banner_image: ./media/image.png
     ```
-  
+    **important**: the above example shows the keys supported by the default theme.  
+
+
 
 ## Media
 
@@ -187,7 +223,7 @@ For local images you have to put the files in a folder named `media` in the cont
 ```markdown
 # content with media
 
-![Image here](./media/subfolder/image.png)
+![Image here](media/subfolder/image.png)
 ```
 
 Marmite will copy your `media` folder to the output site, it is recommended to use `./media` as
@@ -230,7 +266,7 @@ the `templates` and `static` directories and then customize in the way you like.
 
 To learn more about how to create a new theme check this post:
 
-[Customizing Templates](./customizing-templates.html)
+[Customizing Templates](customizing-templates.html)
 
 ## More features
 
@@ -244,5 +280,5 @@ If you have ideas please open issues on the repository.
 
 That's all!
 
-[Read the Docs](./tag-docs.html)
+[Read the Docs](tag-docs.html)
 

@@ -22,6 +22,7 @@ pub struct Data {
     pub tag: GroupedContent,
     pub archive: GroupedContent,
     pub author: GroupedContent,
+    pub stream: GroupedContent,
 }
 
 impl Data {
@@ -41,6 +42,7 @@ impl Data {
             tag: GroupedContent::new(Kind::Tag),
             archive: GroupedContent::new(Kind::Archive),
             author: GroupedContent::new(Kind::Author),
+            stream: GroupedContent::new(Kind::Stream),
         }
     }
 
@@ -55,6 +57,7 @@ impl Data {
         self.tag.map.clear();
         self.archive.map.clear();
         self.author.map.clear();
+        self.stream.map.clear();
     }
 }
 
@@ -301,16 +304,24 @@ fn render_templates(
     }
     debug!("Global Context site: {:?}", &site_data.site);
 
-    handle_list_page(
-        &global_context,
-        &site_data.site.list_title,
-        &site_data.posts,
-        site_data,
-        tera,
-        output_dir,
-        "index",
-    )?;
+    // Assuming every item on site_data.posts is a Content and has a stream field
+    // we can use this to render a {stream}.html page from list.html template
+    // by default posts will have a `index` stream.
+    for (stream, stream_contents) in site_data.stream.iter() {
+        let stream_slug = slugify(stream);
+        handle_list_page(
+            &global_context,
+            stream,
+            &stream_contents,
+            site_data,
+            tera,
+            output_dir,
+            &stream_slug,
+        )?;
+    }
 
+    // Pages are treated as a list of content, no stream separation is needed
+    // pages are usually just static pages that user will link in the menu.
     handle_list_page(
         &global_context,
         &site_data.site.pages_title,
@@ -330,10 +341,29 @@ fn render_templates(
     // render group pages
     handle_tag_pages(output_dir, site_data, &global_context, tera)?;
     handle_archive_pages(output_dir, site_data, &global_context, tera)?;
-
-    // Render Author pages
     handle_author_pages(output_dir, site_data, &global_context, tera)?;
+    handle_stream_list_page(output_dir, site_data, &global_context, tera)?;
 
+    Ok(())
+}
+
+fn handle_stream_list_page(
+    output_dir: &Path,
+    site_data: &Data,
+    global_context: &Context,
+    tera: &Tera,
+) -> Result<(), String> {
+    let mut stream_list_context = global_context.clone();
+    stream_list_context.insert("title", &site_data.site.streams_title);
+    stream_list_context.insert("current_page", "streams.html");
+    stream_list_context.insert("kind", "stream");
+    render_html(
+        "group.html",
+        "streams.html",
+        tera,
+        &stream_list_context,
+        output_dir,
+    )?;
     Ok(())
 }
 
@@ -680,6 +710,7 @@ fn handle_404(
         back_links: vec![],
         card_image: None,
         authors: vec![],
+        stream: None,
     };
     if input_404_path.exists() {
         let custom_content = get_content(&input_404_path)?;

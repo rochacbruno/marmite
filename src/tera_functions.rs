@@ -86,6 +86,7 @@ impl Function for Group {
             "tag" => &self.site_data.tag,
             "archive" => &self.site_data.archive,
             "author" => &self.site_data.author,
+            "stream" => &self.site_data.stream,
             _ => return Err(tera::Error::msg("Invalid `kind` argument")),
         };
 

@@ -1,7 +1,8 @@
 ---
-title: Pagination
 tags: docs
 ---
+
+# Pagination
 
 Yes! we have pagination!
 
