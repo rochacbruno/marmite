@@ -1,27 +1,32 @@
 {% extends "base.html" %}
 {% block main %}
 
-        {%if current_page != "index.html" and author is not defined %}
-        <div class="list-title">
-            <article><strong> {{ title }} </strong></article>
-        </div>
-        {% endif %}
-        {% if hero is defined and current_page == "index.html" %}
-        <div class="hero">
-            <article>
-            {{hero}}
-            </article>
-        </div>
-        {% endif %}
-        {% if author is defined %}
-        <div class="hero author-hero">
-            <article>
-            <h1>{{author.name}}</h1>
-            <div class="author-hero-image">
-                <img src="{{ author.avatar }}" alt="{{ author.name }}" class="avatar">
-            </div>
-            <div class="author-hero-bio">
-                <p>{{author.bio}}</p>
+{%if current_page != "index.html" and author is not defined %}
+<div class="list-title">
+    <article><strong> {{ title }} </strong></article>
+</div>
+{% endif %}
+{% if hero is defined and current_page == "index.html" %}
+<div class="hero">
+    <article>
+        {{hero}}
+    </article>
+</div>
+{% endif %}
+{% if author is defined %}
+<div class="hero author-hero">
+    <article>
+        <div class="author-hero-profile">
+            <div class="author-hero-flex">
+                <div class="author-hero-image">
+                    <img src="{{ author.avatar }}" alt="{{ author.name }}" class="avatar">
+                </div>
+                <div class="author-hero-info">
+                    <h1>{{author.name}}</h1>
+                    <div class="author-hero-bio">
+                        <p>{{author.bio}}</p>
+                    </div>
+                </div>
             </div>
             {% if author.links %}
             <div class="author-hero-links">
@@ -32,36 +37,37 @@
                 </ul>
             </div>
             {% endif %}
-            </article>
         </div>
-        {% endif %}
-        <div class="content-list">
-            {%- for content in content_list %}
-            <article class="content-list-item">
-                <h2 class="content-title"><a href="./{{content.slug}}.html">{{ content.title | capitalize }}</a></h2>
-                <p class="content-excerpt">
-                    {% if content.description %}
-                        {{ content.description | replace(from='"', to="") | truncate(length=100, end="...") }}
-                    {% else %}
-                        {{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=100, end="...") }}
-                    {%- endif %}
-                </p>
-                {% if content.date -%}
-                <footer class="data-tags-footer">
-                    <span class="content-date">{{ content.date | default_date_format }}</span>
-                    {% if content.tags -%}
-                    <ul class="content-tags overflow-auto">
-                        {% for tag in content.tags | slice(end=3) -%}
-                            <li><a href="./tag-{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
-                        {%- endfor %}
-                    </ul>
-                    {%- endif %}
-                </footer>
-                {%- endif %}
-            </article>
-            {%- endfor %}
-        </div>
-        {% if total_pages is defined and total_pages > 1 %}
-          {% include "pagination.html" ignore missing %}
-        {% endif %}
+    </article>
+</div>
+{% endif %}
+<div class="content-list">
+    {%- for content in content_list %}
+    <article class="content-list-item">
+        <h2 class="content-title"><a href="./{{content.slug}}.html">{{ content.title | capitalize }}</a></h2>
+        <p class="content-excerpt">
+            {% if content.description %}
+            {{ content.description | replace(from='"', to="") | truncate(length=100, end="...") }}
+            {% else %}
+            {{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=100, end="...") }}
+            {%- endif %}
+        </p>
+        {% if content.date -%}
+        <footer class="data-tags-footer">
+            <span class="content-date">{{ content.date | default_date_format }}</span>
+            {% if content.tags -%}
+            <ul class="content-tags overflow-auto">
+                {% for tag in content.tags | slice(end=3) -%}
+                <li><a href="./tag-{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
+                {%- endfor %}
+            </ul>
+            {%- endif %}
+        </footer>
+        {%- endif %}
+    </article>
+    {%- endfor %}
+</div>
+{% if total_pages is defined and total_pages > 1 %}
+{% include "pagination.html" ignore missing %}
+{% endif %}
 {% endblock %}
