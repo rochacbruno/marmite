@@ -74,8 +74,12 @@ pub struct Content {
     pub authors: Vec<String>,
 }
 
-pub fn get_title<'a>(frontmatter: &'a Frontmatter, markdown: &'a str) -> String {
-    match frontmatter.get("title") {
+/// Try to get the title from the frontmatter
+/// If not found, get the first line of the markdown without the leading '#'
+/// If no lines are found, return an empty string
+/// return (title, markdown without title)
+pub fn get_title<'a>(frontmatter: &'a Frontmatter, markdown: &'a str) -> (String, String) {
+    let title = match frontmatter.get("title") {
         Some(Value::String(t)) => t.to_string(),
         _ => markdown
             .lines()
@@ -84,7 +88,17 @@ pub fn get_title<'a>(frontmatter: &'a Frontmatter, markdown: &'a str) -> String 
             .trim_start_matches('#')
             .trim()
             .to_string(),
-    }
+    };
+    let markdown = markdown
+        .lines()
+        .skip_while(|line| {
+            line.trim().is_empty()
+                || line.trim().starts_with('#') && line.trim_start_matches('#').trim() == title
+                || line.trim() == title
+        })
+        .collect::<Vec<&str>>()
+        .join("\n");
+    (title, markdown)
 }
 
 pub fn get_description(frontmatter: &Frontmatter) -> Option<String> {
@@ -210,8 +224,9 @@ mod tests {
         frontmatter.insert("title".to_string(), Value::String("Test Title".to_string()));
         let markdown = "# HTML Title";
 
-        let title = get_title(&frontmatter, markdown);
+        let (title, markdown) = get_title(&frontmatter, markdown);
         assert_eq!(title, "Test Title");
+        assert!(markdown.contains("HTML Title"));
     }
 
     #[test]
@@ -219,8 +234,9 @@ mod tests {
         let frontmatter = Frontmatter::new();
         let markdown = "# HTML Title";
 
-        let title = get_title(&frontmatter, markdown);
+        let (title, markdown) = get_title(&frontmatter, markdown);
         assert_eq!(title, "HTML Title");
+        assert!(!markdown.contains("HTML Title"));
     }
 
     #[test]
@@ -228,8 +244,9 @@ mod tests {
         let frontmatter = Frontmatter::new();
         let markdown = "title here";
 
-        let title = get_title(&frontmatter, markdown);
+        let (title, markdown) = get_title(&frontmatter, markdown);
         assert_eq!(title, "title here");
+        assert!(!markdown.contains("title here"));
     }
 
     #[test]
@@ -240,8 +257,10 @@ mod tests {
 Second Title
         ";
 
-        let title = get_title(&frontmatter, markdown);
+        let (title, markdown) = get_title(&frontmatter, markdown);
         assert_eq!(title, "First Title");
+        assert!(!markdown.contains("First Title"));
+        assert!(markdown.contains("Second Title"));
     }
 
     #[test]

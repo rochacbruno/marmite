@@ -48,8 +48,8 @@ pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
 pub fn get_content(path: &Path) -> Result<Content, String> {
     let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
     let (frontmatter, markdown) = parse_front_matter(&file_content)?;
-    let html = get_html(markdown);
-    let title = get_title(&frontmatter, markdown);
+    let (title, markdown) = get_title(&frontmatter, markdown);
+    let html = get_html(&markdown);
     let description = get_description(&frontmatter);
     let tags = get_tags(&frontmatter);
     let slug = get_slug(&frontmatter, path);
@@ -445,7 +445,7 @@ This is a test content.
         assert!(result.tags.is_empty());
         assert!(result.date.is_none());
         assert!(result.extra.is_none());
-        assert_eq!(result.html, "<h1><a href=\"#test-content.html\"></a>Test Content</h1>\n<p>This is a test content.</p>\n");
+        assert_eq!(result.html, "<p>This is a test content.</p>\n");
         fs::remove_file(path).unwrap();
     }
 
