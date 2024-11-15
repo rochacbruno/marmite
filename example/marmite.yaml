@@ -14,6 +14,7 @@ pagination: 6
 # media_path: media
 
 card_image: ./media/og_image.jpg
+banner_image: media/og_image.jpg
 # logo_image: name of site logo image, relative to media or absolute
 
 enable_search: true
@@ -24,6 +25,7 @@ menu:
   - ["Tags", "tags.html"]
   - ["Archive", "archive.html"]
   - ["Authors", "authors.html"]
+  - ["Streams", "streams.html"]
   - ["Github", "https://github.com/rochacbruno/marmite"]
 
 # https://docs.rs/chrono/latest/chrono/format/strftime/index.html

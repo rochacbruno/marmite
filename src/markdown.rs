@@ -73,6 +73,7 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
     let links_to = get_links_to(&html);
     let back_links = Vec::new(); // will be mutated later
     let card_image = get_card_image(&frontmatter, &html);
+    let banner_image = get_banner_image(&frontmatter);
     let authors = get_authors(&frontmatter);
 
     let stream = if date.is_some() {
@@ -92,6 +93,7 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
         links_to,
         back_links,
         card_image,
+        banner_image,
         authors,
         stream,
     };
@@ -104,21 +106,33 @@ fn get_card_image(frontmatter: &Frontmatter, html: &str) -> Option<String> {
     if let Some(card_image) = frontmatter.get("card_image") {
         return Some(card_image.to_string());
     }
-    // attempt to get extra.banner_image
-    if let Some(extra) = frontmatter.get("extra") {
-        if let Some(extra) = extra.as_object() {
-            if let Some(card_image) = extra.get("banner_image") {
-                let url = card_image.to_string();
-                // trim start and end quotes
-                return Some(url.trim_matches('"').to_string());
-            }
-        }
+    // try banner_image
+    if let Some(banner_image) = get_banner_image(frontmatter) {
+        return Some(banner_image);
     }
+
     // first <img> src attribute
     let img_regex = Regex::new(r#"<img[^>]*src="([^"]+)""#).unwrap();
     img_regex
         .captures(html)
         .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+}
+
+fn get_banner_image(frontmatter: &Frontmatter) -> Option<String> {
+    if let Some(banner_image) = frontmatter.get("banner_image") {
+        return Some(banner_image.as_str().unwrap().trim_matches('"').to_string());
+    }
+    // attempt to get extra.banner_image
+    if let Some(extra) = frontmatter.get("extra") {
+        if let Some(extra) = extra.as_object() {
+            if let Some(banner_image) = extra.get("banner_image") {
+                let url = banner_image.to_string();
+                // trim start and end quotes
+                return Some(url.trim_matches('"').to_string());
+            }
+        }
+    }
+    None
 }
 
 /// Extract all the internal links from the html content

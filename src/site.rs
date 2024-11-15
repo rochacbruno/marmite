@@ -654,7 +654,8 @@ fn handle_list_page(
         );
 
         // Render the HTML file for this page
-        render_html("list.html", &filename, tera, &context, output_dir)?;
+        let templates = format!("custom_{filename},list.html");
+        render_html(&templates, &filename, tera, &context, output_dir)?;
     }
     Ok(())
 }
@@ -709,6 +710,7 @@ fn handle_404(
         links_to: None,
         back_links: vec![],
         card_image: None,
+        banner_image: None,
         authors: vec![],
         stream: None,
     };
@@ -812,6 +814,11 @@ fn render_html(
     context: &Context,
     output_dir: &Path,
 ) -> Result<(), String> {
+    let templates = template.split(',').collect::<Vec<_>>();
+    let template = templates
+        .iter()
+        .find(|t| tera.get_template(t).is_ok())
+        .unwrap_or(&templates[0]);
     let rendered = tera.render(template, context).map_err(|e| {
         debug!(
             "Error rendering template `{}` -> {}: {:#?}",

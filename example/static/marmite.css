@@ -391,6 +391,10 @@ pre:has(> code.language-mermaid) p {
   align-items: center;
 }
 
+.index-banner-image {
+  margin-bottom: 20px;
+}
+
 .content-title {
   margin-bottom: 10px;
 }

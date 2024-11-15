@@ -1,0 +1,152 @@
+{# RENAME THIS FILE TO `custom_index.html`#}
+{% extends "base.html" %}
+
+{# this head block is not needed if CSS is moved to custom.css #}
+{% block head %}
+    {{ super() }}
+    <style>
+    .content-banner-image {
+        background-size: cover;
+        background-position: center;
+        height: 300px;
+        margin-bottom: 20px;
+        background-image: url('media/og_image.jpg');
+    }
+
+    .main-div {
+    display: flex;
+    grid-column-gap: 10px;
+    grid-row-gap: 0px;
+    }
+
+    .left {
+        width: 70%;
+    }
+    .right {
+        width: 30%;
+    }
+    .right li {
+        list-style-type: none;
+    }
+    .author-card img {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+    }
+    @media (max-width: 1024px) {
+        .main-div {
+            display: block;
+        }
+        .left {
+            width: 100%;
+        }
+        .right {
+            width: 100%;
+        }
+    }
+    </style>
+{% endblock %}
+
+{% block main %}
+<div class="content-banner-image"></div>
+
+<div class="main-div">
+    <div class="left">
+            {% if hero is defined %}
+            <div class="hero">
+                <article>
+                    {{hero}}
+                </article>
+            </div>
+            {% endif %}
+
+            {%- for content in content_list %}
+            <article class="content-card">
+                <h2 class="content-title"><a href="./{{content.slug}}.html">{{ content.title | capitalize }}</a></h2>
+                <p class="content-excerpt">
+                    {% if content.description %}
+                    {{ content.description | replace(from='"', to="") | truncate(length=250, end=" ...") }}
+                    {% else %}
+                    {{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=250, end=" ...") }}
+                    {%- endif %}
+                    <a class="secondary" href="./{{content.slug}}.html">read more &rarr;</a>
+                </p>
+                {% if content.date -%}
+                <footer class="data-tags-footer">
+                    <span class="content-date"><a class="secondary" href="./{{content.slug}}.html">{{ content.date | default_date_format }}</a></span>
+                    {% if content.tags -%}
+                    <ul class="content-tags overflow-auto">
+                        {% for tag in content.tags | slice(end=3) -%}
+                        <li><a href="./tag-{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
+                        {%- endfor %}
+                    </ul>
+                    {%- endif %}
+                </footer>
+                {%- endif %}
+            </article>
+            {%- endfor %}
+            {% if total_pages is defined and total_pages > 1 %}
+                {% include "pagination.html" ignore missing %}
+            {% endif %}
+        
+    </div>
+    <div class="right">
+        {% if site.authors %}
+            {% for username, author in site.authors %}
+            <article class="author-card">
+                <header>{{author.name}}</header>
+                <img src="{{author.avatar}}" alt="{{author.name}}">
+                <p>{{author.bio}}</p>
+                <ul>
+                    {% for link in author.links %}
+                    <li><a href="{{link.1}}">{{link.0}}</a></li>
+                    {% endfor %}
+                </ul>
+            </article>
+            {% break %} {# only show the first author #}
+            {% endfor %}
+        {% endif %}
+        <article>
+            <header>Tags</header>
+            <ul>
+            {% for name, _ in group(kind="tag") %}
+            <li><a href="tag-{{name | slugify}}.html">#{{name | slugify}}</a></li>
+            {% endfor %}
+            </ul>
+        </article>
+        <article>
+            <header>Authors</header>
+            <ul>
+            {% for name, _ in group(kind="author") %}
+            <li><a href="author-{{name | slugify}}.html">@{{name}}</a></li>
+            {% endfor %}
+            </ul>
+        </article>
+        <article>
+            <header>Archive</header>
+            <ul>
+            {% for year, _ in group(kind="archive") %}
+            <li><a href="archive-{{year}}.html">{{year}}</a></li>
+            {% endfor %}
+            </ul>
+        </article>
+        <article>
+            <header>Streams</header>
+            <ul>
+            {% for stream, _ in group(kind="stream") %}
+            <li><a href="{{stream}}.html">{{stream}}</a></li>
+            {% endfor %}
+            </ul>
+        </article>
+        <article>
+            <header>Pages</header>
+            <ul>
+            {% for page in site_data.pages %}
+            <li><a href="{{page.slug}}.html">{{page.title}}</a></li>
+            {% endfor %}
+            </ul>
+        </article>
+    </div>
+</div> 
+
+{% endblock %}

@@ -6,13 +6,23 @@
     <article><strong> {{ title }} </strong></article>
 </div>
 {% endif %}
-{% if hero is defined and current_page == "index.html" %}
-<div class="hero">
-    <article>
-        {{hero}}
-    </article>
-</div>
+
+{% if current_page == "index.html" %}
+    
+    {% if site.banner_image %}
+    <div class="content-banner-image index-banner-image" style="background-image: url({{site.banner_image}});"></div>
+    {% endif %}
+
+    {% if hero is defined %}
+    <div class="hero">
+        <article>
+            {{hero}}
+        </article>
+    </div>
+    {% endif %}
+
 {% endif %}
+
 {% if author is defined %}
 <div class="hero author-hero">
     <article>

@@ -2,10 +2,10 @@
 title: Getting started
 slug: getting-started
 tags: docs
+banner_image: media/getting_started.jpg
+authors: rochacbruno
 extra:
   mermaid: true
-  banner_image: media/og_image.jpg
-authors: rochacbruno
 ---
 Learn how to create your blog with Marmite in minutes, you can start with zero-config 
 and then customize gradually later.
@@ -278,7 +278,7 @@ And refresh your browser to take a look at the customizations.
 </figure>
 
 
-You can see all available options on the Marmite [Docs]
+You can see all available options on the Marmite [example config] or reading the [docs]
 
 ### Enabling Comments
 
@@ -459,3 +459,4 @@ You can ask **Marmite** related questions or suggest features on [Discussions] p
 [Discussions]: <https://github.com/rochacbruno/marmite/discussions> "Github Discussions"
 [Markdown Formatting]: <./markdown-format.html> "Markdown Formatting"
 [Fuse]: <https://fusejs.io> "Fuse JS"
+[example config]: <https://github.com/rochacbruno/marmite/blob/main/example/marmite.yaml> "Config Example"
