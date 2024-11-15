@@ -26,7 +26,8 @@ menu:
   - ["Authors", "authors.html"]
   - ["Github", "https://github.com/rochacbruno/marmite"]
 
-default_date_format: "%A, %d %B"
+# https://docs.rs/chrono/latest/chrono/format/strftime/index.html
+default_date_format: "%A, %d %B %Y"
 
 authors:
   rochacbruno:

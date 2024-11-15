@@ -9,7 +9,7 @@
                 <summary role="button" class="outline contrast">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{{name}} <sup>{{items | length}}</sup></summary>
                 <ul>
                 {% for item in items | slice(end=10) %}
-                    <li><a href="./{{item.slug}}.html">{{item.title}}</a></li>
+                    <li><a href="./{{item.slug}}.html">{{item.title}}</a> <small>{{item.date | date(format="%Y-%m-%d") }}</small></li>
                 {% endfor %}
                 {% if kind == "stream" %}
                 <li><a href="./{{ name | trim | slugify }}.html">more &rarr;</a></li>

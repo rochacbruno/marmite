@@ -12,7 +12,7 @@ menu:
   - ['Streams', 'streams.html']
   - ['Github', 'https://github.com/rochacbruno/marmite/']
 card_image: ./media/og_image.jpg
-default_date_format: "%A, %d %B"
+default_date_format: "%A, %d %B %Y"
 extra:
   comments:
     title: Comments
