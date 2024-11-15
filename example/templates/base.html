@@ -6,6 +6,7 @@
     <link rel="icon" type="image/x-icon" href="./static/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark" />
+    <meta name="generator" content="Marmite" />
     {% block seo %}
     <meta property="og:title" content="{{ site.name }}">
     <meta property="og:description" content="{{ site.tagline }}">
@@ -24,6 +25,22 @@
     <link rel="stylesheet" type="text/css" href="./static/marmite.css">
     <link rel="stylesheet" type="text/css" href="./static/custom.css">
     {% endblock -%}
+    {%- block feeds %}
+    <link rel="alternate" type="application/rss+xml" title="index" href="index.rss">
+    {% for stream, _ in group(kind="stream") -%}
+    <link rel="alternate" type="application/rss+xml" title="{{stream}}" href="{{stream | slugify}}.rss">
+    {% endfor %}
+    {%- for tag, _ in group(kind="tag") -%}
+    <link rel="alternate" type="application/rss+xml" title="{{tag}}" href="tag-{{tag | slugify}}.rss">
+    {% endfor %}
+    {%- for author, _ in group(kind="author") -%}
+    <link rel="alternate" type="application/rss+xml" title="{{author}}" href="author-{{author | slugify}}.rss">
+    {% endfor %}
+    {%- for year, _ in group(kind="archive") -%}
+    <link rel="alternate" type="application/rss+xml" title="{{year}}" href="archive-{{year}}.rss">
+    {% endfor %}
+
+    {% endblock %}
 </head>
 <body>
     <main class="container">

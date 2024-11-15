@@ -319,6 +319,8 @@ fn render_templates(
             output_dir,
             &stream_slug,
         )?;
+        // Render {stream}.rss for each stream
+        crate::feed::generate_rss(&stream_contents, output_dir, &stream_slug, &site_data.site)?;
     }
 
     // Pages are treated as a list of content, no stream separation is needed
@@ -428,6 +430,7 @@ fn handle_author_pages(
             .cloned()
             .collect::<Vec<Content>>();
 
+        let filename = format!("author-{}", &author_slug);
         handle_list_page(
             &author_context,
             &author.name,
@@ -435,7 +438,15 @@ fn handle_author_pages(
             site_data,
             tera,
             output_dir,
-            format!("author-{}", &author_slug).as_ref(),
+            &filename,
+        )?;
+
+        // Render author-{name}.rss for each stream
+        crate::feed::generate_rss(
+            &author_posts,
+            output_dir,
+            &filename.clone(),
+            &site_data.site,
         )?;
     }
 
@@ -778,6 +789,7 @@ fn handle_tag_pages(
 ) -> Result<(), String> {
     for (tag, tagged_contents) in site_data.tag.iter() {
         let tag_slug = slugify(tag);
+        let filename = format!("tag-{}", &tag_slug);
         handle_list_page(
             global_context,
             &site_data.site.tags_content_title.replace("$tag", tag),
@@ -785,7 +797,14 @@ fn handle_tag_pages(
             site_data,
             tera,
             output_dir,
-            format!("tag-{}", &tag_slug).as_ref(),
+            &filename,
+        )?;
+        // Render tag-{tag}.rss for each stream
+        crate::feed::generate_rss(
+            &tagged_contents,
+            output_dir,
+            &filename.clone(),
+            &site_data.site,
         )?;
     }
 
@@ -811,6 +830,7 @@ fn handle_archive_pages(
     tera: &Tera,
 ) -> Result<(), String> {
     for (year, archive_contents) in site_data.archive.iter() {
+        let filename = format!("archive-{year}");
         handle_list_page(
             global_context,
             &site_data.site.archives_content_title.replace("$year", year),
@@ -818,7 +838,14 @@ fn handle_archive_pages(
             site_data,
             tera,
             output_dir,
-            format!("archive-{year}").as_ref(),
+            &filename,
+        )?;
+        // Render archive-{year}.rss for each stream
+        crate::feed::generate_rss(
+            &archive_contents,
+            output_dir,
+            &filename.clone(),
+            &site_data.site,
         )?;
     }
 

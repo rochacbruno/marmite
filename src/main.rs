@@ -7,6 +7,7 @@ mod cli;
 mod config;
 mod content;
 mod embedded;
+mod feed;
 mod markdown;
 mod server;
 mod site;
