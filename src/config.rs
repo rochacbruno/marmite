@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
 #[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct Marmite {
@@ -58,6 +58,32 @@ pub struct Marmite {
     pub authors: HashMap<String, Author>,
 }
 
+impl Marmite {
+    fn new() -> Self {
+        Marmite {
+            name: default_name(),
+            tagline: default_tagline(),
+            footer: default_footer(),
+            pagination: default_pagination(),
+            list_title: default_list_title(),
+            pages_title: default_pages_title(),
+            tags_title: default_tags_title(),
+            tags_content_title: default_tags_content_title(),
+            archives_title: default_archives_title(),
+            archives_content_title: default_archives_content_title(),
+            authors_title: default_authors_title(),
+            streams_title: default_streams_title(),
+            content_path: default_content_path(),
+            templates_path: default_templates_path(),
+            static_path: default_static_path(),
+            media_path: default_media_path(),
+            default_date_format: default_date_format(),
+            menu: default_menu(),
+            ..Default::default()
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Author {
     pub name: String,
@@ -70,33 +96,14 @@ pub struct Author {
 /// this function writes to `marmite.yaml` in the input folder
 /// the YAML file will contain the default configuration
 /// default configuration is taken from serde default values
-pub fn generate_config(input_folder: &std::path::PathBuf) {
+pub fn generate(input_folder: &Path) {
     let config_path = input_folder.join("marmite.yaml");
     // If the file already exists, do not overwrite
     if config_path.exists() {
-        eprintln!("Config file already exists: {:?}", config_path);
+        eprintln!("Config file already exists: {config_path:?}");
         return;
     }
-
-    let mut config = Marmite::default();
-    config.name = default_name();
-    config.tagline = default_tagline();
-    config.footer = default_footer();
-    config.pagination = default_pagination();
-    config.list_title = default_list_title();
-    config.pages_title = default_pages_title();
-    config.tags_title = default_tags_title();
-    config.tags_content_title = default_tags_content_title();
-    config.archives_title = default_archives_title();
-    config.archives_content_title = default_archives_content_title();
-    config.authors_title = default_authors_title();
-    config.streams_title = default_streams_title();
-    config.content_path = default_content_path();
-    config.templates_path = default_templates_path();
-    config.static_path = default_static_path();
-    config.media_path = default_media_path();
-    config.default_date_format = default_date_format();
-    config.menu = default_menu();
+    let config = Marmite::new();
     let config_str = serde_yaml::to_string(&config).unwrap();
     std::fs::write(&config_path, config_str).unwrap();
     println!("Config file generated: {:?}", &config_path.display());
