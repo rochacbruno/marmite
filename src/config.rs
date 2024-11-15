@@ -2,13 +2,13 @@ use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::collections::HashMap;
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default)]
 pub struct Marmite {
     #[serde(default = "default_name")]
     pub name: String,
     #[serde(default = "default_tagline")]
     pub tagline: String,
-    #[serde(default = "default_url")]
+    #[serde(default)]
     pub url: String,
     #[serde(default = "default_footer")]
     pub footer: String,
@@ -32,7 +32,7 @@ pub struct Marmite {
     pub streams_title: String,
     #[serde(default = "default_content_path")]
     pub content_path: String,
-    #[serde(default = "default_site_path")]
+    #[serde(default)]
     pub site_path: String,
     #[serde(default = "default_templates_path")]
     pub templates_path: String,
@@ -40,21 +40,21 @@ pub struct Marmite {
     pub static_path: String,
     #[serde(default = "default_media_path")]
     pub media_path: String,
-    #[serde(default = "default_card_image")]
+    #[serde(default)]
     pub card_image: String,
-    #[serde(default = "default_banner_image")]
+    #[serde(default)]
     pub banner_image: String,
-    #[serde(default = "default_logo_image")]
+    #[serde(default)]
     pub logo_image: String,
-    #[serde(default = "default_enable_search")]
+    #[serde(default)]
     pub enable_search: bool,
     #[serde(default = "default_date_format")]
     pub default_date_format: String,
     #[serde(default = "default_menu")]
     pub menu: Option<Vec<(String, String)>>,
-    #[serde(default = "default_extra")]
+    #[serde(default)]
     pub extra: Option<HashMap<String, Value>>,
-    #[serde(default = "default_authors")]
+    #[serde(default)]
     pub authors: HashMap<String, Author>,
 }
 
@@ -66,16 +66,50 @@ pub struct Author {
     pub links: Option<Vec<(String, String)>>,
 }
 
+/// Generates a default configuration file
+/// this function writes to `marmite.yaml` in the input folder
+/// the YAML file will contain the default configuration
+/// default configuration is taken from serde default values
+pub fn generate_config(input_folder: &std::path::PathBuf) {
+    let config_path = input_folder.join("marmite.yaml");
+    // If the file already exists, do not overwrite
+    if config_path.exists() {
+        eprintln!("Config file already exists: {:?}", config_path);
+        return;
+    }
+
+    let mut config = Marmite::default();
+    config.name = default_name();
+    config.tagline = default_tagline();
+    config.footer = default_footer();
+    config.pagination = default_pagination();
+    config.list_title = default_list_title();
+    config.pages_title = default_pages_title();
+    config.tags_title = default_tags_title();
+    config.tags_content_title = default_tags_content_title();
+    config.archives_title = default_archives_title();
+    config.archives_content_title = default_archives_content_title();
+    config.authors_title = default_authors_title();
+    config.streams_title = default_streams_title();
+    config.content_path = default_content_path();
+    config.templates_path = default_templates_path();
+    config.static_path = default_static_path();
+    config.media_path = default_media_path();
+    config.default_date_format = default_date_format();
+    config.menu = default_menu();
+    let config_str = serde_yaml::to_string(&config).unwrap();
+    std::fs::write(&config_path, config_str).unwrap();
+    println!("Config file generated: {:?}", &config_path.display());
+}
+
+// Defaults
+
 fn default_name() -> String {
     "Home".to_string()
 }
 
 fn default_tagline() -> String {
     "Site generated from markdown content".to_string()
-}
-
-fn default_url() -> String {
-    String::new()
 }
 
 fn default_footer() -> String {
@@ -118,10 +152,6 @@ fn default_archives_content_title() -> String {
     "Posts from '$year'".to_string()
 }
 
-fn default_site_path() -> String {
-    String::new()
-}
-
 fn default_content_path() -> String {
     "content".to_string()
 }
@@ -138,39 +168,16 @@ fn default_media_path() -> String {
     "media".to_string()
 }
 
-fn default_card_image() -> String {
-    String::new()
-}
-
-fn default_banner_image() -> String {
-    String::new()
-}
-
-fn default_logo_image() -> String {
-    String::new()
-}
-
-fn default_enable_search() -> bool {
-    false
-}
-
 fn default_date_format() -> String {
     "%b %e, %Y".to_string()
 }
 
 fn default_menu() -> Option<Vec<(String, String)>> {
     vec![
-        ("Pages".to_string(), "pages.html".to_string()),
         ("Tags".to_string(), "tags.html".to_string()),
         ("Archive".to_string(), "archive.html".to_string()),
+        ("Authors".to_string(), "authors.html".to_string()),
+        ("Streams".to_string(), "streams.html".to_string()),
     ]
     .into()
-}
-
-fn default_extra() -> Option<HashMap<String, Value>> {
-    None
-}
-
-fn default_authors() -> HashMap<String, Author> {
-    HashMap::new()
 }
