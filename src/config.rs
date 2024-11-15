@@ -42,6 +42,8 @@ pub struct Marmite {
     pub media_path: String,
     #[serde(default = "default_card_image")]
     pub card_image: String,
+    #[serde(default = "default_banner_image")]
+    pub banner_image: String,
     #[serde(default = "default_logo_image")]
     pub logo_image: String,
     #[serde(default = "default_enable_search")]
@@ -137,6 +139,10 @@ fn default_media_path() -> String {
 }
 
 fn default_card_image() -> String {
+    String::new()
+}
+
+fn default_banner_image() -> String {
     String::new()
 }
 

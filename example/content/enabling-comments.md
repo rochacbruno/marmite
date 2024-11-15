@@ -2,6 +2,7 @@
 date: 2024-10-15
 tags: docs, comments, customization
 authors: rochacbruno
+banner_image: media/comment.jpg
 ---
 
 # Enabling Comments

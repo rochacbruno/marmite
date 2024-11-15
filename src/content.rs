@@ -84,6 +84,7 @@ pub struct Content {
     pub links_to: Option<Vec<String>>,
     pub back_links: Vec<Self>,
     pub card_image: Option<String>,
+    pub banner_image: Option<String>,
     pub authors: Vec<String>,
     pub stream: Option<String>,
 }
@@ -527,6 +528,7 @@ Second Title
             links_to: None,
             back_links: vec![],
             card_image: None,
+            banner_image: None,
             authors: vec![],
             stream: None,
         };
@@ -541,6 +543,7 @@ Second Title
             links_to: None,
             back_links: vec![],
             card_image: None,
+            banner_image: None,
             authors: vec![],
             stream: None,
         };
@@ -562,6 +565,7 @@ Second Title
             links_to: None,
             back_links: vec![],
             card_image: None,
+            banner_image: None,
             authors: vec![],
             stream: None,
         };
@@ -576,6 +580,7 @@ Second Title
             links_to: None,
             back_links: vec![],
             card_image: None,
+            banner_image: None,
             authors: vec![],
             stream: None,
         };

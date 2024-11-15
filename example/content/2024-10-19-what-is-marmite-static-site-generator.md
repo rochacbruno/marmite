@@ -198,7 +198,13 @@ Content
 
   : Image url to use as social card image `og:image`  
   **format**  `./media/file.png` or `https://path/to/img.jpg`  
-  **default** extra banner_image or first image extracted from html content or config card_image, or None.
+  **default** banner_image or first image extracted from html content or config card_image, or None.
+
+**banner_image**
+
+  : Image url to use the top banner on content page  
+  **format**  `./media/file.png` or `https://path/to/img.jpg`  
+  **default** empty
 
 **extra**
 
@@ -208,7 +214,6 @@ Content
     extra:
       math: true
       mermaid: true
-      banner_image: ./media/image.png
     ```
     **important**: the above example shows the keys supported by the default theme.  
 

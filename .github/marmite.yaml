@@ -4,7 +4,6 @@ url: https://rochacbruno.github.io/marmite/
 pagination: 6
 enable_search: true
 menu: 
-  - ['Docs', 'tag-docs.html']
   - ['Contributors', 'contributors.html']
   - ['Tags', 'tags.html']
   - ['Archive', 'archive.html']
@@ -12,6 +11,7 @@ menu:
   - ['Streams', 'streams.html']
   - ['Github', 'https://github.com/rochacbruno/marmite/']
 card_image: ./media/og_image.jpg
+banner_image: media/og_image.jpg
 default_date_format: "%A, %d %B %Y"
 extra:
   comments:
