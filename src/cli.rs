@@ -20,11 +20,11 @@ pub struct Cli {
     #[arg(long)]
     pub watch: bool,
 
-    /// Address to bind the server (defaults to localhost:8000)
+    /// Address to bind the server
     #[arg(long, default_value = "localhost:8000")]
     pub bind: String,
 
-    /// Path to custom configuration file (defaults to marmite.yaml)
+    /// Path to custom configuration file
     #[arg(long, default_value = "marmite.yaml")]
     pub config: String,
 
@@ -39,4 +39,8 @@ pub struct Cli {
     /// Initialize a theme with templates and static assets
     #[arg(long)]
     pub start_theme: bool,
+
+    /// Generate the configuration file
+    #[arg(long)]
+    pub generate_config: bool,
 }

@@ -10,6 +10,7 @@ use log::{debug, error, info};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use std::vec;
 use std::{fs, process, sync::Arc, sync::Mutex};
 use tera::{Context, Tera};
 use walkdir::WalkDir;
@@ -344,6 +345,36 @@ fn render_templates(
     handle_author_pages(output_dir, site_data, &global_context, tera)?;
     handle_stream_list_page(output_dir, site_data, &global_context, tera)?;
 
+    // If site_data.stream.map does not contain the index stream
+    // we will render empty index.html from list.html template
+    if !site_data.stream.map.contains_key("index") {
+        handle_default_empty_site(&global_context, tera, output_dir)?;
+    }
+
+    Ok(())
+}
+
+fn handle_default_empty_site(
+    global_context: &Context,
+    tera: &Tera,
+    output_dir: &Path,
+) -> Result<(), String> {
+    let mut index_context = global_context.clone();
+    index_context.insert("title", &"Welcome to Marmite");
+    let empty_content_list: Vec<Content> = Vec::new();
+    index_context.insert("content_list", &empty_content_list);
+    index_context.insert("total_pages", &1);
+    index_context.insert("per_page", &1);
+    index_context.insert("total_content", &1);
+    index_context.insert("current_page", "index.html");
+    index_context.insert("current_page_number", &1);
+    render_html(
+        "custom_index.html,list.html",
+        "index.html",
+        tera,
+        &index_context,
+        output_dir,
+    )?;
     Ok(())
 }
 

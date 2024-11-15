@@ -278,7 +278,14 @@ And refresh your browser to take a look at the customizations.
 </figure>
 
 
-You can see all available options on the Marmite [example config] or reading the [docs]
+You can see all available options on the Marmite [example config]
+
+You can generate a config file with the default values for editing:
+
+```console
+$ marmite myblog site --generate-config
+Config generated at `myblog/marmite.yaml`
+```
 
 ### Enabling Comments
 

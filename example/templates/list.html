@@ -76,6 +76,13 @@
         </footer>
         {%- endif %}
     </article>
+    {%- else -%}
+    <article class="content-list-item">
+        <h2 class="content-title">No content found</h2>
+        <p class="content-excerpt">
+            Add some markdown content and generate the site. &rarr; <a target="_blank" href="https://rochacbruno.github.io/marmite/getting-started.html">Getting Started</a>
+        </p>
+    </article>
     {%- endfor %}
 </div>
 {% if total_pages is defined and total_pages > 1 %}

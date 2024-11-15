@@ -46,6 +46,12 @@ fn main() {
         return; // Exit early if only initializing theme
     }
 
+    // Handle `generate_config` flag
+    if args.generate_config {
+        config::generate(&input_folder);
+        return; // Exit early if only generating config
+    }
+
     // Generate site content
     site::generate(
         &config_path,

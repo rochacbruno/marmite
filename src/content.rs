@@ -179,7 +179,7 @@ pub fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
 }
 
 pub fn get_authors(frontmatter: &Frontmatter) -> Vec<String> {
-    let authors: Vec<String> = match frontmatter.get("authors") {
+    let mut authors: Vec<String> = match frontmatter.get("authors") {
         Some(Value::Array(authors)) => authors
             .iter()
             .map(Value::to_string)
@@ -192,6 +192,22 @@ pub fn get_authors(frontmatter: &Frontmatter) -> Vec<String> {
             .collect(),
         _ => Vec::new(),
     };
+    // If authors is empty, try to get single author from frontmatter
+    if authors.is_empty() {
+        authors = match frontmatter.get("author") {
+            Some(Value::Array(authors)) => authors
+                .iter()
+                .map(Value::to_string)
+                .map(|t| t.trim_matches('"').to_string())
+                .collect(),
+            Some(Value::String(authors)) => authors
+                .split(',')
+                .map(str::trim)
+                .map(String::from)
+                .collect(),
+            _ => Vec::new(),
+        };
+    }
     authors
 }
 
