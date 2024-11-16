@@ -533,7 +533,7 @@ Second Title
 
     #[test]
     fn test_check_for_duplicate_slugs_no_duplicates() {
-        let content1 = Content {
+        let post1 = Content {
             title: "Title 1".to_string(),
             description: None,
             slug: "slug-1".to_string(),
@@ -548,7 +548,7 @@ Second Title
             authors: vec![],
             stream: None,
         };
-        let content2 = Content {
+        let post2 = Content {
             title: "Title 2".to_string(),
             description: None,
             slug: "slug-2".to_string(),
@@ -563,14 +563,14 @@ Second Title
             authors: vec![],
             stream: None,
         };
-        let contents = vec![&content1, &content2];
+        let contents = vec![&post1, &post2];
         let result = check_for_duplicate_slugs(&contents);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_check_for_duplicate_slugs_with_duplicates() {
-        let content1 = Content {
+        let post1 = Content {
             title: "Title 1".to_string(),
             description: None,
             slug: "duplicate-slug".to_string(),
@@ -585,7 +585,7 @@ Second Title
             authors: vec![],
             stream: None,
         };
-        let content2 = Content {
+        let post2 = Content {
             title: "Title 2".to_string(),
             description: None,
             slug: "duplicate-slug".to_string(),
@@ -600,7 +600,7 @@ Second Title
             authors: vec![],
             stream: None,
         };
-        let contents = vec![&content1, &content2];
+        let contents = vec![&post1, &post2];
 
         let result = check_for_duplicate_slugs(&contents);
         assert!(result.is_err());

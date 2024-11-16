@@ -1,6 +1,6 @@
 use crate::config::{Author, Marmite};
 use crate::content::{check_for_duplicate_slugs, slugify, Content, GroupedContent, Kind};
-use crate::embedded::{generate_static, EMBEDDED_TERA};
+use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
 use crate::markdown::{get_content, process_file};
 use crate::tera_functions::{Group, UrlFor};
 use crate::{server, tera_filter};
@@ -258,16 +258,8 @@ fn detect_slug_collision(site_data: &Data) {
 }
 
 fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
-    let templates_path = input_folder.join(site_data.site.templates_path.clone());
-    let mut tera = match Tera::new(&format!("{}/**/*.html", templates_path.display())) {
-        Ok(t) => t,
-        Err(e) => {
-            error!("Error loading templates: {}", e);
-            process::exit(1);
-        }
-    };
+    let mut tera = Tera::default();
     tera.autoescape_on(vec![]);
-    // the person writing a static site knows what is doing!
     tera.register_function(
         "url_for",
         UrlFor {
@@ -286,7 +278,54 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
             date_format: site_data.site.default_date_format.to_string(),
         },
     );
+
+    let templates_path = input_folder.join(site_data.site.templates_path.clone());
+    let mandatory_templates = ["base.html", "content.html", "group.html", "list.html"];
+    // for every mandatory template, if it does not exist in the templates folder
+    // we will load it from the embedded::Templates struct
+    // that is required because Tera needs base templates to be loaded before extending them
+    for template_name in &mandatory_templates {
+        let template_path = templates_path.join(template_name);
+        if !template_path.exists() {
+            Templates::get(template_name).map_or_else(
+                || {
+                    error!("Failed to load template: {}", template_name);
+                    process::exit(1);
+                },
+                |template| {
+                    let template_str = std::str::from_utf8(template.data.as_ref()).unwrap();
+                    tera.add_raw_template(template_name, template_str)
+                        .expect("Failed to load template");
+                },
+            );
+        }
+    }
+
+    // For every template file in the templates folder including subfolders
+    // we will load it into the tera instance one by one
+    for entry in WalkDir::new(&templates_path)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.path().is_file())
+    {
+        let template_path = entry.path();
+        let template_name = template_path
+            .strip_prefix(&templates_path)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string();
+        // windows compatibility
+        let template_name = template_name.replace('\\', "/");
+        let template_name = template_name.trim_start_matches('/');
+        let template_content = fs::read_to_string(template_path).unwrap();
+        tera.add_raw_template(template_name, &template_content)
+            .expect("Failed to load template");
+    }
+
+    // Now extend the remaining templates from the embedded::Templates struct
     tera.extend(&EMBEDDED_TERA).unwrap();
+    debug!("{:#?}", &tera);
     tera
 }
 
