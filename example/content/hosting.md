@@ -22,8 +22,7 @@ This is the easiest and cheapest option to publish your static blog,
 you need a **Github Repository** containing a `content` directory and a `marmite.yaml`
 
 
-Fork this template repository https://github.com/rochacbruno/make-me-a-blog and give a meaninful name like `blog` to
-the forked repo.
+Use this template repository https://github.com/rochacbruno/blog and give a meaninful name like `blog`.
 
 Or start from scratch! it is very simple!
 
@@ -52,6 +51,10 @@ menu:
   - ["Follow me", "https://mastodon.social/@YOURUSER"]
   - ["Github", "https://github.com/rochacbruno"]
 ```
+
+> [!TIP]  
+> you can use `--generate-config` to generate a default configuration file.
+
 
 Now you need to tell github actions to go inside your repo root and run
 

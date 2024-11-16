@@ -223,8 +223,12 @@ fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
             let file_name = e
                 .path()
                 .file_name()
-                .and_then(|ext| ext.to_str())
-                .expect("Could not get file name");
+                .and_then(|name| name.to_str())
+                .unwrap_or(
+                    e.path()
+                        .to_str()
+                        .unwrap_or_else(|| panic!("Could not get file name {:?}", e.path())),
+                );
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
             e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
         })
