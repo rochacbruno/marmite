@@ -15,7 +15,7 @@ And I like simplicity, so I use `marmite` to build this site!
 
 ## My social networks
 
-- [Mastodon](https://fosstodon.org/@marmite)
+- [Mastodon](https://go.rocha.social/@bruno)
 
 ## My Projects
 

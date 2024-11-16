@@ -256,6 +256,8 @@ menu:
 
 Other options are available and can be viewed on [repository](https://github.com/rochacbruno/marmite/blob/main/example/marmite.yaml)
 
+Use `--generate-config` in the CLI to create a default config file.
+
 ## Theme customization
 
 The embedded templates are created with [picocss.com](https://picocss.com/) and 
@@ -268,6 +270,8 @@ If customizing the css and js is not enough then you can create your own theme.
 
 To create a new theme is very simple, you just need to add to your content folder
 the `templates` and `static` directories and then customize in the way you like.
+
+Use `--start-theme` on the CLI to start a new theme from the built-in theme.
 
 To learn more about how to create a new theme check this post:
 

@@ -4,8 +4,6 @@ slug: getting-started
 tags: docs
 banner_image: media/getting_started.jpg
 authors: rochacbruno
-extra:
-  mermaid: true
 ---
 Learn how to create your blog with Marmite in minutes, you can start with zero-config 
 and then customize gradually later.
@@ -18,11 +16,42 @@ Marmite is written in Rust :crab: so if you have Rust in your system you
 can use cargo to install it.
 
 ```bash
+cargo binstall marmite
+```
+or
+
+```bash
 cargo install marmite
 ```
 
-If you don't have Rust, then you can download the pre-build binary from
-the [Github Releases page](https://github.com/rochacbruno/marmite/releases)
+Or download the pre-built **binary** from the [releases](https://github.com/rochacbruno/marmite/releases)
+
+
+<details>
+
+<summary>Or use docker</summary>
+
+
+> [!IMPORTANT]  
+> The directory containing your marmite project must be mapped to containers `/input`  
+> If running inside the directory use `$PWD:/input` 
+> The result will be generates in a `site` folder inside the input dir.
+
+Build
+```console
+$ docker -v $PWD:/input ghcr.io/rochacbruno/marmite:x.y.z
+Site generated at: site/
+```
+Serve (just add port mapping and the --serve)
+```console
+$ docker run -p 8000:8000 -v $PWD:/input ghcr.io/rochacbruno/marmite:x.y.z --serve
+```
+
+> [!IMPORTANT]  
+> Replace `x.y.z` with the version you want to run.
+
+</details>
+
 
 ### Adding Content
 
@@ -96,16 +125,19 @@ marmite myblog site
 ```
 ```bash
 Config loaded from: defaults
-Generated /tmp/site/index.html
-Generated /tmp/site/pages.html
-Generated /tmp/site/hello-world.html
-Generated /tmp/site/about.html
-Generated /tmp/site/404.html
-Generated /tmp/site/tag-hello.html
-Generated /tmp/site/tag-world.html
-Generated /tmp/site/tags.html
-Generated /tmp/site/static/*{css,js,fonts}
-Site generated at: /tmp/site/
+Generated site/index.html
+Generated site/pages.html
+Generated site/hello-world.html
+Generated site/about.html
+Generated site/404.html
+Generated site/tag-hello.html
+Generated site/tag-world.html
+Generated site/tags.html
+Generated site/static/*{css,js,fonts}
+Generated site/index.rss
+Generated site/{tag-*}.rss
+Generated site/{author-*}.rss
+Site generated at: site/
 ```
 
 And that's all! you have full working blog on the `site` folder, as **marmite**
@@ -200,19 +232,13 @@ tags: hello,world
 # Hello World
 
 This is my photo:
-![me](./media/myphoto.png)
+![me](media/myphoto.png)
 ```
 
 <figure>
   <figcaption>Media</figcaption>
   <img src="./media/screenshots/media.png" width="600">
 </figure>
-
-
-**IT IS IMPORTANT** that you always link internally starting with `./`, 
-following this rule you can link to any `./media/` file or any other page like 
-`./about.html`, remember, the generated site is a **flat html**, there is no
-subfolders.
 
 > [!INFO]  
 > You **can create** subfolders in the media directory, that is useful to organize

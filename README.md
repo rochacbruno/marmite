@@ -8,8 +8,7 @@ Marmite [**Mar**kdown **m**akes s**ite**s] is a **very!** simple static site gen
 [![Crates.io Version](https://img.shields.io/crates/v/marmite)](https://crates.io/crates/marmite)
 [![Docs and Demo](https://img.shields.io/badge/docs-demo-blue)](https://rochacbruno.github.io/marmite/)  
   
-[![Create blog](https://img.shields.io/badge/CREATE%20YOUR%20BLOG%20WITH%20ONE%20CLICK-20B2AA?style=for-the-badge)](https://github.com/rochacbruno/make-me-a-blog)
-
+[![Create blog](https://img.shields.io/badge/CREATE%20YOUR%20BLOG%20WITH%20ONE%20CLICK-20B2AA?style=for-the-badge)](https://github.com/rochacbruno/blog)
 
 
 > I'm a big user of other SSGs but it is frequently frustrating that it takes so much setup to get started.  
@@ -23,25 +22,97 @@ It does **"one"** simple thing only:
 - Reads all `.md` files on the `input` directory.
 - Using `CommonMark` parse it to `HTML` content.
 - Extract optional metadata from `frontmatter` or `filename`.
-- Generated `html` file for each page (templates are customizable).
+- Generated `html` file for each page.
 - Outputs the rendered static site to the `output` folder.
 
-It also handles generating or copying `static/` `media/` to the `output` dir.
+It also handles generating or copying `static/` and `media/` to the `output` dir.
+
+## Before you start, you should know
+
+1. Marmite is meant to be simple, don't expect complex features
+2. Marmite is for **bloggers**, so writing and publishing articles in chronological order is the main use case.
+3. The generated static site is a **flat** HTML site, no subpaths, all content is published in extension ending URLS ex: `./{name}.html|rss|json`
+4. There are only 2 taxonomies `tags:` (to group similar content together) and `stream:` (to separate content in a different listing) 
+5. Marmite uses the `date:` attribute to differentiate `posts` from `pages`
+
+## Features
+
+- Everything embedded in a single binary.
+- Zero-Config to get started.
+  - optionally fully configurable
+- Common-mark + Github Flavoured Markdown + Extensions.
+- Raw HTML allowed.
+- Emojis `:smile:`, spoiler `||secret||`.
+- Wikilinks `[[name|url]]` and Obsidian links `[[page]]`.
+- Backlinks.
+- Tags.
+- Multi authors.
+  - Author profile page
+- Multi streams.
+  - Separate content in different listing
+- Pagination.
+- Static Search Index.
+- RSS Feeds.
+  - Multiple feeds (index, tags, authors, streams)
+- Built-in HTTP server.
+- Auto rebuild when content changes.
+- Built-in theme 
+  - Light and Dark modes.
+  - Fully responsive
+  - Spotlight Search.
+  - Easy to replace the index page and add custom CSS/JS
+  - Easy to customize the templates
+  - Math and Mermaid diagrams.
+  - Syntax Highlight.
+  - Commenting system integration.
+  - Banner images and `og:` tags.
+- CLI to start a new theme from scratch
+
 
 ## Installation
 
 Install with cargo
 
 ```bash
+cargo binstall marmite
+```
+or
+
+```bash
 cargo install marmite
 ```
 
-Or download the pre-built binary from the [releases](https://github.com/rochacbruno/marmite/releases)
+Or download the pre-built **binary** from the [releases](https://github.com/rochacbruno/marmite/releases)
 
+
+<details>
+
+<summary>Or use docker</summary>
+
+
+> [!IMPORTANT]  
+> The directory containing your marmite project must be mapped to containers `/input`  
+> If running inside the directory use `$PWD:/input` 
+> The result will be generates in a `site` folder inside the input dir.
+
+Build
+```console
+$ docker -v $PWD:/input ghcr.io/rochacbruno/marmite:x.y.z
+Site generated at: site/
+```
+Serve (just add port mapping and the --serve)
+```console
+$ docker run -p 8000:8000 -v $PWD:/input ghcr.io/rochacbruno/marmite:x.y.z --serve
+```
+
+> [!IMPORTANT]  
+> Replace `x.y.z` with the version you want to run.
+
+</details>
 
 ## Usage
 
-~It's simple, really!
+It's simple, really!
 
 ```console
 $ marmite folder_with_markdown_files path_to_generated_site
@@ -68,11 +139,11 @@ Options:
       --debug            Print debug messages
       --init-templates   Initialize templates in the project
       --start-theme      Initialize a theme with templates and static assets
+      --generate-config  Generate the configuration file
   -h, --help             Print help
   -V, --version          Print version
 
 ```
-
 
 ## Getting started
 
@@ -95,3 +166,4 @@ Here are some that I recommend:
 
 - [Cobalt](https://cobalt-org.github.io/)
 - [Zola](https://www.getzola.org/)
+- [Zine](https://zineland.github.io/)
