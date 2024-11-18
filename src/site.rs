@@ -280,13 +280,15 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
     );
 
     let templates_path = input_folder.join(site_data.site.templates_path.clone());
-    let mandatory_templates = ["base.html", "content.html", "group.html", "list.html"];
-    // for every mandatory template, if it does not exist in the templates folder
-    // we will load it from the embedded::Templates struct
-    // that is required because Tera needs base templates to be loaded before extending them
+    let mandatory_templates = ["base.html", "list.html", "group.html", "content.html"];
+    // Required because Tera needs base templates to be loaded before extending them
     for template_name in &mandatory_templates {
         let template_path = templates_path.join(template_name);
-        if !template_path.exists() {
+        if template_path.exists() {
+            let template_content = fs::read_to_string(template_path).unwrap();
+            tera.add_raw_template(template_name, &template_content)
+                .expect("Failed to load template");
+        } else {
             Templates::get(template_name).map_or_else(
                 || {
                     error!("Failed to load template: {}", template_name);
@@ -355,7 +357,10 @@ fn render_templates(
         let stream_slug = slugify(stream);
         handle_list_page(
             &global_context,
-            stream,
+            &site_data
+                .site
+                .streams_content_title
+                .replace("$stream", stream),
             &stream_contents,
             site_data,
             tera,

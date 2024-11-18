@@ -4,7 +4,6 @@
   src: url("./Atkinson-Hyperlegible-Regular-102.woff");
 }
 :root {
-  --pico-typography-spacing-vertical: 1.5rem;
   --pico-font-family: "Atkinson Hyperlegible", sans-serif;
   --pico-color-grey-50: #f1f1f1;
   --pico-color-azure-50: #e9f2fc;
@@ -18,12 +17,14 @@
   --pico-color-azure-650: #015887;
   --pico-border-radius: 4px;
   --pico-typography-spacing-vertical: 1rem;
+  --pico-typography-spacing-top: 1rem;
+  --pico-form-element-background-color: var(--pico-background-color);
 }
 
 [data-theme="light"],
 :root:not([data-theme="dark"]) {
   --pico-tag: var(--pico-color-azure-50);
-  --pico-bg-menu: #fff;
+  --pico-bg-menu: var(--pico-background-color);
   --pico-home: var(--pico-color-slate-500);
   --pico-menu-selected: #48536b;
   --pico-menu: #5d6b89;
@@ -32,7 +33,7 @@
 @media only screen and (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     --pico-tag: var(--pico-color-slate-850);
-    --pico-bg-menu: var(--pico-color-slate-850);
+    --pico-bg-menu: var(--pico-background-color);
     --pico-home: var(--pico-color-slate-500);
     --pico-menu-selected: #b3b9c5;
     --pico-menu: #969eaf;
@@ -41,10 +42,14 @@
 
 [data-theme="dark"] {
   --pico-tag: var(--pico-color-slate-850);
-  --pico-bg-menu: var(--pico-color-slate-850);
+  --pico-bg-menu: var(--pico-background-color);
   --pico-home: var(--pico-color-slate-500);
   --pico-menu-selected: #b3b9c5;
   --pico-menu: #969eaf;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  --pico-typography-spacing-top: revert;
 }
 
 a {
@@ -85,7 +90,7 @@ blockquote {
 .header-menu li {
   text-decoration: none;
   padding: 8px 16px;
-  color: #333;
+  color: var(--pico-color-slate-750);
   display: inline-block;
 }
 
@@ -158,7 +163,7 @@ blockquote {
   white-space: nowrap;
   list-style: none;
   display: inline-block;
-  color: #333;
+  color: var( --pico-color-slate-750);
 }
 
 .content-tags li:before {
@@ -204,7 +209,7 @@ article footer {
 }
 .spoiler:not(:hover) {
   color: transparent;
-  background-color: #808080;
+  background-color: var(--pico-code-color);
 }
 .spoiler:not(:hover) > * {
   opacity: 0;
@@ -303,9 +308,9 @@ pre:has(> code.language-mermaid) p {
   transform: translate(-50%, -50%);
   background-color: var(--pico-bg-menu);
   padding: 20px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px var(--pico-modal-overlay-background-color);
   z-index: 1001; /* Higher z-index to sit above the background overlay */
-  border-radius: 8px;
+  border-radius: var(--pico-border-radius);
   width: 90%;
   max-width: 700px;
   display: flex;
@@ -323,7 +328,7 @@ pre:has(> code.language-mermaid) p {
   padding: 10px;
   font-size: 16px;
   border: 1px solid var(--pico-color-azure-550);
-  border-radius: 4px;
+  border-radius: var(--pico-border-radius);
   outline: none;
   margin-bottom: 10px;
 }
@@ -349,7 +354,7 @@ pre:has(> code.language-mermaid) p {
   width: 100%;
   height: 100%;
   backdrop-filter: blur(10px); /* This creates the blur effect */
-  background-color: rgba(0, 0, 0, 0.4); /* Slightly darkened background */
+  background-color: var(--pico-modal-overlay-background-color); /* Slightly darkened background */
   z-index: 1000; /* Sits behind the search bar */
   display: none; /* Initially hidden */
 }
@@ -370,13 +375,6 @@ pre:has(> code.language-mermaid) p {
   font-size: 18px;
   cursor: pointer;
   color: var(--pico-text-selection-color);
-}
-
-.hljs {
-  /* important crime must be committed here because of unknown events */
-  background: var(
-    --pico-code-background-color
-  ) !important; /* why, Bruno, Why??????*/
 }
 
 /*  Banner img*/
@@ -466,8 +464,7 @@ th {
 }
 
 .author-hero-image .avatar {
-  width: 100px;
-  height: 100px;
+  width: 150px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -531,6 +528,18 @@ th {
   border-radius: 50%;
 }
 
+.hljs {
+  background-color: var(--pico-code-background-color) !important;
+}
+
+select.colorscheme-toggle {
+  background: transparent;
+  border: none;
+}
+select.colorscheme-toggle option {
+  background-color: var(--pico-background-color);
+} 
+
 /* ^ Any non-responsive code goes above here ^ */
 
 /* Responsive */
@@ -549,7 +558,7 @@ th {
     padding: 15px;
     border-radius: 4px;
     z-index: 100;
-    box-shadow: 0px 4px 4px 0px #0000001f;
+    box-shadow: 0px 4px 4px 0px var(--pico-contrast-focus);
   }
 
   .header-menu.active {

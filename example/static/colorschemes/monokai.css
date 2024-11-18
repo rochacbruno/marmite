@@ -1,0 +1,48 @@
+/* Marmite Monokai Theme */
+/* picocss.com  */
+:root {
+    --pico-border-radius: 0;
+}
+
+.content-tags a:where(a:not([role=button])),
+[role=link] {
+    --pico-color: revert;
+}
+
+[data-theme=light],
+:root:not([data-theme=dark]) {
+    --pico-background-color: #F8F8F2;
+    --pico-card-background-color: #F8F8F2;
+    --pico-card-sectioning-background-color: var(--pico-background-color);
+    --pico-primary: #66D9EF;
+    --pico-primary-hover: #A6E22E;
+    --pico-color: #272822;
+    --pico-tag: #adadac;
+    --pico-h1-color: var(--pico-primary);
+    --pico-code-background-color: var(--pico-background-color);
+    --pico-table-border-color: var(--pico-card-background-color);
+    --pico-color-azure-550: var(--pico-primary);
+}
+
+[data-theme=light] pre:has(> code.language-mermaid) {
+    background-color: var(--pico-card-background-color);
+}
+
+[data-theme=dark],
+:root:not([data-theme=light]) {
+    --pico-background-color: #272822;
+    --pico-card-background-color: #3E3D32;
+    --pico-card-sectioning-background-color: var(--pico-background-color);
+    --pico-primary: #F92672;
+    --pico-primary-hover: #FD971F;
+    --pico-color: #F8F8F2;
+    --pico-tag: #75715E;
+    --pico-h1-color: var(--pico-color);
+    --pico-code-background-color: var(--pico-background-color);
+    --pico-table-border-color: var(--pico-card-background-color);
+    --pico-color-azure-550: var(--pico-primary);
+}
+
+[data-theme=dark] pre:has(> code.language-mermaid) {
+    background-color: var(--pico-code-color);
+}

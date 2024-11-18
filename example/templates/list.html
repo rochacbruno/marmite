@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block main %}
 
-{%if current_page != "index.html" and author is not defined %}
+{%if title and current_page != "index.html" and author is not defined %}
 <div class="list-title">
     <article><strong> {{ title }} </strong></article>
 </div>

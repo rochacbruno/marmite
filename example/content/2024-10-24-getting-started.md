@@ -369,6 +369,84 @@ Hero
   <img src="./media/screenshots/hero.png" width="600">
 </figure>
 
+
+## Colorschemes
+
+Marmite comes with some colorschemes built-in, colorschemes are CSS style files that customizes colors, spacing etc.
+
+To choose a colorscheme add to `marmite.yaml`
+```yaml
+extra:
+  colorscheme: gruvbox
+```
+
+The built-in options are **catppuccin**, **dracula**, **github**, **gruvbox**, **iceberg**, **monokai**, **nord**, **one**, **solarized**, **typewriter**.
+
+To create a custom colorscheme drop a `custom.css` on your input folder (the same where marmite.yaml is located)
+
+<details>
+
+<summary> CLICK HERE to see an example colorscheme on <code>custom.css</code> </summary>
+
+
+```css
+/* Marmite Nord Theme */
+/* picocss.com  */
+:root {
+    --pico-border-radius: 0;
+}
+
+.content-tags a:where(a:not([role=button])),
+[role=link] {
+    --pico-color: revert;
+}
+
+[data-theme=light],
+:root:not([data-theme=dark]) {
+    --pico-background-color: #ECEFF4;
+    --pico-card-background-color: #E5E9F0;
+    --pico-card-sectioning-background-color: var(--pico-background-color);
+    --pico-primary: #5E81AC;
+    --pico-primary-hover: #81A1C1;
+    --pico-color: #2E3440;
+    --pico-tag: #4C566A;
+    --pico-h1-color: var(--pico-primary);
+    --pico-code-background-color: var(--pico-background-color);
+    --pico-table-border-color: var(--pico-card-background-color);
+    --pico-color-azure-550: var(--pico-primary);
+}
+
+[data-theme=light] pre:has(> code.language-mermaid) {
+    background-color: var(--pico-card-background-color);
+}
+
+[data-theme=dark],
+:root:not([data-theme=light]) {
+    --pico-background-color: #2E3440;
+    --pico-card-background-color: #3B4252;
+    --pico-card-sectioning-background-color: var(--pico-background-color);
+    --pico-primary: #81A1C1;
+    --pico-primary-hover: #88C0D0;
+    --pico-color: #D8DEE9;
+    --pico-tag: #4C566A;
+    --pico-h1-color: var(--pico-color);
+    --pico-code-background-color: var(--pico-background-color);
+    --pico-table-border-color: var(--pico-card-background-color);
+    --pico-color-azure-550: var(--pico-primary);
+}
+
+[data-theme=dark] pre:has(> code.language-mermaid) {
+    background-color: var(--pico-code-color);
+}
+```
+
+> [!INFO]  
+> Multiple colorschemes can also be added to `static/colorschemes/{name}.css`
+> and then enable `extra.colorscheme_toggle` on config.
+
+</details>
+<hr>
+
 ## Layout Customization
 
 If you want to keep using the default theme but wants to customize little parts

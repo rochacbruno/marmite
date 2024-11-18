@@ -119,3 +119,57 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 });
+
+function colorschemeSwitcher() {
+    const colorschemes = [
+        'colorscheme',
+        'catppuccin',
+        'dracula',
+        'github',
+        'gruvbox',
+        'iceberg',
+        'monokai',
+        'nord',
+        'one',
+        'solarized',
+        'typewriter'
+    ];
+
+    const colorschemeDropdown = document.querySelector('.colorscheme-toggle');
+
+    colorschemeDropdown.addEventListener('change', function () {
+        const colorscheme = this.value;
+        const colorschemeLink = document.querySelector('#colorscheme-link');
+        if (colorscheme === 'colorscheme') {
+            if (colorschemeLink) {
+                colorschemeLink.remove();
+            }
+
+            localStorage.removeItem('marmitePreferredColorScheme');
+            return;
+        }
+        if (colorschemeLink) {
+            colorschemeLink.href = `/static/colorschemes/${colorscheme}.css`;
+        } else {
+            const link = document.createElement('link');
+            link.id = 'colorscheme-link';
+            link.rel = 'stylesheet';
+            link.href = `/static/colorschemes/${colorscheme}.css`;
+            document.head.appendChild(link);
+        }
+        localStorage.setItem('marmitePreferredColorScheme', colorscheme);
+    });
+
+    colorschemes.forEach((colorscheme) => {
+        const option = document.createElement('option');
+        option.value = colorscheme;
+        option.textContent = colorscheme;
+        colorschemeDropdown.appendChild(option);
+    });
+
+    const colorscheme = localStorage.getItem('marmitePreferredColorScheme');
+    if (colorscheme) {
+        colorschemeDropdown.value = colorscheme;
+        colorschemeDropdown.dispatchEvent(new Event('change'));
+    }
+}
