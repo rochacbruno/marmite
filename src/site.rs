@@ -357,7 +357,10 @@ fn render_templates(
         let stream_slug = slugify(stream);
         handle_list_page(
             &global_context,
-            stream,
+            &site_data
+                .site
+                .streams_content_title
+                .replace("$stream", stream),
             &stream_contents,
             site_data,
             tera,

@@ -14,8 +14,6 @@ pub struct Marmite {
     pub footer: String,
     #[serde(default = "default_pagination")]
     pub pagination: usize,
-    #[serde(default = "default_list_title")]
-    pub list_title: String,
     #[serde(default = "default_pages_title")]
     pub pages_title: String,
     #[serde(default = "default_tags_title")]
@@ -30,6 +28,8 @@ pub struct Marmite {
     pub authors_title: String,
     #[serde(default = "default_streams_title")]
     pub streams_title: String,
+    #[serde(default = "default_streams_content_title")]
+    pub streams_content_title: String,
     #[serde(default = "default_content_path")]
     pub content_path: String,
     #[serde(default)]
@@ -64,7 +64,6 @@ impl Marmite {
             name: default_name(),
             footer: default_footer(),
             pagination: default_pagination(),
-            list_title: default_list_title(),
             pages_title: default_pages_title(),
             tags_title: default_tags_title(),
             tags_content_title: default_tags_content_title(),
@@ -122,10 +121,6 @@ fn default_pagination() -> usize {
     10usize
 }
 
-fn default_list_title() -> String {
-    "Posts".to_string()
-}
-
 fn default_authors_title() -> String {
     "Authors".to_string()
 }
@@ -136,6 +131,10 @@ fn default_tags_title() -> String {
 
 fn default_tags_content_title() -> String {
     "Posts tagged with '$tag'".to_string()
+}
+
+fn default_streams_content_title() -> String {
+    "Posts from '$stream'".to_string()
 }
 
 fn default_pages_title() -> String {
