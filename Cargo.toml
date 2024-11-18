@@ -18,7 +18,7 @@ tera = {version = "1.20", features = ["preserve_order"]}
 comrak = { version = "0.29.0", features = ["shortcodes"] }
 walkdir = "2.5"
 chrono = { version = "0.4", features = ["serde"] }
-frontmatter-gen = "0.0.2"
+frontmatter-gen = "0.0.3"
 tiny_http = "0.12"
 clap = { version = "4.5.21", features = ["derive"] }
 fs_extra = "1.3"
