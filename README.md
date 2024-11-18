@@ -137,10 +137,10 @@ Options:
       --watch            Detect changes and rebuild the site automatically
       --bind <BIND>      Address to bind the server [default: localhost:8000]
       --config <CONFIG>  Path to custom configuration file [default: marmite.yaml]
-      --debug            Print debug messages
       --init-templates   Initialize templates in the project
       --start-theme      Initialize a theme with templates and static assets
       --generate-config  Generate the configuration file
+  -v, --verbose          Verbosity level (-v, -vv, -vvv)
   -h, --help             Print help
   -V, --version          Print version
 

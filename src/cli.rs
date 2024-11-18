@@ -29,6 +29,7 @@ pub struct Cli {
     pub config: String,
 
     /// Print debug messages
+    /// Deprecated: Use -vv for debug messages
     #[arg(long)]
     pub debug: bool,
 
@@ -43,4 +44,8 @@ pub struct Cli {
     /// Generate the configuration file
     #[arg(long)]
     pub generate_config: bool,
+
+    /// Verbosity level (-v, -vv, -vvv)
+    #[arg(short, long, action = clap::ArgAction::Count)]
+    pub verbose: u8,
 }

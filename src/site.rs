@@ -79,7 +79,7 @@ pub fn generate(
     bind_address: &str,
 ) {
     let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
-        debug!(
+        info!(
             "Unable to read '{}', assuming defaults.: {}",
             &config_path.display(),
             e
@@ -717,7 +717,6 @@ fn handle_list_page(
             context.insert("next_page", &next_page);
         }
 
-        // Debug print
         debug!(
             "List Context for {}: {:#?} - Pagination({:#?})",
             filename,
@@ -926,7 +925,7 @@ fn render_html(
         .find(|t| tera.get_template(t).is_ok())
         .unwrap_or(&templates[0]);
     let rendered = tera.render(template, context).map_err(|e| {
-        debug!(
+        error!(
             "Error rendering template `{}` -> {}: {:#?}",
             template, filename, e
         );

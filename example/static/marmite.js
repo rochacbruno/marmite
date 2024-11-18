@@ -149,12 +149,12 @@ function colorschemeSwitcher() {
             return;
         }
         if (colorschemeLink) {
-            colorschemeLink.href = `/static/colorschemes/${colorscheme}.css`;
+            colorschemeLink.href = `static/colorschemes/${colorscheme}.css`;
         } else {
             const link = document.createElement('link');
             link.id = 'colorscheme-link';
             link.rel = 'stylesheet';
-            link.href = `/static/colorschemes/${colorscheme}.css`;
+            link.href = `static/colorschemes/${colorscheme}.css`;
             document.head.appendChild(link);
         }
         localStorage.setItem('marmitePreferredColorScheme', colorscheme);
