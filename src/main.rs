@@ -22,6 +22,10 @@ fn main() {
     let serve = args.serve;
     let watch = args.watch;
     let bind_address: &str = args.bind.as_str();
+    let mut verbose = args.verbose; // -v info, -vv debug
+    if args.debug {
+        verbose = 2; // backward compatibility with --debug flag
+    }
 
     let config_path = if args.config.starts_with('.') || args.config.starts_with('/') {
         PathBuf::new().join(args.config)
@@ -29,7 +33,12 @@ fn main() {
         input_folder.join(args.config)
     };
 
-    let env = Env::default().default_filter_or(if args.debug { "debug" } else { "info" });
+    let env = Env::default().default_filter_or(match verbose {
+        0 => "warn",
+        1 => "info",
+        2 => "debug",
+        3..=u8::MAX => "trace",
+    });
     if let Err(e) = Builder::from_env(env).try_init() {
         error!("Logger already initialized: {}", e);
     }

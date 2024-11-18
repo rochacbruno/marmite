@@ -1,3 +1,4 @@
+use log::info;
 use rss::{ChannelBuilder, ItemBuilder};
 use std::fs::File;
 use std::io::prelude::*;
@@ -62,8 +63,9 @@ pub fn generate_rss(
 
     let rss = channel.to_string();
     let feed_path = output_path.join(format!("{filename}.rss"));
-    let mut file = File::create(feed_path).map_err(|e| e.to_string())?;
+    let mut file = File::create(&feed_path).map_err(|e| e.to_string())?;
     file.write_all(rss.as_bytes()).map_err(|e| e.to_string())?;
+    info!("Generated {}", &feed_path.display());
 
     Ok(())
 }
