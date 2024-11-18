@@ -58,6 +58,7 @@ It also handles generating or copying `static/` and `media/` to the `output` dir
 - Auto rebuild when content changes.
 - Built-in theme 
   - Light and Dark modes.
+  - Multiple colorschemes
   - Fully responsive
   - Spotlight Search.
   - Easy to replace the index page and add custom CSS/JS

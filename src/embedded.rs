@@ -50,6 +50,13 @@ pub fn generate_static(static_folder: &Path) {
 
     for (name, file_data) in EMBEDDED_STATIC.iter() {
         let file_path = static_folder.join(name); // static/foo.ext
+                                                  // ensure the parent directory exists
+        if let Some(parent) = file_path.parent() {
+            if let Err(e) = fs::create_dir_all(parent) {
+                error!("Unable to create directory: {}", e);
+                return;
+            }
+        }
 
         match write_bytes_to_file(file_path.as_path(), file_data) {
             Ok(()) => info!("Generated {}", &file_path.display()),

@@ -1,4 +1,3 @@
-<!-- website generated with Marmite SSG - https://github.com/rochacbruno/marmite -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,6 +22,9 @@
     <title>{{ site.name }} | {{ title }}</title>
     <link rel="stylesheet" type="text/css" href="./static/pico.min.css">
     <link rel="stylesheet" type="text/css" href="./static/marmite.css">
+    {% if site.extra.colorscheme %}
+    <link rel="stylesheet" type="text/css" href="./static/colorschemes/{{site.extra.colorscheme}}.css">
+    {% endif %}
     <link rel="stylesheet" type="text/css" href="./static/custom.css">
     {% endblock -%}
     {%- block feeds %}
@@ -39,7 +41,6 @@
     {%- for year, _ in group(kind="archive") -%}
     <link rel="alternate" type="application/rss+xml" title="{{year}}" href="archive-{{year}}.rss">
     {% endfor %}
-
     {% endblock %}
 </head>
 <body>
@@ -50,7 +51,7 @@
                     <li>
                         <hgroup>
                             <h2><a href="./index.html" class="contrast">{{ site.name }}</a></h2>
-                            <p>{{ site.tagline }}</p>
+                            {% if site.tagline %} <p>{{ site.tagline }}</p> {% endif %}
                         </hgroup>
                     </li>
                 </ul>
@@ -58,16 +59,21 @@
                 
                 <ul class="header-menu" id="header-menu">
                     {% for item in menu %}
+                      {% set name = item.0 %}
+                      {% set url = item.1 %}
                     <li>
-                        {% if current_page and current_page == item.1 %}
-                        <button class="menu-item active selected">{{item.0 | safe }}</button>
+                        {% if current_page and current_page == url %}
+                        <button class="menu-item active selected">{{name | safe }}</button>
                         {% else %}
-                        <a class="menu-item secondary" {% if item.1 is starting_with("http") %} href="{{item.1}}" target="_blank" {% else %} href="./{{item.1}}"{% endif %}>{{ item.0 | safe }}</a>
+                        <a class="menu-item secondary" {% if url is starting_with("http") %} href="{{url}}" target="_blank" {% else %} href="./{{url}}"{% endif %}>{{ name | safe }}</a>
                         {% endif %}
                     </li>
                     {% endfor %}
                     {% if site.enable_search %}
                     <li><a href="#" id="search-toggle" class="secondary" title="Search (Ctrl + Shift + F)"> <span class="search-txt">Search</span><span class="search-magnifier"></span></a></li>
+                    {% endif %}
+                    {% if site.extra.colorscheme_toggle %}
+                    <li><select class="colorscheme-toggle"></select></li>
                     {% endif %}
                     <li><a href="#" id="theme-toggle" class="secondary">&#9789;</a></li>
                     <div class="underline"></div>
@@ -96,6 +102,11 @@
     <script src="./static/custom.js"></script>
     {% if site.enable_search %}
     <script type="module" src="./static/search.js"></script>
+    {% endif %}
+    {% if site.extra.colorscheme_toggle %}
+    <script type="application/javascript" >
+        colorschemeSwitcher();
+    </script>
     {% endif %}
     {% endblock -%}
 </body>

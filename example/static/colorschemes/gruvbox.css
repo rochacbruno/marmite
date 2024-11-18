@@ -1,0 +1,48 @@
+/* Marmite Gruvbox Theme */
+/* picocss.com  */
+:root {
+    --pico-border-radius: 0;
+}
+
+.content-tags a:where(a:not([role=button])),
+[role=link] {
+    --pico-color: revert;
+}
+
+[data-theme=light],
+:root:not([data-theme=dark]) {
+    --pico-background-color: #fbf1c7;
+    --pico-card-background-color: #ebdbb2;
+    --pico-card-sectioning-background-color: var(--pico-background-color);
+    --pico-primary: #b57614;
+    --pico-primary-hover: #d79921;
+    --pico-color: #3c3836;
+    --pico-tag: #7c6f64;
+    --pico-h1-color: var(--pico-primary);
+    --pico-code-background-color: var(--pico-background-color);
+    --pico-table-border-color: var(--pico-card-background-color);
+    --pico-color-azure-550: var(--pico-primary);
+}
+
+[data-theme=light] pre:has(> code.language-mermaid) {
+    background-color: var(--pico-card-background-color);
+}
+
+[data-theme=dark],
+:root:not([data-theme=light]) {
+    --pico-background-color: #282828;
+    --pico-card-background-color: #3c3836;
+    --pico-card-sectioning-background-color: var(--pico-background-color);
+    --pico-primary: #d79921;
+    --pico-primary-hover: #fabd2f;
+    --pico-color: #ebdbb2;
+    --pico-tag: #a89984;
+    --pico-h1-color: var(--pico-color);
+    --pico-code-background-color: var(--pico-background-color);
+    --pico-table-border-color: var(--pico-card-background-color);
+    --pico-color-azure-550: var(--pico-primary);
+}
+
+[data-theme=dark] pre:has(> code.language-mermaid) {
+    background-color: var(--pico-code-color);
+}

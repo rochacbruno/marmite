@@ -1,6 +1,6 @@
-name: Marmite SSG
-tagline: Simply create a static blog from markdown files
-url: https://rochacbruno.github.io/marmite/
+name: Marmite
+tagline: Static Site Generator
+url: https://rochacbruno.github.io/marmite
 pagination: 6
 enable_search: true
 menu: 
@@ -14,6 +14,7 @@ card_image: ./media/og_image.jpg
 banner_image: media/og_image.jpg
 default_date_format: "%A, %d %B %Y"
 extra:
+  colorscheme_toggle: true
   comments:
     title: Comments
     source: |

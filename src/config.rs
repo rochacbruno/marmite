@@ -6,7 +6,7 @@ use std::{collections::HashMap, path::Path};
 pub struct Marmite {
     #[serde(default = "default_name")]
     pub name: String,
-    #[serde(default = "default_tagline")]
+    #[serde(default)]
     pub tagline: String,
     #[serde(default)]
     pub url: String,
@@ -62,7 +62,6 @@ impl Marmite {
     fn new() -> Self {
         Marmite {
             name: default_name(),
-            tagline: default_tagline(),
             footer: default_footer(),
             pagination: default_pagination(),
             list_title: default_list_title(),
@@ -115,12 +114,8 @@ fn default_name() -> String {
     "Home".to_string()
 }
 
-fn default_tagline() -> String {
-    "Site generated from markdown content".to_string()
-}
-
 fn default_footer() -> String {
-    r#"<div>Site generated with <a href="https://github.com/rochacbruno/marmite">Marmite</a> | <small><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a></small></div>"#.to_string()
+    r#"<div>Powered by <a href="https://github.com/rochacbruno/marmite">Marmite</a> | <small><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC-BY_NC-SA</a></small></div>"#.to_string()
 }
 
 fn default_pagination() -> usize {
