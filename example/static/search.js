@@ -53,7 +53,9 @@ import Fuse from "https://cdnjs.cloudflare.com/ajax/libs/fuse.js/7.0.0/fuse.basi
 })();
 
 const toggleSearchBar = () => {
-    document.body.classList.toggle('show'); // Toggles the 'show' class on the body
+    document.body.classList.toggle('show');
+    document.getElementById("marmite-search-input").value = "";
+    document.getElementById("marmite-search-bar-result").innerHTML = ""; 
     // Focus the search input if the search bar is shown
     const searchInput = document.getElementById("marmite-search-input");
     if (document.body.classList.contains('show')) {
@@ -69,7 +71,7 @@ document.getElementById("overlay-close").addEventListener("click", toggleSearchB
 document.addEventListener("keydown", (event) => {
     const searchBarIsVisible = document.body.classList.contains('show');
 
-    // Toggle on Ctrl+Shift+P (17: Ctrl, 16: Shift, 80: P)
+    // Show on 'Ctrl + Shift + F' key
     if (event.ctrlKey && event.shiftKey && event.key === 'F') {
         toggleSearchBar();
     }

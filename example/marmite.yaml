@@ -8,6 +8,7 @@ pagination: 6
 # archives_title: Archive
 # pages_title: pages
 # authors_title: Authors
+# search_title: Search
 
 # templates_path: templates
 # static_path: static
@@ -20,7 +21,7 @@ banner_image: media/og_image.jpg
 enable_search: true
 
 menu:
-  - ["About", "about.html"]
+  # - ["About", "about.html"]
   - ["Pages", "pages.html"]
   - ["Tags", "tags.html"]
   - ["Archive", "archive.html"]
@@ -31,6 +32,7 @@ menu:
 # https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 default_date_format: "%A, %d %B %Y"
 
+default_author: rochacbruno
 authors:
   rochacbruno:
     name: Bruno Rocha

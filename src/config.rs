@@ -28,6 +28,8 @@ pub struct Marmite {
     pub authors_title: String,
     #[serde(default = "default_streams_title")]
     pub streams_title: String,
+    #[serde(default = "default_search_title")]
+    pub search_title: String,
     #[serde(default = "default_streams_content_title")]
     pub streams_content_title: String,
     #[serde(default = "default_content_path")]
@@ -56,6 +58,8 @@ pub struct Marmite {
     pub extra: Option<HashMap<String, Value>>,
     #[serde(default)]
     pub authors: HashMap<String, Author>,
+    #[serde(default)]
+    pub default_author: String,
 }
 
 impl Marmite {
@@ -181,4 +185,8 @@ fn default_menu() -> Option<Vec<(String, String)>> {
         ("Streams".to_string(), "streams.html".to_string()),
     ]
     .into()
+}
+
+fn default_search_title() -> String {
+    "Search".to_string()
 }

@@ -4,6 +4,7 @@ slug: getting-started
 tags: docs
 banner_image: media/getting_started.jpg
 authors: rochacbruno
+pinned: true
 ---
 Learn how to create your blog with Marmite in minutes, you can start with zero-config 
 and then customize gradually later.
@@ -345,23 +346,53 @@ To enable this feature add to your `marmite.yaml`
 
 ```yaml
 enable_search: true
+search_title: Search
 ```
 
 ## Special pages and Fragments
 
 There are some contents that are considered **special** as those are 
-not regular posts or pages, right now there are 2:
+not regular posts or pages, right now there are:
 
-Hero
+Hero - `_hero.md`
 
   : A banner that shows as the first content in your home page  
     Marmite will look for a file named `_hero.md` within your content folder.
 
-404
+404 - `_404.md`
 
   : The page that will show for Not Found error  
     Marmite will look for a file named `_404.md` within your content folder.  
     if not found, marmite will generate a default.
+
+
+Footer - `_footer.md`
+
+  : The content of `_footer.md` will be shown on the footer of base template
+    this will override the contents of `marmite.yaml` `footer:` field 
+
+
+References - `_references.md`
+
+  : This file will be appended to the end of every markdown file
+    processed, so it is possible to use the references and footnotes
+    globally.
+  **format**  
+    ```markdown
+    [name]: <https://link> "description"
+    ```
+
+Markdown Footer - `_markdown_footer.md`
+
+  : This file will be appended to the end of every markdown processed
+    You can include anything inside it, this is useful to add custom
+    callouts, messages, signatures to the end of contents.
+
+Markdown Header - `_markdown_header.md`
+
+  : This file will be prepended to the top of every markdown processed
+    You can include anything inside it, this is useful to add custom
+    callouts, messages, signatures to the end of contents.
 
 
 <figure>
@@ -472,6 +503,16 @@ body {
   <img src="./media/screenshots/custom.png" width="600">
 </figure>
 
+#### Customizing Content Width
+
+The content container is optimized for blogs, if you want to change the 
+width just add to the `custom.css`
+
+```css
+:root {
+   --pico-container-max-width: 1024px;
+}
+```
 
 #### Custom JS
 

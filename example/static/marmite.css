@@ -19,6 +19,8 @@
   --pico-typography-spacing-vertical: 1rem;
   --pico-typography-spacing-top: 1rem;
   --pico-form-element-background-color: var(--pico-background-color);
+  /* custom vars */
+  --pico-container-max-width: 894px;
 }
 
 [data-theme="light"],
@@ -83,15 +85,15 @@ blockquote {
 .header-menu {
   list-style: none;
   display: flex;
-  gap: 15px;
+  gap: 4px;
   position: relative;
 }
 
 .header-menu li {
   text-decoration: none;
-  padding: 8px 16px;
   color: var(--pico-color-slate-750);
   display: inline-block;
+  padding: 8px;
 }
 
 .header-menu .selected {
@@ -134,6 +136,11 @@ blockquote {
   position: relative;
 }
 
+.theme-toggle {
+  cursor: pointer;
+  color: var(--pico-menu)
+}
+
 #menu-toggle:focus {
   outline: none;
 }
@@ -147,46 +154,30 @@ blockquote {
   margin: 0 0;
   justify-content: flex-start;
   list-style: none;
-  gap: 8px;
+  gap: 2px;
 }
 
 .content-tags li {
-  padding: 8px 16px;
   border-radius: 4px;
-  margin: 4px 8px;
-  background-color: var(--pico-tag);
+  margin: 0;
   text-wrap: nowrap;
   position: relative;
-  padding: 4px 12px 4px 8px;
+  padding: 2px;
   border-radius: 4px;
-  background-color: var(--pico-tag);
   white-space: nowrap;
   list-style: none;
   display: inline-block;
   color: var( --pico-color-slate-750);
 }
 
-.content-tags li:before {
-  content: "";
-  position: absolute;
-  left: -14px;
-  top: 50%;
-  transform: translateY(-50%);
-  border-top: 16px solid transparent;
-  border-bottom: 16px solid transparent;
-  border-right: 16px solid var(--pico-tag);
+.content-tags li a {
+  color: var(--pico-primary);
 }
 
-.group-list .content-tags {
-  display: flex;
-  width: auto;
-  flex-direction: row;
-  margin: 0;
-  padding: 0;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 12px;
+.content-tags li::before {
+  content: "#";
+  border: 0;
+  color: var(--pico-secondary);
 }
 
 .tag-count {
@@ -196,6 +187,11 @@ blockquote {
 .content-tags li::marker {
   content: "";
 }
+
+.tag-group-title::before {
+  content: "#";
+  color: var(--pico-secondary);
+} 
 
 article footer {
   display: flex;
@@ -265,6 +261,8 @@ pre:has(> code.language-mermaid) p {
 
 .hero article {
   overflow: auto;
+  font-size: initial;
+  padding: 8px;
 }
 
 /* Footer content */
@@ -368,7 +366,7 @@ pre:has(> code.language-mermaid) p {
 /* Close button styling */
 .marmite-close-button {
   position: absolute;
-  top: 1.2em;
+  top: 0.5em;
   right: 1em;
   background: transparent;
   border: none;
@@ -379,7 +377,7 @@ pre:has(> code.language-mermaid) p {
 
 /*  Banner img*/
 .content-banner-image {
-  height: 350px;
+  height: 200px;
   width: 100%;
   background-size: cover;
   background-position: center;
@@ -391,6 +389,15 @@ pre:has(> code.language-mermaid) p {
 
 .index-banner-image {
   margin-bottom: 20px;
+}
+
+.content-title-wrapper {
+  position: relative;
+}
+.content-title-wrapper .content-pin {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 
 .content-title {
@@ -533,11 +540,14 @@ th {
 }
 
 select.colorscheme-toggle {
-  background: transparent;
+  /* background-color: var(--pico-card-background-color); */
+  background-color: transparent;
   border: none;
+  width: 150px;
+  padding: 0;
 }
 select.colorscheme-toggle option {
-  background-color: var(--pico-background-color);
+  background-color: var(--pico-card-background-color);
 } 
 
 /* ^ Any non-responsive code goes above here ^ */
@@ -622,6 +632,16 @@ select.colorscheme-toggle option {
   }
 
   .content-banner-image {
-    height: 200px;
+    height: 150px;
+  }
+}
+
+/* Ensure content width complains with readability recommendations */
+@media (1024px <=width <=3072px) {
+  .container {
+      max-width: var(--pico-container-max-width);
+  }
+  :root {
+      --pico-font-size: 118.75%;
   }
 }

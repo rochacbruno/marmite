@@ -217,7 +217,11 @@ Content
     ```
     **important**: the above example shows the keys supported by the default theme.  
 
+**pinned**
 
+  : Boolean `true` or `false` indicating if content is pinned on top
+    of its stream page.
+  **default** false
 
 ## Media
 

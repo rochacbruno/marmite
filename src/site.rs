@@ -1,5 +1,7 @@
 use crate::config::{Author, Marmite};
-use crate::content::{check_for_duplicate_slugs, slugify, Content, GroupedContent, Kind};
+use crate::content::{
+    check_for_duplicate_slugs, slugify, Content, ContentBuilder, GroupedContent, Kind,
+};
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
 use crate::markdown::{get_content, process_file};
 use crate::tera_functions::{Group, UrlFor};
@@ -9,6 +11,7 @@ use hotwatch::{Event, EventKind, Hotwatch};
 use log::{debug, error, info};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::path::Path;
 use std::vec;
 use std::{fs, process, sync::Arc, sync::Mutex};
@@ -113,7 +116,8 @@ pub fn generate(
             let mut site_data = site_data.lock().unwrap();
             // cleanup before rebuilding, otherwise we get duplicated content
             site_data.clear_all();
-            collect_content(&content_dir, &mut site_data);
+            let fragments = collect_fragments(&content_dir);
+            collect_content(&content_dir, &mut site_data, &fragments);
 
             // Detect slug collision
             detect_slug_collision(&site_data);
@@ -185,6 +189,23 @@ pub fn generate(
     }
 }
 
+fn collect_fragments(content_dir: &Path) -> HashMap<String, String> {
+    let markdown_fragments: HashMap<String, String> =
+        ["markdown_header", "markdown_footer", "references"]
+            .iter()
+            .map(|fragment| {
+                let fragment_path = content_dir.join(format!("_{fragment}.md"));
+                let fragment_content = if fragment_path.exists() {
+                    fs::read_to_string(fragment_path).unwrap()
+                } else {
+                    String::new()
+                };
+                ((*fragment).to_string(), fragment_content)
+            })
+            .collect();
+    markdown_fragments
+}
+
 fn collect_back_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
     let other_contents = site_data
         .posts
@@ -215,7 +236,11 @@ fn _collect_back_links(contents: &mut [Content], other_contents: &[Content]) {
     }
 }
 
-fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
+fn collect_content(
+    content_dir: &std::path::PathBuf,
+    site_data: &mut Data,
+    fragments: &HashMap<String, String>,
+) {
     WalkDir::new(content_dir)
         .into_iter()
         .filter_map(Result::ok)
@@ -233,7 +258,7 @@ fn collect_content(content_dir: &std::path::PathBuf, site_data: &mut Data) {
             e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
         })
         .for_each(|entry| {
-            if let Err(e) = process_file(entry.path(), site_data) {
+            if let Err(e) = process_file(entry.path(), site_data, fragments) {
                 error!("Failed to process file {}: {}", entry.path().display(), e);
             }
         });
@@ -339,15 +364,22 @@ fn render_templates(
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
-    global_context.insert("site_data", &site_data);
-    global_context.insert("site", &site_data.site);
-    global_context.insert("menu", &site_data.site.menu);
+    let mut site_data = site_data.clone();
 
     let hero_fragment = get_html_fragment("_hero.md", content_dir);
     if !hero_fragment.is_empty() {
         global_context.insert("hero", &hero_fragment);
         debug!("Hero fragment {}", &hero_fragment);
     }
+    let footer_fragment = get_html_fragment("_footer.md", content_dir);
+    if !footer_fragment.is_empty() {
+        site_data.site.footer.clone_from(&footer_fragment);
+        debug!("Footer fragment {}", &footer_fragment);
+    }
+
+    global_context.insert("site_data", &site_data);
+    global_context.insert("site", &site_data.site);
+    global_context.insert("menu", &site_data.site.menu);
     debug!("Global Context site: {:?}", &site_data.site);
 
     // Assuming every item on site_data.posts is a Content and has a stream field
@@ -355,14 +387,33 @@ fn render_templates(
     // by default posts will have a `index` stream.
     for (stream, stream_contents) in site_data.stream.iter() {
         let stream_slug = slugify(stream);
-        handle_list_page(
-            &global_context,
-            &site_data
+        let title = if stream == "index" {
+            String::new()
+        } else {
+            site_data
                 .site
                 .streams_content_title
-                .replace("$stream", stream),
-            &stream_contents,
-            site_data,
+                .replace("$stream", stream)
+        };
+
+        // if there is any content on the stream with pinned set to true
+        // sort the content by pinned first and then by date
+        let mut sorted_stream_contents = stream_contents.clone();
+        sorted_stream_contents.sort_by(|a, b| {
+            if a.pinned && !b.pinned {
+                std::cmp::Ordering::Less
+            } else if !a.pinned && b.pinned {
+                std::cmp::Ordering::Greater
+            } else {
+                b.date.cmp(&a.date)
+            }
+        });
+
+        handle_list_page(
+            &global_context,
+            &title,
+            &sorted_stream_contents,
+            &site_data,
             tera,
             output_dir,
             &stream_slug,
@@ -377,23 +428,23 @@ fn render_templates(
         &global_context,
         &site_data.site.pages_title,
         &site_data.pages,
-        site_data,
+        &site_data,
         tera,
         output_dir,
         "pages",
     )?;
 
     // Render individual content-slug.html from content.html template
-    handle_content_pages(site_data, &global_context, tera, output_dir)?;
+    handle_content_pages(&site_data, &global_context, tera, output_dir)?;
 
     // Check and guarantees that page 404 was generated even if 404.md is removed
     handle_404(content_dir, &global_context, tera, output_dir)?;
 
     // render group pages
-    handle_tag_pages(output_dir, site_data, &global_context, tera)?;
-    handle_archive_pages(output_dir, site_data, &global_context, tera)?;
-    handle_author_pages(output_dir, site_data, &global_context, tera)?;
-    handle_stream_list_page(output_dir, site_data, &global_context, tera)?;
+    handle_tag_pages(output_dir, &site_data, &global_context, tera)?;
+    handle_archive_pages(output_dir, &site_data, &global_context, tera)?;
+    handle_author_pages(output_dir, &site_data, &global_context, tera)?;
+    handle_stream_list_page(output_dir, &site_data, &global_context, tera)?;
 
     // If site_data.stream.map does not contain the index stream
     // we will render empty index.html from list.html template
@@ -788,23 +839,13 @@ fn handle_404(
 ) -> Result<(), String> {
     let input_404_path = content_dir.join("_404.md");
     let mut context = global_context.clone();
-    let mut content = Content {
-        html: String::from("Page not found :/"),
-        title: String::from("Page not found"),
-        description: None,
-        date: None,
-        slug: "404".to_string(),
-        extra: None,
-        tags: vec![],
-        links_to: None,
-        back_links: vec![],
-        card_image: None,
-        banner_image: None,
-        authors: vec![],
-        stream: None,
-    };
+    let mut content = ContentBuilder::default()
+        .html("Page not found :/".to_string())
+        .title("Page not found".to_string())
+        .slug("404".to_string())
+        .build();
     if input_404_path.exists() {
-        let custom_content = get_content(&input_404_path)?;
+        let custom_content = get_content(&input_404_path, None, &Marmite::default())?;
         content.html.clone_from(&custom_content.html);
         content.title.clone_from(&custom_content.title);
     }
@@ -814,11 +855,11 @@ fn handle_404(
     Ok(())
 }
 
-fn get_html_fragment(filename: &str, content_dir: &Path) -> String {
+pub fn get_html_fragment(filename: &str, content_dir: &Path) -> String {
     let filepath = content_dir.join(filename);
     let mut fragment = String::new();
     if filepath.exists() {
-        match get_content(&filepath) {
+        match get_content(&filepath, None, &Marmite::default()) {
             Ok(content) => fragment.push_str(&content.html),
             Err(e) => {
                 error!("Error parsing {}: {}", filepath.display(), e);

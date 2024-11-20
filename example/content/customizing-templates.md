@@ -1,7 +1,6 @@
 ---
 date: 2024-10-18
 tags: docs, templates, theme, customization
-authors: rochacbruno
 title: Customizing Templates
 banner_image: media/what.jpg
 ---
@@ -77,6 +76,7 @@ back_links: [Content] or []
 card_image: str or None
 banner_image: str or None
 authors: [str] or []
+pinned: bool
 ```
 
 The `GroupedContent` is a map that when iterated returns a map of `name: [Content]`, this is available on global context,
