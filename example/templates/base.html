@@ -17,9 +17,12 @@
     {% endif %}
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{site.name}}">
+    {% if site.extra.fediverse_verification %}
+    <linl rel="me" href="{{site.extra.fediverse_verification}}">
+    {% endif %}
     {% endblock %}
     {%- block head %}
-    <title>{{ site.name }} | {{ title }}</title>
+    <title>{% if title %}{{title}} | {%endif%}{{ site.name }}</title>
     <link rel="stylesheet" type="text/css" href="./static/pico.min.css">
     <link rel="stylesheet" type="text/css" href="./static/marmite.css">
     {% if site.extra.colorscheme %}
@@ -69,19 +72,17 @@
                         {% endif %}
                     </li>
                     {% endfor %}
+                    <li><span class="theme-toggle secondary" title="dark mode">&#9789;</span></li>
                     {% if site.enable_search %}
                     <li><a href="#" id="search-toggle" class="secondary" title="Search (Ctrl + Shift + F)"> <span class="search-txt">Search</span><span class="search-magnifier"></span></a></li>
                     {% endif %}
-                    {% if site.extra.colorscheme_toggle %}
-                    <li><select class="colorscheme-toggle"></select></li>
-                    {% endif %}
-                    <li><a href="#" id="theme-toggle" class="secondary">&#9789;</a></li>
                     <div class="underline"></div>
                 </ul>
             </nav>
             {% if site.enable_search %}
             <div class="marmite-background-overlay" id="overlay-close"></div>
             <div class="marmite-search-bar hidden">
+                <span>{{site.search_title}}</span>
                 <button class="marmite-close-button" id="search-close">X</button>
                 <input placeholder="Search" id="marmite-search-input" />
                 <div class="marmite-search-bar-result">
@@ -93,8 +94,14 @@
         <section class="main-content">
             {% block main -%}{%- endblock %}
         </section>
-        <footer class="footer-content">
+        <footer class="footer-content grid">
             {{ site.footer | safe }}
+            {% if site.extra.colorscheme_toggle %}
+            <div class="colorscheme-toggle-div">
+                colorscheme: <select name="colorscheme" class="colorscheme-toggle"><option value="default">default</option></select>
+                <span class="theme-toggle secondary" title="dark mode">&#9789;</span>
+            </div>
+            {% endif %}
         </footer>
     </main>
     {%- block tail %}

@@ -2,7 +2,7 @@
 const themeSwitcher = {
     // Config
     _scheme: "auto",
-    toggleButton: document.getElementById("theme-toggle"),
+    toggleButton: document.querySelectorAll(".theme-toggle"),
     rootAttribute: "data-theme",
     localStorageKey: "picoPreferredColorScheme",
     
@@ -25,16 +25,19 @@ const themeSwitcher = {
     
     // Init toggle
     initToggle() {
-        this.toggleButton.addEventListener(
-            "click",
-            (event) => {
-                event.preventDefault();
-                // Toggle scheme
-                this.scheme = this.scheme === "dark" ? "light" : "dark";
-                this.updateIcon();
-            },
-            false
-        );
+        // for each toggle button add event listener
+        this.toggleButton.forEach((button) => {
+            button.addEventListener(
+                "click",
+                (event) => {
+                    event.preventDefault();
+                    // Toggle scheme
+                    this.scheme = this.scheme === "dark" ? "light" : "dark";
+                    this.updateIcon();
+                },
+                false
+            );
+        });
     },
     
     // Set scheme
@@ -67,11 +70,16 @@ const themeSwitcher = {
     
     // Update icon based on the current scheme
     updateIcon() {
-        if (this.scheme === "dark") {
-            this.toggleButton.innerHTML = "&#9788;"; // Sun icon for light mode
-        } else {
-            this.toggleButton.innerHTML = "&#9789;"; // Moon icon for dark mode
-        }
+        // for each toggle button update icon
+        this.toggleButton.forEach((button) => {
+            if (this.scheme === "dark") {
+                button.innerHTML = "&#9788;"; // Sun icon for light mode
+                button.title = "light mode";
+            } else {
+                button.innerHTML = "&#9789;"; // Moon icon for dark mode
+                button.title = "dark mode"; 
+            }
+        });
     },
 };
 
@@ -120,9 +128,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
+
+// Colorscheme switcher
 function colorschemeSwitcher() {
     const colorschemes = [
-        'colorscheme',
         'catppuccin',
         'dracula',
         'github',
@@ -140,7 +149,7 @@ function colorschemeSwitcher() {
     colorschemeDropdown.addEventListener('change', function () {
         const colorscheme = this.value;
         const colorschemeLink = document.querySelector('#colorscheme-link');
-        if (colorscheme === 'colorscheme') {
+        if (colorscheme === 'default') {
             if (colorschemeLink) {
                 colorschemeLink.remove();
             }

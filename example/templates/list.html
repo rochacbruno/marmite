@@ -54,7 +54,10 @@
 <div class="content-list">
     {%- for content in content_list %}
     <article class="content-list-item">
-        <h2 class="content-title"><a href="./{{content.slug}}.html">{{ content.title | capitalize }}</a></h2>
+        <div class="content-title-wrapper">
+            <h2 class="content-title"><a href="./{{content.slug}}.html">{{ content.title | capitalize }}</a></h2>
+            {%if content.pinned %}<span class="content-pin">&star;</span>{%endif%} 
+        </div>
         <p class="content-excerpt">
             {% if content.description %}
             {{ content.description | replace(from='"', to="") | truncate(length=250, end=" ...") }}

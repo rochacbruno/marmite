@@ -147,18 +147,19 @@ on its list of back-links:
 
 ## Footnotes
 
-Here is a simple footnote[^1]. With some additional text after it.  
+Here is a simple footnote[^1]. With some[^2] additional text after it.  
 
-A reference[1] can also be hidden from footnotes.
+A reference[1] can also be just a link hidden from footnotes.
 
 ```markdown
-Here is a simple footnote[^1]. With some additional text after it.  
+Here is a simple footnote[^1]. With some[^2] additional text after it.  
 
-A reference[1] can also be hidden from footnotes.
+A reference[1] can also be just a link hidden from footnotes.
 ```
 And on the end of the file:
 ```markdown
 [^1]: My reference.
+[^2]: Another footnote
 [1]: <https://en.wikipedia.org/wiki/Hobbit#Lifestyle> "Hobbit lifestyles"
 ```
 

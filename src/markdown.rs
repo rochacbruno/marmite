@@ -1,3 +1,4 @@
+use crate::config::Marmite;
 use crate::content::{
     get_authors, get_date, get_description, get_slug, get_stream, get_tags, get_title, Content,
 };
@@ -6,6 +7,7 @@ use chrono::Datelike;
 use comrak::{markdown_to_html, ComrakOptions};
 use frontmatter_gen::{extract, Frontmatter};
 use regex::Regex;
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -13,8 +15,12 @@ use std::path::Path;
 /// If the file is a post, add it to the posts vector
 /// If the file is a page, add it to the pages vector
 /// Also add the post to the tag and archive maps
-pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
-    let content = get_content(path)?;
+pub fn process_file(
+    path: &Path,
+    site_data: &mut Data,
+    fragments: &HashMap<String, String>,
+) -> Result<(), String> {
+    let content = get_content(path, Some(fragments), &site_data.site)?;
 
     if let Some(date) = content.date {
         site_data.posts.push(content.clone());
@@ -53,7 +59,11 @@ pub fn process_file(path: &Path, site_data: &mut Data) -> Result<(), String> {
 
 /// From the file content, extract the frontmatter and the markdown content
 /// then parse the markdown content to html and return a Content struct
-pub fn get_content(path: &Path) -> Result<Content, String> {
+pub fn get_content(
+    path: &Path,
+    fragments: Option<&HashMap<String, String>>,
+    site: &Marmite,
+) -> Result<Content, String> {
     let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
     let (frontmatter, raw_markdown) = parse_front_matter(&file_content)?;
     let (title, markdown_without_title) = get_title(&frontmatter, raw_markdown);
@@ -61,6 +71,18 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
     let is_fragment = path.file_name().unwrap().to_str().unwrap().starts_with('_');
     let html = if is_fragment {
         get_html(raw_markdown)
+    } else if fragments.is_some() {
+        let mut markdown_without_title = markdown_without_title.to_string();
+        if let Some(header) = fragments.and_then(|f| f.get("markdown_header")) {
+            markdown_without_title.insert_str(0, format!("{header}\n").as_str());
+        }
+        if let Some(footer) = fragments.and_then(|f| f.get("markdown_footer")) {
+            markdown_without_title.push_str(format!("\n{footer}").as_str());
+        }
+        if let Some(references) = fragments.and_then(|f| f.get("references")) {
+            markdown_without_title.push_str(format!("\n{references}").as_str());
+        }
+        get_html(&markdown_without_title)
     } else {
         get_html(&markdown_without_title)
     };
@@ -72,9 +94,12 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
     let extra = frontmatter.get("extra").map(std::borrow::ToOwned::to_owned);
     let links_to = get_links_to(&html);
     let back_links = Vec::new(); // will be mutated later
-    let card_image = get_card_image(&frontmatter, &html);
-    let banner_image = get_banner_image(&frontmatter);
-    let authors = get_authors(&frontmatter);
+    let card_image = get_card_image(&frontmatter, &html, path, &slug);
+    let banner_image = get_banner_image(&frontmatter, path, &slug);
+    let authors = get_authors(&frontmatter, Some(site.default_author.clone()));
+    let pinned = frontmatter
+        .get("pinned")
+        .map_or(false, |p| p.as_bool().unwrap_or(false));
 
     let stream = if date.is_some() {
         get_stream(&frontmatter)
@@ -96,18 +121,30 @@ pub fn get_content(path: &Path) -> Result<Content, String> {
         banner_image,
         authors,
         stream,
+        pinned,
     };
     Ok(content)
 }
 
 /// Capture `card_image` from frontmatter, then if not defined
 /// take the first img src found in the post content
-fn get_card_image(frontmatter: &Frontmatter, html: &str) -> Option<String> {
+fn get_card_image(
+    frontmatter: &Frontmatter,
+    html: &str,
+    path: &Path,
+    slug: &str,
+) -> Option<String> {
     if let Some(card_image) = frontmatter.get("card_image") {
         return Some(card_image.to_string());
     }
+
+    // Try to find image matching the slug
+    if let Some(value) = find_matching_file(slug, path, "card", &["png", "jpg", "jpeg"]) {
+        return Some(value);
+    }
+
     // try banner_image
-    if let Some(banner_image) = get_banner_image(frontmatter) {
+    if let Some(banner_image) = get_banner_image(frontmatter, path, slug) {
         return Some(banner_image);
     }
 
@@ -118,10 +155,31 @@ fn get_card_image(frontmatter: &Frontmatter, html: &str) -> Option<String> {
         .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
 }
 
-fn get_banner_image(frontmatter: &Frontmatter) -> Option<String> {
+fn find_matching_file(slug: &str, path: &Path, kind: &str, exts: &[&str]) -> Option<String> {
+    // check if a file named {slug}.card.{png,jpg,jpeg} exists in the same directory
+    for ext in exts {
+        let image_filename = format!("{slug}.{kind}.{ext}");
+        let mut path = path.to_path_buf();
+        path.pop();
+        path.push("media");
+        path.push(&image_filename);
+        if path.exists() {
+            return Some(format!("media/{image_filename}"));
+        }
+    }
+    None
+}
+
+fn get_banner_image(frontmatter: &Frontmatter, path: &Path, slug: &str) -> Option<String> {
     if let Some(banner_image) = frontmatter.get("banner_image") {
         return Some(banner_image.as_str().unwrap().trim_matches('"').to_string());
     }
+
+    // Try to find image matching the slug
+    if let Some(value) = find_matching_file(slug, path, "banner", &["png", "jpg", "jpeg"]) {
+        return Some(value);
+    }
+
     // attempt to get extra.banner_image
     if let Some(extra) = frontmatter.get("extra") {
         if let Some(extra) = extra.as_object() {
@@ -386,7 +444,11 @@ mod tests {
         );
         let html = r#"<p>Some content</p><img src="media/other.jpg" />"#;
         let expected = Some("\"media/image.jpg\"".to_string());
-        assert_eq!(get_card_image(&frontmatter, html), expected);
+        // assert_eq!(get_card_image(&frontmatter, html, ), expected);
+        assert_eq!(
+            get_card_image(&frontmatter, html, Path::new("test"), "test"),
+            expected
+        );
     }
 
     #[test]
@@ -394,7 +456,10 @@ mod tests {
         let frontmatter = Frontmatter::new();
         let html = r#"<p>Some content</p><img src="media/image.jpg" />"#;
         let expected = Some("media/image.jpg".to_string());
-        assert_eq!(get_card_image(&frontmatter, html), expected);
+        assert_eq!(
+            get_card_image(&frontmatter, html, Path::new("test"), "test"),
+            expected
+        );
     }
 
     #[test]
@@ -402,7 +467,10 @@ mod tests {
         let frontmatter = Frontmatter::new();
         let html = "<p>Some content</p>";
         let expected: Option<String> = None;
-        assert_eq!(get_card_image(&frontmatter, html), expected);
+        assert_eq!(
+            get_card_image(&frontmatter, html, Path::new("test"), "test"),
+            expected
+        );
     }
 
     #[test]
@@ -410,7 +478,10 @@ mod tests {
         let frontmatter = Frontmatter::new();
         let html = r#"<p>Some content</p><img src="image1.jpg" /><img src="image2.jpg" />"#;
         let expected = Some("image1.jpg".to_string());
-        assert_eq!(get_card_image(&frontmatter, html), expected);
+        assert_eq!(
+            get_card_image(&frontmatter, html, Path::new("test"), "test"),
+            expected
+        );
     }
 
     #[test]
@@ -418,7 +489,10 @@ mod tests {
         let frontmatter = Frontmatter::new();
         let html = r#"<p>Some content</p><img src="image.jpg"#;
         let expected: Option<String> = None;
-        assert_eq!(get_card_image(&frontmatter, html), expected);
+        assert_eq!(
+            get_card_image(&frontmatter, html, Path::new("test"), "test"),
+            expected
+        );
     }
 
     #[test]
@@ -436,7 +510,7 @@ date: "2023-01-01"
 This is a test content.
 "#;
         fs::write(path, content).unwrap();
-        let result = get_content(path).unwrap();
+        let result = get_content(path, None, &Marmite::default()).unwrap();
         assert_eq!(result.title, "Test Title");
         assert_eq!(result.description, Some("\"Test Description\"".to_string()));
         assert_eq!(result.slug, "test-title");
@@ -462,7 +536,7 @@ extra: "extra content"
 This is a test content.
 "#;
         fs::write(path, content).unwrap();
-        let result = get_content(path);
+        let result = get_content(path, None, &Marmite::default());
         assert!(result.is_err());
         fs::remove_file(path).unwrap();
     }
@@ -475,7 +549,7 @@ This is a test content.
 This is a test content.
 ";
         fs::write(path, content).unwrap();
-        let result = get_content(path).unwrap();
+        let result = get_content(path, None, &Marmite::default()).unwrap();
         assert_eq!(result.title, "Test Content".to_string());
         assert_eq!(result.description, None);
         assert_eq!(result.slug, "test_get_content_without_frontmatter");
@@ -491,7 +565,7 @@ This is a test content.
         let path = Path::new("test_get_content_with_empty_file.md");
         let content = "";
         fs::write(path, content).unwrap();
-        let result = get_content(path).unwrap();
+        let result = get_content(path, None, &Marmite::default()).unwrap();
         assert_eq!(result.slug, "test_get_content_with_empty_file".to_string());
         fs::remove_file(path).unwrap();
     }

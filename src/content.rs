@@ -72,7 +72,7 @@ impl GroupedContent {
     }
 }
 
-#[derive(Debug, Deserialize, Clone, Serialize)]
+#[derive(Debug, Deserialize, Clone, Serialize, Default)]
 pub struct Content {
     pub title: String,
     pub description: Option<String>,
@@ -87,6 +87,122 @@ pub struct Content {
     pub banner_image: Option<String>,
     pub authors: Vec<String>,
     pub stream: Option<String>,
+    pub pinned: bool,
+}
+
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, Clone, Default)]
+pub struct ContentBuilder {
+    title: Option<String>,
+    description: Option<String>,
+    slug: Option<String>,
+    html: Option<String>,
+    tags: Option<Vec<String>>,
+    date: Option<NaiveDateTime>,
+    extra: Option<Value>,
+    links_to: Option<Vec<String>>,
+    back_links: Option<Vec<Content>>,
+    card_image: Option<String>,
+    banner_image: Option<String>,
+    authors: Option<Vec<String>>,
+    stream: Option<String>,
+    pinned: Option<bool>,
+}
+
+#[allow(dead_code)]
+impl ContentBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn title(mut self, title: String) -> Self {
+        self.title = Some(title);
+        self
+    }
+
+    pub fn description(mut self, description: String) -> Self {
+        self.description = Some(description);
+        self
+    }
+
+    pub fn slug(mut self, slug: String) -> Self {
+        self.slug = Some(slug);
+        self
+    }
+
+    pub fn html(mut self, html: String) -> Self {
+        self.html = Some(html);
+        self
+    }
+
+    pub fn tags(mut self, tags: Vec<String>) -> Self {
+        self.tags = Some(tags);
+        self
+    }
+
+    pub fn date(mut self, date: NaiveDateTime) -> Self {
+        self.date = Some(date);
+        self
+    }
+
+    pub fn extra(mut self, extra: Value) -> Self {
+        self.extra = Some(extra);
+        self
+    }
+
+    pub fn links_to(mut self, links_to: Vec<String>) -> Self {
+        self.links_to = Some(links_to);
+        self
+    }
+
+    pub fn back_links(mut self, back_links: Vec<Content>) -> Self {
+        self.back_links = Some(back_links);
+        self
+    }
+
+    pub fn card_image(mut self, card_image: String) -> Self {
+        self.card_image = Some(card_image);
+        self
+    }
+
+    pub fn banner_image(mut self, banner_image: String) -> Self {
+        self.banner_image = Some(banner_image);
+        self
+    }
+
+    pub fn authors(mut self, authors: Vec<String>) -> Self {
+        self.authors = Some(authors);
+        self
+    }
+
+    pub fn stream(mut self, stream: String) -> Self {
+        self.stream = Some(stream);
+        self
+    }
+
+    pub fn pinned(mut self, pinned: bool) -> Self {
+        self.pinned = Some(pinned);
+        self
+    }
+
+    pub fn build(self) -> Content {
+        Content {
+            title: self.title.unwrap_or_default(),
+            description: self.description,
+            slug: self.slug.unwrap_or_default(),
+            html: self.html.unwrap_or_default(),
+            tags: self.tags.unwrap_or_default(),
+            date: self.date,
+            extra: self.extra,
+            links_to: self.links_to,
+            back_links: self.back_links.unwrap_or_default(),
+            card_image: self.card_image,
+            banner_image: self.banner_image,
+            authors: self.authors.unwrap_or_default(),
+            stream: self.stream,
+            pinned: self.pinned.unwrap_or_default(),
+        }
+    }
 }
 
 /// Try to get the title from the frontmatter
@@ -178,7 +294,7 @@ pub fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
     tags
 }
 
-pub fn get_authors(frontmatter: &Frontmatter) -> Vec<String> {
+pub fn get_authors(frontmatter: &Frontmatter, default_author: Option<String>) -> Vec<String> {
     let mut authors: Vec<String> = match frontmatter.get("authors") {
         Some(Value::Array(authors)) => authors
             .iter()
@@ -207,6 +323,13 @@ pub fn get_authors(frontmatter: &Frontmatter) -> Vec<String> {
                 .collect(),
             _ => Vec::new(),
         };
+    }
+    if authors.is_empty() {
+        if let Some(default_author) = default_author {
+            if !default_author.is_empty() {
+                authors.push(default_author);
+            }
+        }
     }
     authors
 }
@@ -533,36 +656,16 @@ Second Title
 
     #[test]
     fn test_check_for_duplicate_slugs_no_duplicates() {
-        let post1 = Content {
-            title: "Title 1".to_string(),
-            description: None,
-            slug: "slug-1".to_string(),
-            html: String::new(),
-            tags: vec![],
-            date: None,
-            extra: None,
-            links_to: None,
-            back_links: vec![],
-            card_image: None,
-            banner_image: None,
-            authors: vec![],
-            stream: None,
-        };
-        let post2 = Content {
-            title: "Title 2".to_string(),
-            description: None,
-            slug: "slug-2".to_string(),
-            html: String::new(),
-            tags: vec![],
-            date: None,
-            extra: None,
-            links_to: None,
-            back_links: vec![],
-            card_image: None,
-            banner_image: None,
-            authors: vec![],
-            stream: None,
-        };
+        let post1: Content = ContentBuilder::new()
+            .title("Title 1".to_string())
+            .slug("slug-1".to_string())
+            .build();
+
+        let post2: Content = ContentBuilder::new()
+            .title("Title 2".to_string())
+            .slug("slug-2".to_string())
+            .build();
+
         let contents = vec![&post1, &post2];
         let result = check_for_duplicate_slugs(&contents);
         assert!(result.is_ok());
@@ -570,36 +673,16 @@ Second Title
 
     #[test]
     fn test_check_for_duplicate_slugs_with_duplicates() {
-        let post1 = Content {
-            title: "Title 1".to_string(),
-            description: None,
-            slug: "duplicate-slug".to_string(),
-            html: String::new(),
-            tags: vec![],
-            date: None,
-            extra: None,
-            links_to: None,
-            back_links: vec![],
-            card_image: None,
-            banner_image: None,
-            authors: vec![],
-            stream: None,
-        };
-        let post2 = Content {
-            title: "Title 2".to_string(),
-            description: None,
-            slug: "duplicate-slug".to_string(),
-            html: String::new(),
-            tags: vec![],
-            date: None,
-            extra: None,
-            links_to: None,
-            back_links: vec![],
-            card_image: None,
-            banner_image: None,
-            authors: vec![],
-            stream: None,
-        };
+        let post1: Content = ContentBuilder::new()
+            .title("Title 1".to_string())
+            .slug("duplicate-slug".to_string())
+            .build();
+
+        let post2: Content = ContentBuilder::new()
+            .title("Title 2".to_string())
+            .slug("duplicate-slug".to_string())
+            .build();
+
         let contents = vec![&post1, &post2];
 
         let result = check_for_duplicate_slugs(&contents);

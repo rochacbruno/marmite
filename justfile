@@ -15,14 +15,16 @@ fix:
 pedantic_fix:
     cargo clippy --fix -- -W clippy::pedantic
 
+watch:
+    cargo watch -c -q -x "run example ../site_example --debug"
+
 [doc('Bump version in Cargo.toml')]
 [group('maintainer')]
 bumpversion VERSION:
     #!/usr/bin/env bash
-    VERSION="{{ trim_start_match(VERSION, "v") }}"
-    shopt -s expand_aliases
     alias set-version='cargo set-version --package marmite --locked'
-    set-version "$VERSION" || cargo install -y cargo-edit@0.13.0 && set-version "$VERSION"
+    cargo set-version --version || cargo install -y cargo-edit@0.13.0
+    cargo set-version --package marmite --locked "$VERSION"
     cargo generate-lockfile
     just fmt
     git add ./Cargo.toml ./Cargo.lock
@@ -32,11 +34,8 @@ bumpversion VERSION:
 [group('maintainer')]
 pushtag TAG:
     #!/usr/bin/env bash
-    VERSION="{{ trim_start_match(TAG, "v") }}"
-    git push origin :refs/tags/$VERSION # delete the origin tag
-    git tag -d $VERSION # delete the local tag
-    git tag -a "$VERSION" -m "chore: push $VERSION"
-    git push origin $VERSION
+    git tag -a "$TAG" -m "chore: push $TAG"
+    git push --tags
 
 [doc('Publish a new version (bumpversion + pushtag)')]
 [group('maintainer')]
