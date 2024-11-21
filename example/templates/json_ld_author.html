@@ -1,0 +1,18 @@
+<script type="application/ld+json">
+    {
+      "@context": "https://schema.org/",
+      "@type": "Person",
+      "name": "{{author.name}}",
+      "url": "{{url_for(path=current_page, abs=True)}}",
+      {% if author.avatar -%}
+      "image": "{{url_for(path=author.avatar, abs=True)}}",
+      {%- endif %}
+      "sameAs": [
+        {%- if author.links -%}
+        {%- for link in author.links -%}
+        "{{link.1}}"{% if not loop.last %},{% endif %}
+        {%- endfor -%}
+        {%- endif -%}
+      ]  
+    }
+</script>

@@ -1,6 +1,6 @@
 name: My Blog
 # tagline: This blog is awesome
-# url: https://www.myblog.com/blog/
+url: https://www.myblog.com/blog/
 # footer: This is an example site generated with Marmite
 pagination: 6
 
@@ -17,6 +17,7 @@ pagination: 6
 card_image: ./media/og_image.jpg
 banner_image: media/og_image.jpg
 # logo_image: name of site logo image, relative to media or absolute
+logo_image: media/logo.png
 
 enable_search: true
 

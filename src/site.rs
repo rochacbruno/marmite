@@ -851,6 +851,7 @@ fn handle_404(
     }
     context.insert("title", &content.title);
     context.insert("content", &content);
+    context.insert("current_page", "404.html");
     render_html("content.html", "404.html", tera, &context, output_dir)?;
     Ok(())
 }

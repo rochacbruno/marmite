@@ -12,6 +12,10 @@ Just having a directory of markdown files and running a single command sounds re
 &mdash; Michael, marmite user.
 >>>
 
+<div style="padding-bottom:0;">
+Do you like colorschemes?:  <select name="colorscheme" class="colorscheme-toggle"><option value="default">default</option></select><span class="theme-toggle secondary" title="dark mode">&#9789;</span>
+</div>
+
 </div>
 
 </div>
