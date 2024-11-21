@@ -380,6 +380,7 @@ fn render_templates(
     global_context.insert("site_data", &site_data);
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
+    global_context.insert("language", &site_data.site.language);
     debug!("Global Context site: {:?}", &site_data.site);
 
     // Assuming every item on site_data.posts is a Content and has a stream field

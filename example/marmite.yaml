@@ -51,11 +51,10 @@ authors:
       - ["Github", "https://github.com/karlamagueta"]
 
 # extra data for template customization
-# extra:
-#  foo: bar
-
 extra:
   colorscheme_toggle: true
+  # colorscheme: gruvbox
+  # fediverse_verification: https://mastodon.social/@me
 
 # Example, to enable comments:
 # Go to: https://giscus.app/ and generate your config and replace below.

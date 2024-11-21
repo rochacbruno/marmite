@@ -12,6 +12,8 @@ pub struct Marmite {
     pub url: String,
     #[serde(default = "default_footer")]
     pub footer: String,
+    #[serde(default = "default_language")]
+    pub language: String,
     #[serde(default = "default_pagination")]
     pub pagination: usize,
     #[serde(default = "default_pages_title")]
@@ -189,4 +191,8 @@ fn default_menu() -> Option<Vec<(String, String)>> {
 
 fn default_search_title() -> String {
     "Search".to_string()
+}
+
+fn default_language() -> String {
+    "en".to_string()
 }

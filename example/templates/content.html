@@ -80,7 +80,7 @@
 <article>
   Back-links
   <ul>
-    {% for item in content.back_links | sort(attribute="date") | reverse | slice(end=10) %}
+    {% for item in content.back_links | slice(end=10) %}
     <li><a href="./{{item.slug }}.html">{{item.title}}</a></li>
     {% endfor %}
   </ul>
@@ -90,10 +90,12 @@
 {% if content.tags %}
   {# Only the first tag for now #}
   {% set tag = content.tags[0] %}
+  {% set related_content = site_data.tag.map[tag] %}
+  {% if related_content | length > 1 %}
   <article>
     Related {{tag}} content
     <ul>
-      {% for item in site_data.tag.map[tag] | sort(attribute="date") | reverse | slice(end=5) %}
+      {% for item in related_content | sort(attribute="date") | reverse | slice(end=5) %}
       {% if item.slug == content.slug or item in content.back_links %}
       {% continue %}
       {% endif %}
@@ -101,6 +103,7 @@
       {% endfor %}
     </ul>
   </article>
+  {% endif %}
 {% endif %}
 
 {% if site.extra.comments.source is defined and content.date %}
