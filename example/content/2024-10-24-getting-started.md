@@ -6,8 +6,9 @@ banner_image: media/getting_started.jpg
 authors: rochacbruno
 pinned: true
 ---
-Learn how to create your blog with Marmite in minutes, you can start with zero-config 
-and then customize gradually later.
+Learn how to create your blog with Marmite in minutes, you can start with zero-config  and then customize gradually later.
+
+Not convinced yet? Read [[why-to-use-marmite]]
 
 ## Quick Start
 
@@ -405,6 +406,9 @@ Markdown Header - `_markdown_header.md`
 
 Marmite comes with some colorschemes built-in, colorschemes are CSS style files that customizes colors, spacing etc.
 
+if you use other applications such
+as text editors, terminals and web apps you probably are familiarized with the colorschemes available.
+
 To choose a colorscheme add to `marmite.yaml`
 ```yaml
 extra:
@@ -413,6 +417,8 @@ extra:
 
 The built-in options are **catppuccin**, **dracula**, **github**, **gruvbox**, **iceberg**, **monokai**, **nord**, **one**, **solarized**, **typewriter**.
 
+Click to select a colorscheme: <select name="colorscheme" class="colorscheme-toggle"><option value="default">default</option></select><span class="theme-toggle secondary" title="dark mode">&#9789;</span>
+
 To create a custom colorscheme drop a `custom.css` on your input folder (the same where marmite.yaml is located)
 
 <details>
@@ -420,6 +426,7 @@ To create a custom colorscheme drop a `custom.css` on your input folder (the sam
 <summary> CLICK HERE to see an example colorscheme on <code>custom.css</code> </summary>
 
 
+`custom.css`
 ```css
 /* Marmite Nord Theme */
 /* picocss.com  */

@@ -4,11 +4,16 @@
     <article style="width: 250px;text-align: center;">
        <header style="text-align: center;"><a href="https://github.com/rochacbruno" target="_blank">rochacbruno</a></header>
        <a href="https://github.com/rochacbruno" target="_blank"><img src="https://avatars.githubusercontent.com/u/458654?v=4" style="width: 100px;"></a>
-       <footer style="text-align: center;">79 commits</footer>
+       <footer style="text-align: center;">112 commits</footer>
     </article>
     <article style="width: 250px;text-align: center;">
        <header style="text-align: center;"><a href="https://github.com/rdenadai" target="_blank">rdenadai</a></header>
        <a href="https://github.com/rdenadai" target="_blank"><img src="https://avatars.githubusercontent.com/u/917516?v=4" style="width: 100px;"></a>
+       <footer style="text-align: center;">8 commits</footer>
+    </article>
+    <article style="width: 250px;text-align: center;">
+       <header style="text-align: center;"><a href="https://github.com/karlamagueta" target="_blank">karlamagueta</a></header>
+       <a href="https://github.com/karlamagueta" target="_blank"><img src="https://avatars.githubusercontent.com/u/64945344?v=4" style="width: 100px;"></a>
        <footer style="text-align: center;">7 commits</footer>
     </article>
     <article style="width: 250px;text-align: center;">
@@ -17,14 +22,19 @@
        <footer style="text-align: center;">6 commits</footer>
     </article>
     <article style="width: 250px;text-align: center;">
-       <header style="text-align: center;"><a href="https://github.com/karlamagueta" target="_blank">karlamagueta</a></header>
-       <a href="https://github.com/karlamagueta" target="_blank"><img src="https://avatars.githubusercontent.com/u/64945344?v=4" style="width: 100px;"></a>
-       <footer style="text-align: center;">5 commits</footer>
-    </article>
-    <article style="width: 250px;text-align: center;">
        <header style="text-align: center;"><a href="https://github.com/SkySingh04" target="_blank">SkySingh04</a></header>
        <a href="https://github.com/SkySingh04" target="_blank"><img src="https://avatars.githubusercontent.com/u/114267538?v=4" style="width: 100px;"></a>
        <footer style="text-align: center;">2 commits</footer>
+    </article>
+    <article style="width: 250px;text-align: center;">
+       <header style="text-align: center;"><a href="https://github.com/apps/dependabot" target="_blank">dependabot[bot]</a></header>
+       <a href="https://github.com/apps/dependabot" target="_blank"><img src="https://avatars.githubusercontent.com/in/29110?v=4" style="width: 100px;"></a>
+       <footer style="text-align: center;">1 commits</footer>
+    </article>
+    <article style="width: 250px;text-align: center;">
+       <header style="text-align: center;"><a href="https://github.com/zuramai" target="_blank">zuramai</a></header>
+       <a href="https://github.com/zuramai" target="_blank"><img src="https://avatars.githubusercontent.com/u/45036724?v=4" style="width: 100px;"></a>
+       <footer style="text-align: center;">1 commits</footer>
     </article>
     <article style="width: 250px;text-align: center;">
        <header style="text-align: center;"><a href="https://github.com/lincolnthalles" target="_blank">lincolnthalles</a></header>
@@ -37,3 +47,4 @@
        <footer style="text-align: center;">1 commits</footer>
     </article>
 </div>
+

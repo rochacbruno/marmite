@@ -1,0 +1,10 @@
+<script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "{{site.name}}",
+      "url": "{{site.url}}"{% if site.logo_image %},
+      "logo": "{{url_for(path=site.logo_image, abs=True)}}"
+      {% endif %}
+    }
+</script>

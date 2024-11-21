@@ -1,4 +1,14 @@
 {% extends "base.html" %}
+
+{% block seo %}
+    {{ super()}}
+    {%- if author is defined -%}
+    {% include "json_ld_author.html" ignore missing%}
+    {%- else -%}
+    {% include "json_ld_index.html" ignore missing%}
+    {%- endif -%}
+{% endblock %}
+
 {% block main %}
 
 {%if title and current_page != "index.html" and author is not defined %}

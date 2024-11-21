@@ -53,6 +53,6 @@ with open(filename, "w") as file:
         )
         file.write("    </article>\n")
 
-    file.write("</div>\n")
+    file.write("</div>\n\n")
 
 print("contributors.md file has been generated!")

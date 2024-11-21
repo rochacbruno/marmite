@@ -1,0 +1,42 @@
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "{{url_for(path=current_page, abs=True)}}"
+    },
+    "url": "{{url_for(path=current_page, abs=True)}}",
+    "headline": "{{content.title}}",
+    {% if content.description -%}
+    "description": "{{content.description | trim_start_matches(pat="\n") | replace(from='"', to="") | truncate(length=140, end="...")}}",
+    {%- else -%}
+    "description": "{{ content.html | striptags | trim_start_matches(pat="\n") | trim_start_matches(pat=content.title) | truncate(length=140, end="...") }}",
+    {%- endif %}
+    {% if content.card_image -%}
+    "image": "{{url_for(path=content.card_image, abs=True)}}",  
+    {%- endif %}
+    {%if content.authors -%}
+        {%- set username = content.authors[0] -%}
+        {%- if site.authors and username in site.authors -%}
+        {%- set author = site.authors[username] -%}
+        {%- endif -%}
+    "author": {
+        "@type": "Person",
+        "name": "{{author.name | default(value=username)}}",
+        "url": "{{url_for(path='author-' ~ username ~ '.html', abs=True)}}",
+    },  
+    {%- endif %}
+    "publisher": {
+        "@type": "Organization",
+        "name": "{{site.name}}",
+        "logo": {
+            "@type": "ImageObject",
+            "url": "{{url_for(path=site.logo_image, abs=True)}}"
+        }
+    },
+    {% if content.date -%}
+    "datePublished": "{{content.date | date(format='%+')}}"
+    {%- endif %}
+}
+</script>
