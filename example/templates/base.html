@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{language}}">
 <head>
     <meta charset="UTF-8">
     <link rel="icon" type="image/x-icon" href="./static/favicon.ico">
@@ -18,7 +18,7 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{site.name}}">
     {% if site.extra.fediverse_verification %}
-    <linl rel="me" href="{{site.extra.fediverse_verification}}">
+    <link rel="me" href="{{site.extra.fediverse_verification}}">
     {% endif %}
     {% endblock %}
     {%- block head %}

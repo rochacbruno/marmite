@@ -277,6 +277,9 @@ menu:
   - ["Projects", "projects.html"]
   - ["Contact", "contact.html"]
   - ["Github", "https://github.com/rochacbruno"]
+extra:
+  colorscheme: gruvbox
+  fediverse_verification: https://mastodon.social/@me
 ```
 
 Other options are available and can be viewed on [repository](https://github.com/rochacbruno/marmite/blob/main/example/marmite.yaml)
