@@ -435,9 +435,6 @@ fn render_templates(
         "pages",
     )?;
 
-    // Render individual content-slug.html from content.html template
-    handle_content_pages(&site_data, &global_context, tera, output_dir)?;
-
     // Check and guarantees that page 404 was generated even if 404.md is removed
     handle_404(content_dir, &global_context, tera, output_dir)?;
 
@@ -452,6 +449,11 @@ fn render_templates(
     if !site_data.stream.map.contains_key("index") {
         handle_default_empty_site(&global_context, tera, output_dir)?;
     }
+
+    // Render individual content-slug.html from content.html template
+    // content is rendered as last step so it gives the user the ability to
+    // override some prebuilt pages like tags.html, authors.html, etc.
+    handle_content_pages(&site_data, &global_context, tera, output_dir)?;
 
     Ok(())
 }
@@ -728,20 +730,38 @@ fn handle_list_page(
 ) -> Result<(), String> {
     let per_page = &site_data.site.pagination;
     let total_content = all_content.len();
-    let total_pages = (total_content + per_page - 1) / per_page;
-    for page_num in 0..total_pages {
-        let mut context = global_context.clone();
+    let mut context = global_context.clone();
+    context.insert("title", title);
+    context.insert("per_page", &per_page);
+    context.insert("current_page", &format!("{}.html", output_filename));
 
+    // If all_content is empty, ensure we still generate an empty page
+    if total_content == 0 {
+        let empty_content_list: Vec<Content> = Vec::new();
+        context.insert("content_list", &empty_content_list);
+        context.insert("total_pages", &1);
+        context.insert("total_content", &1);
+        context.insert("current_page_number", &1);
+        render_html(
+            "custom_list.html,list.html",
+            &format!("{}.html", output_filename),
+            tera,
+            &context,
+            output_dir,
+        )?;
+        return Ok(());
+    }
+
+    let total_pages = (total_content + per_page - 1) / per_page;
+    context.insert("total_content", &total_content);
+    context.insert("total_pages", &total_pages);
+    for page_num in 0..total_pages {
         // Slice the content list for this page
         let page_content =
             &all_content[page_num * per_page..(page_num * per_page + per_page).min(total_content)];
 
         // Set up context for pagination
-        context.insert("title", title);
         context.insert("content_list", page_content);
-        context.insert("total_pages", &total_pages);
-        context.insert("per_page", &per_page);
-        context.insert("total_content", &total_content);
 
         // Determine filename and pagination values
         let (current_page_number, filename) = if page_num == 0 {
@@ -752,6 +772,17 @@ fn handle_list_page(
                 format!("{}-{}.html", output_filename, page_num + 1),
             )
         };
+
+        if current_page_number > 1 {
+            if title.is_empty() {
+                context.insert("title", &format!("Page - {current_page_number}"));
+            } else {
+                context.insert("title", &format!("{title} - {current_page_number}"));
+            }
+        } else {
+            context.insert("title", title);
+        }
+
         context.insert("current_page", &filename);
         context.insert("current_page_number", &current_page_number);
 
@@ -820,13 +851,17 @@ fn handle_content_pages(
                 &content.title, &content.date, &content.tags
             )
         );
-        render_html(
+
+        if let Err(e) = render_html(
             "content.html",
             &format!("{}.html", &content.slug),
             tera,
             &content_context,
             output_dir,
-        )?;
+        ) {
+            error!("Failed to render content {}: {}", &content.slug, e);
+            return Err(e);
+        }
     }
     Ok(())
 }

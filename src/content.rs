@@ -259,9 +259,7 @@ pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
             .and_then(|stem| stem.to_str())
             .unwrap()
             .to_string();
-        if let Some(date) = extract_date_from_filename(path) {
-            final_slug = final_slug.replace(&format!("{}-", date.date()), "");
-        }
+        final_slug = remove_date_from_filename(&final_slug);
     }
 
     if stream != "index" {
@@ -269,6 +267,14 @@ pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
     }
 
     final_slug
+}
+
+// Remove date prefix from filename `2024-01-01-myfile.md` -> `myfile.md`
+// Return filename if no date prefix is found
+fn remove_date_from_filename(filename: &str) -> String {
+    let date_prefix_re =
+        Regex::new(r"^\d{4}-\d{2}-\d{2}([-T]\d{2}([:-]\d{2})?([:-]\d{2})?)?-").unwrap();
+    date_prefix_re.replace(filename, "").to_string()
 }
 
 /// Capture `stream` from frontmatter
@@ -359,20 +365,28 @@ pub fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime>
 /// Tries to parse 3 different date formats or return Error.
 /// input: "2024-01-01 15:40:56" | "2024-01-01 15:40" | "2024-01-01"
 fn try_to_parse_date(input: &str) -> Result<NaiveDateTime, chrono::ParseError> {
-    NaiveDateTime::parse_from_str(input, "%Y-%m-%d %H:%M:%S")
+    // Fix input to match the format "2023-02-08 19:03:32" or "2023-02-08 19:03" or "2023-02-08"
+    // even if the input is on format 2020-01-19T21:05:12.984Z or 2020-01-19T21:05:12+0000
+    let re = Regex::new(r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?").unwrap();
+    let input = re.find(input).map_or("", |m| m.as_str());
+
+    input
+        .parse::<NaiveDateTime>()
+        .or_else(|_| NaiveDateTime::parse_from_str(input, "%Y-%m-%d %H:%M:%S"))
         .or_else(|_| NaiveDateTime::parse_from_str(input, "%Y-%m-%d %H:%M"))
         .or_else(|_| {
             NaiveDate::parse_from_str(input, "%Y-%m-%d").map(|d| d.and_hms_opt(0, 0, 0).unwrap())
         })
 }
 
-/// Use regex to extract date from filename `2024-01-01-myfile.md`
+/// Use regex to extract date from filename `2024-01-01-myfile.md` or `2024-01-01-15-30-myfile.md`
 fn extract_date_from_filename(path: &Path) -> Option<NaiveDateTime> {
-    let date_re = Regex::new(r"\d{4}-\d{2}-\d{2}").unwrap();
-    date_re
-        .find(path.to_str().unwrap())
-        .and_then(|m| NaiveDate::parse_from_str(m.as_str(), "%Y-%m-%d").ok())
-        .and_then(|dt| dt.and_hms_opt(0, 0, 0))
+    if let Some(filename) = path.file_stem().and_then(|stem| stem.to_str()) {
+        if let Ok(date) = try_to_parse_date(filename) {
+            return Some(date);
+        }
+    }
+    None
 }
 
 pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String> {
@@ -499,6 +513,25 @@ Second Title
 
         let slug = get_slug(&frontmatter, path);
         assert_eq!(slug, "myfile");
+    }
+
+    #[test]
+    fn test_get_slug_from_various_filenames() {
+        let frontmatter = Frontmatter::new();
+        let filenames = vec![
+            "my-file.md",
+            "2024-01-01-my-file.md",
+            "2024-01-01-15-30-my-file.md",
+            "2024-01-01-15-30-12-my-file.md",
+            "2024-01-01T15:30-my-file.md",
+            "2024-01-01T15:30:12-my-file.md",
+        ];
+
+        for filename in filenames {
+            let path = Path::new(filename);
+            let slug = get_slug(&frontmatter, path);
+            assert_eq!(slug, "my-file", "Failed for filename: {}", filename);
+        }
     }
 
     #[test]
@@ -749,5 +782,34 @@ Second Title
                 .and_hms_opt(0, 0, 0)
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn test_try_to_parse_date() {
+        let inputs = vec![
+            "2024-01-01",
+            "2024-01-01 15:40",
+            "2024-01-01-15:40",
+            "2024-01-01 15:40:56",
+            "2024-01-01-15:40:56",
+            "2024-01-01 15:40:56.123Z",
+            "2024-01-01T15:40",
+            "2024-01-01T15:40:56",
+            "2024-01-01T15:40:56.123Z",
+            "2024-01-01T15:40:56+0000",
+            "2024-01-01T15:40:56.123+0000",
+            "2024-01-01T15:40:56.123456+0000",
+            "2024-01-01T15:40:56.123456Z",
+            "2024-01-01T15:40:56.123456789+0000",
+            "2024-01-01T15:40:56.123456789Z",
+            "2020-01-19T21:05:12.984Z",
+            "2020-01-19T21:05:12+0000",
+            "2024-11-22 20:29:53.211984268 +00:00",
+        ];
+
+        for input in inputs {
+            let date = try_to_parse_date(input);
+            assert!(date.is_ok(), "Failed for input: {}", input);
+        }
     }
 }
