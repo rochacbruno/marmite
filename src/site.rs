@@ -71,6 +71,7 @@ struct BuildInfo {
     posts: usize,
     pages: usize,
     generated_at: String,
+    elapsed_time: f64,
 }
 
 pub fn generate(
@@ -107,6 +108,8 @@ pub fn generate(
 
     // Function to trigger site regeneration
     let rebuild_site = {
+        let start_time = std::time::Instant::now();
+
         let content_dir = content_dir.clone();
         let output_folder = Arc::clone(output_folder);
         let input_folder = input_folder.to_path_buf();
@@ -151,8 +154,9 @@ pub fn generate(
                 generate_search_index(&site_data, &output_folder);
             }
 
-            write_build_info(&output_path, &site_data);
-
+            let end_time = start_time.elapsed().as_secs_f64();
+            write_build_info(&output_path, &site_data, &end_time);
+            debug!("Site generated in {:.2}s", end_time);
             info!("Site generated at: {}/", output_folder.display());
         }
     };
