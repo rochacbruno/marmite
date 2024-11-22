@@ -297,7 +297,9 @@ pub fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
         Some(Value::String(tags)) => tags.split(',').map(str::trim).map(String::from).collect(),
         _ => Vec::new(),
     };
-    tags
+
+    // Remove empty tags
+    tags.iter().filter(|tag| !tag.is_empty()).cloned().collect()
 }
 
 pub fn get_authors(frontmatter: &Frontmatter, default_author: Option<String>) -> Vec<String> {
@@ -574,6 +576,15 @@ Second Title
     #[test]
     fn test_get_tags_with_no_tags() {
         let frontmatter = Frontmatter::new();
+
+        let tags = get_tags(&frontmatter);
+        assert!(tags.is_empty());
+    }
+
+    #[test]
+    fn test_get_tags_with_empty_str() {
+        let mut frontmatter = Frontmatter::new();
+        frontmatter.insert("tags".to_string(), Value::String("".to_string()));
 
         let tags = get_tags(&frontmatter);
         assert!(tags.is_empty());

@@ -700,12 +700,17 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
     }
 }
 
-fn write_build_info(output_path: &Path, site_data: &std::sync::MutexGuard<'_, Data>) {
+fn write_build_info(
+    output_path: &Path,
+    site_data: &std::sync::MutexGuard<'_, Data>,
+    end_time: &f64,
+) {
     let build_info = BuildInfo {
         marmite_version: env!("CARGO_PKG_VERSION").to_string(),
         posts: site_data.posts.len(),
         pages: site_data.pages.len(),
         generated_at: chrono::Local::now().to_string(),
+        elapsed_time: *end_time,
     };
 
     let build_info_path = output_path.join("marmite.json");
