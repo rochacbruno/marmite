@@ -71,6 +71,7 @@ struct BuildInfo {
     posts: usize,
     pages: usize,
     generated_at: String,
+    elapsed_time: f64,
 }
 
 pub fn generate(
@@ -107,6 +108,8 @@ pub fn generate(
 
     // Function to trigger site regeneration
     let rebuild_site = {
+        let start_time = std::time::Instant::now();
+
         let content_dir = content_dir.clone();
         let output_folder = Arc::clone(output_folder);
         let input_folder = input_folder.to_path_buf();
@@ -151,8 +154,9 @@ pub fn generate(
                 generate_search_index(&site_data, &output_folder);
             }
 
-            write_build_info(&output_path, &site_data);
-
+            let end_time = start_time.elapsed().as_secs_f64();
+            write_build_info(&output_path, &site_data, &end_time);
+            debug!("Site generated in {:.2}s", end_time);
             info!("Site generated at: {}/", output_folder.display());
         }
     };
@@ -273,12 +277,12 @@ fn detect_slug_collision(site_data: &Data) {
             .collect::<Vec<_>>(),
     ) {
         error!(
-            "Error: Duplicate slug found: '{}' \
-            - try setting any of `title`, `slug` as a unique text, \
-            or leave both empty so filename will be assumed.",
+            "Duplicate slug found: '{}' \
+            - try setting `title` or `slug` as a unique text, \
+            or leave both empty so filename will be assumed. \
+            - The latest content rendered will overwrite the previous one.",
             duplicate
         );
-        process::exit(1);
     }
 }
 
@@ -435,9 +439,6 @@ fn render_templates(
         "pages",
     )?;
 
-    // Render individual content-slug.html from content.html template
-    handle_content_pages(&site_data, &global_context, tera, output_dir)?;
-
     // Check and guarantees that page 404 was generated even if 404.md is removed
     handle_404(content_dir, &global_context, tera, output_dir)?;
 
@@ -452,6 +453,11 @@ fn render_templates(
     if !site_data.stream.map.contains_key("index") {
         handle_default_empty_site(&global_context, tera, output_dir)?;
     }
+
+    // Render individual content-slug.html from content.html template
+    // content is rendered as last step so it gives the user the ability to
+    // override some prebuilt pages like tags.html, authors.html, etc.
+    handle_content_pages(&site_data, &global_context, tera, output_dir)?;
 
     Ok(())
 }
@@ -698,12 +704,17 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
     }
 }
 
-fn write_build_info(output_path: &Path, site_data: &std::sync::MutexGuard<'_, Data>) {
+fn write_build_info(
+    output_path: &Path,
+    site_data: &std::sync::MutexGuard<'_, Data>,
+    end_time: &f64,
+) {
     let build_info = BuildInfo {
         marmite_version: env!("CARGO_PKG_VERSION").to_string(),
         posts: site_data.posts.len(),
         pages: site_data.pages.len(),
         generated_at: chrono::Local::now().to_string(),
+        elapsed_time: *end_time,
     };
 
     let build_info_path = output_path.join("marmite.json");
@@ -728,20 +739,38 @@ fn handle_list_page(
 ) -> Result<(), String> {
     let per_page = &site_data.site.pagination;
     let total_content = all_content.len();
-    let total_pages = (total_content + per_page - 1) / per_page;
-    for page_num in 0..total_pages {
-        let mut context = global_context.clone();
+    let mut context = global_context.clone();
+    context.insert("title", title);
+    context.insert("per_page", &per_page);
+    context.insert("current_page", &format!("{}.html", output_filename));
 
+    // If all_content is empty, ensure we still generate an empty page
+    if total_content == 0 {
+        let empty_content_list: Vec<Content> = Vec::new();
+        context.insert("content_list", &empty_content_list);
+        context.insert("total_pages", &1);
+        context.insert("total_content", &1);
+        context.insert("current_page_number", &1);
+        render_html(
+            "custom_list.html,list.html",
+            &format!("{}.html", output_filename),
+            tera,
+            &context,
+            output_dir,
+        )?;
+        return Ok(());
+    }
+
+    let total_pages = (total_content + per_page - 1) / per_page;
+    context.insert("total_content", &total_content);
+    context.insert("total_pages", &total_pages);
+    for page_num in 0..total_pages {
         // Slice the content list for this page
         let page_content =
             &all_content[page_num * per_page..(page_num * per_page + per_page).min(total_content)];
 
         // Set up context for pagination
-        context.insert("title", title);
         context.insert("content_list", page_content);
-        context.insert("total_pages", &total_pages);
-        context.insert("per_page", &per_page);
-        context.insert("total_content", &total_content);
 
         // Determine filename and pagination values
         let (current_page_number, filename) = if page_num == 0 {
@@ -752,6 +781,17 @@ fn handle_list_page(
                 format!("{}-{}.html", output_filename, page_num + 1),
             )
         };
+
+        if current_page_number > 1 {
+            if title.is_empty() {
+                context.insert("title", &format!("Page - {current_page_number}"));
+            } else {
+                context.insert("title", &format!("{title} - {current_page_number}"));
+            }
+        } else {
+            context.insert("title", title);
+        }
+
         context.insert("current_page", &filename);
         context.insert("current_page_number", &current_page_number);
 
@@ -820,13 +860,17 @@ fn handle_content_pages(
                 &content.title, &content.date, &content.tags
             )
         );
-        render_html(
+
+        if let Err(e) = render_html(
             "content.html",
             &format!("{}.html", &content.slug),
             tera,
             &content_context,
             output_dir,
-        )?;
+        ) {
+            error!("Failed to render content {}: {}", &content.slug, e);
+            return Err(e);
+        }
     }
     Ok(())
 }
