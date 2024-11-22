@@ -277,12 +277,12 @@ fn detect_slug_collision(site_data: &Data) {
             .collect::<Vec<_>>(),
     ) {
         error!(
-            "Error: Duplicate slug found: '{}' \
-            - try setting any of `title`, `slug` as a unique text, \
-            or leave both empty so filename will be assumed.",
+            "Duplicate slug found: '{}' \
+            - try setting `title` or `slug` as a unique text, \
+            or leave both empty so filename will be assumed. \
+            - The latest content rendered will overwrite the previous one.",
             duplicate
         );
-        process::exit(1);
     }
 }
 
