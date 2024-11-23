@@ -186,10 +186,16 @@ details summary::after {
   list-style: none;
   display: inline-block;
   color: var( --pico-color-slate-750);
+  border: 1px solid transparent;
 }
 
 .content-tags li a {
   color: var(--pico-primary);
+}
+
+.content-tags li:hover {
+  background-color: var(--pico-card-background-color);
+  border: 1px solid var(--pico-color-slate-750);
 }
 
 .content-tags li::before {
