@@ -17,7 +17,7 @@ mod tera_functions;
 
 fn main() {
     let args = cli::Cli::parse();
-    let input_folder = args.input_folder;
+    let input_folder = Arc::new(args.input_folder);
     let output_folder = Arc::new(args.output_folder);
     let serve = args.serve;
     let watch = args.watch;
@@ -28,9 +28,9 @@ fn main() {
     }
 
     let config_path = if args.config.starts_with('.') || args.config.starts_with('/') {
-        PathBuf::new().join(args.config)
+        Arc::new(PathBuf::new().join(args.config))
     } else {
-        input_folder.join(args.config)
+        Arc::new(input_folder.join(args.config))
     };
 
     let env = Env::default().default_filter_or(match verbose {
@@ -75,6 +75,6 @@ fn main() {
     // Serve the site if the flag was provided
     if serve && !watch {
         info!("Starting built-in HTTP server...");
-        server::start(bind_address, &output_folder);
+        server::start(bind_address, &Arc::clone(&output_folder));
     }
 }

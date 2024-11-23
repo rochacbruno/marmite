@@ -53,15 +53,10 @@ impl Data {
     pub fn sort_all(&mut self) {
         self.posts.sort_by(|a, b| b.date.cmp(&a.date));
         self.pages.sort_by(|a, b| b.title.cmp(&a.title));
-    }
-
-    pub fn clear_all(&mut self) {
-        self.posts.clear();
-        self.pages.clear();
-        self.tag.map.clear();
-        self.archive.map.clear();
-        self.author.map.clear();
-        self.stream.map.clear();
+        self.tag.sort_all();
+        self.archive.sort_all();
+        self.author.sort_all();
+        self.stream.sort_all();
     }
 }
 
@@ -75,105 +70,93 @@ struct BuildInfo {
 }
 
 pub fn generate(
-    config_path: &std::path::PathBuf,
-    input_folder: &std::path::Path,
+    config_path: &Arc<std::path::PathBuf>,
+    input_folder: &Arc<std::path::PathBuf>,
     output_folder: &Arc<std::path::PathBuf>,
-    watch: bool, // New parameter for watching,
-    serve: bool, // Is running on server mode
+    watch: bool,
+    serve: bool,
     bind_address: &str,
 ) {
-    let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
-        info!(
-            "Unable to read '{}', assuming defaults.: {}",
-            &config_path.display(),
-            e
-        );
-        String::new()
-    });
-    if config_str.is_empty() {
-        info!("Config loaded from: defaults");
-    } else {
-        info!("Config loaded from: {}", config_path.display());
-    }
-    let site_data = Arc::new(Mutex::new(Data::new(&config_str)));
+    let moved_input_folder = Arc::clone(input_folder);
+    let moved_output_folder = Arc::clone(output_folder);
+    let moved_config_path = Arc::clone(config_path);
 
-    // Define the content directory
-    let content_dir = {
-        let site_data = site_data.lock().unwrap();
-        Some(input_folder.join(site_data.site.content_path.clone()))
-    }
-    .filter(|path| path.is_dir()) // Take if exists
-    .unwrap_or_else(|| input_folder.to_path_buf());
-    // Fallback to input_folder if not
-
-    // Function to trigger site regeneration
-    let rebuild_site = {
-        let start_time = std::time::Instant::now();
-
-        let content_dir = content_dir.clone();
-        let output_folder = Arc::clone(output_folder);
-        let input_folder = input_folder.to_path_buf();
-        let site_data = site_data.clone();
-
+    let rebuild = {
         move || {
+            let start_time = std::time::Instant::now();
+
+            let config_str = fs::read_to_string(moved_config_path.as_path()).unwrap_or_else(|e| {
+                info!(
+                    "Unable to read '{}', assuming defaults.: {}",
+                    &moved_config_path.display(),
+                    e
+                );
+                String::new()
+            });
+            if config_str.is_empty() {
+                info!("Config loaded from: defaults");
+            } else {
+                info!("Config loaded from: {}", moved_config_path.display());
+            }
+
+            let site_data = Arc::new(Mutex::new(Data::new(&config_str)));
+            let content_dir = {
+                let site_data = site_data.lock().unwrap();
+                Some(moved_input_folder.join(site_data.site.content_path.clone()))
+            }
+            .filter(|path| path.is_dir()) // Take if exists
+            .unwrap_or_else(|| moved_input_folder.to_path_buf()); // Fallback to input_folder if not
+
             let mut site_data = site_data.lock().unwrap();
-            // cleanup before rebuilding, otherwise we get duplicated content
-            site_data.clear_all();
             let fragments = collect_fragments(&content_dir);
             collect_content(&content_dir, &mut site_data, &fragments);
-
-            // Detect slug collision
-            detect_slug_collision(&site_data);
-
-            // Feed back_links
+            site_data.sort_all();
+            detect_slug_collision(&site_data); // Detect slug collision and warn user
             collect_back_links(&mut site_data);
 
-            site_data.sort_all();
-
-            // Create the output directory
             let site_path = site_data.site.site_path.clone();
-            let output_path = output_folder.join(site_path);
+            let output_path = moved_output_folder.join(site_path);
             if let Err(e) = fs::create_dir_all(&output_path) {
                 error!("Unable to create output directory: {}", e);
                 process::exit(1);
             }
 
-            // Initialize Tera templates
-            let tera = initialize_tera(&input_folder, &site_data);
-
-            // Render templates
+            let tera = initialize_tera(&moved_input_folder, &site_data);
             if let Err(e) = render_templates(&content_dir, &site_data, &tera, &output_path) {
                 error!("Failed to render templates: {}", e);
                 process::exit(1);
             }
 
-            // Copy static folder if present
-            handle_static_artifacts(&input_folder, &site_data, &output_folder, &content_dir);
+            handle_static_artifacts(
+                &moved_input_folder,
+                &site_data,
+                &moved_output_folder,
+                &content_dir,
+            );
 
             if site_data.site.enable_search {
-                generate_search_index(&site_data, &output_folder);
+                generate_search_index(&site_data, &moved_output_folder);
             }
 
             let end_time = start_time.elapsed().as_secs_f64();
-            write_build_info(&output_path, &site_data, &end_time);
+            write_build_info(&output_path, &site_data, end_time);
             debug!("Site generated in {:.2}s", end_time);
-            info!("Site generated at: {}/", output_folder.display());
+            info!("Site generated at: {}/", moved_output_folder.display());
         }
     };
 
     // Initial site generation
-    rebuild_site();
+    rebuild();
 
-    // If watch flag is enabled, start hotwatch
     if watch {
         let mut hotwatch = Hotwatch::new().expect("Failed to initialize hotwatch!");
-
+        let watch_folder = Arc::clone(input_folder).as_path().to_path_buf();
         // Watch the input folder for changes
         hotwatch
-            .watch(input_folder, move |event: Event| match event.kind {
+            .watch(watch_folder, move |event: Event| match event.kind {
                 EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
                     info!("Change detected. Rebuilding site...");
-                    rebuild_site();
+                    rebuild();
                 }
                 _ => {}
             })
@@ -184,7 +167,7 @@ pub fn generate(
         // Keep the thread alive for watching
         if serve {
             info!("Starting built-in HTTP server...");
-            server::start(bind_address, output_folder);
+            server::start(bind_address, &Arc::clone(output_folder));
         } else {
             loop {
                 std::thread::sleep(std::time::Duration::from_secs(1));
@@ -707,14 +690,14 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
 fn write_build_info(
     output_path: &Path,
     site_data: &std::sync::MutexGuard<'_, Data>,
-    end_time: &f64,
+    end_time: f64,
 ) {
     let build_info = BuildInfo {
         marmite_version: env!("CARGO_PKG_VERSION").to_string(),
         posts: site_data.posts.len(),
         pages: site_data.pages.len(),
         generated_at: chrono::Local::now().to_string(),
-        elapsed_time: *end_time,
+        elapsed_time: end_time,
     };
 
     let build_info_path = output_path.join("marmite.json");
@@ -742,7 +725,7 @@ fn handle_list_page(
     let mut context = global_context.clone();
     context.insert("title", title);
     context.insert("per_page", &per_page);
-    context.insert("current_page", &format!("{}.html", output_filename));
+    context.insert("current_page", &format!("{output_filename}.html"));
 
     // If all_content is empty, ensure we still generate an empty page
     if total_content == 0 {
@@ -753,7 +736,7 @@ fn handle_list_page(
         context.insert("current_page_number", &1);
         render_html(
             "custom_list.html,list.html",
-            &format!("{}.html", output_filename),
+            &format!("{output_filename}.html"),
             tera,
             &context,
             output_dir,
