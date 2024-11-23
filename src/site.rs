@@ -58,15 +58,6 @@ impl Data {
         self.author.sort_all();
         self.stream.sort_all();
     }
-
-    pub fn clear_all(&mut self) {
-        self.posts.clear();
-        self.pages.clear();
-        self.tag.map.clear();
-        self.archive.map.clear();
-        self.author.map.clear();
-        self.stream.map.clear();
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -117,7 +108,6 @@ pub fn generate(
             .unwrap_or_else(|| moved_input_folder.to_path_buf()); // Fallback to input_folder if not
 
             let mut site_data = site_data.lock().unwrap();
-            site_data.clear_all();
             let fragments = collect_fragments(&content_dir);
             collect_content(&content_dir, &mut site_data, &fragments);
             site_data.sort_all();
@@ -149,7 +139,7 @@ pub fn generate(
             }
 
             let end_time = start_time.elapsed().as_secs_f64();
-            write_build_info(&output_path, &site_data, &end_time);
+            write_build_info(&output_path, &site_data, end_time);
             debug!("Site generated in {:.2}s", end_time);
             info!("Site generated at: {}/", moved_output_folder.display());
         }
@@ -177,7 +167,7 @@ pub fn generate(
         // Keep the thread alive for watching
         if serve {
             info!("Starting built-in HTTP server...");
-            server::start(bind_address, Arc::clone(output_folder));
+            server::start(bind_address, &Arc::clone(output_folder));
         } else {
             loop {
                 std::thread::sleep(std::time::Duration::from_secs(1));
@@ -700,14 +690,14 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
 fn write_build_info(
     output_path: &Path,
     site_data: &std::sync::MutexGuard<'_, Data>,
-    end_time: &f64,
+    end_time: f64,
 ) {
     let build_info = BuildInfo {
         marmite_version: env!("CARGO_PKG_VERSION").to_string(),
         posts: site_data.posts.len(),
         pages: site_data.pages.len(),
         generated_at: chrono::Local::now().to_string(),
-        elapsed_time: *end_time,
+        elapsed_time: end_time,
     };
 
     let build_info_path = output_path.join("marmite.json");
@@ -735,7 +725,7 @@ fn handle_list_page(
     let mut context = global_context.clone();
     context.insert("title", title);
     context.insert("per_page", &per_page);
-    context.insert("current_page", &format!("{}.html", output_filename));
+    context.insert("current_page", &format!("{output_filename}.html"));
 
     // If all_content is empty, ensure we still generate an empty page
     if total_content == 0 {
@@ -746,7 +736,7 @@ fn handle_list_page(
         context.insert("current_page_number", &1);
         render_html(
             "custom_list.html,list.html",
-            &format!("{}.html", output_filename),
+            &format!("{output_filename}.html"),
             tera,
             &context,
             output_dir,

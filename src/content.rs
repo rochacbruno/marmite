@@ -525,7 +525,7 @@ Second Title
         for filename in filenames {
             let path = Path::new(filename);
             let slug = get_slug(&frontmatter, path);
-            assert_eq!(slug, "my-file", "Failed for filename: {}", filename);
+            assert_eq!(slug, "my-file", "Failed for filename: {filename}");
         }
     }
 
@@ -577,7 +577,7 @@ Second Title
     #[test]
     fn test_get_tags_with_empty_str() {
         let mut frontmatter = Frontmatter::new();
-        frontmatter.insert("tags".to_string(), Value::String("".to_string()));
+        frontmatter.insert("tags".to_string(), Value::String(String::new()));
 
         let tags = get_tags(&frontmatter);
         assert!(tags.is_empty());
@@ -813,7 +813,7 @@ Second Title
 
         for input in inputs {
             let date = try_to_parse_date(input);
-            assert!(date.is_ok(), "Failed for input: {}", input);
+            assert!(date.is_ok(), "Failed for input: {input}");
         }
     }
 }

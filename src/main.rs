@@ -75,6 +75,6 @@ fn main() {
     // Serve the site if the flag was provided
     if serve && !watch {
         info!("Starting built-in HTTP server...");
-        server::start(bind_address, Arc::clone(&output_folder));
+        server::start(bind_address, &Arc::clone(&output_folder));
     }
 }

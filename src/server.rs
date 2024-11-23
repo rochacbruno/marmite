@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::{fs::File, path::Path};
 use tiny_http::{Header, Response, Server};
 
-pub fn start(bind_address: &str, output_folder: Arc<PathBuf>) {
+pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>) {
     let server = Server::http(bind_address).unwrap();
 
     info!(
