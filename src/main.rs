@@ -1,6 +1,6 @@
 use clap::Parser;
 use env_logger::{Builder, Env};
-use log::{error, info};
+use log::{error, info, warn};
 use std::{path::PathBuf, sync::Arc};
 
 mod cli;
@@ -34,13 +34,17 @@ fn main() {
     };
 
     let env = Env::default().default_filter_or(match verbose {
-        0 => "warn",
-        1 => "info",
-        2 => "debug",
-        3..=u8::MAX => "trace",
+        0 => "marmite=warn",
+        1 => "marmite=info",
+        2 => "marmite=debug",
+        3 => "marmite=trace",
+        4..=u8::MAX => "trace",
     });
     if let Err(e) = Builder::from_env(env).try_init() {
         error!("Logger already initialized: {}", e);
+    }
+    if args.debug {
+        warn!("--debug flag is deprecated, use -vv for debug messages");
     }
 
     // Handle `init_templates` flag

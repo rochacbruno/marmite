@@ -16,7 +16,7 @@ pedantic_fix:
     cargo clippy --fix -- -W clippy::pedantic
 
 watch:
-    cargo watch -c -q -x "run example ../site_example --debug"
+    cargo watch -c -q -x "run example ../site_example -vvvv"
 
 [doc('Bump version in Cargo.toml')]
 [group('maintainer')]

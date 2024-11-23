@@ -21,7 +21,7 @@ pub struct Cli {
     pub watch: bool,
 
     /// Address to bind the server
-    #[arg(long, default_value = "localhost:8000")]
+    #[arg(long, default_value = "0.0.0.0:8000")]
     pub bind: String,
 
     /// Path to custom configuration file
@@ -45,7 +45,9 @@ pub struct Cli {
     #[arg(long)]
     pub generate_config: bool,
 
-    /// Verbosity level (-v, -vv, -vvv)
+    /// Verbosity level (0-4)
+    /// [default: 0 warn]
+    /// options: -v: info,-vv: debug,-vvv: trace,-vvvv: trace all
     #[arg(short, long, action = clap::ArgAction::Count)]
     pub verbose: u8,
 }

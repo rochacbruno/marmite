@@ -81,7 +81,7 @@ jobs:
           python .github/contributors.py marmitesite/content/contributors.md
 
       - name: Build site 🏗️
-        run: marmite marmitesite site -vv
+        run: marmite marmitesite site -vvvv
 
       - name: List files on site 📂
         run: ls -R site
