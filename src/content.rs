@@ -36,35 +36,28 @@ impl GroupedContent {
         self.map.entry(key)
     }
 
-    /// Sort tag map by number of contents
-    /// Sort archive map by date
-    /// Sort author map by author name
-    /// Sort stream map by stream name
+    pub fn sort_all(&mut self) {
+        for contents in self.map.values_mut() {
+            contents.sort_by(|a, b| b.date.cmp(&a.date));
+        }
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (&String, Vec<Content>)> {
-        let mut vec = Vec::new();
+        // Assuming the content is already sorted by date on a previous call of .sort_all
+        let mut vec: Vec<(&String, Vec<Content>)> =
+            self.map.iter().map(|(k, v)| (k, v.clone())).collect();
+
         match self.kind {
             Kind::Tag => {
-                for (tag, contents) in &self.map {
-                    let mut contents = contents.clone();
-                    contents.sort_by(|a, b| b.date.cmp(&a.date));
-                    vec.push((tag, contents));
-                }
+                // sort by number of contents
                 vec.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
             }
             Kind::Archive => {
-                for (text, contents) in &self.map {
-                    let mut contents = contents.clone();
-                    contents.sort_by(|a, b| b.date.cmp(&a.date));
-                    vec.push((text, contents));
-                }
+                // sort by year, newest first
                 vec.sort_by(|a, b| b.0.cmp(a.0));
             }
             Kind::Author | Kind::Stream => {
-                for (text, contents) in &self.map {
-                    let mut contents = contents.clone();
-                    contents.sort_by(|a, b| b.date.cmp(&a.date));
-                    vec.push((text, contents));
-                }
+                // sort alphabetically
                 vec.sort_by(|a, b| a.0.cmp(b.0));
             }
         }

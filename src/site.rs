@@ -53,15 +53,10 @@ impl Data {
     pub fn sort_all(&mut self) {
         self.posts.sort_by(|a, b| b.date.cmp(&a.date));
         self.pages.sort_by(|a, b| b.title.cmp(&a.title));
-    }
-
-    pub fn clear_all(&mut self) {
-        self.posts.clear();
-        self.pages.clear();
-        self.tag.map.clear();
-        self.archive.map.clear();
-        self.author.map.clear();
-        self.stream.map.clear();
+        self.tag.sort_all();
+        self.archive.sort_all();
+        self.author.sort_all();
+        self.stream.sort_all();
     }
 }
 
@@ -78,8 +73,8 @@ pub fn generate(
     config_path: &std::path::PathBuf,
     input_folder: &std::path::Path,
     output_folder: &Arc<std::path::PathBuf>,
-    watch: bool, // New parameter for watching,
-    serve: bool, // Is running on server mode
+    watch: bool,
+    serve: bool,
     bind_address: &str,
 ) {
     let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
@@ -95,42 +90,27 @@ pub fn generate(
     } else {
         info!("Config loaded from: {}", config_path.display());
     }
-    let site_data = Arc::new(Mutex::new(Data::new(&config_str)));
 
-    // Define the content directory
-    let content_dir = {
-        let site_data = site_data.lock().unwrap();
-        Some(input_folder.join(site_data.site.content_path.clone()))
-    }
-    .filter(|path| path.is_dir()) // Take if exists
-    .unwrap_or_else(|| input_folder.to_path_buf());
-    // Fallback to input_folder if not
-
-    // Function to trigger site regeneration
-    let rebuild_site = {
+    let rebuild = {
         let start_time = std::time::Instant::now();
-
-        let content_dir = content_dir.clone();
+        let site_data = Arc::new(Mutex::new(Data::new(&config_str)));
+        let content_dir = {
+            let site_data = site_data.lock().unwrap();
+            Some(input_folder.join(site_data.site.content_path.clone()))
+        }
+        .filter(|path| path.is_dir()) // Take if exists
+        .unwrap_or_else(|| input_folder.to_path_buf()); // Fallback to input_folder if not
         let output_folder = Arc::clone(output_folder);
         let input_folder = input_folder.to_path_buf();
-        let site_data = site_data.clone();
 
         move || {
             let mut site_data = site_data.lock().unwrap();
-            // cleanup before rebuilding, otherwise we get duplicated content
-            site_data.clear_all();
             let fragments = collect_fragments(&content_dir);
             collect_content(&content_dir, &mut site_data, &fragments);
-
-            // Detect slug collision
-            detect_slug_collision(&site_data);
-
-            // Feed back_links
+            site_data.sort_all();
+            detect_slug_collision(&site_data); // Detect slug collision and warn user
             collect_back_links(&mut site_data);
 
-            site_data.sort_all();
-
-            // Create the output directory
             let site_path = site_data.site.site_path.clone();
             let output_path = output_folder.join(site_path);
             if let Err(e) = fs::create_dir_all(&output_path) {
@@ -138,16 +118,12 @@ pub fn generate(
                 process::exit(1);
             }
 
-            // Initialize Tera templates
             let tera = initialize_tera(&input_folder, &site_data);
-
-            // Render templates
             if let Err(e) = render_templates(&content_dir, &site_data, &tera, &output_path) {
                 error!("Failed to render templates: {}", e);
                 process::exit(1);
             }
 
-            // Copy static folder if present
             handle_static_artifacts(&input_folder, &site_data, &output_folder, &content_dir);
 
             if site_data.site.enable_search {
@@ -162,7 +138,7 @@ pub fn generate(
     };
 
     // Initial site generation
-    rebuild_site();
+    rebuild();
 
     // If watch flag is enabled, start hotwatch
     if watch {
@@ -173,7 +149,7 @@ pub fn generate(
             .watch(input_folder, move |event: Event| match event.kind {
                 EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
                     info!("Change detected. Rebuilding site...");
-                    rebuild_site();
+                    rebuild();
                 }
                 _ => {}
             })
