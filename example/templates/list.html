@@ -61,7 +61,8 @@
     </article>
 </div>
 {% endif %}
-<div class="content-list">
+<div class="content-list {%if sidebar is defined %}content-list-with-sidebar{% endif %}">
+    <div class="left">
     {%- for content in content_list %}
     <article class="content-list-item">
         <div class="content-title-wrapper">
@@ -90,15 +91,21 @@
         {%- endif %}
     </article>
     {%- else -%}
-    <article class="content-list-item">
+    <article class="content-list-item left">
         <h2 class="content-title">No content found</h2>
         <p class="content-excerpt">
             Add some markdown content and generate the site. &rarr; <a target="_blank" href="https://rochacbruno.github.io/marmite/getting-started.html">Getting Started</a>
         </p>
     </article>
     {%- endfor %}
+    {% if total_pages is defined and total_pages > 1 %}
+    {% include "pagination.html" ignore missing %}
+    {% endif %}
+    </div>
+    {%- if sidebar is defined %}
+    <div class="right">
+        <article>{{sidebar}}</article>
+    </div>
+    {%- endif %}
 </div>
-{% if total_pages is defined and total_pages > 1 %}
-{% include "pagination.html" ignore missing %}
-{% endif %}
 {% endblock %}

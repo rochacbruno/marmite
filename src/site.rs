@@ -122,7 +122,9 @@ pub fn generate(
             }
 
             let tera = initialize_tera(&moved_input_folder, &site_data);
-            if let Err(e) = render_templates(&content_dir, &site_data, &tera, &output_path) {
+            if let Err(e) =
+                render_templates(&content_dir, &site_data, &tera, &output_path, &fragments)
+            {
                 error!("Failed to render templates: {}", e);
                 process::exit(1);
             }
@@ -177,6 +179,7 @@ pub fn generate(
 }
 
 /// Collect markdown fragments that will merge into the content markdown before processing
+/// These are static parts of text that will just be merged to the content
 fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
     let markdown_fragments: HashMap<String, String> =
         ["markdown_header", "markdown_footer", "references"]
@@ -195,17 +198,28 @@ fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
 }
 
 /// Collect global fragments of markdown, process them and insert into the global context
+/// these are dynamic parts of text that will be processed by Tera
 fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, tera: &Tera) {
-    for fragment in &["hero", "footer", "header", "comments", "announce"] {
-        let fragment_content = get_html_fragment(&format!("_{fragment}.md"), content_dir);
-        if !fragment_content.is_empty() {
-            let fragment_content = tera
-                .clone()
-                .render_str(&fragment_content, global_context)
-                .unwrap();
-            global_context.insert((*fragment).to_string(), &fragment_content);
-            debug!("{} fragment {}", fragment, &fragment_content);
-        }
+    for fragment in &[
+        "announce", "header", "hero", "sidebar", "footer", "comments",
+    ] {
+        let fragment_path = content_dir.join(format!("_{fragment}.md"));
+        let fragment_content = if fragment_path.exists() {
+            fs::read_to_string(fragment_path).unwrap()
+        } else {
+            continue;
+        };
+        // append references
+        let references_path = content_dir.join("_references.md");
+        let fragment_content =
+            crate::markdown::append_references(&fragment_content, &references_path);
+        let rendered_fragment = tera
+            .clone()
+            .render_str(&fragment_content, global_context)
+            .unwrap();
+        let fragment_content = crate::markdown::get_html(&rendered_fragment);
+        global_context.insert((*fragment).to_string(), &fragment_content);
+        debug!("{} fragment {}", fragment, &fragment_content);
     }
 }
 
@@ -364,10 +378,11 @@ fn render_templates(
     site_data: &Data,
     tera: &Tera,
     output_dir: &Path,
+    fragments: &HashMap<String, String>,
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
-    collect_global_fragments(content_dir, &mut global_context, tera);
+    global_context.insert("markdown_fragments", &fragments);
     let site_data = site_data.clone();
 
     global_context.insert("site_data", &site_data);
@@ -375,6 +390,7 @@ fn render_templates(
     global_context.insert("menu", &site_data.site.menu);
     global_context.insert("language", &site_data.site.language);
     debug!("Global Context site: {:?}", &site_data.site);
+    collect_global_fragments(content_dir, &mut global_context, tera);
 
     // Assuming every item on site_data.posts is a Content and has a stream field
     // we can use this to render a {stream}.html page from list.html template
@@ -518,12 +534,22 @@ fn handle_author_pages(
         author_context.insert("author", &author);
 
         let author_slug = slugify(username);
-        let author_posts = site_data
+        let mut author_posts = site_data
             .posts
             .iter()
             .filter(|post| post.authors.contains(username))
             .cloned()
             .collect::<Vec<Content>>();
+
+        author_posts.sort_by(|a, b| {
+            if a.pinned && !b.pinned {
+                std::cmp::Ordering::Less
+            } else if !a.pinned && b.pinned {
+                std::cmp::Ordering::Greater
+            } else {
+                b.date.cmp(&a.date)
+            }
+        });
 
         let filename = format!("author-{}", &author_slug);
         handle_list_page(
@@ -894,20 +920,6 @@ fn handle_404(
     context.insert("current_page", "404.html");
     render_html("content.html", "404.html", tera, &context, output_dir)?;
     Ok(())
-}
-
-pub fn get_html_fragment(filename: &str, content_dir: &Path) -> String {
-    let filepath = content_dir.join(filename);
-    let mut fragment = String::new();
-    if filepath.exists() {
-        match get_content(&filepath, None, &Marmite::default()) {
-            Ok(content) => fragment.push_str(&content.html),
-            Err(e) => {
-                error!("Error parsing {}: {}", filepath.display(), e);
-            }
-        }
-    }
-    fragment
 }
 
 fn handle_tag_pages(

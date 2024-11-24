@@ -1,5 +1,5 @@
 ---
-date: 2024-10-18
+date: 2024-10-18 11:00
 tags: docs, templates, theme, customization
 title: Customizing Templates
 banner_image: media/what.jpg

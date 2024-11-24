@@ -1,7 +1,7 @@
 name: Marmite
 tagline: Static Site Generator
 url: https://rochacbruno.github.io/marmite
-pagination: 6
+pagination: 5
 enable_search: true
 menu: 
   - ['Contributors', 'contributors.html']
@@ -15,25 +15,6 @@ banner_image: media/og_image.jpg
 default_date_format: "%A, %d %B %Y"
 extra:
   colorscheme_toggle: true
-  comments:
-    title: Comments
-    source: |
-      <script src="https://giscus.app/client.js"
-              data-repo="rochacbruno/marmite"
-              data-repo-id="R_kgDONAKMvQ"
-              data-category="Comments"
-              data-category-id="DIC_kwDONAKMvc4CjmH_"
-              data-mapping="pathname"
-              data-strict="0"
-              data-reactions-enabled="1"
-              data-emit-metadata="0"
-              data-input-position="bottom"
-              data-theme="preferred_color_scheme"
-              data-lang="en"
-              data-loading="lazy"
-              crossorigin="anonymous"
-              async>
-      </script>
 default_author: rochacbruno
 authors:
   rochacbruno:

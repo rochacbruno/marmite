@@ -181,6 +181,41 @@ details summary::after {
   outline: none;
 }
 
+/* Sidebar mod */
+
+.content-list-with-sidebar {
+display: flex;
+grid-column-gap: 10px;
+grid-row-gap: 0px;
+}
+
+.content-list-with-sidebar .left {
+  width: 70%;
+}
+.content-list-with-sidebar .right {
+  width: 30%;
+}
+.content-list-with-sidebar .right li {
+  list-style-type: none;
+}
+.content-list-with-sidebar .author-card img {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+}
+@media (max-width: 1024px) {
+  .content-list-with-sidebar {
+      display: block;
+  }
+  .content-list-with-sidebar .left {
+      width: 100%;
+  }
+  .content-list-with-sidebar .right {
+      width: 100%;
+  }
+}
+
+
 /* Tags */
 
 .content-tags {
