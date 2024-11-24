@@ -281,7 +281,7 @@ $$
 
 > Depends on `extra: {"mermaid": true}` defined on frontmatter, then **MermaidJS** is loaded.
 >  
-> `mermaid_theme` is also configurable with values `forest,neutral*,dark,forest,base,default`
+> `mermaid_theme` is also configurable with values `forest`,`neutral`,`dark`,`forest`,`base`,`default`
 
 ```mermaid
 sequenceDiagram
