@@ -98,16 +98,16 @@ Or download the pre-built **binary** from the [releases](https://github.com/roch
 
 Build
 ```console
-$ docker -v $PWD:/input ghcr.io/rochacbruno/marmite:x.y.z
+$ docker run -v $PWD:/input ghcr.io/rochacbruno/marmite
 Site generated at: site/
 ```
 Serve (just add port mapping and the --serve)
 ```console
-$ docker run -p 8000:8000 -v $PWD:/input ghcr.io/rochacbruno/marmite:x.y.z --serve
+$ docker run -p 8000:8000 -v $PWD:/input ghcr.io/rochacbruno/marmite --serve
 ```
 
-> [!IMPORTANT]  
-> Replace `x.y.z` with the version you want to run.
+> [!INFO]  
+> By default will run `:latest`, Add `:x.y.z` with the version you want to run.
 
 </details>
 
@@ -137,10 +137,11 @@ Options:
       --watch            Detect changes and rebuild the site automatically
       --bind <BIND>      Address to bind the server [default: localhost:8000]
       --config <CONFIG>  Path to custom configuration file [default: marmite.yaml]
+      --debug            Print debug messages Deprecated: Use -vv for debug messages
       --init-templates   Initialize templates in the project
       --start-theme      Initialize a theme with templates and static assets
       --generate-config  Generate the configuration file
-  -v, --verbose          Verbosity level (-v, -vv, -vvv)
+  -v, --verbose...       Verbosity level (0-4) [default: 0 warn] options: -v: info,-vv: debug,-vvv: trace,-vvvv: trace all
   -h, --help             Print help
   -V, --version          Print version
 

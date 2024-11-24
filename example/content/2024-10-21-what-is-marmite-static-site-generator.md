@@ -42,7 +42,7 @@ mycontent/
 ```
 
 ```console
-$ marmite mycontent mysite
+$ marmite mycontent mysite -v
 Site generated at: /mysite
 ```
 
