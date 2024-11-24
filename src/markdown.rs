@@ -5,7 +5,7 @@ use crate::content::{
 use crate::site::Data;
 use chrono::Datelike;
 use comrak::{markdown_to_html, ComrakOptions};
-use frontmatter_gen::{extract, Frontmatter};
+use frontmatter_gen::{detect_format, extract_raw_frontmatter, parse, Frontmatter};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
@@ -238,6 +238,7 @@ pub fn get_html(markdown: &str) -> String {
     options.render.figure_with_caption = true;
     options.parse.relaxed_tasklist_matching = true;
     // options.parse.broken_link_callback = TODO: implement this to warn about broken links
+    // options.extension.image_url_rewriter = TODO: implement this to point to small image and have a link to the full image
     options.extension.tagfilter = false;
     options.extension.strikethrough = true;
     options.extension.table = true;
@@ -311,10 +312,18 @@ fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
     // this is needed because the frontmatter parser does not like leading empty lines
     let content = content.trim_start_matches('\n');
     if content.starts_with("---") {
-        extract(content).map_err(|e| e.to_string())
+        extract_fm_content(content).map_err(|e| e.to_string())
     } else {
         Ok((Frontmatter::new(), content))
     }
+}
+
+pub fn extract_fm_content(content: &str) -> Result<(Frontmatter, &str), String> {
+    let (raw_frontmatter, remaining_content) = extract_raw_frontmatter(content)?;
+    let format = detect_format(raw_frontmatter)?;
+    let frontmatter = parse(raw_frontmatter, format)?;
+
+    Ok((frontmatter, remaining_content))
 }
 
 #[cfg(test)]
