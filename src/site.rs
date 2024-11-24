@@ -196,14 +196,14 @@ fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
 
 /// Collect global fragments of markdown, process them and insert into the global context
 fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, tera: &Tera) {
-    for fragment in ["hero", "footer", "header", "comments", "announce"].iter() {
+    for fragment in &["hero", "footer", "header", "comments", "announce"] {
         let fragment_content = get_html_fragment(&format!("_{fragment}.md"), content_dir);
         if !fragment_content.is_empty() {
             let fragment_content = tera
                 .clone()
                 .render_str(&fragment_content, global_context)
                 .unwrap();
-            global_context.insert(fragment.to_string(), &fragment_content);
+            global_context.insert((*fragment).to_string(), &fragment_content);
             debug!("{} fragment {}", fragment, &fragment_content);
         }
     }

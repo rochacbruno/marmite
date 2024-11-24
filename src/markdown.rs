@@ -60,8 +60,8 @@ pub fn process_file(
 /// From the file content, extract the frontmatter and the markdown content
 /// then parse the markdown content to html and return a Content struct
 /// if the file is a fragment, the markdown content will be modified to include the references
-/// if is a regular content then content will be modified to include the markdown_header
-/// and markdown_footer and references
+/// if is a regular content then content will be modified to include the `markdown_header`
+/// and `markdown_footer` and references
 pub fn get_content(
     path: &Path,
     fragments: Option<&HashMap<String, String>>,
