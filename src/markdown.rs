@@ -57,6 +57,15 @@ pub fn process_file(
     Ok(())
 }
 
+pub fn append_references(content: &str, references_path: &Path) -> String {
+    if references_path.exists() {
+        let references = fs::read_to_string(references_path).unwrap_or_default();
+        format!("{content}\n\n{references}")
+    } else {
+        content.to_string()
+    }
+}
+
 /// From the file content, extract the frontmatter and the markdown content
 /// then parse the markdown content to html and return a Content struct
 /// if the file is a fragment, the markdown content will be modified to include the references
@@ -74,14 +83,11 @@ pub fn get_content(
     let is_fragment = path.file_name().unwrap().to_str().unwrap().starts_with('_');
     let html = if is_fragment {
         let references_path = path.with_file_name("_references.md");
-        if path != references_path && references_path.exists() {
-            let references_content = fs::read_to_string(path.with_file_name("_references.md"))
-                .map_err(|e| e.to_string())?;
-            let raw_markdown = format!("{raw_markdown}\n\n{references_content}");
-            get_html(&raw_markdown)
-        } else {
-            get_html(raw_markdown)
+        let mut raw_markdown = raw_markdown.to_string();
+        if path != references_path {
+            raw_markdown = append_references(&raw_markdown, &references_path);
         }
+        get_html(&raw_markdown)
     } else if fragments.is_some() {
         let mut markdown_without_title = markdown_without_title.to_string();
         if let Some(header) = fragments.and_then(|f| f.get("markdown_header")) {
@@ -230,6 +236,8 @@ pub fn get_html(markdown: &str) -> String {
     options.render.unsafe_ = true;
     options.render.ignore_empty_links = true;
     options.render.figure_with_caption = true;
+    options.parse.relaxed_tasklist_matching = true;
+    // options.parse.broken_link_callback = TODO: implement this to warn about broken links
     options.extension.tagfilter = false;
     options.extension.strikethrough = true;
     options.extension.table = true;
@@ -244,6 +252,7 @@ pub fn get_html(markdown: &str) -> String {
     options.extension.shortcodes = true;
     options.extension.header_ids = Some("toc-".to_string());
     options.extension.wikilinks_title_before_pipe = true;
+    // options.extension.link_url_rewriter = TODO: implement this to replace fix_internal_links
 
     fix_internal_links(&markdown_to_html(markdown, &options))
 }
