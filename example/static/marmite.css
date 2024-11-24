@@ -84,6 +84,15 @@ details summary::after {
   transition: transform var(--pico-transition);
 }
 
+.announcement-wrapper {
+  background-color: var(--pico-color);
+  text-align: center;
+}
+
+.announcement, .announcement p {
+  color: var(--pico-background-color);
+}
+
 .header-name a.contrast {
   color: var(--pico-home);
 }

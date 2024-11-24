@@ -108,7 +108,7 @@ pub fn generate(
             .unwrap_or_else(|| moved_input_folder.to_path_buf()); // Fallback to input_folder if not
 
             let mut site_data = site_data.lock().unwrap();
-            let fragments = collect_fragments(&content_dir);
+            let fragments = collect_content_fragments(&content_dir);
             collect_content(&content_dir, &mut site_data, &fragments);
             site_data.sort_all();
             detect_slug_collision(&site_data); // Detect slug collision and warn user
@@ -176,7 +176,8 @@ pub fn generate(
     }
 }
 
-fn collect_fragments(content_dir: &Path) -> HashMap<String, String> {
+/// Collect markdown fragments that will merge into the content markdown before processing
+fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
     let markdown_fragments: HashMap<String, String> =
         ["markdown_header", "markdown_footer", "references"]
             .iter()
@@ -191,6 +192,17 @@ fn collect_fragments(content_dir: &Path) -> HashMap<String, String> {
             })
             .collect();
     markdown_fragments
+}
+
+/// Collect global fragments of markdown, process them and insert into the global context
+fn collect_global_fragments(content_dir: &Path, global_context: &mut Context) {
+    for fragment in ["hero", "footer", "header", "comments", "announce"].iter() {
+        let fragment_content = get_html_fragment(&format!("_{fragment}.md"), content_dir);
+        if !fragment_content.is_empty() {
+            global_context.insert(fragment.to_string(), &fragment_content);
+            debug!("{} fragment {}", fragment, &fragment_content);
+        }
+    }
 }
 
 fn collect_back_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
@@ -351,18 +363,8 @@ fn render_templates(
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
-    let mut site_data = site_data.clone();
-
-    let hero_fragment = get_html_fragment("_hero.md", content_dir);
-    if !hero_fragment.is_empty() {
-        global_context.insert("hero", &hero_fragment);
-        debug!("Hero fragment {}", &hero_fragment);
-    }
-    let footer_fragment = get_html_fragment("_footer.md", content_dir);
-    if !footer_fragment.is_empty() {
-        site_data.site.footer.clone_from(&footer_fragment);
-        debug!("Footer fragment {}", &footer_fragment);
-    }
+    collect_global_fragments(content_dir, &mut global_context);
+    let site_data = site_data.clone();
 
     global_context.insert("site_data", &site_data);
     global_context.insert("site", &site_data.site);

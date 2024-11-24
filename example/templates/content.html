@@ -106,8 +106,10 @@
   {% endif %}
 {% endif %}
 
-{% if site.extra.comments.source is defined and content.date %}
-{%include "comments.html" ignore missing %}
+{% if comments is defined %}
+    <article>{{ comments }}</article>
+{% elif site.extra.comments.source is defined and content.date %}
+    {%include "comments.html" ignore missing %}
 {% endif %}
 
 {% endblock %}

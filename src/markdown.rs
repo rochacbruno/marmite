@@ -70,6 +70,9 @@ pub fn get_content(
 
     let is_fragment = path.file_name().unwrap().to_str().unwrap().starts_with('_');
     let html = if is_fragment {
+        // if path != _references.md then get references from fragments and add to raw_markdown
+        // TODO: inject references into raw_markdown
+        // adjust comments docs and announce style
         get_html(raw_markdown)
     } else if fragments.is_some() {
         let mut markdown_without_title = markdown_without_title.to_string();

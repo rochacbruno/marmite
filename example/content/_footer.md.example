@@ -1,0 +1,6 @@
+I customized the **footer**
+
+<div class="colorscheme-toggle-div">
+    colorscheme: <select name="colorscheme" class="colorscheme-toggle"><option value="default">default</option></select>
+    <span class="theme-toggle secondary" title="dark mode">&#9789;</span>
+</div>
