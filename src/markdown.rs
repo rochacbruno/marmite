@@ -59,6 +59,9 @@ pub fn process_file(
 
 /// From the file content, extract the frontmatter and the markdown content
 /// then parse the markdown content to html and return a Content struct
+/// if the file is a fragment, the markdown content will be modified to include the references
+/// if is a regular content then content will be modified to include the `markdown_header`
+/// and `markdown_footer` and references
 pub fn get_content(
     path: &Path,
     fragments: Option<&HashMap<String, String>>,
@@ -70,7 +73,15 @@ pub fn get_content(
 
     let is_fragment = path.file_name().unwrap().to_str().unwrap().starts_with('_');
     let html = if is_fragment {
-        get_html(raw_markdown)
+        let references_path = path.with_file_name("_references.md");
+        if path != references_path && references_path.exists() {
+            let references_content = fs::read_to_string(path.with_file_name("_references.md"))
+                .map_err(|e| e.to_string())?;
+            let raw_markdown = format!("{raw_markdown}\n\n{references_content}");
+            get_html(&raw_markdown)
+        } else {
+            get_html(raw_markdown)
+        }
     } else if fragments.is_some() {
         let mut markdown_without_title = markdown_without_title.to_string();
         if let Some(header) = fragments.and_then(|f| f.get("markdown_header")) {
@@ -80,7 +91,7 @@ pub fn get_content(
             markdown_without_title.push_str(format!("\n{footer}").as_str());
         }
         if let Some(references) = fragments.and_then(|f| f.get("references")) {
-            markdown_without_title.push_str(format!("\n{references}").as_str());
+            markdown_without_title.push_str(format!("\n\n{references}").as_str());
         }
         get_html(&markdown_without_title)
     } else {

@@ -47,7 +47,15 @@
     {% endblock %}
 </head>
 <body>
+    {% if announce is defined %}
+    <div class="container-fluid announcement-wrapper">
+        <div class="announcement">{{ announce }}</div>
+    </div>
+    {% endif %}
     <main class="container">
+        {% if header is defined %}
+           {{ header}}
+        {% else %}
         <header class="header-content">
             <nav class="header-nav">
                 <ul class="header-name">
@@ -91,9 +99,13 @@
             </div>
             {% endif %}
         </header>
+        {% endif %}
         <section class="main-content">
             {% block main -%}{%- endblock %}
         </section>
+        {% if footer is defined %}
+           {{ footer}}
+        {% else %}
         <footer class="footer-content grid">
             {{ site.footer | safe }}
             {% if site.extra.colorscheme_toggle %}
@@ -103,6 +115,7 @@
             </div>
             {% endif %}
         </footer>
+        {% endif %}
     </main>
     {%- block tail %}
     <script src="./static/marmite.js"></script>

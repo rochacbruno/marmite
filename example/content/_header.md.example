@@ -1,0 +1,17 @@
+
+<header class="header-content">
+<nav class="header-nav">
+
+
+- [**My Awesome Site**](index.html)  
+   My Site is great
+
+
+- [[About|about]]
+- [[Tags|tags]]
+- <span class="theme-toggle secondary" title="dark mode">&#9789;</span>
+
+
+</nav>
+
+</header>
