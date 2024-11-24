@@ -28,6 +28,10 @@ Hatsu
   Requires user to comment from a fediverse account.
   
 
+Altearnatives are Disqus and Commento.
+
+---
+
 For now the easiest system is Giscus.
 
 ## Setting up Giscus
@@ -40,9 +44,38 @@ For now the easiest system is Giscus.
 4. The Discussions feature must be [enabled](https://docs.github.com/en/github/administering-a-repository/managing-repository-settings/enabling-or-disabling-github-discussions-for-a-repository) on your repository.
 
 
-Now go to https://giscus.app/ and find the **configuration** section.
+Now go to https://giscus.app/ and find the **configuration** section, configure ir and and Copy the `<script ... /script>`.
 
-Copy the `<script ... /script>` that was presented and put it in your `marmite.yaml`
+
+Now there are 2 ways to add it to Marmite
+
+1. On a markdown fragment
+
+
+Add a `_comments.md` to your content folder.
+```markdown
+##### Comments
+
+<script src="https://giscus.app/client.js"
+        data-repo="rochacbruno/marmite"
+        data-repo-id="R_kgDONAKMvQ"
+        data-category="Comments"
+        data-category-id="DIC_kwDONAKMvc4CjmH_"
+        data-mapping="pathname"
+        data-strict="0"
+        data-reactions-enabled="1"
+        data-emit-metadata="0"
+        data-input-position="bottom"
+        data-theme="preferred_color_scheme"
+        data-lang="en"
+        data-loading="lazy"
+        crossorigin="anonymous"
+        async>
+</script>
+```
+
+
+2. Alternatively, add to  `marmite.yaml` extra section.
 
 ```yaml
 extra:
