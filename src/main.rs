@@ -23,6 +23,10 @@ fn main() {
     let watch = args.watch;
     let bind_address: &str = args.bind.as_str();
     let mut verbose = args.verbose; // -v info, -vv debug
+
+    if verbose == 0 && (args.watch || args.serve) {
+        verbose = 1; // force info level when watching or serving
+    }
     if args.debug {
         verbose = 2; // backward compatibility with --debug flag
     }
