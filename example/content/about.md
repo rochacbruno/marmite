@@ -1,7 +1,9 @@
----
-title: about
-authors: rochacbruno
----
++++
+title = "about"
+authors = "rochacbruno"
+# This page uses TOML as front matter, 
+# Marmite supports any of YAML `---`, TOML `+++`, JSON `{}`
++++
 
 # About me
 
@@ -43,4 +45,3 @@ it looked like a good idea!
 **Why not?**
 
 </details>
-

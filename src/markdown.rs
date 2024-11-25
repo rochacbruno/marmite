@@ -4,12 +4,14 @@ use crate::content::{
 };
 use crate::site::Data;
 use chrono::Datelike;
-use comrak::{markdown_to_html, ComrakOptions};
+use comrak::{markdown_to_html, BrokenLinkReference, ComrakOptions, ResolvedReference};
 use frontmatter_gen::{detect_format, extract_raw_frontmatter, parse, Frontmatter};
+use log::warn;
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 
 /// Process the file, extract the content and add it to the site data
 /// If the file is a post, add it to the posts vector
@@ -91,10 +93,10 @@ pub fn get_content(
     } else if fragments.is_some() {
         let mut markdown_without_title = markdown_without_title.to_string();
         if let Some(header) = fragments.and_then(|f| f.get("markdown_header")) {
-            markdown_without_title.insert_str(0, format!("{header}\n").as_str());
+            markdown_without_title.insert_str(0, format!("{header}\n\n").as_str());
         }
         if let Some(footer) = fragments.and_then(|f| f.get("markdown_footer")) {
-            markdown_without_title.push_str(format!("\n{footer}").as_str());
+            markdown_without_title.push_str(format!("\n\n{footer}").as_str());
         }
         if let Some(references) = fragments.and_then(|f| f.get("references")) {
             markdown_without_title.push_str(format!("\n\n{references}").as_str());
@@ -230,6 +232,22 @@ fn get_links_to(html: &str) -> Option<Vec<String>> {
     Some(result)
 }
 
+fn warn_broken_link(link_ref: BrokenLinkReference) -> Option<ResolvedReference> {
+    let original = link_ref.original;
+    let is_allowed = original
+        .starts_with("http")  // external links
+        || original.starts_with("!") // Callouts
+        || original.starts_with("#") // anchors
+        ||original.starts_with("^") // footnotes
+        || original.starts_with("/") // absolute links
+        || (original.len() == 1 && !original.chars().next().unwrap().is_ascii_digit()) // task checkboxes
+        || original.is_empty(); // empty links
+    if !is_allowed {
+        warn!("Reference missing: [{original}] - add '[{original}]: url' to the end of your content file or to the '_references.md' file.");
+    }
+    None
+}
+
 /// Convert markdown to html using comrak
 pub fn get_html(markdown: &str) -> String {
     let mut options = ComrakOptions::default();
@@ -237,8 +255,7 @@ pub fn get_html(markdown: &str) -> String {
     options.render.ignore_empty_links = true;
     options.render.figure_with_caption = true;
     options.parse.relaxed_tasklist_matching = true;
-    // options.parse.broken_link_callback = TODO: implement this to warn about broken links
-    // options.extension.image_url_rewriter = TODO: implement this to point to small image and have a link to the full image
+    options.parse.broken_link_callback = Some(Arc::new(warn_broken_link));
     options.extension.tagfilter = false;
     options.extension.strikethrough = true;
     options.extension.table = true;
@@ -251,9 +268,9 @@ pub fn get_html(markdown: &str) -> String {
     options.extension.spoiler = true;
     options.extension.greentext = true;
     options.extension.shortcodes = true;
-    options.extension.header_ids = Some("toc-".to_string());
+    options.extension.header_ids = Some("".to_string());
     options.extension.wikilinks_title_before_pipe = true;
-    // options.extension.link_url_rewriter = TODO: implement this to replace fix_internal_links
+    // options.extension.image_url_rewriter = TODO: implement this to point to a resized image
 
     fix_internal_links(&markdown_to_html(markdown, &options))
 }
@@ -267,10 +284,12 @@ fn fix_internal_links(html: &str) -> String {
         let href = &caps[1];
         let text = &caps[2];
         let is_internal = !href.starts_with("http");
+        let is_anchor = href.starts_with("#");
         let href_ends_in_html = std::path::Path::new(href)
             .extension()
             .map_or(false, |ext| ext.eq_ignore_ascii_case("html"));
-        let new_href = if is_internal {
+
+        let new_href = if !is_anchor && is_internal {
             if let Some(stripped) = href.strip_suffix(".md") {
                 format!("{stripped}.html")
             } else if !href_ends_in_html {
@@ -296,25 +315,22 @@ fn fix_internal_links(html: &str) -> String {
             text
         };
 
-        format!(r#"<a href="{new_href}">{new_text}</a>"#)
+        let link_with_attributes = caps.get(0).map_or("", |m| m.as_str());
+        link_with_attributes
+            .replace(
+                &format!("href=\"{}\"", href),
+                &format!("href=\"{}\"", new_href),
+            )
+            .replace(&format!(">{}</a>", text), &format!(">{}</a>", new_text))
     })
     .to_string()
 }
 
-/// Extract the frontmatter from the content
-/// If the content does not start with `---` return an empty frontmatter
-/// Otherwise extract the frontmatter and the content after the frontmatter
-/// and return them as a tuple
-/// The content after the frontmatter is the markdown content
-/// If the frontmatter is not valid yaml, return an error
 fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
-    // strip leading empty lines from content
-    // this is needed because the frontmatter parser does not like leading empty lines
     let content = content.trim_start_matches('\n');
-    if content.starts_with("---") {
-        extract_fm_content(content).map_err(|e| e.to_string())
-    } else {
-        Ok((Frontmatter::new(), content))
+    match extract_fm_content(content) {
+        Ok((frontmatter, content)) => Ok((frontmatter, content)),
+        Err(_) => Ok((Frontmatter::new(), content)),
     }
 }
 
@@ -322,7 +338,6 @@ pub fn extract_fm_content(content: &str) -> Result<(Frontmatter, &str), String> 
     let (raw_frontmatter, remaining_content) = extract_raw_frontmatter(content)?;
     let format = detect_format(raw_frontmatter)?;
     let frontmatter = parse(raw_frontmatter, format)?;
-
     Ok((frontmatter, remaining_content))
 }
 

@@ -17,8 +17,8 @@ mod tera_functions;
 
 fn main() {
     let args = cli::Cli::parse();
+    let cloned_args = Arc::new(args.clone()); // Clone to pass to the server thread
     let input_folder = Arc::new(args.input_folder);
-    let output_folder = Arc::new(args.output_folder);
     let serve = args.serve;
     let watch = args.watch;
     let bind_address: &str = args.bind.as_str();
@@ -66,11 +66,18 @@ fn main() {
 
     // Handle `generate_config` flag
     if args.generate_config {
-        config::generate(&input_folder);
+        config::generate(&input_folder, &cloned_args);
         return; // Exit early if only generating config
     }
 
+    // Handle `init_site` flag
+    if args.init_site {
+        site::initialize(&input_folder, &cloned_args);
+        return; // Exit early if only initializing site
+    }
+
     // Generate site content
+    let output_folder = Arc::new(args.output_folder.unwrap_or(input_folder.join("site")));
     site::generate(
         &config_path,
         &input_folder,
@@ -78,8 +85,8 @@ fn main() {
         watch,
         serve,
         bind_address,
+        &cloned_args,
     );
-
     // Serve the site if the flag was provided
     if serve && !watch {
         info!("Starting built-in HTTP server...");

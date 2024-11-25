@@ -1,6 +1,6 @@
----
-tags: docs
----
+{"tags": "docs"}
+
+<!-- This page uses JSON as front-matter, this format is support but not recommended, use YAML `---` or TOML `+++` -->
 
 # Pagination
 
