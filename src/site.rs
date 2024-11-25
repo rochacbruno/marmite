@@ -1037,23 +1037,6 @@ fn render_html(
 }
 
 /// Initialize a new site in the input folder
-/// only if the folder is empty
-/// This will:
-/// - Create a new marmite.yaml file
-/// - Create a new 'content' folder
-/// - Create a new 'content/media' folder
-/// - Create a new 'custom.css' file
-/// - Create a new 'custom.js' file
-/// - Create a new 'content/_404.md' file
-/// - Create a new 'content/_references.md' file
-/// - Create a new 'content/_markdown_header.md' file
-/// - Create a new 'content/_markdown_footer.md' file
-/// - Create a new 'content/_announce.md' file
-/// - Create a new 'content/_sidebar.md' file
-/// - Create a new 'content/_comments.md' file
-/// - Create a new 'content/_hero.md' file
-/// - Create a new 'content/about.md' file
-/// - Create a new 'content/{now}-welcome.md' file
 pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::cli::Cli>) {
     let input_folder = input_folder.as_path();
     let content_folder = input_folder.join("content");
@@ -1124,18 +1107,18 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         process::exit(1);
     }
     // create content/_sidebar.md with `<!-- Sidebar content -->` content
-    let side_bar_content = r#"
-    {% set groups = ['tag', 'archive', 'author', 'stream'] %}
-    {% for group in groups %}
-
-    ##### {{group}}s
-
-    {% for name, items in group(kind=group) -%}
-    - [{{name}}]({{group}}-{{name | slugify}}.html)
+    let side_bar_content = "
+    {% set groups = ['tag', 'archive', 'author', 'stream'] %}\n\
+    {% for group in groups %}\n\
+    \n\
+    ##### {{group}}s\n\
+    \n\
+    {% for name, items in group(kind=group) -%}\n\
+    - [{{name}}]({{group}}-{{name | slugify}}.html)\n\
+    {% endfor %}\n\
+    \n\
     {% endfor %}
-
-    {% endfor %}
-    "#;
+    ";
     if let Err(e) = fs::write(content_folder.join("_sidebar.example.md"), side_bar_content) {
         error!("Failed to create 'content/_sidebar.md' file: {}", e);
         process::exit(1);
@@ -1143,11 +1126,17 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     // create content/_comments.md with `<!-- Comments -->` content
     if let Err(e) = fs::write(
         content_folder.join("_comments.md"),
-        r#"##### Comments 
-
-        <div id="commento"></div>
-        <script src="https://cdn.commento.io/js/commento.js"></script>
-        "#,
+        "##### Comments\n\
+        **edit `content/_comments.md` to adjust for your own site/repo**\n\
+        \n\
+        <script src='https://utteranc.es/client.js'\n\
+        repo='rochacbruno/issue-bin'\n\
+        issue-term='pathname'\n\
+        theme='preferred-color-scheme'\n\
+        crossorigin='anonymous'\n\
+        async>\n\
+        </script>\n\
+        ",
     ) {
         error!("Failed to create 'content/_comments.md' file: {}", e);
         process::exit(1);
@@ -1155,11 +1144,11 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     // create content/_hero.md with `<!-- Hero content -->` content
     if let Err(e) = fs::write(
         content_folder.join("_hero.md"),
-        r#"##### Welcome to Marmite
-
-        Marmite is a static site generator written in Rust.
-        edit content/_hero.md to change this content.
-        "#,
+        "##### Welcome to Marmite\n\
+        \n\
+        Marmite is a static site generator written in Rust.\n\
+        edit `content/_hero.md` to change this content.
+        ",
     ) {
         error!("Failed to create 'content/_hero.md' file: {}", e);
         process::exit(1);
@@ -1167,10 +1156,10 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     // create content/about.md with `# About` content
     if let Err(e) = fs::write(
         content_folder.join("about.md"),
-        r#"# About
-        
-        Hi, edit about.md to change this content.
-        "#,
+        "# About\n\
+        \n\
+        Hi, edit `about.md` to change this content.
+        ",
     ) {
         error!("Failed to create 'content/about.md' file: {}", e);
         process::exit(1);
@@ -1180,12 +1169,12 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     let now = now.format("%Y-%m-%d").to_string();
     if let Err(e) = fs::write(
         content_folder.join(format!("{}-welcome.md", now)),
-        r#"# Welcome to Marmite
-        
-        This is your first post!
-
-        edit this file to change this content.
-        "#,
+        "# Welcome to Marmite\n\
+        \n\
+        This is your first post!\n\
+        \n\
+        edit on `content/{date}-welcome.md`.
+        ",
     ) {
         error!("Failed to create 'content/{now}-welcome.md' file: {}", e);
         process::exit(1);

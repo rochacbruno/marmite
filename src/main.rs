@@ -51,32 +51,37 @@ fn main() {
         warn!("--debug flag is deprecated, use -vv for debug messages");
     }
 
-    // Handle `init_templates` flag
-    if args.init_templates {
-        templates::initialize_templates(&input_folder);
-        return; // Exit early if only initializing templates
+    if args.init_site {
+        site::initialize(&input_folder, &cloned_args);
+        return;
+    }
+    
+    if !input_folder.exists() {
+        error!("Input folder does not exist: {:?}", input_folder);
+        return;
     }
 
-    // Handle `start_theme` flag
+    if let Some(text) = args.new {
+        content::new(&input_folder, &text, &cloned_args);
+        return;
+    }
+
+    if args.init_templates {
+        templates::initialize_templates(&input_folder);
+        return;
+    }
+
     if args.start_theme {
         templates::initialize_templates(&input_folder);
         templates::initialize_theme_assets(&input_folder);
-        return; // Exit early if only initializing theme
+        return;
     }
 
-    // Handle `generate_config` flag
     if args.generate_config {
         config::generate(&input_folder, &cloned_args);
-        return; // Exit early if only generating config
+        return;
     }
 
-    // Handle `init_site` flag
-    if args.init_site {
-        site::initialize(&input_folder, &cloned_args);
-        return; // Exit early if only initializing site
-    }
-
-    // Generate site content
     let output_folder = Arc::new(args.output_folder.unwrap_or(input_folder.join("site")));
     site::generate(
         &config_path,
@@ -87,7 +92,7 @@ fn main() {
         bind_address,
         &cloned_args,
     );
-    // Serve the site if the flag was provided
+    
     if serve && !watch {
         info!("Starting built-in HTTP server...");
         server::start(bind_address, &Arc::clone(&output_folder));

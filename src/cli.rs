@@ -58,6 +58,18 @@ pub struct Cli {
     #[arg(long)]
     pub init_site: bool,
 
+    /// Create a new post with the given title and open in the default editor
+    #[arg(long)]
+    pub new: Option<String>,
+    #[arg(long, short)]
+    pub edit: bool,
+    #[arg(long, short)]
+    pub page: bool,
+    #[arg(long, short)]
+    pub tags: Option<String>,
+    
+    // ---- //
+
     // Every field below is optional and will be used to override the values from the config file
     /// Site name [default: "Home" or value from config file]
     #[arg(long)]

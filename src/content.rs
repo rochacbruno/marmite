@@ -1,13 +1,17 @@
 use chrono::{NaiveDate, NaiveDateTime};
 use frontmatter_gen::{Frontmatter, Value};
-use log::error;
+use log::{error, info};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::process;
+use std::sync::Arc;
+use std::io::Write;
 use unicode_normalization::UnicodeNormalization;
+
+use crate::cli::Cli;
 
 #[derive(Debug, Clone, Serialize)]
 pub enum Kind {
@@ -401,6 +405,41 @@ pub fn slugify(text: &str) -> String {
     let re = Regex::new(r"[^a-z0-9]+").unwrap();
     let slug = re.replace_all(&normalized, "-");
     slug.trim_matches('-').to_string()
+}
+
+
+pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>) {
+    let mut path = input_folder.to_path_buf();
+    path.push(text);
+    if path.exists() {
+        error!("File already exists: {:?}", path);
+        return;
+    }
+    let mut file = match std::fs::File::create(&path) {
+        Ok(file) => file,
+        Err(e) => {
+            error!("Failed to create file: {:?}", e);
+            return;
+        }
+    };
+    let content = format!(
+        r#"---
+title: "{text}"
+date: "{date}"
+tags: []
+---
+
+# {text}
+
+"#,
+        text = text,
+        date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+    );
+    if let Err(e) = file.write_all(content.as_bytes()) {
+        error!("Failed to write to file: {:?}", e);
+        return;
+    }
+    info!("Created new file: {:?}", path);
 }
 
 #[cfg(test)]
