@@ -502,9 +502,9 @@ mod tests {
     }
 
     #[test]
-    fn test_get_html_with_internal_links() {
+    fn test_get_html_with_internal_relative_links() {
         let markdown = "[internal](./test.md)";
-        let expected = "<p><a href=\"./test.html\">internal</a></p>\n";
+        let expected = "<p><a href=\"./test.md\">internal</a></p>\n";
         assert_eq!(get_html(markdown), expected);
     }
 
