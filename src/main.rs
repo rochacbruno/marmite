@@ -17,15 +17,22 @@ mod tera_functions;
 
 fn main() {
     let args = cli::Cli::parse();
+    let cloned_args = Arc::new(args.clone()); // Clone to pass to the server thread
     let input_folder = Arc::new(args.input_folder);
-    let output_folder = Arc::new(args.output_folder);
     let serve = args.serve;
     let watch = args.watch;
     let bind_address: &str = args.bind.as_str();
     let mut verbose = args.verbose; // -v info, -vv debug
 
-    if verbose == 0 && (args.watch || args.serve) {
-        verbose = 1; // force info level when watching or serving
+    if verbose == 0
+        && (args.watch
+            || args.serve
+            || args.start_theme
+            || args.init_templates
+            || args.generate_config
+            || args.init_site)
+    {
+        verbose = 1;
     }
     if args.debug {
         verbose = 2; // backward compatibility with --debug flag
@@ -51,26 +58,38 @@ fn main() {
         warn!("--debug flag is deprecated, use -vv for debug messages");
     }
 
-    // Handle `init_templates` flag
-    if args.init_templates {
-        templates::initialize_templates(&input_folder);
-        return; // Exit early if only initializing templates
+    if args.init_site {
+        site::initialize(&input_folder, &cloned_args);
+        return;
     }
 
-    // Handle `start_theme` flag
+    if !input_folder.exists() {
+        error!("Input folder does not exist: {:?}", input_folder);
+        return;
+    }
+
+    if let Some(title) = args.create.new {
+        content::new(&input_folder, &title, &cloned_args, &config_path);
+        return;
+    }
+
+    if args.init_templates {
+        templates::initialize_templates(&input_folder);
+        return;
+    }
+
     if args.start_theme {
         templates::initialize_templates(&input_folder);
         templates::initialize_theme_assets(&input_folder);
-        return; // Exit early if only initializing theme
+        return;
     }
 
-    // Handle `generate_config` flag
     if args.generate_config {
-        config::generate(&input_folder);
-        return; // Exit early if only generating config
+        config::generate(&input_folder, &cloned_args);
+        return;
     }
 
-    // Generate site content
+    let output_folder = Arc::new(args.output_folder.unwrap_or(input_folder.join("site")));
     site::generate(
         &config_path,
         &input_folder,
@@ -78,9 +97,9 @@ fn main() {
         watch,
         serve,
         bind_address,
+        &cloned_args,
     );
 
-    // Serve the site if the flag was provided
     if serve && !watch {
         info!("Starting built-in HTTP server...");
         server::start(bind_address, &Arc::clone(&output_folder));

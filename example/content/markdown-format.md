@@ -65,12 +65,23 @@ Wikilinks allows to link using `[[name|url]]` syntax.
 
 [[Read the Tutorial|getting-started]] and [[Read the Tutorial|getting-started.md]] and [[Read the Tutorial|getting-started.html]]  
 
+Anchors also supported [[FAQ|about#faq]]
+
 [[Pudim|https://pudim.com.br]]
+
+It also resolve anchors like [[Wikilinks|#wikilinks]]  
+and internal content by title like 
+[[MD Wikilinks|Markdown Format#Wikilinks]] or [[MD Format|Markdown Format]]
 
 ```markdown
 [[Read the Tutorial|getting-started]] and [[Read the Tutorial|getting-started.md]] and [[Read the Tutorial|getting-started.html]]
 
 [[Pudim|https://pudim.com.br]]
+
+It also resolve anchors like [[Wikilinks|#wikilinks]]  
+and internal content by title like 
+[[MD Wikilinks|Markdown Format#Wikilinks]] or [[MD Format|Markdown Format]]
+
 ```
 
 ### Obsidian Links
@@ -81,12 +92,25 @@ Example:
 
 [[about]] and [[about.md]] and [[about.html]] should point both to the about page.
 
+Anchors also supported [[about#faq]]
+
 [[https://pudim.com.br]]
+
+It also resolve anchors like [[#Obsidian Links]]  
+and internal content by title like  
+[[Markdown Format#Obsidian Links]] or [[Markdown Format]]
 
 ```markdown
 [[about]] and [[about.md]] and [[about.html]] should point both to the about page.
 
+Anchors also supported [[about#faq]]
+
 [[https://pudim.com.br]]
+
+It also resolve anchors like [[#Obsidian Links]]  
+and internal content by title like 
+[[Markdown Format#Obsidian Links]] or [[Markdown Format]]
+
 ```
 
 
@@ -167,25 +191,19 @@ And on the end of the file:
 ## Description lists
 
 First term
-
 : Details for the **first term**
 
 Second term
-
 : Details for the **second term**
-
-    More details in second paragraph.
+: More details in second paragraph.
 
 ```markdown
 First term
-
 : Details for the **first term**
 
 Second term
-
 : Details for the **second term**
-
-    More details in second paragraph.
+: More details in second paragraph.
 ```
 
 ## Block quote

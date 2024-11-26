@@ -6,6 +6,7 @@ use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
 use crate::markdown::{get_content, process_file};
 use crate::tera_functions::{Group, UrlFor};
 use crate::{server, tera_filter};
+use core::str;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
 use hotwatch::{Event, EventKind, Hotwatch};
 use log::{debug, error, info};
@@ -50,6 +51,25 @@ impl Data {
         }
     }
 
+    pub fn from_file(config_path: &Path) -> Self {
+        let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
+            info!(
+                "Unable to read '{}', assuming defaults.: {}",
+                &config_path.display(),
+                e
+            );
+            String::new()
+        });
+
+        if config_str.is_empty() {
+            info!("Config loaded from: defaults");
+        } else {
+            info!("Config loaded from: {}", config_path.display());
+        }
+
+        Self::new(&config_str)
+    }
+
     pub fn sort_all(&mut self) {
         self.posts.sort_by(|a, b| b.date.cmp(&a.date));
         self.pages.sort_by(|a, b| b.title.cmp(&a.title));
@@ -76,40 +96,29 @@ pub fn generate(
     watch: bool,
     serve: bool,
     bind_address: &str,
+    cli_args: &Arc<crate::cli::Cli>,
 ) {
     let moved_input_folder = Arc::clone(input_folder);
     let moved_output_folder = Arc::clone(output_folder);
     let moved_config_path = Arc::clone(config_path);
+    let moved_cli_args = Arc::clone(cli_args);
 
     let rebuild = {
         move || {
             let start_time = std::time::Instant::now();
 
-            let config_str = fs::read_to_string(moved_config_path.as_path()).unwrap_or_else(|e| {
-                info!(
-                    "Unable to read '{}', assuming defaults.: {}",
-                    &moved_config_path.display(),
-                    e
-                );
-                String::new()
-            });
-            if config_str.is_empty() {
-                info!("Config loaded from: defaults");
-            } else {
-                info!("Config loaded from: {}", moved_config_path.display());
-            }
-
-            let site_data = Arc::new(Mutex::new(Data::new(&config_str)));
-            let content_dir = {
-                let site_data = site_data.lock().unwrap();
-                Some(moved_input_folder.join(site_data.site.content_path.clone()))
-            }
-            .filter(|path| path.is_dir()) // Take if exists
-            .unwrap_or_else(|| moved_input_folder.to_path_buf()); // Fallback to input_folder if not
-
+            let site_data = Arc::new(Mutex::new(Data::from_file(
+                moved_config_path.clone().as_path(),
+            )));
+            let content_folder = get_content_folder(
+                &site_data.lock().unwrap().site,
+                moved_input_folder.clone().as_path(),
+            );
             let mut site_data = site_data.lock().unwrap();
-            let fragments = collect_content_fragments(&content_dir);
-            collect_content(&content_dir, &mut site_data, &fragments);
+            site_data.site.override_from_cli_args(&moved_cli_args);
+
+            let fragments = collect_content_fragments(&content_folder);
+            collect_content(&content_folder, &mut site_data, &fragments);
             site_data.sort_all();
             detect_slug_collision(&site_data); // Detect slug collision and warn user
             collect_back_links(&mut site_data);
@@ -123,7 +132,7 @@ pub fn generate(
 
             let tera = initialize_tera(&moved_input_folder, &site_data);
             if let Err(e) =
-                render_templates(&content_dir, &site_data, &tera, &output_path, &fragments)
+                render_templates(&content_folder, &site_data, &tera, &output_path, &fragments)
             {
                 error!("Failed to render templates: {}", e);
                 process::exit(1);
@@ -133,7 +142,7 @@ pub fn generate(
                 &moved_input_folder,
                 &site_data,
                 &moved_output_folder,
-                &content_dir,
+                &content_folder,
             );
 
             if site_data.site.enable_search {
@@ -176,6 +185,13 @@ pub fn generate(
             }
         }
     }
+}
+
+/// Get the content folder from the config or default to the input folder
+pub fn get_content_folder(config: &Marmite, input_folder: &Path) -> std::path::PathBuf {
+    Some(input_folder.join(config.content_path.clone()))
+        .filter(|path| path.is_dir())
+        .unwrap_or_else(|| input_folder.to_path_buf())
 }
 
 /// Collect markdown fragments that will merge into the content markdown before processing
@@ -1029,4 +1045,153 @@ fn render_html(
     fs::write(&output_file, rendered).map_err(|e| e.to_string())?;
     info!("Generated {}", &output_file.display());
     Ok(())
+}
+
+/// Initialize a new site in the input folder
+#[allow(clippy::too_many_lines)]
+pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::cli::Cli>) {
+    let input_folder = input_folder.as_path();
+    let content_folder = input_folder.join("content");
+    let media_folder = content_folder.join("media");
+
+    if let Err(e) = fs::create_dir_all(input_folder) {
+        error!("Failed to create input folder: {}", e);
+        process::exit(1);
+    }
+    if input_folder.read_dir().unwrap().next().is_some() {
+        error!("Input folder is not empty: {}", input_folder.display());
+        process::exit(1);
+    }
+    crate::config::generate(input_folder, cli_args);
+    if let Err(e) = fs::create_dir(&content_folder) {
+        error!("Failed to create 'content' folder: {}", e);
+        process::exit(1);
+    }
+    if let Err(e) = fs::create_dir(&media_folder) {
+        error!("Failed to create 'content/media' folder: {}", e);
+        process::exit(1);
+    }
+    // create input_folder/custom.css with `/* Custom CSS */` content
+    if let Err(e) = fs::write(input_folder.join("custom.css"), "/* Custom CSS */") {
+        error!("Failed to create 'custom.css' file: {}", e);
+        process::exit(1);
+    }
+    // create input_folder/custom.js with `// Custom JS` content
+    if let Err(e) = fs::write(input_folder.join("custom.js"), "// Custom JS") {
+        error!("Failed to create 'custom.js' file: {}", e);
+        process::exit(1);
+    }
+    // create content/_404.md with `# Not Found` content
+    if let Err(e) = fs::write(content_folder.join("_404.md"), "# Not Found") {
+        error!("Failed to create 'content/_404.md' file: {}", e);
+        process::exit(1);
+    }
+    // create content/_references.md with `[marmite]: https://github.com/rochacbruno/marmite` content
+    if let Err(e) = fs::write(
+        content_folder.join("_references.md"),
+        "[github]: https://github.com/rochacbruno/marmite",
+    ) {
+        error!("Failed to create 'content/_references.md' file: {}", e);
+        process::exit(1);
+    }
+    // create content/_markdown_header.md with `<!-- Content Injected to every content markdown header -->` content
+    if let Err(e) = fs::write(
+        content_folder.join("_markdown_header.md"),
+        "<!-- Content Injected to every content markdown header -->",
+    ) {
+        error!("Failed to create 'content/_markdown_header.md' file: {}", e);
+        process::exit(1);
+    }
+    // create content/_markdown_footer.md with `<!-- Content Injected to every content markdown footer -->` content
+    if let Err(e) = fs::write(
+        content_folder.join("_markdown_footer.md"),
+        "<!-- Content Injected to every content markdown footer -->",
+    ) {
+        error!("Failed to create 'content/_markdown_footer.md' file: {}", e);
+        process::exit(1);
+    }
+    // create content/_announce.md with `Give us a &star; on [github]` content
+    if let Err(e) = fs::write(
+        content_folder.join("_announce.md"),
+        "Give us a &star; on [github]",
+    ) {
+        error!("Failed to create 'content/_announce.md' file: {}", e);
+        process::exit(1);
+    }
+    // create content/_sidebar.md with `<!-- Sidebar content -->` content
+    let side_bar_content = "
+    {% set groups = ['tag', 'archive', 'author', 'stream'] %}\n\
+    {% for group in groups %}\n\
+    \n\
+    ##### {{group}}s\n\
+    \n\
+    {% for name, items in group(kind=group) -%}\n\
+    - [{{name}}]({{group}}-{{name | slugify}}.html)\n\
+    {% endfor %}\n\
+    \n\
+    {% endfor %}
+    ";
+    if let Err(e) = fs::write(content_folder.join("_sidebar.example.md"), side_bar_content) {
+        error!("Failed to create 'content/_sidebar.md' file: {}", e);
+        process::exit(1);
+    }
+    // create content/_comments.md with `<!-- Comments -->` content
+    if let Err(e) = fs::write(
+        content_folder.join("_comments.md"),
+        "##### Comments\n\
+        **edit `content/_comments.md` to adjust for your own site/repo**\n\
+        **remove** the file to disable comments\n\
+        \n\
+        <script src='https://utteranc.es/client.js'\n\
+        repo='rochacbruno/issue-bin'\n\
+        issue-term='pathname'\n\
+        theme='preferred-color-scheme'\n\
+        crossorigin='anonymous'\n\
+        async>\n\
+        </script>\n\
+        ",
+    ) {
+        error!("Failed to create 'content/_comments.md' file: {}", e);
+        process::exit(1);
+    }
+    // create content/_hero.md with `<!-- Hero content -->` content
+    if let Err(e) = fs::write(
+        content_folder.join("_hero.md"),
+        "##### Welcome to Marmite\n\
+        \n\
+        Marmite is a static site generator written in Rust.\n\
+        edit `content/_hero.md` to change this content.\n\
+        remove the file to disable the hero section.\n\
+        ",
+    ) {
+        error!("Failed to create 'content/_hero.md' file: {}", e);
+        process::exit(1);
+    }
+    // create content/about.md with `# About` content
+    if let Err(e) = fs::write(
+        content_folder.join("about.md"),
+        "# About\n\
+        \n\
+        Hi, edit `about.md` to change this content.
+        ",
+    ) {
+        error!("Failed to create 'content/about.md' file: {}", e);
+        process::exit(1);
+    }
+    // create content/{now}-welcome.md with `# Welcome to Marmite` content
+    let now = chrono::Local::now();
+    let now = now.format("%Y-%m-%d").to_string();
+    if let Err(e) = fs::write(
+        content_folder.join(format!("{now}-welcome.md")),
+        "# Welcome to Marmite\n\
+        \n\
+        This is your first post!\n\
+        \n\
+        edit on `content/{date}-welcome.md`.
+        ",
+    ) {
+        error!("Failed to create 'content/{now}-welcome.md' file: {}", e);
+        process::exit(1);
+    }
+    info!("Site initialized in {}", input_folder.display());
 }

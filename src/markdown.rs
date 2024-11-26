@@ -1,15 +1,19 @@
 use crate::config::Marmite;
 use crate::content::{
-    get_authors, get_date, get_description, get_slug, get_stream, get_tags, get_title, Content,
+    get_authors, get_date, get_description, get_slug, get_stream, get_tags, get_title, slugify,
+    Content,
 };
 use crate::site::Data;
 use chrono::Datelike;
-use comrak::{markdown_to_html, ComrakOptions};
+use comrak::{markdown_to_html, BrokenLinkReference, ComrakOptions, ResolvedReference};
 use frontmatter_gen::{detect_format, extract_raw_frontmatter, parse, Frontmatter};
+use log::warn;
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
+use url::Url;
 
 /// Process the file, extract the content and add it to the site data
 /// If the file is a post, add it to the posts vector
@@ -91,10 +95,10 @@ pub fn get_content(
     } else if fragments.is_some() {
         let mut markdown_without_title = markdown_without_title.to_string();
         if let Some(header) = fragments.and_then(|f| f.get("markdown_header")) {
-            markdown_without_title.insert_str(0, format!("{header}\n").as_str());
+            markdown_without_title.insert_str(0, format!("{header}\n\n").as_str());
         }
         if let Some(footer) = fragments.and_then(|f| f.get("markdown_footer")) {
-            markdown_without_title.push_str(format!("\n{footer}").as_str());
+            markdown_without_title.push_str(format!("\n\n{footer}").as_str());
         }
         if let Some(references) = fragments.and_then(|f| f.get("references")) {
             markdown_without_title.push_str(format!("\n\n{references}").as_str());
@@ -117,6 +121,15 @@ pub fn get_content(
     let pinned = frontmatter
         .get("pinned")
         .map_or(false, |p| p.as_bool().unwrap_or(false));
+    let toc = if site.toc
+        || frontmatter
+            .get("toc")
+            .map_or(false, |t| t.as_bool().unwrap_or(false))
+    {
+        Some(get_table_of_contents_from_html(&html))
+    } else {
+        None
+    };
 
     let stream = if date.is_some() {
         get_stream(&frontmatter)
@@ -139,13 +152,14 @@ pub fn get_content(
         authors,
         stream,
         pinned,
+        toc,
     };
     Ok(content)
 }
 
 /// Capture `card_image` from frontmatter, then if not defined
 /// take the first img src found in the post content
-fn get_card_image(
+pub fn get_card_image(
     frontmatter: &Frontmatter,
     html: &str,
     path: &Path,
@@ -213,7 +227,7 @@ fn get_banner_image(frontmatter: &Frontmatter, path: &Path, slug: &str) -> Optio
 /// Extract all the internal links from the html content
 /// that point to a internal .html file (excluding http links)
 /// and return them as a vector of strings
-fn get_links_to(html: &str) -> Option<Vec<String>> {
+pub fn get_links_to(html: &str) -> Option<Vec<String>> {
     let mut result = Vec::new();
     let re = Regex::new(r#"href="([^"]+)\.html""#).unwrap();
     for cap in re.captures_iter(html) {
@@ -230,6 +244,62 @@ fn get_links_to(html: &str) -> Option<Vec<String>> {
     Some(result)
 }
 
+#[allow(clippy::needless_pass_by_value)]
+fn warn_broken_link(link_ref: BrokenLinkReference) -> Option<ResolvedReference> {
+    let original = link_ref.original;
+    let is_allowed = original
+        .starts_with("http")  // external links
+        || original.starts_with('!') // Callouts
+        || original.starts_with('#') // anchors
+        ||original.starts_with('^') // footnotes
+        || original.starts_with('/') // absolute links
+        || (original.len() == 1 && !original.chars().next().unwrap().is_ascii_digit()) // task checkboxes
+        || original.is_empty(); // empty links
+    if !is_allowed {
+        warn!("Reference missing: [{original}] - add '[{original}]: url' to the end of your content file or to the '_references.md' file.");
+    }
+    None
+}
+
+pub fn get_table_of_contents_from_html(html: &str) -> String {
+    let re =
+        Regex::new(r#"<h([1-6])[^>]*>(?:<a[^>]*href="([^"]+)"[^>]*></a>)?(.*?)</h[1-6]>"#).unwrap();
+    let mut toc = String::new();
+    let mut last_level = 0;
+
+    for cap in re.captures_iter(html) {
+        let level = cap.get(1).map_or(0, |m| m.as_str().parse().unwrap());
+        let title = cap.get(3).map_or("", |m| m.as_str());
+        let slug = cap.get(2).map_or_else(
+            || format!("#{}", slugify(title)),
+            |m| m.as_str().to_string(),
+        );
+
+        match level.cmp(&last_level) {
+            std::cmp::Ordering::Greater => {
+                for _ in last_level..level {
+                    toc.push_str("<ul>\n");
+                }
+            }
+            std::cmp::Ordering::Less => {
+                for _ in level..last_level {
+                    toc.push_str("</ul>\n");
+                }
+            }
+            std::cmp::Ordering::Equal => {}
+        }
+
+        toc.push_str(&format!("<li><a href=\"{slug}\">{title}</a></li>\n"));
+        last_level = level;
+    }
+
+    for _ in 0..last_level {
+        toc.push_str("</ul>\n");
+    }
+
+    toc
+}
+
 /// Convert markdown to html using comrak
 pub fn get_html(markdown: &str) -> String {
     let mut options = ComrakOptions::default();
@@ -237,8 +307,7 @@ pub fn get_html(markdown: &str) -> String {
     options.render.ignore_empty_links = true;
     options.render.figure_with_caption = true;
     options.parse.relaxed_tasklist_matching = true;
-    // options.parse.broken_link_callback = TODO: implement this to warn about broken links
-    // options.extension.image_url_rewriter = TODO: implement this to point to small image and have a link to the full image
+    options.parse.broken_link_callback = Some(Arc::new(warn_broken_link));
     options.extension.tagfilter = false;
     options.extension.strikethrough = true;
     options.extension.table = true;
@@ -251,9 +320,9 @@ pub fn get_html(markdown: &str) -> String {
     options.extension.spoiler = true;
     options.extension.greentext = true;
     options.extension.shortcodes = true;
-    options.extension.header_ids = Some("toc-".to_string());
+    options.extension.header_ids = Some(String::new());
     options.extension.wikilinks_title_before_pipe = true;
-    // options.extension.link_url_rewriter = TODO: implement this to replace fix_internal_links
+    // options.extension.image_url_rewriter = TODO: implement this to point to a resized image
 
     fix_internal_links(&markdown_to_html(markdown, &options))
 }
@@ -261,68 +330,78 @@ pub fn get_html(markdown: &str) -> String {
 /// Takes the html content, finds all the internal links and
 /// fixes them to point to the correct html file
 /// Also removes the .md|.html extension from the text of the link
-fn fix_internal_links(html: &str) -> String {
+pub fn fix_internal_links(html: &str) -> String {
     let re = Regex::new(r#"<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>"#).unwrap();
     re.replace_all(html, |caps: &regex::Captures| {
-        let href = &caps[1];
-        let text = &caps[2];
-        let is_internal = !href.starts_with("http");
-        let href_ends_in_html = std::path::Path::new(href)
-            .extension()
-            .map_or(false, |ext| ext.eq_ignore_ascii_case("html"));
-        let new_href = if is_internal {
-            if let Some(stripped) = href.strip_suffix(".md") {
-                format!("{stripped}.html")
-            } else if !href_ends_in_html {
-                format!("{href}.html")
-            } else {
-                href.to_string()
+        let link = caps.get(0).map_or("", |m| m.as_str());
+        let href = caps.get(1).map_or("", |m| m.as_str());
+        let text = caps.get(2).map_or("", |m| m.as_str());
+        if link.contains("class=\"anchor\"")
+            || link.contains("data-footnote-ref")
+            || link.contains("footnote-backref")
+            || link.starts_with('/')
+            || href.starts_with('.')
+        {
+            return link.to_string();
+        }
+
+        if let Ok(url) = Url::parse(href) {
+            if !url.scheme().is_empty() {
+                return link.to_string();
             }
+        }
+
+        let new_href = if let Ok(parsed) = Url::parse(&format!("m://m/{href}")) {
+            let path = slugify(
+                parsed
+                    .path()
+                    .trim_start_matches('/')
+                    .trim_end_matches(".md")
+                    .trim_end_matches(".html"),
+            );
+            let fragment = match parsed.fragment() {
+                Some(f) => slugify(f),
+                None => String::new(),
+            };
+
+            let mut new_href = String::new();
+            if !path.is_empty() {
+                new_href.push_str(&format!("{path}.html"));
+            }
+            if !fragment.is_empty() {
+                new_href.push_str(&format!("#{fragment}"));
+            }
+            new_href
         } else {
             href.to_string()
         };
 
-        let text_ends_in_md = std::path::Path::new(text)
-            .extension()
-            .map_or(false, |ext| ext.eq_ignore_ascii_case("md"));
-        let text_ends_in_html = std::path::Path::new(text)
-            .extension()
-            .map_or(false, |ext| ext.eq_ignore_ascii_case("html"));
-        let new_text = if is_internal && text_ends_in_md {
-            &text[..text.len() - 3]
-        } else if is_internal && text_ends_in_html {
-            &text[..text.len() - 5]
-        } else {
-            text
-        };
+        let new_text = text
+            .trim_start_matches('#')
+            .trim_end_matches(".md")
+            .trim_end_matches(".html")
+            .replace('#', " > ");
 
-        format!(r#"<a href="{new_href}">{new_text}</a>"#)
+        link.replace(&format!("href=\"{href}\""), &format!("href=\"{new_href}\""))
+            .replace(&format!(">{text}</a>"), &format!(">{new_text}</a>"))
     })
     .to_string()
 }
 
-/// Extract the frontmatter from the content
-/// If the content does not start with `---` return an empty frontmatter
-/// Otherwise extract the frontmatter and the content after the frontmatter
-/// and return them as a tuple
-/// The content after the frontmatter is the markdown content
-/// If the frontmatter is not valid yaml, return an error
 fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
-    // strip leading empty lines from content
-    // this is needed because the frontmatter parser does not like leading empty lines
     let content = content.trim_start_matches('\n');
-    if content.starts_with("---") {
-        extract_fm_content(content).map_err(|e| e.to_string())
-    } else {
-        Ok((Frontmatter::new(), content))
+    let has_frontmatter =
+        content.starts_with("---") || content.starts_with("+++") || content.starts_with('{');
+    if !has_frontmatter {
+        return Ok((Frontmatter::new(), content));
     }
+    extract_fm_content(content)
 }
 
 pub fn extract_fm_content(content: &str) -> Result<(Frontmatter, &str), String> {
     let (raw_frontmatter, remaining_content) = extract_raw_frontmatter(content)?;
     let format = detect_format(raw_frontmatter)?;
     let frontmatter = parse(raw_frontmatter, format)?;
-
     Ok((frontmatter, remaining_content))
 }
 
@@ -411,7 +490,7 @@ mod tests {
     #[test]
     fn test_get_html_basic_markdown() {
         let markdown = "# Title\n\nThis is a paragraph.";
-        let expected = "<h1><a href=\"#title.html\"></a>Title</h1>\n<p>This is a paragraph.</p>\n";
+        let expected = "<h1><a href=\"#title\" aria-hidden=\"true\" class=\"anchor\" id=\"title\"></a>Title</h1>\n<p>This is a paragraph.</p>\n";
         assert_eq!(get_html(markdown), expected);
     }
 
@@ -423,9 +502,9 @@ mod tests {
     }
 
     #[test]
-    fn test_get_html_with_internal_links() {
+    fn test_get_html_with_internal_relative_links() {
         let markdown = "[internal](./test.md)";
-        let expected = "<p><a href=\"./test.html\">internal</a></p>\n";
+        let expected = "<p><a href=\"./test.md\">internal</a></p>\n";
         assert_eq!(get_html(markdown), expected);
     }
 
@@ -545,7 +624,7 @@ This is a test content.
         assert_eq!(result.slug, "test-title");
         assert_eq!(result.tags, vec!["tag1".to_string(), "tag2".to_string()]);
         assert_eq!(result.date.unwrap().to_string(), "2023-01-01 00:00:00");
-        assert_eq!(result.html, "<h1><a href=\"#test-content.html\"></a>Test Content</h1>\n<p>This is a test content.</p>\n");
+        assert_eq!(result.html, "<h1><a href=\"#test-content\" aria-hidden=\"true\" class=\"anchor\" id=\"test-content\"></a>Test Content</h1>\n<p>This is a test content.</p>\n");
         fs::remove_file(path).unwrap();
     }
 
@@ -597,5 +676,53 @@ This is a test content.
         let result = get_content(path, None, &Marmite::default()).unwrap();
         assert_eq!(result.slug, "test_get_content_with_empty_file".to_string());
         fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn test_get_table_of_contents_from_html_with_single_header() {
+        let html = r##"<h1><a href="#header1"></a>Header 1</h1>"##;
+        let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n</ul>\n";
+        assert_eq!(get_table_of_contents_from_html(html), expected);
+    }
+
+    #[test]
+    fn test_get_table_of_contents_from_html_with_multiple_headers() {
+        let html = r##"
+            <h1><a href="#header1"></a>Header 1</h1>
+            <h2><a href="#header2"></a>Header 2</h2>
+            <h3><a href="#header3"></a>Header 3</h3>
+        "##;
+        let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header2\">Header 2</a></li>\n<ul>\n<li><a href=\"#header3\">Header 3</a></li>\n</ul>\n</ul>\n</ul>\n";
+        assert_eq!(get_table_of_contents_from_html(html), expected);
+    }
+
+    #[test]
+    fn test_get_table_of_contents_from_html_with_nested_headers() {
+        let html = r##"
+            <h1><a href="#header1"></a>Header 1</h1>
+            <h2><a href="#header2"></a>Header 2</h2>
+            <h1><a href="#header3"></a>Header 3</h1>
+        "##;
+        let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header2\">Header 2</a></li>\n</ul>\n<li><a href=\"#header3\">Header 3</a></li>\n</ul>\n";
+        assert_eq!(get_table_of_contents_from_html(html), expected);
+    }
+
+    #[test]
+    fn test_get_table_of_contents_from_html_with_no_headers() {
+        let html = r"<p>No headers here</p>";
+        let expected = "";
+        assert_eq!(get_table_of_contents_from_html(html), expected);
+    }
+
+    #[test]
+    fn test_get_table_of_contents_from_html_with_mixed_content() {
+        let html = r##"
+            <h1><a href="#header1"></a>Header 1</h1>
+            <p>Some content</p>
+            <h2><a href="#header2"></a>Header 2</h2>
+            <p>More content</p>
+        "##;
+        let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header2\">Header 2</a></li>\n</ul>\n</ul>\n";
+        assert_eq!(get_table_of_contents_from_html(html), expected);
     }
 }

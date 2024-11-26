@@ -5,9 +5,14 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
+use std::io::Write;
 use std::path::Path;
 use std::process;
+use std::sync::Arc;
 use unicode_normalization::UnicodeNormalization;
+
+use crate::cli::Cli;
+use crate::site::{get_content_folder, Data};
 
 #[derive(Debug, Clone, Serialize)]
 pub enum Kind {
@@ -81,6 +86,7 @@ pub struct Content {
     pub authors: Vec<String>,
     pub stream: Option<String>,
     pub pinned: bool,
+    pub toc: Option<String>,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -100,6 +106,7 @@ pub struct ContentBuilder {
     authors: Option<Vec<String>>,
     stream: Option<String>,
     pinned: Option<bool>,
+    toc: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -178,6 +185,11 @@ impl ContentBuilder {
         self
     }
 
+    pub fn toc(mut self, toc: String) -> Self {
+        self.toc = Some(toc);
+        self
+    }
+
     pub fn build(self) -> Content {
         Content {
             title: self.title.unwrap_or_default(),
@@ -194,6 +206,7 @@ impl ContentBuilder {
             authors: self.authors.unwrap_or_default(),
             stream: self.stream,
             pinned: self.pinned.unwrap_or_default(),
+            toc: self.toc,
         }
     }
 }
@@ -207,7 +220,7 @@ pub fn get_title<'a>(frontmatter: &'a Frontmatter, markdown: &'a str) -> (String
         Some(Value::String(t)) => t.to_string(),
         _ => markdown
             .lines()
-            .find(|line| !line.is_empty())
+            .find(|line| !line.trim().is_empty() && !line.trim().starts_with("<!"))
             .unwrap_or("")
             .trim_start_matches('#')
             .trim()
@@ -215,11 +228,7 @@ pub fn get_title<'a>(frontmatter: &'a Frontmatter, markdown: &'a str) -> (String
     };
     let markdown = markdown
         .lines()
-        .skip_while(|line| {
-            line.trim().is_empty()
-                || line.trim().starts_with('#') && line.trim_start_matches('#').trim() == title
-                || line.trim() == title
-        })
+        .skip_while(|line| line.trim().is_empty() || line.trim_start_matches('#').trim() == title)
         .collect::<Vec<&str>>()
         .join("\n");
     (title, markdown)
@@ -397,10 +406,70 @@ pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String>
 }
 
 pub fn slugify(text: &str) -> String {
+    let text = text.replace("%20", "-");
     let normalized = text.nfd().collect::<String>().to_lowercase();
     let re = Regex::new(r"[^a-z0-9]+").unwrap();
     let slug = re.replace_all(&normalized, "-");
     slug.trim_matches('-').to_string()
+}
+
+/// Create a new file with the given text as title and slug
+pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &Path) {
+    let content_folder = get_content_folder(&Data::from_file(config_path).site, input_folder);
+    let mut path = content_folder.clone();
+    let slug = slugify(text);
+    if cli_args.create.page {
+        path.push(format!("{slug}.md"));
+    } else {
+        path.push(format!(
+            "{}-{}.md",
+            chrono::Local::now().format("%Y-%m-%d-%H-%M-%S"),
+            slug
+        ));
+    }
+    if path.exists() {
+        error!("File already exists: {:?}", path);
+        return;
+    }
+    let mut file = match std::fs::File::create(&path) {
+        Ok(file) => file,
+        Err(e) => {
+            error!("Failed to create file: {:?}", e);
+            return;
+        }
+    };
+    let content = if cli_args.create.tags.is_some() {
+        format!(
+            "---\n\
+            tags: {tags}\n\
+            ---\n\
+            # {text}\n\
+            \n\
+            ",
+            text = text,
+            tags = cli_args.create.tags.as_deref().unwrap_or(""),
+        )
+    } else {
+        format!("# {text}\n")
+    };
+    if let Err(e) = file.write_all(content.as_bytes()) {
+        error!("Failed to write to file: {:?}", e);
+        return;
+    }
+    println!("{}", path.display());
+    if cli_args.create.edit {
+        let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
+            if cfg!(target_os = "windows") {
+                "notepad".to_string()
+            } else {
+                "nano".to_string()
+            }
+        });
+        let status = std::process::Command::new(editor).arg(&path).status();
+        if let Err(e) = status {
+            error!("Failed to open editor: {:?}", e);
+        }
+    }
 }
 
 #[cfg(test)]
