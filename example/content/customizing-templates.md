@@ -77,6 +77,7 @@ card_image: str or None
 banner_image: str or None
 authors: [str] or []
 pinned: bool
+toc: str or None
 ```
 
 The `GroupedContent` is a map that when iterated returns a map of `name: [Content]`, this is available on global context,

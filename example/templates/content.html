@@ -50,6 +50,14 @@
 <article>
 
   {% include "content_title.html" ignore missing %}
+  {% if content.toc %}
+  <div class="content-toc">
+    <details>
+    <summary>Table of contents</summary>
+    {{ content.toc }}
+    </details>
+  </div>
+  {% endif %}
 
   <div class="content-html">{{ content.html }}</div>
   {% if content.date %}

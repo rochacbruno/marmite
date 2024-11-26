@@ -86,6 +86,7 @@ pub struct Content {
     pub authors: Vec<String>,
     pub stream: Option<String>,
     pub pinned: bool,
+    pub toc: Option<String>,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -105,6 +106,7 @@ pub struct ContentBuilder {
     authors: Option<Vec<String>>,
     stream: Option<String>,
     pinned: Option<bool>,
+    toc: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -183,6 +185,11 @@ impl ContentBuilder {
         self
     }
 
+    pub fn toc(mut self, toc: String) -> Self {
+        self.toc = Some(toc);
+        self
+    }
+
     pub fn build(self) -> Content {
         Content {
             title: self.title.unwrap_or_default(),
@@ -199,6 +206,7 @@ impl ContentBuilder {
             authors: self.authors.unwrap_or_default(),
             stream: self.stream,
             pinned: self.pinned.unwrap_or_default(),
+            toc: self.toc,
         }
     }
 }

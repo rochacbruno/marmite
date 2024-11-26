@@ -108,16 +108,6 @@ pub fn get_content(
         get_html(&markdown_without_title)
     };
 
-    let toc = frontmatter
-        .get("toc")
-        .map_or(false, |t| t.as_bool().unwrap_or(false));
-    let html = if toc {
-        let toc = get_table_of_contents_from_html(&html);
-        format!("<details class='table-of-contents'><summary>Table of contents</summary>\n\n{toc}\n\n</details>\n\n{html}")
-    } else {
-        html
-    };
-
     let description = get_description(&frontmatter);
     let tags = get_tags(&frontmatter);
     let slug = get_slug(&frontmatter, path);
@@ -131,6 +121,14 @@ pub fn get_content(
     let pinned = frontmatter
         .get("pinned")
         .map_or(false, |p| p.as_bool().unwrap_or(false));
+    let toc = if frontmatter
+        .get("toc")
+        .map_or(false, |t| t.as_bool().unwrap_or(false))
+    {
+        Some(get_table_of_contents_from_html(&html))
+    } else {
+        None
+    };
 
     let stream = if date.is_some() {
         get_stream(&frontmatter)
@@ -153,6 +151,7 @@ pub fn get_content(
         authors,
         stream,
         pinned,
+        toc,
     };
     Ok(content)
 }
