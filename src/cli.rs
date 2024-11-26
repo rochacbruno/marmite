@@ -10,7 +10,7 @@ pub struct Cli {
     pub input_folder: PathBuf,
 
     /// Output folder to generate the site
-    /// [default: "{`input_folder}/site`"]
+    /// [default: `input_folder/site`]
     pub output_folder: Option<PathBuf>,
 
     /// Verbosity level (0-4)

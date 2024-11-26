@@ -232,6 +232,7 @@ pub fn get_links_to(html: &str) -> Option<Vec<String>> {
     Some(result)
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn warn_broken_link(link_ref: BrokenLinkReference) -> Option<ResolvedReference> {
     let original = link_ref.original;
     let is_allowed = original

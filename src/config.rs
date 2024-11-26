@@ -119,19 +119,19 @@ impl Marmite {
 
     pub fn override_from_cli_args(&mut self, cli_args: &Arc<Cli>) {
         if let Some(name) = &cli_args.configuration.name {
-            self.name = name.clone();
+            self.name.clone_from(name);
         }
         if let Some(tagline) = &cli_args.configuration.tagline {
-            self.tagline = tagline.clone();
+            self.tagline.clone_from(tagline);
         }
         if let Some(url) = &cli_args.configuration.url {
-            self.url = url.clone();
+            self.url.clone_from(url);
         }
         if let Some(footer) = &cli_args.configuration.footer {
-            self.footer = footer.clone();
+            self.footer.clone_from(footer);
         }
         if let Some(language) = &cli_args.configuration.language {
-            self.language = language.clone();
+            self.language.clone_from(language);
         }
         if let Some(pagination) = cli_args.configuration.pagination {
             self.pagination = pagination;
@@ -140,19 +140,19 @@ impl Marmite {
             self.enable_search = enable_search;
         }
         if let Some(content_path) = &cli_args.configuration.content_path {
-            self.content_path = content_path.clone();
+            self.content_path.clone_from(content_path);
         }
         if let Some(templates_path) = &cli_args.configuration.templates_path {
-            self.templates_path = templates_path.clone();
+            self.templates_path.clone_from(templates_path);
         }
         if let Some(static_path) = &cli_args.configuration.static_path {
-            self.static_path = static_path.clone();
+            self.static_path.clone_from(static_path);
         }
         if let Some(media_path) = &cli_args.configuration.media_path {
-            self.media_path = media_path.clone();
+            self.media_path.clone_from(media_path);
         }
         if let Some(default_date_format) = &cli_args.configuration.default_date_format {
-            self.default_date_format = default_date_format.clone();
+            self.default_date_format.clone_from(default_date_format);
         }
     }
 }

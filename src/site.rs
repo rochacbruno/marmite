@@ -1037,6 +1037,7 @@ fn render_html(
 }
 
 /// Initialize a new site in the input folder
+#[allow(clippy::too_many_lines)]
 pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::cli::Cli>) {
     let input_folder = input_folder.as_path();
     let content_folder = input_folder.join("content");
