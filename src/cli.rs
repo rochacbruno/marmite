@@ -20,7 +20,7 @@ pub struct Cli {
     pub verbose: u8,
 
     /// Detect changes and rebuild the site automatically
-    #[arg(long, short)]
+    #[arg(long, short, requires = "output_folder")]
     pub watch: bool,
 
     /// Serve the site with a built-in HTTP server
@@ -140,4 +140,9 @@ pub struct Configuration {
     /// see <https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html>
     #[arg(long)]
     pub default_date_format: Option<String>,
+
+    /// Name of the colorscheme to use [default: "default" or from config file]
+    /// see <https://rochacbruno.github.io/marmite/getting-started.html#colorschemes>
+    #[arg(long)]
+    pub colorscheme: Option<String>,
 }

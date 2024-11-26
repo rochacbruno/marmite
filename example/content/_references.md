@@ -9,6 +9,7 @@
 [Markdown Formatting]: <./markdown-format.html> "Markdown Formatting"
 [Fuse]: <https://fusejs.io> "Fuse JS"
 [example config]: <https://github.com/rochacbruno/marmite/blob/main/example/marmite.yaml> "Config Example"
+[Nginx]: https://nginx.org
 
 <!-- _references.md is a file to gather all references together 
 this file is appended to every raw markdown.

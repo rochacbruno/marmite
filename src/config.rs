@@ -1,3 +1,4 @@
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
 use std::{collections::HashMap, path::Path, sync::Arc};
@@ -154,6 +155,17 @@ impl Marmite {
         if let Some(default_date_format) = &cli_args.configuration.default_date_format {
             self.default_date_format.clone_from(default_date_format);
         }
+        if let Some(colorscheme) = &cli_args.configuration.colorscheme {
+            self.extra = Some(
+                [(
+                    "colorscheme".to_string(),
+                    Value::String(colorscheme.clone()),
+                )]
+                .iter()
+                .cloned()
+                .collect(),
+            );
+        }
     }
 }
 
@@ -173,14 +185,14 @@ pub fn generate(input_folder: &Path, cli_args: &Arc<Cli>) {
     let config_path = input_folder.join(cli_args.config.as_str());
     // If the file already exists, do not overwrite
     if config_path.exists() {
-        eprintln!("Config file already exists: {config_path:?}");
+        error!("Config file already exists: {config_path:?}");
         return;
     }
     let mut config = Marmite::new();
     config.override_from_cli_args(cli_args);
     let config_str = serde_yaml::to_string(&config).unwrap();
     std::fs::write(&config_path, config_str).unwrap();
-    println!("Config file generated: {:?}", &config_path.display());
+    info!("Config file generated: {:?}", &config_path.display());
 }
 
 // Defaults

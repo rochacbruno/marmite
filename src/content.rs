@@ -1,6 +1,6 @@
 use chrono::{NaiveDate, NaiveDateTime};
 use frontmatter_gen::{Frontmatter, Value};
-use log::{error, info};
+use log::error;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::Entry;
@@ -12,6 +12,7 @@ use std::sync::Arc;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::cli::Cli;
+use crate::site::{get_content_folder, Data};
 
 #[derive(Debug, Clone, Serialize)]
 pub enum Kind {
@@ -211,7 +212,7 @@ pub fn get_title<'a>(frontmatter: &'a Frontmatter, markdown: &'a str) -> (String
         Some(Value::String(t)) => t.to_string(),
         _ => markdown
             .lines()
-            .find(|line| !line.is_empty())
+            .find(|line| !line.trim().is_empty() && !line.trim().starts_with("<!"))
             .unwrap_or("")
             .trim_start_matches('#')
             .trim()
@@ -219,11 +220,7 @@ pub fn get_title<'a>(frontmatter: &'a Frontmatter, markdown: &'a str) -> (String
     };
     let markdown = markdown
         .lines()
-        .skip_while(|line| {
-            line.trim().is_empty()
-                || line.trim().starts_with('#') && line.trim_start_matches('#').trim() == title
-                || line.trim() == title
-        })
+        .skip_while(|line| line.trim().is_empty() || line.trim_start_matches('#').trim() == title)
         .collect::<Vec<&str>>()
         .join("\n");
     (title, markdown)
@@ -401,6 +398,7 @@ pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String>
 }
 
 pub fn slugify(text: &str) -> String {
+    let text = text.replace("%20", "-");
     let normalized = text.nfd().collect::<String>().to_lowercase();
     let re = Regex::new(r"[^a-z0-9]+").unwrap();
     let slug = re.replace_all(&normalized, "-");
@@ -408,8 +406,8 @@ pub fn slugify(text: &str) -> String {
 }
 
 /// Create a new file with the given text as title and slug
-pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>) {
-    let content_folder = input_folder.join("content");
+pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &Path) {
+    let content_folder = get_content_folder(&Data::from_file(config_path).site, input_folder);
     let mut path = content_folder.clone();
     let slug = slugify(text);
     if cli_args.create.page {
@@ -417,7 +415,7 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>) {
     } else {
         path.push(format!(
             "{}-{}.md",
-            chrono::Local::now().format("%Y-%m-%d"),
+            chrono::Local::now().format("%Y-%m-%d-%H-%M-%S"),
             slug
         ));
     }
@@ -450,7 +448,7 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>) {
         error!("Failed to write to file: {:?}", e);
         return;
     }
-    info!("Created new file: {:?}", path);
+    println!("{}", path.display());
     if cli_args.create.edit {
         let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
             if cfg!(target_os = "windows") {

@@ -24,8 +24,15 @@ fn main() {
     let bind_address: &str = args.bind.as_str();
     let mut verbose = args.verbose; // -v info, -vv debug
 
-    if verbose == 0 && (args.watch || args.serve) {
-        verbose = 1; // force info level when watching or serving
+    if verbose == 0
+        && (args.watch
+            || args.serve
+            || args.start_theme
+            || args.init_templates
+            || args.generate_config
+            || args.init_site)
+    {
+        verbose = 1;
     }
     if args.debug {
         verbose = 2; // backward compatibility with --debug flag
@@ -62,7 +69,7 @@ fn main() {
     }
 
     if let Some(title) = args.create.new {
-        content::new(&input_folder, &title, &cloned_args);
+        content::new(&input_folder, &title, &cloned_args, &config_path);
         return;
     }
 

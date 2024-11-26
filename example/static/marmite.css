@@ -62,6 +62,18 @@ a {
   text-decoration: none;
 }
 
+h1:hover > a.anchor::before,
+h2:hover > a.anchor::before,
+h3:hover > a.anchor::before,
+h4:hover > a.anchor::before,
+h5:hover > a.anchor::before,
+h6:hover > a.anchor::before {
+ content: "🔗            \00a0";
+ font-size: 0.8em;
+ position: absolute;
+ margin-left: -2rem;
+}
+
 blockquote {
   padding: 0;
   padding-left: 1rem;

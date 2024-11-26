@@ -1,6 +1,7 @@
 use crate::config::Marmite;
 use crate::content::{
-    get_authors, get_date, get_description, get_slug, get_stream, get_tags, get_title, Content,
+    get_authors, get_date, get_description, get_slug, get_stream, get_tags, get_title, slugify,
+    Content,
 };
 use crate::site::Data;
 use chrono::Datelike;
@@ -12,6 +13,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
+use url::Url;
 
 /// Process the file, extract the content and add it to the site data
 /// If the file is a post, add it to the posts vector
@@ -104,6 +106,16 @@ pub fn get_content(
         get_html(&markdown_without_title)
     } else {
         get_html(&markdown_without_title)
+    };
+
+    let toc = frontmatter
+        .get("toc")
+        .map_or(false, |t| t.as_bool().unwrap_or(false));
+    let html = if toc {
+        let toc = get_table_of_contents_from_html(&html);
+        format!("<details class='table-of-contents'><summary>Table of contents</summary>\n\n{toc}\n\n</details>\n\n{html}")
+    } else {
+        html
     };
 
     let description = get_description(&frontmatter);
@@ -249,6 +261,45 @@ fn warn_broken_link(link_ref: BrokenLinkReference) -> Option<ResolvedReference> 
     None
 }
 
+pub fn get_table_of_contents_from_html(html: &str) -> String {
+    let re =
+        Regex::new(r#"<h([1-6])[^>]*>(?:<a[^>]*href="([^"]+)"[^>]*></a>)?(.*?)</h[1-6]>"#).unwrap();
+    let mut toc = String::new();
+    let mut last_level = 0;
+
+    for cap in re.captures_iter(html) {
+        let level = cap.get(1).map_or(0, |m| m.as_str().parse().unwrap());
+        let title = cap.get(3).map_or("", |m| m.as_str());
+        let slug = cap.get(2).map_or_else(
+            || format!("#{}", slugify(title)),
+            |m| m.as_str().to_string(),
+        );
+
+        match level.cmp(&last_level) {
+            std::cmp::Ordering::Greater => {
+                for _ in last_level..level {
+                    toc.push_str("<ul>\n");
+                }
+            }
+            std::cmp::Ordering::Less => {
+                for _ in level..last_level {
+                    toc.push_str("</ul>\n");
+                }
+            }
+            std::cmp::Ordering::Equal => {}
+        }
+
+        toc.push_str(&format!("<li><a href=\"{slug}\">{title}</a></li>\n"));
+        last_level = level;
+    }
+
+    for _ in 0..last_level {
+        toc.push_str("</ul>\n");
+    }
+
+    toc
+}
+
 /// Convert markdown to html using comrak
 pub fn get_html(markdown: &str) -> String {
     let mut options = ComrakOptions::default();
@@ -282,43 +333,56 @@ pub fn get_html(markdown: &str) -> String {
 pub fn fix_internal_links(html: &str) -> String {
     let re = Regex::new(r#"<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>"#).unwrap();
     re.replace_all(html, |caps: &regex::Captures| {
-        let href = &caps[1];
-        let text = &caps[2];
-        let is_internal = !href.starts_with("http");
-        let is_anchor = href.starts_with('#');
-        let href_ends_in_html = std::path::Path::new(href)
-            .extension()
-            .map_or(false, |ext| ext.eq_ignore_ascii_case("html"));
+        let link = caps.get(0).map_or("", |m| m.as_str());
+        let href = caps.get(1).map_or("", |m| m.as_str());
+        let text = caps.get(2).map_or("", |m| m.as_str());
+        if link.contains("class=\"anchor\"")
+            || link.contains("data-footnote-ref")
+            || link.contains("footnote-backref")
+            || link.starts_with('/')
+            || href.starts_with(".")
+        {
+            return link.to_string();
+        }
 
-        let new_href = if !is_anchor && is_internal {
-            if let Some(stripped) = href.strip_suffix(".md") {
-                format!("{stripped}.html")
-            } else if !href_ends_in_html {
-                format!("{href}.html")
-            } else {
-                href.to_string()
+        if let Ok(url) = Url::parse(href) {
+            if !url.scheme().is_empty() {
+                return link.to_string();
             }
+        }
+
+        let new_href = if let Ok(parsed) = Url::parse(&format!("m://m/{}", href)) {
+            let path = slugify(
+                parsed
+                    .path()
+                    .trim_start_matches('/')
+                    .trim_end_matches(".md")
+                    .trim_end_matches(".html"),
+            );
+            let fragment = match parsed.fragment() {
+                Some(f) => slugify(f),
+                None => String::new(),
+            };
+
+            let mut new_href = String::new();
+            if !path.is_empty() {
+                new_href.push_str(&format!("{path}.html"));
+            }
+            if !fragment.is_empty() {
+                new_href.push_str(&format!("#{}", fragment));
+            }
+            new_href
         } else {
             href.to_string()
         };
 
-        let text_ends_in_md = std::path::Path::new(text)
-            .extension()
-            .map_or(false, |ext| ext.eq_ignore_ascii_case("md"));
-        let text_ends_in_html = std::path::Path::new(text)
-            .extension()
-            .map_or(false, |ext| ext.eq_ignore_ascii_case("html"));
-        let new_text = if is_internal && text_ends_in_md {
-            &text[..text.len() - 3]
-        } else if is_internal && text_ends_in_html {
-            &text[..text.len() - 5]
-        } else {
-            text
-        };
+        let new_text = text
+            .trim_start_matches('#')
+            .trim_end_matches(".md")
+            .trim_end_matches(".html")
+            .replace("#", " > ");
 
-        let link_with_attributes = caps.get(0).map_or("", |m| m.as_str());
-        link_with_attributes
-            .replace(&format!("href=\"{href}\""), &format!("href=\"{new_href}\""))
+        link.replace(&format!("href=\"{href}\""), &format!("href=\"{new_href}\""))
             .replace(&format!(">{text}</a>"), &format!(">{new_text}</a>"))
     })
     .to_string()
@@ -612,5 +676,53 @@ This is a test content.
         let result = get_content(path, None, &Marmite::default()).unwrap();
         assert_eq!(result.slug, "test_get_content_with_empty_file".to_string());
         fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn test_get_table_of_contents_from_html_with_single_header() {
+        let html = r##"<h1><a href="#header1"></a>Header 1</h1>"##;
+        let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n</ul>\n";
+        assert_eq!(get_table_of_contents_from_html(html), expected);
+    }
+
+    #[test]
+    fn test_get_table_of_contents_from_html_with_multiple_headers() {
+        let html = r##"
+            <h1><a href="#header1"></a>Header 1</h1>
+            <h2><a href="#header2"></a>Header 2</h2>
+            <h3><a href="#header3"></a>Header 3</h3>
+        "##;
+        let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header2\">Header 2</a></li>\n<ul>\n<li><a href=\"#header3\">Header 3</a></li>\n</ul>\n</ul>\n</ul>\n";
+        assert_eq!(get_table_of_contents_from_html(html), expected);
+    }
+
+    #[test]
+    fn test_get_table_of_contents_from_html_with_nested_headers() {
+        let html = r##"
+            <h1><a href="#header1"></a>Header 1</h1>
+            <h2><a href="#header2"></a>Header 2</h2>
+            <h1><a href="#header3"></a>Header 3</h1>
+        "##;
+        let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header2\">Header 2</a></li>\n</ul>\n<li><a href=\"#header3\">Header 3</a></li>\n</ul>\n";
+        assert_eq!(get_table_of_contents_from_html(html), expected);
+    }
+
+    #[test]
+    fn test_get_table_of_contents_from_html_with_no_headers() {
+        let html = r#"<p>No headers here</p>"#;
+        let expected = "";
+        assert_eq!(get_table_of_contents_from_html(html), expected);
+    }
+
+    #[test]
+    fn test_get_table_of_contents_from_html_with_mixed_content() {
+        let html = r##"
+            <h1><a href="#header1"></a>Header 1</h1>
+            <p>Some content</p>
+            <h2><a href="#header2"></a>Header 2</h2>
+            <p>More content</p>
+        "##;
+        let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header2\">Header 2</a></li>\n</ul>\n</ul>\n";
+        assert_eq!(get_table_of_contents_from_html(html), expected);
     }
 }
