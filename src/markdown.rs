@@ -236,10 +236,10 @@ fn warn_broken_link(link_ref: BrokenLinkReference) -> Option<ResolvedReference> 
     let original = link_ref.original;
     let is_allowed = original
         .starts_with("http")  // external links
-        || original.starts_with("!") // Callouts
-        || original.starts_with("#") // anchors
-        ||original.starts_with("^") // footnotes
-        || original.starts_with("/") // absolute links
+        || original.starts_with('!') // Callouts
+        || original.starts_with('#') // anchors
+        ||original.starts_with('^') // footnotes
+        || original.starts_with('/') // absolute links
         || (original.len() == 1 && !original.chars().next().unwrap().is_ascii_digit()) // task checkboxes
         || original.is_empty(); // empty links
     if !is_allowed {
@@ -268,7 +268,7 @@ pub fn get_html(markdown: &str) -> String {
     options.extension.spoiler = true;
     options.extension.greentext = true;
     options.extension.shortcodes = true;
-    options.extension.header_ids = Some("".to_string());
+    options.extension.header_ids = Some(String::new());
     options.extension.wikilinks_title_before_pipe = true;
     // options.extension.image_url_rewriter = TODO: implement this to point to a resized image
 
@@ -284,7 +284,7 @@ pub fn fix_internal_links(html: &str) -> String {
         let href = &caps[1];
         let text = &caps[2];
         let is_internal = !href.starts_with("http");
-        let is_anchor = href.starts_with("#");
+        let is_anchor = href.starts_with('#');
         let href_ends_in_html = std::path::Path::new(href)
             .extension()
             .map_or(false, |ext| ext.eq_ignore_ascii_case("html"));
@@ -317,11 +317,8 @@ pub fn fix_internal_links(html: &str) -> String {
 
         let link_with_attributes = caps.get(0).map_or("", |m| m.as_str());
         link_with_attributes
-            .replace(
-                &format!("href=\"{}\"", href),
-                &format!("href=\"{}\"", new_href),
-            )
-            .replace(&format!(">{}</a>", text), &format!(">{}</a>", new_text))
+            .replace(&format!("href=\"{href}\""), &format!("href=\"{new_href}\""))
+            .replace(&format!(">{text}</a>"), &format!(">{new_text}</a>"))
     })
     .to_string()
 }

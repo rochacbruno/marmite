@@ -410,7 +410,7 @@ pub fn slugify(text: &str) -> String {
 /// Create a new file with the given text as title and slug
 pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>) {
     let content_folder = input_folder.join("content");
-    let mut path = content_folder.to_path_buf();
+    let mut path = content_folder.clone();
     let slug = slugify(text);
     if cli_args.create.page {
         path.push(format!("{slug}.md"));
@@ -444,7 +444,7 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>) {
             tags = cli_args.create.tags.as_deref().unwrap_or(""),
         )
     } else {
-        format!("# {text}\n", text = text)
+        format!("# {text}\n")
     };
     if let Err(e) = file.write_all(content.as_bytes()) {
         error!("Failed to write to file: {:?}", e);

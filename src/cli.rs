@@ -10,7 +10,7 @@ pub struct Cli {
     pub input_folder: PathBuf,
 
     /// Output folder to generate the site
-    /// [default: "{input_folder}/site"]
+    /// [default: "{`input_folder}/site`"]
     pub output_folder: Option<PathBuf>,
 
     /// Verbosity level (0-4)
@@ -118,8 +118,8 @@ pub struct Configuration {
     pub enable_search: Option<bool>,
 
     /// Path for content subfolder [default: "content" or value from config file]
-    /// this is the folder where markdown files are stored inside input_folder
-    /// no need to change this if your markdown files are in input_folder directly
+    /// this is the folder where markdown files are stored inside `input_folder`
+    /// no need to change this if your markdown files are in `input_folder` directly
     #[arg(long)]
     pub content_path: Option<String>,
 
@@ -137,7 +137,7 @@ pub struct Configuration {
     pub media_path: Option<String>,
 
     /// Default date format [default: "%b %e, %Y" or from config file]
-    /// see https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html
+    /// see <https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html>
     #[arg(long)]
     pub default_date_format: Option<String>,
 }

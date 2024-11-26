@@ -1168,7 +1168,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     let now = chrono::Local::now();
     let now = now.format("%Y-%m-%d").to_string();
     if let Err(e) = fs::write(
-        content_folder.join(format!("{}-welcome.md", now)),
+        content_folder.join(format!("{now}-welcome.md")),
         "# Welcome to Marmite\n\
         \n\
         This is your first post!\n\
