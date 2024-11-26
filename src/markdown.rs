@@ -340,7 +340,7 @@ pub fn fix_internal_links(html: &str) -> String {
             || link.contains("data-footnote-ref")
             || link.contains("footnote-backref")
             || link.starts_with('/')
-            || href.starts_with(".")
+            || href.starts_with('.')
         {
             return link.to_string();
         }
@@ -351,7 +351,7 @@ pub fn fix_internal_links(html: &str) -> String {
             }
         }
 
-        let new_href = if let Ok(parsed) = Url::parse(&format!("m://m/{}", href)) {
+        let new_href = if let Ok(parsed) = Url::parse(&format!("m://m/{href}")) {
             let path = slugify(
                 parsed
                     .path()
@@ -369,7 +369,7 @@ pub fn fix_internal_links(html: &str) -> String {
                 new_href.push_str(&format!("{path}.html"));
             }
             if !fragment.is_empty() {
-                new_href.push_str(&format!("#{}", fragment));
+                new_href.push_str(&format!("#{fragment}"));
             }
             new_href
         } else {
@@ -380,7 +380,7 @@ pub fn fix_internal_links(html: &str) -> String {
             .trim_start_matches('#')
             .trim_end_matches(".md")
             .trim_end_matches(".html")
-            .replace("#", " > ");
+            .replace('#', " > ");
 
         link.replace(&format!("href=\"{href}\""), &format!("href=\"{new_href}\""))
             .replace(&format!(">{text}</a>"), &format!(">{new_text}</a>"))
@@ -709,7 +709,7 @@ This is a test content.
 
     #[test]
     fn test_get_table_of_contents_from_html_with_no_headers() {
-        let html = r#"<p>No headers here</p>"#;
+        let html = r"<p>No headers here</p>";
         let expected = "";
         assert_eq!(get_table_of_contents_from_html(html), expected);
     }
