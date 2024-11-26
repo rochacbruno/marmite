@@ -5,10 +5,10 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
+use std::io::Write;
 use std::path::Path;
 use std::process;
 use std::sync::Arc;
-use std::io::Write;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::cli::Cli;
@@ -407,10 +407,20 @@ pub fn slugify(text: &str) -> String {
     slug.trim_matches('-').to_string()
 }
 
-
+/// Create a new file with the given text as title and slug
 pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>) {
-    let mut path = input_folder.to_path_buf();
-    path.push(text);
+    let content_folder = input_folder.join("content");
+    let mut path = content_folder.to_path_buf();
+    let slug = slugify(text);
+    if cli_args.create.page {
+        path.push(format!("{slug}.md"));
+    } else {
+        path.push(format!(
+            "{}-{}.md",
+            chrono::Local::now().format("%Y-%m-%d"),
+            slug
+        ));
+    }
     if path.exists() {
         error!("File already exists: {:?}", path);
         return;
@@ -422,24 +432,38 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>) {
             return;
         }
     };
-    let content = format!(
-        r#"---
-title: "{text}"
-date: "{date}"
-tags: []
----
-
-# {text}
-
-"#,
-        text = text,
-        date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
-    );
+    let content = if cli_args.create.tags.is_some() {
+        format!(
+            "---\n\
+            tags: {tags}\n\
+            ---\n\
+            # {text}\n\
+            \n\
+            ",
+            text = text,
+            tags = cli_args.create.tags.as_deref().unwrap_or(""),
+        )
+    } else {
+        format!("# {text}\n", text = text)
+    };
     if let Err(e) = file.write_all(content.as_bytes()) {
         error!("Failed to write to file: {:?}", e);
         return;
     }
     info!("Created new file: {:?}", path);
+    if cli_args.create.edit {
+        let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
+            if cfg!(target_os = "windows") {
+                "notepad".to_string()
+            } else {
+                "nano".to_string()
+            }
+        });
+        let status = std::process::Command::new(editor).arg(&path).status();
+        if let Err(e) = status {
+            error!("Failed to open editor: {:?}", e);
+        }
+    }
 }
 
 #[cfg(test)]

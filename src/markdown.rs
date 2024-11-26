@@ -147,7 +147,7 @@ pub fn get_content(
 
 /// Capture `card_image` from frontmatter, then if not defined
 /// take the first img src found in the post content
-fn get_card_image(
+pub fn get_card_image(
     frontmatter: &Frontmatter,
     html: &str,
     path: &Path,
@@ -215,7 +215,7 @@ fn get_banner_image(frontmatter: &Frontmatter, path: &Path, slug: &str) -> Optio
 /// Extract all the internal links from the html content
 /// that point to a internal .html file (excluding http links)
 /// and return them as a vector of strings
-fn get_links_to(html: &str) -> Option<Vec<String>> {
+pub fn get_links_to(html: &str) -> Option<Vec<String>> {
     let mut result = Vec::new();
     let re = Regex::new(r#"href="([^"]+)\.html""#).unwrap();
     for cap in re.captures_iter(html) {
@@ -278,7 +278,7 @@ pub fn get_html(markdown: &str) -> String {
 /// Takes the html content, finds all the internal links and
 /// fixes them to point to the correct html file
 /// Also removes the .md|.html extension from the text of the link
-fn fix_internal_links(html: &str) -> String {
+pub fn fix_internal_links(html: &str) -> String {
     let re = Regex::new(r#"<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>"#).unwrap();
     re.replace_all(html, |caps: &regex::Captures| {
         let href = &caps[1];
@@ -328,10 +328,12 @@ fn fix_internal_links(html: &str) -> String {
 
 fn parse_front_matter(content: &str) -> Result<(Frontmatter, &str), String> {
     let content = content.trim_start_matches('\n');
-    match extract_fm_content(content) {
-        Ok((frontmatter, content)) => Ok((frontmatter, content)),
-        Err(_) => Ok((Frontmatter::new(), content)),
+    let has_frontmatter =
+        content.starts_with("---") || content.starts_with("+++") || content.starts_with('{');
+    if !has_frontmatter {
+        return Ok((Frontmatter::new(), content));
     }
+    extract_fm_content(content)
 }
 
 pub fn extract_fm_content(content: &str) -> Result<(Frontmatter, &str), String> {
@@ -426,7 +428,7 @@ mod tests {
     #[test]
     fn test_get_html_basic_markdown() {
         let markdown = "# Title\n\nThis is a paragraph.";
-        let expected = "<h1><a href=\"#title.html\"></a>Title</h1>\n<p>This is a paragraph.</p>\n";
+        let expected = "<h1><a href=\"#title\" aria-hidden=\"true\" class=\"anchor\" id=\"title\"></a>Title</h1>\n<p>This is a paragraph.</p>\n";
         assert_eq!(get_html(markdown), expected);
     }
 
@@ -560,7 +562,7 @@ This is a test content.
         assert_eq!(result.slug, "test-title");
         assert_eq!(result.tags, vec!["tag1".to_string(), "tag2".to_string()]);
         assert_eq!(result.date.unwrap().to_string(), "2023-01-01 00:00:00");
-        assert_eq!(result.html, "<h1><a href=\"#test-content.html\"></a>Test Content</h1>\n<p>This is a test content.</p>\n");
+        assert_eq!(result.html, "<h1><a href=\"#test-content\" aria-hidden=\"true\" class=\"anchor\" id=\"test-content\"></a>Test Content</h1>\n<p>This is a test content.</p>\n");
         fs::remove_file(path).unwrap();
     }
 

@@ -118,40 +118,40 @@ impl Marmite {
     }
 
     pub fn override_from_cli_args(&mut self, cli_args: &Arc<Cli>) {
-        if let Some(name) = &cli_args.name {
+        if let Some(name) = &cli_args.configuration.name {
             self.name = name.clone();
         }
-        if let Some(tagline) = &cli_args.tagline {
+        if let Some(tagline) = &cli_args.configuration.tagline {
             self.tagline = tagline.clone();
         }
-        if let Some(url) = &cli_args.url {
+        if let Some(url) = &cli_args.configuration.url {
             self.url = url.clone();
         }
-        if let Some(footer) = &cli_args.footer {
+        if let Some(footer) = &cli_args.configuration.footer {
             self.footer = footer.clone();
         }
-        if let Some(language) = &cli_args.language {
+        if let Some(language) = &cli_args.configuration.language {
             self.language = language.clone();
         }
-        if let Some(pagination) = cli_args.pagination {
+        if let Some(pagination) = cli_args.configuration.pagination {
             self.pagination = pagination;
         }
-        if let Some(enable_search) = cli_args.enable_search {
+        if let Some(enable_search) = cli_args.configuration.enable_search {
             self.enable_search = enable_search;
         }
-        if let Some(content_path) = &cli_args.content_path {
+        if let Some(content_path) = &cli_args.configuration.content_path {
             self.content_path = content_path.clone();
         }
-        if let Some(templates_path) = &cli_args.templates_path {
+        if let Some(templates_path) = &cli_args.configuration.templates_path {
             self.templates_path = templates_path.clone();
         }
-        if let Some(static_path) = &cli_args.static_path {
+        if let Some(static_path) = &cli_args.configuration.static_path {
             self.static_path = static_path.clone();
         }
-        if let Some(media_path) = &cli_args.media_path {
+        if let Some(media_path) = &cli_args.configuration.media_path {
             self.media_path = media_path.clone();
         }
-        if let Some(default_date_format) = &cli_args.default_date_format {
+        if let Some(default_date_format) = &cli_args.configuration.default_date_format {
             self.default_date_format = default_date_format.clone();
         }
     }

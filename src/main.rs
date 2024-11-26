@@ -55,14 +55,14 @@ fn main() {
         site::initialize(&input_folder, &cloned_args);
         return;
     }
-    
+
     if !input_folder.exists() {
         error!("Input folder does not exist: {:?}", input_folder);
         return;
     }
 
-    if let Some(text) = args.new {
-        content::new(&input_folder, &text, &cloned_args);
+    if let Some(title) = args.create.new {
+        content::new(&input_folder, &title, &cloned_args);
         return;
     }
 
@@ -92,7 +92,7 @@ fn main() {
         bind_address,
         &cloned_args,
     );
-    
+
     if serve && !watch {
         info!("Starting built-in HTTP server...");
         server::start(bind_address, &Arc::clone(&output_folder));

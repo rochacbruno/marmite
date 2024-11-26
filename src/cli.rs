@@ -1,5 +1,5 @@
 #![allow(clippy::struct_excessive_bools)]
-use clap::Parser;
+use clap::{Args, Parser};
 use std::path::PathBuf;
 
 /// Command Line Argument Parser for Marmite CLI
@@ -10,6 +10,7 @@ pub struct Cli {
     pub input_folder: PathBuf,
 
     /// Output folder to generate the site
+    /// [default: "{input_folder}/site"]
     pub output_folder: Option<PathBuf>,
 
     /// Verbosity level (0-4)
@@ -19,7 +20,7 @@ pub struct Cli {
     pub verbose: u8,
 
     /// Detect changes and rebuild the site automatically
-    #[arg(long)]
+    #[arg(long, short)]
     pub watch: bool,
 
     /// Serve the site with a built-in HTTP server
@@ -27,11 +28,11 @@ pub struct Cli {
     pub serve: bool,
 
     /// Address to bind the server
-    #[arg(long, default_value = "0.0.0.0:8000")]
+    #[arg(long, default_value = "0.0.0.0:8000", requires = "serve")]
     pub bind: String,
 
     /// Path to custom configuration file
-    #[arg(long, default_value = "marmite.yaml")]
+    #[arg(long, short, default_value = "marmite.yaml")]
     pub config: String,
 
     /// Print debug messages
@@ -58,19 +59,36 @@ pub struct Cli {
     #[arg(long)]
     pub init_site: bool,
 
+    /// Create a new markdown file in the input folder
+    #[command(flatten)]
+    pub create: Create,
+
+    /// Override configuration values from CLI arguments
+    #[command(flatten)]
+    pub configuration: Configuration,
+}
+
+/// Create a new markdown file in the input folder
+#[derive(Args, Debug, Clone)]
+pub struct Create {
     /// Create a new post with the given title and open in the default editor
     #[arg(long)]
     pub new: Option<String>,
-    #[arg(long, short)]
+    /// Edit the file in the default editor
+    #[arg(short, requires = "new")]
     pub edit: bool,
-    #[arg(long, short)]
+    /// Set the new content as a page
+    #[arg(short, requires = "new")]
     pub page: bool,
-    #[arg(long, short)]
+    /// Set the tags for the new content
+    /// tags are comma separated
+    #[arg(short, requires = "new")]
     pub tags: Option<String>,
-    
-    // ---- //
+}
 
-    // Every field below is optional and will be used to override the values from the config file
+/// Gather configuration values from CLI arguments
+#[derive(Args, Debug, Clone)]
+pub struct Configuration {
     /// Site name [default: "Home" or value from config file]
     #[arg(long)]
     pub name: Option<String>,
