@@ -145,4 +145,9 @@ pub struct Configuration {
     /// see <https://rochacbruno.github.io/marmite/getting-started.html#colorschemes>
     #[arg(long)]
     pub colorscheme: Option<String>,
+
+    /// Show Table of Contents in posts [default: false or from config file]
+    /// this will generate a table of contents for each post
+    #[arg(long)]
+    pub toc: Option<bool>,
 }

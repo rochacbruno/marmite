@@ -93,6 +93,9 @@ pub struct Marmite {
 
     #[serde(default)]
     pub authors: HashMap<String, Author>,
+
+    #[serde(default)]
+    pub toc: bool,
 }
 
 impl Marmite {
@@ -139,6 +142,9 @@ impl Marmite {
         }
         if let Some(enable_search) = cli_args.configuration.enable_search {
             self.enable_search = enable_search;
+        }
+        if let Some(toc) = cli_args.configuration.toc {
+            self.toc = toc;
         }
         if let Some(content_path) = &cli_args.configuration.content_path {
             self.content_path.clone_from(content_path);

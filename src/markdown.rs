@@ -121,9 +121,10 @@ pub fn get_content(
     let pinned = frontmatter
         .get("pinned")
         .map_or(false, |p| p.as_bool().unwrap_or(false));
-    let toc = if frontmatter
-        .get("toc")
-        .map_or(false, |t| t.as_bool().unwrap_or(false))
+    let toc = if site.toc
+        || frontmatter
+            .get("toc")
+            .map_or(false, |t| t.as_bool().unwrap_or(false))
     {
         Some(get_table_of_contents_from_html(&html))
     } else {
