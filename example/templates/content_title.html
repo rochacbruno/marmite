@@ -1,7 +1,7 @@
 {# Display title and date if not starting with h1, else render the content using the user given title #}
 
 {% if content.html is not starting_with("<h1>") %}
-<div class="content-title">
+<div class="content-title" id="title">
     <h1>{{content.title}}</h1> 
     {% include "content_date.html" ignore missing %}
 </div>

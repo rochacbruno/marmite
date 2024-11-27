@@ -11,9 +11,12 @@ extra:
   mermaid_theme: default
 ---
 
+## Common Markdown
+
 The content on Marmite accepts any valid `CommonMark` or **Github** _Flavoured_ markdown
 and some `GFM` extensions, Marmite also does post processing of HTML to support features such as 
 back-links and Obsidian links.
+
 
 ### Paragraphs and formatting
 
@@ -45,16 +48,206 @@ The following is ~~no more~~.
 | List        | Here's a list! <ul><li>Item one.</li><li>Item two.</li></ul> |
 ```
 
+### Footnotes
+
+Here is a simple footnote[^1]. With some[^2] additional text after it.  
+
+A reference[1] can also be used to just create a link hidden from footnotes.
+
+```markdown
+Here is a simple footnote[^1]. With some[^2] additional text after it.  
+
+A reference[1] can also be used to just create a link hidden from footnotes.
+```
+And on the end of the file:
+```markdown
+[^1]: My footnote.
+[^2]: Another footnote.
+[1]: <https://en.wikipedia.org/wiki/Hobbit#Lifestyle> "Hobbit lifestyles"
+```
+
+> [!TIP]  
+> Add global references to the `_references.md` file to reuse on any content.
+
+### Block quote
+
+>Not a quote
+> quote
+> > > Nested quote
+
+```markdown
+>Not a quote
+> quote
+> > > Nested quote
+```
+
+Multiline quote
+
+>>>
+"Marmite is the easiest SSG" created by
+Bruno Rocha with the contribution of various people.
+>>>
+
+```markdown
+>>>
+"Marmite is the easiest SSG" created by
+Bruno Rocha with the contribution of various people.
+>>>
+```
+
+Multi paragraph quote 
+
+> Dorothy followed her through many of the beautiful rooms in her castle.
+> 
+> The Witch bade her clean the pots and kettles and sweep the floor and keep the fire fed with 
+
+```markdown
+> Dorothy followed her through many of the beautiful rooms in her castle.
+> 
+> The Witch bade her clean the pots and kettles and sweep the floor and keep the fire fed with 
+```
+
+Rich quotes
+
+> **The quarterly results look great!**
+> 
+> - Revenue was off the chart.
+> - Profits were higher than ever.
+> 
+>  *Everything* is going according to **plan**.
+
+```markdown
+> **The quarterly results look great!**
+> 
+> - Revenue was off the chart.
+> - Profits were higher than ever.
+> 
+>  *Everything* is going according to **plan**.
+```
+
+### Underline
+
+__dunder__
+
+```markdown
+__dunder__
+```
+
+### Code
+
+```python
+import antigravity
+
+def main():
+    print("Python is a great language")
+```
+
+```rust
+fn main() {
+    println!("Marmite is made with Rust!");
+}
+```
+````markdown
+```python
+import antigravity
+
+def main():
+    print("Python is a great language")
+```
+
+```rust
+fn main() {
+    println!("Marmite is made with Rust!");
+}
+```
+````
+
+### lists
+
+- lists
+  - sub item
+- images
+  * other
+- tables
+- Formatting
+```markdown
+- lists
+  - sub item
+- images
+  * other
+- tables
+- Formatting
+```
+
+Numbered
+
+1. First item
+1. Second item
+    - Indented unordered item
+    - Indented unordered item
+1. Third item
+    1. Indented ordered item
+    1. Indented ordered item
+1. Fourth item 
+```markdown
+1. First item
+1. Second item
+    - Indented unordered item
+    - Indented unordered item
+1. Third item
+    1. Indented ordered item
+    1. Indented ordered item
+1. Fourth item 
+```
+
+Starting lists with numbers requires a `number\`
+
+- 1983\. A great year!
+- I think 1984 was second best. 
+```markdown
+- 1983\. A great year!
+- I think 1984 was second best. 
+```
+
+### Images
+
+Photo  
+![Photo](media/marmite.jpg)
+
+Same but containing a tooltip if you hover the mouse on  
+![Photo](media/marmite.jpg "A jar of Marmite")
+```markdown
+Photo  
+![Photo](media/marmite.jpg)
+
+Same but containing a tooltip if you hover the mouse on  
+![Photo](media/marmite.jpg "A jar of Marmite")
+```
+
+---
+
+## Creating Links
+
+### Regular link
+
+[Marmite](https://github.com/rochacbruno/marmite)  
+
+[A link with a tooltip](https://pudim.com.br "A picture of a pudim")  
+
+```markdown
+[Marmite](https://github.com/rochacbruno/marmite)
+
+[A link with a tooltip](https://pudim.com.br "A picture of a pudim")  
+```
+
 ### Auto-link
 
 https://github.com/rochacbruno/marmite  
-[A link with a tooltip](https://pudim.com.br "A picture of a pudim")  
 <https://www.markdownguide.org>  
 <fake@example.com>
 
 ```markdown
 https://github.com/rochacbruno/marmite  
-[A link with a tooltip](https://pudim.com.br "A picture of a pudim")  
 <https://www.markdownguide.org>  
 <fake@example.com>
 ```
@@ -113,7 +306,6 @@ and internal content by title like
 
 ```
 
-
 ### Back-links
 
 Every time you link to another page or post
@@ -147,7 +339,9 @@ on its list of back-links:
   <img src="media/screenshots/backlink.png" width="500">
 </figure>
 
+---
 
+## Extensions
 
 ### Task
 
@@ -159,36 +353,16 @@ on its list of back-links:
 - [ ] Task 2
 ```
 
-## Superscript
 
-> All **raw** html is allowed
+### Emoji
 
-80<sup>2</sup>
-
-```html
-80<sup>2</sup>
-```
-
-## Footnotes
-
-Here is a simple footnote[^1]. With some[^2] additional text after it.  
-
-A reference[1] can also be just a link hidden from footnotes.
+:smile: - :crab: - :snake:
 
 ```markdown
-Here is a simple footnote[^1]. With some[^2] additional text after it.  
-
-A reference[1] can also be just a link hidden from footnotes.
-```
-And on the end of the file:
-```markdown
-[^1]: My reference.
-[^2]: Another footnote
-[1]: <https://en.wikipedia.org/wiki/Hobbit#Lifestyle> "Hobbit lifestyles"
+:smile: - :crab: - :snake:
 ```
 
-
-## Description lists
+### Description lists
 
 First term
 : Details for the **first term**
@@ -206,72 +380,14 @@ Second term
 : More details in second paragraph.
 ```
 
-## Block quote
+### Spoiler 
 
->Not a quote
-> quote
-> > > Nested quote
-
+This is ||secret||
 ```markdown
->Not a quote
-> quote
-> > > Nested quote
+This is ||secret||
 ```
 
-Multiline quote
-
->>>
-"Marmite is the easiest SSG" created by
-Bruno Rocha with the contribution of various people.
->>>
-
-```markdown
->>>
-"Marmite is the easiest SSG" created by
-Bruno Rocha with the contribution of various people.
->>>
-```
-
-Multi paragraph quote 
-
-> Dorothy followed her through many of the beautiful rooms in her castle.
-> 
-> The Witch bade her clean the pots and kettles and sweep the floor and keep the fire fed with 
-
-```markdown
-> Dorothy followed her through many of the beautiful rooms in her castle.
-> 
-> The Witch bade her clean the pots and kettles and sweep the floor and keep the fire fed with 
-```
-
-Rich quotes
-
-> #### The quarterly results look great!
-> 
-> - Revenue was off the chart.
-> - Profits were higher than ever.
-> 
->  *Everything* is going according to **plan**.
-
-```markdown
-> #### The quarterly results look great!
-> 
-> - Revenue was off the chart.
-> - Profits were higher than ever.
-> 
->  *Everything* is going according to **plan**.
-```
-
-## Emoji
-
-:smile: - :crab: - :snake:
-
-```markdown
-:smile: - :crab: - :snake:
-```
-
-
-## Math
+### Math
 
 > Depends on `extra: {"math": true}` defined on frontmatter, then **MathJax** is loaded.
 
@@ -408,110 +524,18 @@ timeline
 
 </details>
 
-## Underline
+---
 
-__dunder__
+## HTML
 
-```markdown
-__dunder__
-```
+> All **raw** html is allowed
 
-## Spoiler 
+### Superscript
 
-This is ||secret||
-```markdown
-This is ||secret||
-```
+80<sup>2</sup>
 
-## Code
-
-```python
-import antigravity
-
-def main():
-    print("Python is a great language")
-```
-
-```rust
-fn main() {
-    println!("Marmite is made with Rust!");
-}
-```
-````markdown
-```python
-import antigravity
-
-def main():
-    print("Python is a great language")
-```
-
-```rust
-fn main() {
-    println!("Marmite is made with Rust!");
-}
-```
-````
-
-### lists
-
-- lists
-  - sub item
-- images
-  * other
-- tables
-- Formatting
-```markdown
-- lists
-  - sub item
-- images
-  * other
-- tables
-- Formatting
-```
-
-Numbered
-
-1. First item
-1. Second item
-    - Indented unordered item
-    - Indented unordered item
-1. Third item
-    1. Indented ordered item
-    1. Indented ordered item
-1. Fourth item 
-```markdown
-1. First item
-1. Second item
-    - Indented unordered item
-    - Indented unordered item
-1. Third item
-    1. Indented ordered item
-    1. Indented ordered item
-1. Fourth item 
-```
-
-Starting lists with numbers requires a `number\`
-
-- 1983\. A great year!
-- I think 1984 was second best. 
-```markdown
-- 1983\. A great year!
-- I think 1984 was second best. 
-```
-
-### Images
-
-Photo  
-![Photo](media/marmite.jpg)
-
-Same but containing a tooltip if you hover the mouse on  
-![Photo](media/marmite.jpg "A jar of Marmite")
-```markdown
-Photo  
-![Photo](media/marmite.jpg)
-
-Same but containing a tooltip if you hover the mouse on  
-![Photo](media/marmite.jpg "A jar of Marmite")
+```html
+80<sup>2</sup>
 ```
 
 ### Embed
@@ -592,23 +616,9 @@ This is a &copy;left material.
 This is a &copy;left material.
 ```
 
----
-
-This post specifies `FrontMatter` on its header
-```yaml
----
-date: 2024-01-01 12:00:01
-slug: markdown-format
-title: Markdown Formatting Options
-tags: markdown, python, rust, Common Mark
-extra:
-  math: true
-  mermaid: true
----
-```
-
 Bye!
 
 
-[^1]: My reference.
+[^1]: My footnote.
+[^2]: Another footnote.
 [1]: <https://en.wikipedia.org/wiki/Hobbit#Lifestyle> "Hobbit lifestyles"

@@ -133,6 +133,7 @@ document.addEventListener("DOMContentLoaded", function () {
 function colorschemeSwitcher() {
     const colorschemes = [
         'catppuccin',
+        'clean',
         'dracula',
         'github',
         'gruvbox',

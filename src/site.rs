@@ -1139,7 +1139,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     if let Err(e) = fs::write(
         content_folder.join("_comments.md"),
         "##### Comments\n\
-        **edit `content/_comments.md` to adjust for your own site/repo**\n\
+        **edit `content/_comments.md` to adjust for your own site/repo**\n\n\
         **remove** the file to disable comments\n\
         \n\
         <script src='https://utteranc.es/client.js'\n\
@@ -1187,7 +1187,17 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         \n\
         This is your first post!\n\
         \n\
-        edit on `content/{date}-welcome.md`.
+        ## Edit this content\n\n\
+        edit on `content/{date}-welcome.md`\n\n\
+        ## Add more content\n\n\
+        create new markdown files in the `content` folder\n\n\
+        use `marmite --new` to create new content\n\n\
+        ## Customize your site\n\n\
+        edit `marmite.yaml` to change site settings\n\n\
+        edit the files starting with `_` in the `content` folder to change the layout\n\n\
+        or edit the templates to create a custom layout\n\n\
+        ## Deploy your site\n\n\
+        read more on [marmite documentation](https://rochacbruno.github.io/marmite)\n\n\
         ",
     ) {
         error!("Failed to create 'content/{now}-welcome.md' file: {}", e);

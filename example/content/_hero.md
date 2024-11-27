@@ -1,6 +1,6 @@
 <div class="grid" style="display: flex;">
 
-<div style="align-content: center;">
+<div style="align-content: center;" id="hero-marmite-logo">
     <img src="https://github.com/rochacbruno/marmite/raw/main/assets/_resized/logo_160x120.png" width="100" align="left" >
 </div>
 

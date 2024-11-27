@@ -52,8 +52,9 @@
   {% include "content_title.html" ignore missing %}
   {% if content.toc %}
   <div class="content-toc">
+    <a href="#" id="toc"></a>
     <details>
-    <summary>&#x1F5C8;</summary>
+    <summary>🗒️</summary>
     {{ content.toc }}
     </details>
   </div>
@@ -142,4 +143,6 @@
 </script>
 {% endif %}
 
+
+<a href="#title" class="top" title="Back to top">&#8679;</a>
 {% endblock %}

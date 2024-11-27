@@ -154,7 +154,7 @@ extra:
   colorscheme: gruvbox
 ```
 
-The built-in options are **catppuccin**, **dracula**, **github**, **gruvbox**, **iceberg**, **monokai**, **nord**, **one**, **solarized**, **typewriter**.
+The built-in options are **catppuccin**, **clean**, **dracula**, **github**, **gruvbox**, **iceberg**, **monokai**, **nord**, **one**, **solarized**, **typewriter**.
 
 Click to select a colorscheme: <select name="colorscheme" class="colorscheme-toggle"><option value="default">default</option></select><span class="theme-toggle secondary" title="dark mode">&#9789;</span>
 

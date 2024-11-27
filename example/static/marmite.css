@@ -61,6 +61,10 @@ h1, h2, h3, h4, h5, h6 {
 a {
   text-decoration: none;
 }
+a:hover {
+  text-decoration: underline;
+  color: var(--pico-primary)
+}
 
 h1:hover > a.anchor::before,
 h2:hover > a.anchor::before,
@@ -92,7 +96,7 @@ details summary::after {
   height: 1rem;
   float: none;
   transform: rotate(-90deg);
-  background-size: revert;
+  /* background-size: revert; */
   background-image: var(--pico-icon-chevron);
   background-position: right center;
   background-repeat: no-repeat;
@@ -226,6 +230,37 @@ grid-row-gap: 0px;
       width: 100%;
   }
 }
+
+
+/* toc */
+.content-toc details > ul {
+  padding: 0;
+}
+.content-toc ul li  {
+  list-style-type: revert;
+}
+.top {
+  text-decoration: none;
+  padding: 10px;
+  font-family: sans-serif;
+  color: #fff;
+  background: #000;
+  border-radius: 10px;
+  position: sticky;
+  float: right;
+  right: 20px;
+  bottom: 20px; 
+  --offset: 100px; 
+
+  margin-top: calc(100vh + var(--offset));
+}
+
+
+/* this is to create a sidebar left */
+/* body {
+  display: grid;
+  grid-template-columns: auto auto;
+} */
 
 
 /* Tags */

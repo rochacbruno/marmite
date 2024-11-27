@@ -1,0 +1,81 @@
+/* Marmite Solarized Theme */
+/* picocss.com  */
+:root {
+    --pico-border-radius: 0;
+    --pico-card-box-shadow: none;
+}
+
+.content-tags a:where(a:not([role=button])),
+[role=link] {
+    --pico-color: revert;
+}
+
+.content-excerpt, .index-banner-image, .content-list .content-tags, .content-pin {
+    display: none;
+}
+.author-hero {
+    display: revert;
+}
+
+.data-tags-footer {
+    margin-top: 0;
+    justify-content: revert;
+}
+
+article > footer {
+    border-top: 0;
+    margin-left: 0;
+    padding: 0;
+    justify-content: revert;
+}
+
+#hero-marmite-logo {
+    display: none;
+}
+
+/* Light Mode */
+[data-theme=light],
+:root:not([data-theme=dark]) {
+    --pico-background-color: #fff;
+    --pico-card-background-color: #fff;
+    --pico-card-sectioning-background-color: var(--pico-background-color);
+    --pico-primary: #1972c1;
+    --pico-primary-hover: #1972c1;
+    --pico-color: #000;
+    --pico-tag: #a34b4b;
+    --pico-h1-color: #000;
+    --pico-code-background-color: var(--pico-background-color);
+    --pico-table-border-color: var(--pico-card-background-color);
+    --pico-color-azure-550: var(--pico-primary);
+    --pico-card-box-shadow: none;
+    --pico-code-background-color: #f8f8f8;
+    --pico-table-border-color: #d5d1d1;
+}
+
+[data-theme=light] pre:has(> code.language-mermaid) {
+    background-color: var(--pico-card-background-color);
+}
+
+/* Dark Mode */
+[data-theme=dark],
+:root:not([data-theme=light]) {
+    --pico-background-color: #000000;
+    --pico-card-background-color: #000000;
+    --pico-card-sectioning-background-color: var(--pico-background-color);
+    --pico-primary: #ffffff;
+    --pico-primary-hover: #ffffff;
+    --pico-color: #ffffff;
+    --pico-tag: #9ddaed;
+    --pico-h1-color: var(--pico-color);
+    --pico-code-background-color: var(--pico-background-color);
+    --pico-table-border-color: var(--pico-card-background-color);
+    --pico-color-azure-550: var(--pico-primary);
+    --pico-card-box-shadow: none;
+    --pico-code-background-color: #232323;
+    --pico-code-color: #ffffff;
+    --pico-table-border-color: #f9f9f9;
+}
+
+[data-theme=dark] pre:has(> code.language-mermaid) {
+    background-color: var(--pico-code-color);
+}

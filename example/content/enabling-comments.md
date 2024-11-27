@@ -19,7 +19,7 @@ Utterances
 **Giscus**
 
   : Use Github discussions as comment system  
-  requires user to login to github
+  requires user to login to github.
  
 Hatsu
 
@@ -28,11 +28,35 @@ Hatsu
   Requires user to comment from a fediverse account.
   
 
-Altearnatives are Disqus and Commento.
+Paid alternatives are Disqus and Commento, easy to add but not covered on this article.
 
 ---
 
-For now the easiest system is Giscus.
+For now the easiest systems are Giscus and Utterances.
+
+
+## Setting up Utterances
+
+1. First you need to have a github repository
+    - if you used the starting [repo](https://github.com/rochacbruno/make-me-a-blog) you already got one.
+    - You can create a repository solely for comments, the blog doesn't need to be hosted on the same repo.
+2. The repository must be public, otherwise visitors will not be able to view the discussion.
+3. Install [utterances app](https://github.com/apps/utterances) on your repo, otherwise visitors will not be able to comment and react.
+
+
+Add a `_comments.md` to your content folder.
+```markdown
+##### Comments
+
+<script src='https://utteranc.es/client.js'
+repo='youruser/your-repo'
+issue-term='pathname'
+theme='preferred-color-scheme'
+crossorigin='anonymous'
+async>
+</script>
+```
+
 
 ## Setting up Giscus
 
@@ -74,6 +98,20 @@ Add a `_comments.md` to your content folder.
 </script>
 ```
 
+## Setting up other comment systems
+
+The process will be very similar, you just need to grab the required `script` and tags.
+
+`content/_comments.md`
+```markdown
+##### Comments
+
+<div id="comment-system"></div>
+<script src="https://commentsystem.app/foo/bar/dothethings.js"></script>
+```
+
+
+## Setting on the config file
 
 2. Alternatively, add to  `marmite.yaml` extra section.
 
@@ -100,9 +138,7 @@ extra:
         </script>
 ```
 
-## Setting up other comment systems
-
-The process will be very similar, you just need to grab the required `script` and tags.
+Same for any other comment system
 
 ```yaml
 extra:
