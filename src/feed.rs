@@ -14,6 +14,7 @@ pub fn generate_rss(
     filename: &str,
     config: &Marmite,
 ) -> Result<(), String> {
+    let date_format = "%a, %d %b %Y %H:%M:%S"; // Loose RFC-822 format
     let mut channel = ChannelBuilder::default()
         .title(&config.name)
         .link(&config.url)
@@ -30,7 +31,7 @@ pub fn generate_rss(
                     .value(format!("{}/{}", &config.url, &content.slug))
                     .build(),
             )
-            .pub_date(content.date.unwrap().to_string())
+            .pub_date(content.date.unwrap().format(date_format).to_string())
             .content(content.html.clone())
             .source(
                 rss::SourceBuilder::default()
@@ -56,7 +57,7 @@ pub fn generate_rss(
         channel.pub_date = latest_item.pub_date.clone();
     }
 
-    channel.last_build_date = Some(chrono::Utc::now().format("%+").to_string());
+    channel.last_build_date = Some(chrono::Utc::now().format(date_format).to_string());
 
     if !config.card_image.is_empty() {
         channel.image = Some(
@@ -121,6 +122,7 @@ pub fn generate_json(
     filename: &str,
     config: &Marmite,
 ) -> Result<(), String> {
+    let date_format = "%Y-%m-%dT%H:%M:%S-00:00"; // Loose RFC3339 format
     let mut items = Vec::new();
     for content in contents.iter().take(15) {
         let item = JsonFeedItem {
@@ -130,7 +132,9 @@ pub fn generate_json(
             content_html: content.html.clone(),
             // content_text: content.html.clone(), // requires stripping HTML tags
             summary: content.description.clone().unwrap_or(String::new()),
-            date_published: content.date.unwrap().to_string(),
+            // date_published: content.date.unwrap().to_string(),
+            // date published should be in RFC-822 format
+            date_published: content.date.unwrap().format(date_format).to_string(),
             image: content.card_image.clone().unwrap_or(String::new()),
             authors: content
                 .authors
@@ -236,7 +240,11 @@ mod tests {
         assert_eq!(item.url, format!("{}/{}", config.url, content.slug));
         assert_eq!(item.content_html, content.html);
         assert_eq!(item.summary, content.description.clone().unwrap());
-        assert_eq!(item.date_published, content.date.unwrap().to_string());
+        let date_format = "%Y-%m-%dT%H:%M:%S-00:00"; // Loose RFC3339 format
+        assert_eq!(
+            item.date_published,
+            content.date.unwrap().format(date_format).to_string()
+        );
         assert_eq!(item.image, content.card_image.clone().unwrap());
         assert_eq!(item.authors.len(), content.authors.len());
         assert_eq!(item.tags, content.tags);
