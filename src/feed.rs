@@ -14,7 +14,7 @@ pub fn generate_rss(
     filename: &str,
     config: &Marmite,
 ) -> Result<(), String> {
-    let date_format = "%a, %d %b %Y %H:%M:%S"; // Loose RFC-822 format
+    let date_format = "%a, %d %b %Y %H:%M:%S GMT"; // Loose RFC-822 format
     let mut channel = ChannelBuilder::default()
         .title(&config.name)
         .link(&config.url)
