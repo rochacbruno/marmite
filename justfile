@@ -20,21 +20,20 @@ watch:
 
 [doc('Bump version in Cargo.toml')]
 [group('maintainer')]
-bumpversion VERSION:
+bumpversion TAG:
     #!/usr/bin/env bash
-    alias set-version='cargo set-version --package marmite --locked'
     cargo set-version --version || cargo install -y cargo-edit@0.13.0
-    cargo set-version --package marmite --locked "$VERSION"
+    cargo set-version --package marmite --locked "{{ TAG }}"
     cargo generate-lockfile
     just fmt
     git add ./Cargo.toml ./Cargo.lock
-    git commit -m "chore: bump version to $VERSION"
+    git commit -m "chore: bump version to {{ TAG }}"
 
 [doc('Push a new tag to the repository')]
 [group('maintainer')]
 pushtag TAG:
     #!/usr/bin/env bash
-    git tag -a "$TAG" -m "chore: push $TAG"
+    git tag -a "{{ TAG }}" -m "chore: push {{ TAG }}"
     git push --tags
 
 [doc('Publish a new version (bumpversion + pushtag)')]
