@@ -33,6 +33,7 @@
     {%- block feeds %}
     <link rel="alternate" type="application/rss+xml" title="index" href="index.rss">
     {% for stream, _ in group(kind="stream") -%}
+    {% if stream == "index" %}{% continue %}{% endif %}
     <link rel="alternate" type="application/rss+xml" title="{{stream}}" href="{{stream | slugify}}.rss">
     {% endfor %}
     {%- for tag, _ in group(kind="tag") -%}
@@ -44,6 +45,24 @@
     {%- for year, _ in group(kind="archive") -%}
     <link rel="alternate" type="application/rss+xml" title="{{year}}" href="archive-{{year}}.rss">
     {% endfor %}
+
+    {% if site.json_feed %}
+    <link rel="alternate" type="application/feed+json" title="JSON index" href="index.json">
+    {% for stream, _ in group(kind="stream") -%}
+    {% if stream == "index" %}{% continue %}{% endif %}
+    <link rel="alternate" type="application/feed+json" title="JSON {{stream}}" href="{{stream | slugify}}.json">
+    {% endfor %}
+    {%- for tag, _ in group(kind="tag") -%}
+    <link rel="alternate" type="application/feed+json" title="JSON {{tag}}" href="tag-{{tag | slugify}}.json">
+    {% endfor %}
+    {%- for author, _ in group(kind="author") -%}
+    <link rel="alternate" type="application/feed+json" title="JSON {{author}}" href="author-{{author | slugify}}.json">
+    {% endfor %}
+    {%- for year, _ in group(kind="archive") -%}
+    <link rel="alternate" type="application/feed+json" title="JSON {{year}}" href="archive-{{year}}.json">
+    {% endfor %}
+    {% endif %}
+
     {% endblock %}
 </head>
 <body>
