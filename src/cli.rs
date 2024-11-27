@@ -150,4 +150,8 @@ pub struct Configuration {
     /// this will generate a table of contents for each post
     #[arg(long)]
     pub toc: Option<bool>,
+
+    /// Generate JSON Feed [default: false or from config file]
+    #[arg(long)]
+    pub json_feed: Option<bool>,
 }

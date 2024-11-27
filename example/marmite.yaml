@@ -4,6 +4,7 @@ url: https://www.myblog.com/blog/
 # footer: This is an example site generated with Marmite
 pagination: 5
 toc: true
+json_feed: true
 # tags_title: Tags
 # archives_title: Archive
 # pages_title: pages

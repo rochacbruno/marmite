@@ -4,6 +4,7 @@ url: https://rochacbruno.github.io/marmite
 pagination: 5
 enable_search: true
 toc: true
+json_feed: true
 menu: 
   - ['Contributors', 'contributors.html']
   - ['Tags', 'tags.html']

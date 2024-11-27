@@ -96,6 +96,9 @@ pub struct Marmite {
 
     #[serde(default)]
     pub toc: bool,
+
+    #[serde(default)]
+    pub json_feed: bool,
 }
 
 impl Marmite {
@@ -171,6 +174,9 @@ impl Marmite {
                 .cloned()
                 .collect(),
             );
+        }
+        if let Some(json_feed) = cli_args.configuration.json_feed {
+            self.json_feed = json_feed;
         }
     }
 }
