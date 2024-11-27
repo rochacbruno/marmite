@@ -446,6 +446,15 @@ fn render_templates(
         )?;
         // Render {stream}.rss for each stream
         crate::feed::generate_rss(&stream_contents, output_dir, &stream_slug, &site_data.site)?;
+
+        if site_data.site.json_feed {
+            crate::feed::generate_json(
+                &stream_contents,
+                output_dir,
+                &stream_slug,
+                &site_data.site,
+            )?;
+        }
     }
 
     // Pages are treated as a list of content, no stream separation is needed
@@ -585,6 +594,10 @@ fn handle_author_pages(
             &filename.clone(),
             &site_data.site,
         )?;
+
+        if site_data.site.json_feed {
+            crate::feed::generate_json(&author_posts, output_dir, &filename, &site_data.site)?;
+        }
     }
 
     // Render authors.html group page
@@ -963,6 +976,10 @@ fn handle_tag_pages(
             &filename.clone(),
             &site_data.site,
         )?;
+
+        if site_data.site.json_feed {
+            crate::feed::generate_json(&tagged_contents, output_dir, &filename, &site_data.site)?;
+        }
     }
 
     // Render tags.html group page
@@ -1004,6 +1021,10 @@ fn handle_archive_pages(
             &filename.clone(),
             &site_data.site,
         )?;
+
+        if site_data.site.json_feed {
+            crate::feed::generate_json(&archive_contents, output_dir, &filename, &site_data.site)?;
+        }
     }
 
     // Render archive.html group page
