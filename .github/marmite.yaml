@@ -10,7 +10,7 @@ menu:
   - ['Tags', 'tags.html']
   - ['Archive', 'archive.html']
   - ['Authors', 'authors.html']
-  - ['Streams', 'streams.html']
+  # - ['Streams', 'streams.html']
   - ['Github', 'https://github.com/rochacbruno/marmite/']
 card_image: ./media/og_image.jpg
 # banner_image: media/og_image.jpg

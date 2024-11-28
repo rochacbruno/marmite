@@ -28,7 +28,7 @@ menu:
   - ["Tags", "tags.html"]
   - ["Archive", "archive.html"]
   - ["Authors", "authors.html"]
-  - ["Streams", "streams.html"]
+  # - ["Streams", "streams.html"]
   - ["Github", "https://github.com/rochacbruno/marmite"]
 
 # https://docs.rs/chrono/latest/chrono/format/strftime/index.html

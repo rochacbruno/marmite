@@ -278,7 +278,7 @@ fn default_menu() -> Option<Vec<(String, String)>> {
         ("Tags".to_string(), "tags.html".to_string()),
         ("Archive".to_string(), "archive.html".to_string()),
         ("Authors".to_string(), "authors.html".to_string()),
-        ("Streams".to_string(), "streams.html".to_string()),
+        // ("Streams".to_string(), "streams.html".to_string()),
     ]
     .into()
 }
