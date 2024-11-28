@@ -237,7 +237,7 @@ mod tests {
         let item = &json_feed.items[0];
         let content = &contents[0];
         assert_eq!(item.title, content.title);
-        assert_eq!(item.url, format!("{}/{}", config.url, content.slug));
+        assert_eq!(item.url, format!("{}/{}.html", config.url, content.slug));
         assert_eq!(item.content_html, content.html);
         assert_eq!(item.summary, content.description.clone().unwrap());
         let date_format = "%Y-%m-%dT%H:%M:%S-00:00"; // Loose RFC3339 format
