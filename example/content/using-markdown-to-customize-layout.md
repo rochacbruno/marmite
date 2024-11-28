@@ -52,3 +52,24 @@ and footnotes are reusable.
 ```
 
 then on any markdown `[Github]` will resolve to the reference link.
+
+## Scripting and Style blocks
+
+You can add extra scripts and styles to the `<head>` tag using `_htmlhead.md`
+
+`_htmlhead.md`
+```html
+<script defer src="https://analytics.service.com" data-website-id="c8fbd715-5b90"></script>
+<style>
+selector {
+    property: value;
+}
+</style>
+```
+
+If the script needs to go to the bottom of page use `_htmltail.md`
+
+That is available mostly to be used as analytics entrypoint, for custom styling we recommend
+using the `custom.css`
+
+

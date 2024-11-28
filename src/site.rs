@@ -217,7 +217,7 @@ fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
 /// these are dynamic parts of text that will be processed by Tera
 fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, tera: &Tera) {
     for fragment in &[
-        "announce", "header", "hero", "sidebar", "footer", "comments",
+        "announce", "header", "hero", "sidebar", "footer", "comments", "htmlhead", "htmltail",
     ] {
         let fragment_path = content_dir.join(format!("_{fragment}.md"));
         let fragment_content = if fragment_path.exists() {

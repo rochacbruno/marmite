@@ -62,8 +62,10 @@
     <link rel="alternate" type="application/feed+json" title="JSON year: {{year}}" href="archive-{{year}}.json">
     {% endfor %}
     {% endif %}
-
     {% endblock %}
+    {% if htmlhead is defined %}
+    {{ htmlhead }}
+    {% endif %}
 </head>
 <body>
     {% if announce is defined %}
@@ -148,5 +150,8 @@
     </script>
     {% endif %}
     {% endblock -%}
+    {% if htmltail is defined %}
+    {{ htmltail }}
+    {% endif %}
 </body>
 </html>
