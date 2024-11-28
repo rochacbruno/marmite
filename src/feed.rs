@@ -25,10 +25,10 @@ pub fn generate_rss(
     for content in contents.iter().take(15) {
         let mut item = ItemBuilder::default()
             .title(content.title.clone())
-            .link(format!("{}/{}", &config.url, &content.slug))
+            .link(format!("{}/{}.html", &config.url, &content.slug))
             .guid(
                 rss::GuidBuilder::default()
-                    .value(format!("{}/{}", &config.url, &content.slug))
+                    .value(format!("{}/{}.html", &config.url, &content.slug))
                     .build(),
             )
             .pub_date(content.date.unwrap().format(date_format).to_string())
@@ -126,8 +126,8 @@ pub fn generate_json(
     let mut items = Vec::new();
     for content in contents.iter().take(15) {
         let item = JsonFeedItem {
-            id: format!("{}/{}", &config.url, &content.slug),
-            url: format!("{}/{}", &config.url, &content.slug),
+            id: format!("{}/{}.html", &config.url, &content.slug),
+            url: format!("{}/{}.html", &config.url, &content.slug),
             title: content.title.clone(),
             content_html: content.html.clone(),
             // content_text: content.html.clone(), // requires stripping HTML tags
