@@ -10,7 +10,7 @@
     --pico-color: revert;
 }
 
-.content-excerpt, .index-banner-image, .content-list .content-tags, .content-pin {
+.content-excerpt, .content-list .content-tags, .content-pin {
     display: none;
 }
 .author-hero {
@@ -27,10 +27,6 @@ article > footer {
     margin-left: 0;
     padding: 0;
     justify-content: revert;
-}
-
-#hero-marmite-logo {
-    display: none;
 }
 
 /* Light Mode */

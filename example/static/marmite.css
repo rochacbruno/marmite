@@ -239,29 +239,6 @@ grid-row-gap: 0px;
 .content-toc ul li  {
   list-style-type: revert;
 }
-.top {
-  text-decoration: none;
-  padding: 10px;
-  font-family: sans-serif;
-  color: #fff;
-  background: #000;
-  border-radius: 10px;
-  position: sticky;
-  float: right;
-  right: 20px;
-  bottom: 20px; 
-  --offset: 100px; 
-
-  margin-top: calc(100vh + var(--offset));
-}
-
-
-/* this is to create a sidebar left */
-/* body {
-  display: grid;
-  grid-template-columns: auto auto;
-} */
-
 
 /* Tags */
 

@@ -16,7 +16,7 @@ json_feed: true
 # media_path: media
 
 card_image: ./media/og_image.jpg
-banner_image: media/og_image.jpg
+# banner_image: media/og_image.jpg
 # logo_image: name of site logo image, relative to media or absolute
 logo_image: media/logo.png
 
