@@ -29,6 +29,7 @@ pub struct Data {
     pub archive: GroupedContent,
     pub author: GroupedContent,
     pub stream: GroupedContent,
+    pub latest_timestamp: Option<i64>,
 }
 
 impl Data {
@@ -49,6 +50,7 @@ impl Data {
             archive: GroupedContent::new(Kind::Archive),
             author: GroupedContent::new(Kind::Author),
             stream: GroupedContent::new(Kind::Stream),
+            latest_timestamp: None,
         }
     }
 
@@ -119,7 +121,15 @@ struct BuildInfo {
     posts: usize,
     pages: usize,
     generated_at: String,
+    timestamp: i64,
     elapsed_time: f64,
+}
+
+impl BuildInfo {
+    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+        let build_info: Self = serde_json::from_str(json)?;
+        Ok(build_info)
+    }
 }
 
 pub fn generate(
@@ -148,6 +158,14 @@ pub fn generate(
                 moved_input_folder.clone().as_path(),
             );
             let mut site_data = site_data.lock().unwrap();
+
+            let build_info_path = moved_output_folder.join("marmite.json");
+            if build_info_path.exists() {
+                let build_info_json = fs::read_to_string(&build_info_path).unwrap();
+                if let Ok(build_info) = BuildInfo::from_json(&build_info_json) {
+                    site_data.latest_timestamp = Some(build_info.timestamp);
+                }
+            }
             site_data.site.override_from_cli_args(&moved_cli_args);
 
             let fragments = collect_content_fragments(&content_folder);
@@ -331,6 +349,26 @@ fn collect_content(
                 );
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
             e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
+        })
+        .filter(|e| {
+            if let Ok(metadata) = e.metadata() {
+                if let Ok(modified) = metadata.modified() {
+                    if let Ok(modified) = modified.duration_since(std::time::SystemTime::UNIX_EPOCH)
+                    {
+                        if let Some(latest_timestamp) = site_data.latest_timestamp {
+                            modified.as_secs() > latest_timestamp as u64
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
         })
         .map(|entry| Content::from_markdown(entry.path(), Some(fragments), &site_data.site))
         .collect::<Vec<_>>();
@@ -823,6 +861,7 @@ fn write_build_info(
         posts: site_data.posts.len(),
         pages: site_data.pages.len(),
         generated_at: chrono::Local::now().to_string(),
+        timestamp: chrono::Utc::now().timestamp(),
         elapsed_time: end_time,
     };
 
