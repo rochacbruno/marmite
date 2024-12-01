@@ -1035,29 +1035,42 @@ fn handle_archive_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-    for (year, archive_contents) in site_data.archive.iter() {
-        let filename = format!("archive-{year}");
-        handle_list_page(
-            global_context,
-            &site_data.site.archives_content_title.replace("$year", year),
-            &archive_contents,
-            site_data,
-            tera,
-            output_dir,
-            &filename,
-        )?;
-        // Render archive-{year}.rss for each stream
-        crate::feed::generate_rss(
-            &archive_contents,
-            output_dir,
-            &filename.clone(),
-            &site_data.site,
-        )?;
+    site_data
+        .archive
+        .iter()
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|(year, archive_contents)| -> Result<(), String> {
+            let filename = format!("archive-{year}");
+            handle_list_page(
+                global_context,
+                &site_data.site.archives_content_title.replace("$year", year),
+                archive_contents,
+                site_data,
+                tera,
+                output_dir,
+                &filename,
+            )?;
+            // Render archive-{year}.rss for each stream
+            crate::feed::generate_rss(
+                archive_contents,
+                output_dir,
+                &filename.clone(),
+                &site_data.site,
+            )?;
 
-        if site_data.site.json_feed {
-            crate::feed::generate_json(&archive_contents, output_dir, &filename, &site_data.site)?;
-        }
-    }
+            if site_data.site.json_feed {
+                crate::feed::generate_json(
+                    archive_contents,
+                    output_dir,
+                    &filename,
+                    &site_data.site,
+                )?;
+            }
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))?;
 
     // Render archive.html group page
     let mut archive_context = global_context.clone();
