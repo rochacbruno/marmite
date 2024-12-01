@@ -1127,13 +1127,16 @@ fn should_force_render(
         });
 
     let config_modified = {
-        let config_metadata = fs::metadata(config_path).unwrap();
-        let config_modified_time = config_metadata.modified().unwrap();
-        config_modified_time
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64
-            > last_build
+        if let Ok(metadata) = fs::metadata(config_path) {
+            if let Ok(modified_time) = metadata.modified() {
+                return modified_time
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs() as i64
+                    > last_build;
+            }
+        }
+        true
     };
 
     templates_modified || fragments_modified || config_modified
