@@ -976,30 +976,43 @@ fn handle_tag_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-    for (tag, tagged_contents) in site_data.tag.iter() {
-        let tag_slug = slugify(tag);
-        let filename = format!("tag-{}", &tag_slug);
-        handle_list_page(
-            global_context,
-            &site_data.site.tags_content_title.replace("$tag", tag),
-            &tagged_contents,
-            site_data,
-            tera,
-            output_dir,
-            &filename,
-        )?;
-        // Render tag-{tag}.rss for each stream
-        crate::feed::generate_rss(
-            &tagged_contents,
-            output_dir,
-            &filename.clone(),
-            &site_data.site,
-        )?;
+    site_data
+        .tag
+        .iter()
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|(tag, tagged_contents)| -> Result<(), String> {
+            let tag_slug = slugify(tag);
+            let filename = format!("tag-{}", &tag_slug);
+            handle_list_page(
+                global_context,
+                &site_data.site.tags_content_title.replace("$tag", tag),
+                tagged_contents,
+                site_data,
+                tera,
+                output_dir,
+                &filename,
+            )?;
+            // Render tag-{tag}.rss for each stream
+            crate::feed::generate_rss(
+                tagged_contents,
+                output_dir,
+                &filename.clone(),
+                &site_data.site,
+            )?;
 
-        if site_data.site.json_feed {
-            crate::feed::generate_json(&tagged_contents, output_dir, &filename, &site_data.site)?;
-        }
-    }
+            if site_data.site.json_feed {
+                crate::feed::generate_json(
+                    tagged_contents,
+                    output_dir,
+                    &filename,
+                    &site_data.site,
+                )?;
+            }
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))?;
 
     // Render tags.html group page
     let mut tag_list_context = global_context.clone();
