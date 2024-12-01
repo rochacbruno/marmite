@@ -3,7 +3,6 @@ use crate::content::{
     check_for_duplicate_slugs, slugify, Content, ContentBuilder, GroupedContent, Kind,
 };
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
-use crate::markdown::get_content;
 use crate::tera_functions::{Group, UrlFor};
 use crate::{server, tera_filter};
 use chrono::Datelike;
@@ -264,12 +263,12 @@ fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, te
         // append references
         let references_path = content_dir.join("_references.md");
         let fragment_content =
-            crate::markdown::append_references(&fragment_content, &references_path);
+            crate::parser::append_references(&fragment_content, &references_path);
         let rendered_fragment = tera
             .clone()
             .render_str(&fragment_content, global_context)
             .unwrap();
-        let fragment_content = crate::markdown::get_html(&rendered_fragment);
+        let fragment_content = crate::parser::get_html(&rendered_fragment);
         // global_context.insert((*fragment).to_string(), &fragment_content);
         debug!("{} fragment {}", fragment, &fragment_content);
         ((*fragment).to_string(), fragment_content)
@@ -333,7 +332,7 @@ fn collect_content(
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
             e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
         })
-        .map(|entry| get_content(entry.path(), Some(fragments), &site_data.site))
+        .map(|entry| Content::from_markdown(entry.path(), Some(fragments), &site_data.site))
         .collect::<Vec<_>>();
     for content in contents {
         match content {
@@ -1015,7 +1014,7 @@ fn handle_404(
         .slug("404".to_string())
         .build();
     if input_404_path.exists() {
-        let custom_content = get_content(&input_404_path, None, &Marmite::default())?;
+        let custom_content = Content::from_markdown(&input_404_path, None, &Marmite::default())?;
         content.html.clone_from(&custom_content.html);
         content.title.clone_from(&custom_content.title);
     }
