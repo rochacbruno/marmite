@@ -272,7 +272,7 @@ fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, te
         let fragment_content = crate::markdown::get_html(&rendered_fragment);
         // global_context.insert((*fragment).to_string(), &fragment_content);
         debug!("{} fragment {}", fragment, &fragment_content);
-        (fragment.to_string(), fragment_content)
+        ((*fragment).to_string(), fragment_content)
     })
     .collect::<Vec<_>>();
     for (name, content) in fragments {
@@ -612,7 +612,7 @@ fn handle_author_pages(
                 author
             } else {
                 &Author {
-                    name: username.to_string(),
+                    name: (*username).to_string(),
                     bio: None,
                     avatar: Some("static/avatar-placeholder.png".to_string()),
                     links: None,
