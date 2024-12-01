@@ -217,15 +217,17 @@ fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
 /// Collect global fragments of markdown, process them and insert into the global context
 /// these are dynamic parts of text that will be processed by Tera
 fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, tera: &Tera) {
-    for fragment in &[
+    let fragments = [
         "announce", "header", "hero", "sidebar", "footer", "comments", "htmlhead", "htmltail",
-    ] {
+    ]
+    .par_iter()
+    .filter(|fragment| {
         let fragment_path = content_dir.join(format!("_{fragment}.md"));
-        let fragment_content = if fragment_path.exists() {
-            fs::read_to_string(fragment_path).unwrap()
-        } else {
-            continue;
-        };
+        fragment_path.exists()
+    })
+    .map(|fragment| {
+        let fragment_path = content_dir.join(format!("_{fragment}.md"));
+        let fragment_content = fs::read_to_string(fragment_path).unwrap();
         // append references
         let references_path = content_dir.join("_references.md");
         let fragment_content =
@@ -235,8 +237,13 @@ fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, te
             .render_str(&fragment_content, global_context)
             .unwrap();
         let fragment_content = crate::markdown::get_html(&rendered_fragment);
-        global_context.insert((*fragment).to_string(), &fragment_content);
+        // global_context.insert((*fragment).to_string(), &fragment_content);
         debug!("{} fragment {}", fragment, &fragment_content);
+        (fragment.to_string(), fragment_content)
+    })
+    .collect::<Vec<_>>();
+    for (name, content) in fragments {
+        global_context.insert(name, &content);
     }
 }
 
