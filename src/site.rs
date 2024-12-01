@@ -29,10 +29,12 @@ pub struct Data {
     pub archive: GroupedContent,
     pub author: GroupedContent,
     pub stream: GroupedContent,
+    pub latest_timestamp: Option<i64>,
+    pub config_path: String,
 }
 
 impl Data {
-    pub fn new(config_content: &str) -> Self {
+    pub fn new(config_content: &str, config_path: &Path) -> Self {
         let site: Marmite = match serde_yaml::from_str::<Marmite>(config_content) {
             Ok(site) => site,
             Err(e) => {
@@ -49,6 +51,8 @@ impl Data {
             archive: GroupedContent::new(Kind::Archive),
             author: GroupedContent::new(Kind::Author),
             stream: GroupedContent::new(Kind::Stream),
+            latest_timestamp: None,
+            config_path: config_path.to_string_lossy().to_string(),
         }
     }
 
@@ -68,7 +72,7 @@ impl Data {
             info!("Config loaded from: {}", config_path.display());
         }
 
-        Self::new(&config_str)
+        Self::new(&config_str, config_path)
     }
 
     pub fn sort_all(&mut self) {
@@ -119,7 +123,15 @@ struct BuildInfo {
     posts: usize,
     pages: usize,
     generated_at: String,
+    timestamp: i64,
     elapsed_time: f64,
+}
+
+impl BuildInfo {
+    pub fn from_json(json: &str) -> Result<Self, serde_json::Error> {
+        let build_info: Self = serde_json::from_str(json)?;
+        Ok(build_info)
+    }
 }
 
 pub fn generate(
@@ -148,6 +160,13 @@ pub fn generate(
                 moved_input_folder.clone().as_path(),
             );
             let mut site_data = site_data.lock().unwrap();
+            let build_info_path = moved_output_folder.join("marmite.json");
+            if build_info_path.exists() {
+                let build_info_json = fs::read_to_string(&build_info_path).unwrap();
+                if let Ok(build_info) = BuildInfo::from_json(&build_info_json) {
+                    site_data.latest_timestamp = Some(build_info.timestamp);
+                }
+            }
             site_data.site.override_from_cli_args(&moved_cli_args);
 
             let fragments = collect_content_fragments(&content_folder);
@@ -164,9 +183,15 @@ pub fn generate(
             }
 
             let tera = initialize_tera(&moved_input_folder, &site_data);
-            if let Err(e) =
-                render_templates(&content_folder, &site_data, &tera, &output_path, &fragments)
-            {
+            if let Err(e) = render_templates(
+                &content_folder,
+                &site_data,
+                &tera,
+                &output_path,
+                &moved_input_folder,
+                &moved_config_path,
+                &fragments,
+            ) {
                 error!("Failed to render templates: {}", e);
                 process::exit(1);
             }
@@ -309,6 +334,7 @@ fn _collect_back_links(contents: &mut [Content], other_contents: &[Content]) {
     }
 }
 
+#[allow(clippy::cast_possible_wrap)]
 fn collect_content(
     content_dir: &std::path::PathBuf,
     site_data: &mut Data,
@@ -332,7 +358,27 @@ fn collect_content(
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
             e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
         })
-        .map(|entry| Content::from_markdown(entry.path(), Some(fragments), &site_data.site))
+        .map(|entry| {
+            // let modified_time = entry.metadata().unwrap().modified().unwrap();
+            let file_metadata = entry.metadata().expect("Failed to get file metadata");
+            let modified_time = if let Ok(modified_time) = file_metadata.modified() {
+                // get the timestamp for modified time
+                Some(
+                    modified_time
+                        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs() as i64,
+                )
+            } else {
+                None
+            };
+            Content::from_markdown(
+                entry.path(),
+                Some(fragments),
+                &site_data.site,
+                modified_time,
+            )
+        })
         .collect::<Vec<_>>();
     for content in contents {
         match content {
@@ -443,6 +489,8 @@ fn render_templates(
     site_data: &Data,
     tera: &Tera,
     output_dir: &Path,
+    input_folder: &Path,
+    config_path: &Path,
     fragments: &HashMap<String, String>,
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
@@ -545,7 +593,15 @@ fn render_templates(
     // Render individual content-slug.html from content.html template
     // content is rendered as last step so it gives the user the ability to
     // override some prebuilt pages like tags.html, authors.html, etc.
-    handle_content_pages(&site_data, &global_context, tera, output_dir)?;
+    handle_content_pages(
+        &site_data,
+        &global_context,
+        tera,
+        output_dir,
+        content_dir,
+        input_folder,
+        config_path,
+    )?;
 
     Ok(())
 }
@@ -823,6 +879,7 @@ fn write_build_info(
         posts: site_data.posts.len(),
         pages: site_data.pages.len(),
         generated_at: chrono::Local::now().to_string(),
+        timestamp: chrono::Utc::now().timestamp(),
         elapsed_time: end_time,
     };
 
@@ -966,13 +1023,29 @@ fn handle_content_pages(
     global_context: &Context,
     tera: &Tera,
     output_dir: &Path,
+    content_dir: &Path,
+    input_folder: &Path,
+    config_path: &Path,
 ) -> Result<(), String> {
+    let last_build = site_data.latest_timestamp.unwrap_or(0);
+    let force_render = should_force_render(
+        input_folder,
+        site_data,
+        last_build,
+        content_dir,
+        config_path,
+    );
+
     site_data
         .posts
         .iter()
         .chain(&site_data.pages)
         .collect::<Vec<_>>()
         .par_iter()
+        .filter(|content| {
+            // render only if force_render or content is newer than the latest timestamp
+            force_render || content.modified_time.unwrap_or(i64::MAX) > last_build
+        })
         .map(|content| -> Result<(), String> {
             let mut content_context = global_context.clone();
             content_context.insert("title", &content.title);
@@ -999,6 +1072,73 @@ fn handle_content_pages(
         .unwrap_or(Ok(()))
 }
 
+#[allow(clippy::cast_possible_wrap)]
+fn should_force_render(
+    input_folder: &Path,
+    site_data: &Data,
+    last_build: i64,
+    content_dir: &Path,
+    config_path: &Path,
+) -> bool {
+    let templates_path = input_folder.join(site_data.site.templates_path.clone());
+    let templates_modified = WalkDir::new(&templates_path)
+        .into_iter()
+        .filter_map(Result::ok)
+        .any(|entry| {
+            if let Ok(metadata) = entry.metadata() {
+                if let Ok(modified_time) = metadata.modified() {
+                    return modified_time
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs() as i64
+                        > last_build;
+                }
+            }
+            true
+        });
+
+    let fragments_modified = WalkDir::new(content_dir)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| {
+            let file_name = e
+                .path()
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or(
+                    e.path()
+                        .to_str()
+                        .unwrap_or_else(|| panic!("Could not get file name {:?}", e.path())),
+                );
+            let file_extension = e.path().extension().and_then(|ext| ext.to_str());
+            e.path().is_file() && file_extension == Some("md") && file_name.starts_with('_')
+        })
+        .any(|entry| {
+            if let Ok(metadata) = entry.metadata() {
+                if let Ok(modified_time) = metadata.modified() {
+                    return modified_time
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_secs() as i64
+                        > last_build;
+                }
+            }
+            true
+        });
+
+    let config_modified = {
+        let config_metadata = fs::metadata(config_path).unwrap();
+        let config_modified_time = config_metadata.modified().unwrap();
+        config_modified_time
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64
+            > last_build
+    };
+
+    templates_modified || fragments_modified || config_modified
+}
+
 #[allow(clippy::similar_names)]
 fn handle_404(
     content_dir: &Path,
@@ -1014,7 +1154,8 @@ fn handle_404(
         .slug("404".to_string())
         .build();
     if input_404_path.exists() {
-        let custom_content = Content::from_markdown(&input_404_path, None, &Marmite::default())?;
+        let custom_content =
+            Content::from_markdown(&input_404_path, None, &Marmite::default(), None)?;
         content.html.clone_from(&custom_content.html);
         content.title.clone_from(&custom_content.title);
     }
