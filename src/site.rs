@@ -412,51 +412,60 @@ fn render_templates(
     // Assuming every item on site_data.posts is a Content and has a stream field
     // we can use this to render a {stream}.html page from list.html template
     // by default posts will have a `index` stream.
-    for (stream, stream_contents) in site_data.stream.iter() {
-        let stream_slug = slugify(stream);
-        let title = if stream == "index" {
-            String::new()
-        } else {
-            site_data
-                .site
-                .streams_content_title
-                .replace("$stream", stream)
-        };
-
-        // if there is any content on the stream with pinned set to true
-        // sort the content by pinned first and then by date
-        let mut sorted_stream_contents = stream_contents.clone();
-        sorted_stream_contents.sort_by(|a, b| {
-            if a.pinned && !b.pinned {
-                std::cmp::Ordering::Less
-            } else if !a.pinned && b.pinned {
-                std::cmp::Ordering::Greater
+    // for (stream, stream_contents) in
+    site_data
+        .stream
+        .iter()
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|(stream, stream_contents)| -> Result<(), String> {
+            let stream_slug = slugify(stream);
+            let title = if *stream == "index" {
+                String::new()
             } else {
-                b.date.cmp(&a.date)
-            }
-        });
+                site_data
+                    .site
+                    .streams_content_title
+                    .replace("$stream", stream)
+            };
 
-        handle_list_page(
-            &global_context,
-            &title,
-            &sorted_stream_contents,
-            &site_data,
-            tera,
-            output_dir,
-            &stream_slug,
-        )?;
-        // Render {stream}.rss for each stream
-        crate::feed::generate_rss(&stream_contents, output_dir, &stream_slug, &site_data.site)?;
+            // if there is any content on the stream with pinned set to true
+            // sort the content by pinned first and then by date
+            let mut sorted_stream_contents = stream_contents.clone();
+            sorted_stream_contents.sort_by(|a, b| {
+                if a.pinned && !b.pinned {
+                    std::cmp::Ordering::Less
+                } else if !a.pinned && b.pinned {
+                    std::cmp::Ordering::Greater
+                } else {
+                    b.date.cmp(&a.date)
+                }
+            });
 
-        if site_data.site.json_feed {
-            crate::feed::generate_json(
-                &stream_contents,
+            handle_list_page(
+                &global_context,
+                &title,
+                &sorted_stream_contents,
+                &site_data,
+                tera,
                 output_dir,
                 &stream_slug,
-                &site_data.site,
             )?;
-        }
-    }
+            // Render {stream}.rss for each stream
+            crate::feed::generate_rss(stream_contents, output_dir, &stream_slug, &site_data.site)?;
+
+            if site_data.site.json_feed {
+                crate::feed::generate_json(
+                    stream_contents,
+                    output_dir,
+                    &stream_slug,
+                    &site_data.site,
+                )?;
+            };
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))?;
 
     // Pages are treated as a list of content, no stream separation is needed
     // pages are usually just static pages that user will link in the menu.
