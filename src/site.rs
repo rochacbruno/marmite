@@ -552,63 +552,70 @@ fn handle_author_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-    for (username, _) in site_data.author.iter() {
-        let mut author_context = global_context.clone();
-
-        let author = if let Some(author) = site_data.site.authors.get(username) {
-            author
-        } else {
-            &Author {
-                name: username.to_string(),
-                bio: None,
-                avatar: Some("static/avatar-placeholder.png".to_string()),
-                links: None,
-            }
-        };
-
-        author_context.insert("author", &author);
-
-        let author_slug = slugify(username);
-        let mut author_posts = site_data
-            .posts
-            .iter()
-            .filter(|post| post.authors.contains(username))
-            .cloned()
-            .collect::<Vec<Content>>();
-
-        author_posts.sort_by(|a, b| {
-            if a.pinned && !b.pinned {
-                std::cmp::Ordering::Less
-            } else if !a.pinned && b.pinned {
-                std::cmp::Ordering::Greater
+    site_data
+        .author
+        .iter()
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|(username, _)| -> Result<(), String> {
+            let mut author_context = global_context.clone();
+            let author = if let Some(author) = site_data.site.authors.get(*username) {
+                author
             } else {
-                b.date.cmp(&a.date)
+                &Author {
+                    name: username.to_string(),
+                    bio: None,
+                    avatar: Some("static/avatar-placeholder.png".to_string()),
+                    links: None,
+                }
+            };
+            author_context.insert("author", &author);
+
+            let author_slug = slugify(username);
+            let mut author_posts = site_data
+                .posts
+                .iter()
+                .filter(|post| post.authors.contains(username))
+                .cloned()
+                .collect::<Vec<Content>>();
+
+            author_posts.sort_by(|a, b| {
+                if a.pinned && !b.pinned {
+                    std::cmp::Ordering::Less
+                } else if !a.pinned && b.pinned {
+                    std::cmp::Ordering::Greater
+                } else {
+                    b.date.cmp(&a.date)
+                }
+            });
+
+            let filename = format!("author-{}", &author_slug);
+            handle_list_page(
+                &author_context,
+                &author.name,
+                &author_posts,
+                site_data,
+                tera,
+                output_dir,
+                &filename,
+            )?;
+
+            // Render author-{name}.rss for each stream
+            crate::feed::generate_rss(
+                &author_posts,
+                output_dir,
+                &filename.clone(),
+                &site_data.site,
+            )?;
+
+            if site_data.site.json_feed {
+                crate::feed::generate_json(&author_posts, output_dir, &filename, &site_data.site)?;
             }
-        });
 
-        let filename = format!("author-{}", &author_slug);
-        handle_list_page(
-            &author_context,
-            &author.name,
-            &author_posts,
-            site_data,
-            tera,
-            output_dir,
-            &filename,
-        )?;
-
-        // Render author-{name}.rss for each stream
-        crate::feed::generate_rss(
-            &author_posts,
-            output_dir,
-            &filename.clone(),
-            &site_data.site,
-        )?;
-
-        if site_data.site.json_feed {
-            crate::feed::generate_json(&author_posts, output_dir, &filename, &site_data.site)?;
-        }
-    }
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))?;
 
     // Render authors.html group page
     let mut authors_list_context = global_context.clone();
