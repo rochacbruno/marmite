@@ -809,87 +809,92 @@ fn handle_list_page(
     let total_pages = (total_content + per_page - 1) / per_page;
     context.insert("total_content", &total_content);
     context.insert("total_pages", &total_pages);
-    for page_num in 0..total_pages {
-        // Slice the content list for this page
-        let page_content =
-            &all_content[page_num * per_page..(page_num * per_page + per_page).min(total_content)];
+    (0..total_pages)
+        .into_par_iter()
+        .map(|page_num| -> Result<(), String> {
+            // Slice the content list for this page
+            let page_content = &all_content
+                [page_num * per_page..(page_num * per_page + per_page).min(total_content)];
 
-        // Set up context for pagination
-        context.insert("content_list", page_content);
+            let mut context = context.clone();
+            // Set up context for pagination
+            context.insert("content_list", page_content);
 
-        let current_page_number = page_num + 1;
-        let filename = format!("{output_filename}-{current_page_number}.html");
+            let current_page_number = page_num + 1;
+            let filename = format!("{output_filename}-{current_page_number}.html");
 
-        if title.is_empty() {
-            context.insert("title", &format!("Page - {current_page_number}"));
-        } else {
-            context.insert("title", &format!("{title} - {current_page_number}"));
-        }
-
-        context.insert("current_page", &filename);
-        context.insert("current_page_number", &current_page_number);
-
-        if page_num > 0 {
-            let prev_page = format!("{output_filename}-{page_num}.html");
-            context.insert("previous_page", &prev_page);
-        }
-
-        if page_num < total_pages - 1 {
-            let next_page = format!("{output_filename}-{}.html", page_num + 2);
-            context.insert("next_page", &next_page);
-        }
-
-        debug!(
-            "List Context for {}: {:#?} - Pagination({:#?})",
-            filename,
-            page_content
-                .iter()
-                .map(|p| format!("title:{}, slug:{}", p.title, p.slug))
-                .collect::<Vec<_>>(),
-            [
-                "total_pages",
-                "per_page",
-                "total_content",
-                "current_page",
-                "current_page_number",
-                "previous_page",
-                "next_page"
-            ]
-            .iter()
-            .map(|name| format!(
-                "{}:{}",
-                name,
-                context.get(name).unwrap_or(&tera::Value::Null)
-            ))
-            .collect::<Vec<_>>()
-        );
-
-        // Render the HTML file for this page
-        let templates = format!("custom_{output_filename},list.html");
-        render_html(&templates, &filename, tera, &context, output_dir)?;
-        // If there isn't an item in site_data.pages with the same slug as output_filename
-        // we will render a {output_filename}.html with the same content as {output_filename}-1.html
-        // this will generate a duplicate page for each stream, but will allow the user to
-        // have a custom first page for each stream by dropping a {stream}.md file on the content folder
-        if current_page_number == 1 {
-            let page_exists = site_data
-                .pages
-                .iter()
-                .any(|page| page.slug == output_filename);
-            if !page_exists {
-                context.insert("current_page", &format!("{output_filename}.html"));
-                context.insert("title", title);
-                render_html(
-                    &templates,
-                    &format!("{output_filename}.html"),
-                    tera,
-                    &context,
-                    output_dir,
-                )?;
+            if title.is_empty() {
+                context.insert("title", &format!("Page - {current_page_number}"));
+            } else {
+                context.insert("title", &format!("{title} - {current_page_number}"));
             }
-        }
-    }
-    Ok(())
+
+            context.insert("current_page", &filename);
+            context.insert("current_page_number", &current_page_number);
+
+            if page_num > 0 {
+                let prev_page = format!("{output_filename}-{page_num}.html");
+                context.insert("previous_page", &prev_page);
+            }
+
+            if page_num < total_pages - 1 {
+                let next_page = format!("{output_filename}-{}.html", page_num + 2);
+                context.insert("next_page", &next_page);
+            }
+
+            debug!(
+                "List Context for {}: {:#?} - Pagination({:#?})",
+                filename,
+                page_content
+                    .iter()
+                    .map(|p| format!("title:{}, slug:{}", p.title, p.slug))
+                    .collect::<Vec<_>>(),
+                [
+                    "total_pages",
+                    "per_page",
+                    "total_content",
+                    "current_page",
+                    "current_page_number",
+                    "previous_page",
+                    "next_page"
+                ]
+                .iter()
+                .map(|name| format!(
+                    "{}:{}",
+                    name,
+                    context.get(name).unwrap_or(&tera::Value::Null)
+                ))
+                .collect::<Vec<_>>()
+            );
+
+            // Render the HTML file for this page
+            let templates = format!("custom_{output_filename},list.html");
+            render_html(&templates, &filename, tera, &context, output_dir)?;
+            // If there isn't an item in site_data.pages with the same slug as output_filename
+            // we will render a {output_filename}.html with the same content as {output_filename}-1.html
+            // this will generate a duplicate page for each stream, but will allow the user to
+            // have a custom first page for each stream by dropping a {stream}.md file on the content folder
+            if current_page_number == 1 {
+                let page_exists = site_data
+                    .pages
+                    .iter()
+                    .any(|page| page.slug == output_filename);
+                if !page_exists {
+                    context.insert("current_page", &format!("{output_filename}.html"));
+                    context.insert("title", title);
+                    render_html(
+                        &templates,
+                        &format!("{output_filename}.html"),
+                        tera,
+                        &context,
+                        output_dir,
+                    )?;
+                }
+            }
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))
 }
 
 fn handle_content_pages(
