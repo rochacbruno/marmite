@@ -10,6 +10,7 @@ use core::str;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
 use hotwatch::{Event, EventKind, Hotwatch};
 use log::{debug, error, info};
+use rayon::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -897,32 +898,36 @@ fn handle_content_pages(
     tera: &Tera,
     output_dir: &Path,
 ) -> Result<(), String> {
-    for content in site_data.posts.iter().chain(&site_data.pages) {
-        let mut content_context = global_context.clone();
-        content_context.insert("title", &content.title);
-        content_context.insert("content", &content);
-        content_context.insert("current_page", &format!("{}.html", &content.slug));
-        debug!(
-            "{} context: {:?}",
-            &content.slug,
-            format!(
-                "title: {},date: {:?},tags: {:?}",
-                &content.title, &content.date, &content.tags
-            )
-        );
+    site_data
+        .posts
+        .iter()
+        .chain(&site_data.pages)
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|content| -> Result<(), String> {
+            let mut content_context = global_context.clone();
+            content_context.insert("title", &content.title);
+            content_context.insert("content", &content);
+            content_context.insert("current_page", &format!("{}.html", &content.slug));
+            debug!(
+                "{} context: {:?}",
+                &content.slug,
+                format!(
+                    "title: {},date: {:?},tags: {:?}",
+                    &content.title, &content.date, &content.tags
+                )
+            );
 
-        if let Err(e) = render_html(
-            "content.html",
-            &format!("{}.html", &content.slug),
-            tera,
-            &content_context,
-            output_dir,
-        ) {
-            error!("Failed to render content {}: {}", &content.slug, e);
-            return Err(e);
-        }
-    }
-    Ok(())
+            render_html(
+                "content.html",
+                &format!("{}.html", &content.slug),
+                tera,
+                &content_context,
+                output_dir,
+            )
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))
 }
 
 #[allow(clippy::similar_names)]
