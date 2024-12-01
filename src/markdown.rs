@@ -3,8 +3,7 @@ use crate::content::{
     get_authors, get_date, get_description, get_slug, get_stream, get_tags, get_title, slugify,
     Content,
 };
-use crate::site::Data;
-use chrono::Datelike;
+
 use comrak::{markdown_to_html, BrokenLinkReference, ComrakOptions, ResolvedReference};
 use frontmatter_gen::{detect_format, extract_raw_frontmatter, parse, Frontmatter};
 use log::warn;
@@ -14,61 +13,6 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use url::Url;
-
-/// Process the file, extract the content and add it to the site data
-/// If the file is a post, add it to the posts vector
-/// If the file is a page, add it to the pages vector
-/// Also add the post to the tag and archive maps
-pub fn process_file(
-    path: &Path,
-    site_data: &mut Data,
-    fragments: &HashMap<String, String>,
-) -> Result<(), String> {
-    let content = get_content(path, Some(fragments), &site_data.site)?;
-
-    if let Some(date) = content.date {
-        site_data.posts.push(content.clone());
-        // tags
-        for tag in content.tags.clone() {
-            site_data.tag.entry(tag).or_default().push(content.clone());
-        }
-        // authors
-        for username in content.authors.clone() {
-            site_data
-                .author
-                .entry(username)
-                .or_default()
-                .push(content.clone());
-        }
-        // archive by year
-        let year = date.year().to_string();
-        site_data
-            .archive
-            .entry(year)
-            .or_default()
-            .push(content.clone());
-        // stream by name
-        if let Some(stream) = &content.stream {
-            site_data
-                .stream
-                .entry(stream.to_string())
-                .or_default()
-                .push(content.clone());
-        };
-    } else {
-        site_data.pages.push(content);
-    }
-    Ok(())
-}
-
-pub fn append_references(content: &str, references_path: &Path) -> String {
-    if references_path.exists() {
-        let references = fs::read_to_string(references_path).unwrap_or_default();
-        format!("{content}\n\n{references}")
-    } else {
-        content.to_string()
-    }
-}
 
 /// From the file content, extract the frontmatter and the markdown content
 /// then parse the markdown content to html and return a Content struct
@@ -155,6 +99,15 @@ pub fn get_content(
         toc,
     };
     Ok(content)
+}
+
+pub fn append_references(content: &str, references_path: &Path) -> String {
+    if references_path.exists() {
+        let references = fs::read_to_string(references_path).unwrap_or_default();
+        format!("{content}\n\n{references}")
+    } else {
+        content.to_string()
+    }
 }
 
 /// Capture `card_image` from frontmatter, then if not defined

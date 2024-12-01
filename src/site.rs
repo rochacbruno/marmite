@@ -3,13 +3,15 @@ use crate::content::{
     check_for_duplicate_slugs, slugify, Content, ContentBuilder, GroupedContent, Kind,
 };
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
-use crate::markdown::{get_content, process_file};
+use crate::markdown::get_content;
 use crate::tera_functions::{Group, UrlFor};
 use crate::{server, tera_filter};
+use chrono::Datelike;
 use core::str;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
 use hotwatch::{Event, EventKind, Hotwatch};
 use log::{debug, error, info};
+use rayon::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -77,6 +79,38 @@ impl Data {
         self.archive.sort_all();
         self.author.sort_all();
         self.stream.sort_all();
+    }
+
+    /// takes content then classifies the content
+    /// into posts, pages, tags, authors, archive, stream
+    /// and adds the content to the respective fields in self
+    pub fn push_content(&mut self, content: Content) {
+        if let Some(date) = content.date {
+            self.posts.push(content.clone());
+            // tags
+            for tag in content.tags.clone() {
+                self.tag.entry(tag).or_default().push(content.clone());
+            }
+            // authors
+            for username in content.authors.clone() {
+                self.author
+                    .entry(username)
+                    .or_default()
+                    .push(content.clone());
+            }
+            // archive by year
+            let year = date.year().to_string();
+            self.archive.entry(year).or_default().push(content.clone());
+            // stream by name
+            if let Some(stream) = &content.stream {
+                self.stream
+                    .entry(stream.to_string())
+                    .or_default()
+                    .push(content.clone());
+            };
+        } else {
+            self.pages.push(content);
+        }
     }
 }
 
@@ -216,15 +250,17 @@ fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
 /// Collect global fragments of markdown, process them and insert into the global context
 /// these are dynamic parts of text that will be processed by Tera
 fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, tera: &Tera) {
-    for fragment in &[
+    let fragments = [
         "announce", "header", "hero", "sidebar", "footer", "comments", "htmlhead", "htmltail",
-    ] {
+    ]
+    .par_iter()
+    .filter(|fragment| {
         let fragment_path = content_dir.join(format!("_{fragment}.md"));
-        let fragment_content = if fragment_path.exists() {
-            fs::read_to_string(fragment_path).unwrap()
-        } else {
-            continue;
-        };
+        fragment_path.exists()
+    })
+    .map(|fragment| {
+        let fragment_path = content_dir.join(format!("_{fragment}.md"));
+        let fragment_content = fs::read_to_string(fragment_path).unwrap();
         // append references
         let references_path = content_dir.join("_references.md");
         let fragment_content =
@@ -234,8 +270,13 @@ fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, te
             .render_str(&fragment_content, global_context)
             .unwrap();
         let fragment_content = crate::markdown::get_html(&rendered_fragment);
-        global_context.insert((*fragment).to_string(), &fragment_content);
+        // global_context.insert((*fragment).to_string(), &fragment_content);
         debug!("{} fragment {}", fragment, &fragment_content);
+        ((*fragment).to_string(), fragment_content)
+    })
+    .collect::<Vec<_>>();
+    for (name, content) in fragments {
+        global_context.insert(name, &content);
     }
 }
 
@@ -274,9 +315,11 @@ fn collect_content(
     site_data: &mut Data,
     fragments: &HashMap<String, String>,
 ) {
-    WalkDir::new(content_dir)
+    let contents = WalkDir::new(content_dir)
         .into_iter()
         .filter_map(Result::ok)
+        .collect::<Vec<_>>()
+        .into_par_iter()
         .filter(|e| {
             let file_name = e
                 .path()
@@ -290,11 +333,18 @@ fn collect_content(
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
             e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
         })
-        .for_each(|entry| {
-            if let Err(e) = process_file(entry.path(), site_data, fragments) {
-                error!("Failed to process file {}: {}", entry.path().display(), e);
+        .map(|entry| get_content(entry.path(), Some(fragments), &site_data.site))
+        .collect::<Vec<_>>();
+    for content in contents {
+        match content {
+            Ok(content) => {
+                site_data.push_content(content);
             }
-        });
+            Err(e) => {
+                error!("Failed to process content: {}", e);
+            }
+        };
+    }
 }
 
 fn detect_slug_collision(site_data: &Data) {
@@ -411,51 +461,60 @@ fn render_templates(
     // Assuming every item on site_data.posts is a Content and has a stream field
     // we can use this to render a {stream}.html page from list.html template
     // by default posts will have a `index` stream.
-    for (stream, stream_contents) in site_data.stream.iter() {
-        let stream_slug = slugify(stream);
-        let title = if stream == "index" {
-            String::new()
-        } else {
-            site_data
-                .site
-                .streams_content_title
-                .replace("$stream", stream)
-        };
-
-        // if there is any content on the stream with pinned set to true
-        // sort the content by pinned first and then by date
-        let mut sorted_stream_contents = stream_contents.clone();
-        sorted_stream_contents.sort_by(|a, b| {
-            if a.pinned && !b.pinned {
-                std::cmp::Ordering::Less
-            } else if !a.pinned && b.pinned {
-                std::cmp::Ordering::Greater
+    // for (stream, stream_contents) in
+    site_data
+        .stream
+        .iter()
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|(stream, stream_contents)| -> Result<(), String> {
+            let stream_slug = slugify(stream);
+            let title = if *stream == "index" {
+                String::new()
             } else {
-                b.date.cmp(&a.date)
-            }
-        });
+                site_data
+                    .site
+                    .streams_content_title
+                    .replace("$stream", stream)
+            };
 
-        handle_list_page(
-            &global_context,
-            &title,
-            &sorted_stream_contents,
-            &site_data,
-            tera,
-            output_dir,
-            &stream_slug,
-        )?;
-        // Render {stream}.rss for each stream
-        crate::feed::generate_rss(&stream_contents, output_dir, &stream_slug, &site_data.site)?;
+            // if there is any content on the stream with pinned set to true
+            // sort the content by pinned first and then by date
+            let mut sorted_stream_contents = stream_contents.clone();
+            sorted_stream_contents.sort_by(|a, b| {
+                if a.pinned && !b.pinned {
+                    std::cmp::Ordering::Less
+                } else if !a.pinned && b.pinned {
+                    std::cmp::Ordering::Greater
+                } else {
+                    b.date.cmp(&a.date)
+                }
+            });
 
-        if site_data.site.json_feed {
-            crate::feed::generate_json(
-                &stream_contents,
+            handle_list_page(
+                &global_context,
+                &title,
+                &sorted_stream_contents,
+                &site_data,
+                tera,
                 output_dir,
                 &stream_slug,
-                &site_data.site,
             )?;
-        }
-    }
+            // Render {stream}.rss for each stream
+            crate::feed::generate_rss(stream_contents, output_dir, &stream_slug, &site_data.site)?;
+
+            if site_data.site.json_feed {
+                crate::feed::generate_json(
+                    stream_contents,
+                    output_dir,
+                    &stream_slug,
+                    &site_data.site,
+                )?;
+            };
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))?;
 
     // Pages are treated as a list of content, no stream separation is needed
     // pages are usually just static pages that user will link in the menu.
@@ -542,63 +601,70 @@ fn handle_author_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-    for (username, _) in site_data.author.iter() {
-        let mut author_context = global_context.clone();
-
-        let author = if let Some(author) = site_data.site.authors.get(username) {
-            author
-        } else {
-            &Author {
-                name: username.to_string(),
-                bio: None,
-                avatar: Some("static/avatar-placeholder.png".to_string()),
-                links: None,
-            }
-        };
-
-        author_context.insert("author", &author);
-
-        let author_slug = slugify(username);
-        let mut author_posts = site_data
-            .posts
-            .iter()
-            .filter(|post| post.authors.contains(username))
-            .cloned()
-            .collect::<Vec<Content>>();
-
-        author_posts.sort_by(|a, b| {
-            if a.pinned && !b.pinned {
-                std::cmp::Ordering::Less
-            } else if !a.pinned && b.pinned {
-                std::cmp::Ordering::Greater
+    site_data
+        .author
+        .iter()
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|(username, _)| -> Result<(), String> {
+            let mut author_context = global_context.clone();
+            let author = if let Some(author) = site_data.site.authors.get(*username) {
+                author
             } else {
-                b.date.cmp(&a.date)
+                &Author {
+                    name: (*username).to_string(),
+                    bio: None,
+                    avatar: Some("static/avatar-placeholder.png".to_string()),
+                    links: None,
+                }
+            };
+            author_context.insert("author", &author);
+
+            let author_slug = slugify(username);
+            let mut author_posts = site_data
+                .posts
+                .iter()
+                .filter(|post| post.authors.contains(username))
+                .cloned()
+                .collect::<Vec<Content>>();
+
+            author_posts.sort_by(|a, b| {
+                if a.pinned && !b.pinned {
+                    std::cmp::Ordering::Less
+                } else if !a.pinned && b.pinned {
+                    std::cmp::Ordering::Greater
+                } else {
+                    b.date.cmp(&a.date)
+                }
+            });
+
+            let filename = format!("author-{}", &author_slug);
+            handle_list_page(
+                &author_context,
+                &author.name,
+                &author_posts,
+                site_data,
+                tera,
+                output_dir,
+                &filename,
+            )?;
+
+            // Render author-{name}.rss for each stream
+            crate::feed::generate_rss(
+                &author_posts,
+                output_dir,
+                &filename.clone(),
+                &site_data.site,
+            )?;
+
+            if site_data.site.json_feed {
+                crate::feed::generate_json(&author_posts, output_dir, &filename, &site_data.site)?;
             }
-        });
 
-        let filename = format!("author-{}", &author_slug);
-        handle_list_page(
-            &author_context,
-            &author.name,
-            &author_posts,
-            site_data,
-            tera,
-            output_dir,
-            &filename,
-        )?;
-
-        // Render author-{name}.rss for each stream
-        crate::feed::generate_rss(
-            &author_posts,
-            output_dir,
-            &filename.clone(),
-            &site_data.site,
-        )?;
-
-        if site_data.site.json_feed {
-            crate::feed::generate_json(&author_posts, output_dir, &filename, &site_data.site)?;
-        }
-    }
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))?;
 
     // Render authors.html group page
     let mut authors_list_context = global_context.clone();
@@ -808,87 +874,92 @@ fn handle_list_page(
     let total_pages = (total_content + per_page - 1) / per_page;
     context.insert("total_content", &total_content);
     context.insert("total_pages", &total_pages);
-    for page_num in 0..total_pages {
-        // Slice the content list for this page
-        let page_content =
-            &all_content[page_num * per_page..(page_num * per_page + per_page).min(total_content)];
+    (0..total_pages)
+        .into_par_iter()
+        .map(|page_num| -> Result<(), String> {
+            // Slice the content list for this page
+            let page_content = &all_content
+                [page_num * per_page..(page_num * per_page + per_page).min(total_content)];
 
-        // Set up context for pagination
-        context.insert("content_list", page_content);
+            let mut context = context.clone();
+            // Set up context for pagination
+            context.insert("content_list", page_content);
 
-        let current_page_number = page_num + 1;
-        let filename = format!("{output_filename}-{current_page_number}.html");
+            let current_page_number = page_num + 1;
+            let filename = format!("{output_filename}-{current_page_number}.html");
 
-        if title.is_empty() {
-            context.insert("title", &format!("Page - {current_page_number}"));
-        } else {
-            context.insert("title", &format!("{title} - {current_page_number}"));
-        }
-
-        context.insert("current_page", &filename);
-        context.insert("current_page_number", &current_page_number);
-
-        if page_num > 0 {
-            let prev_page = format!("{output_filename}-{page_num}.html");
-            context.insert("previous_page", &prev_page);
-        }
-
-        if page_num < total_pages - 1 {
-            let next_page = format!("{output_filename}-{}.html", page_num + 2);
-            context.insert("next_page", &next_page);
-        }
-
-        debug!(
-            "List Context for {}: {:#?} - Pagination({:#?})",
-            filename,
-            page_content
-                .iter()
-                .map(|p| format!("title:{}, slug:{}", p.title, p.slug))
-                .collect::<Vec<_>>(),
-            [
-                "total_pages",
-                "per_page",
-                "total_content",
-                "current_page",
-                "current_page_number",
-                "previous_page",
-                "next_page"
-            ]
-            .iter()
-            .map(|name| format!(
-                "{}:{}",
-                name,
-                context.get(name).unwrap_or(&tera::Value::Null)
-            ))
-            .collect::<Vec<_>>()
-        );
-
-        // Render the HTML file for this page
-        let templates = format!("custom_{output_filename},list.html");
-        render_html(&templates, &filename, tera, &context, output_dir)?;
-        // If there isn't an item in site_data.pages with the same slug as output_filename
-        // we will render a {output_filename}.html with the same content as {output_filename}-1.html
-        // this will generate a duplicate page for each stream, but will allow the user to
-        // have a custom first page for each stream by dropping a {stream}.md file on the content folder
-        if current_page_number == 1 {
-            let page_exists = site_data
-                .pages
-                .iter()
-                .any(|page| page.slug == output_filename);
-            if !page_exists {
-                context.insert("current_page", &format!("{output_filename}.html"));
-                context.insert("title", title);
-                render_html(
-                    &templates,
-                    &format!("{output_filename}.html"),
-                    tera,
-                    &context,
-                    output_dir,
-                )?;
+            if title.is_empty() {
+                context.insert("title", &format!("Page - {current_page_number}"));
+            } else {
+                context.insert("title", &format!("{title} - {current_page_number}"));
             }
-        }
-    }
-    Ok(())
+
+            context.insert("current_page", &filename);
+            context.insert("current_page_number", &current_page_number);
+
+            if page_num > 0 {
+                let prev_page = format!("{output_filename}-{page_num}.html");
+                context.insert("previous_page", &prev_page);
+            }
+
+            if page_num < total_pages - 1 {
+                let next_page = format!("{output_filename}-{}.html", page_num + 2);
+                context.insert("next_page", &next_page);
+            }
+
+            debug!(
+                "List Context for {}: {:#?} - Pagination({:#?})",
+                filename,
+                page_content
+                    .iter()
+                    .map(|p| format!("title:{}, slug:{}", p.title, p.slug))
+                    .collect::<Vec<_>>(),
+                [
+                    "total_pages",
+                    "per_page",
+                    "total_content",
+                    "current_page",
+                    "current_page_number",
+                    "previous_page",
+                    "next_page"
+                ]
+                .iter()
+                .map(|name| format!(
+                    "{}:{}",
+                    name,
+                    context.get(name).unwrap_or(&tera::Value::Null)
+                ))
+                .collect::<Vec<_>>()
+            );
+
+            // Render the HTML file for this page
+            let templates = format!("custom_{output_filename},list.html");
+            render_html(&templates, &filename, tera, &context, output_dir)?;
+            // If there isn't an item in site_data.pages with the same slug as output_filename
+            // we will render a {output_filename}.html with the same content as {output_filename}-1.html
+            // this will generate a duplicate page for each stream, but will allow the user to
+            // have a custom first page for each stream by dropping a {stream}.md file on the content folder
+            if current_page_number == 1 {
+                let page_exists = site_data
+                    .pages
+                    .iter()
+                    .any(|page| page.slug == output_filename);
+                if !page_exists {
+                    context.insert("current_page", &format!("{output_filename}.html"));
+                    context.insert("title", title);
+                    render_html(
+                        &templates,
+                        &format!("{output_filename}.html"),
+                        tera,
+                        &context,
+                        output_dir,
+                    )?;
+                }
+            }
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))
 }
 
 fn handle_content_pages(
@@ -897,32 +968,36 @@ fn handle_content_pages(
     tera: &Tera,
     output_dir: &Path,
 ) -> Result<(), String> {
-    for content in site_data.posts.iter().chain(&site_data.pages) {
-        let mut content_context = global_context.clone();
-        content_context.insert("title", &content.title);
-        content_context.insert("content", &content);
-        content_context.insert("current_page", &format!("{}.html", &content.slug));
-        debug!(
-            "{} context: {:?}",
-            &content.slug,
-            format!(
-                "title: {},date: {:?},tags: {:?}",
-                &content.title, &content.date, &content.tags
-            )
-        );
+    site_data
+        .posts
+        .iter()
+        .chain(&site_data.pages)
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|content| -> Result<(), String> {
+            let mut content_context = global_context.clone();
+            content_context.insert("title", &content.title);
+            content_context.insert("content", &content);
+            content_context.insert("current_page", &format!("{}.html", &content.slug));
+            debug!(
+                "{} context: {:?}",
+                &content.slug,
+                format!(
+                    "title: {},date: {:?},tags: {:?}",
+                    &content.title, &content.date, &content.tags
+                )
+            );
 
-        if let Err(e) = render_html(
-            "content.html",
-            &format!("{}.html", &content.slug),
-            tera,
-            &content_context,
-            output_dir,
-        ) {
-            error!("Failed to render content {}: {}", &content.slug, e);
-            return Err(e);
-        }
-    }
-    Ok(())
+            render_html(
+                "content.html",
+                &format!("{}.html", &content.slug),
+                tera,
+                &content_context,
+                output_dir,
+            )
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))
 }
 
 #[allow(clippy::similar_names)]
@@ -957,30 +1032,43 @@ fn handle_tag_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-    for (tag, tagged_contents) in site_data.tag.iter() {
-        let tag_slug = slugify(tag);
-        let filename = format!("tag-{}", &tag_slug);
-        handle_list_page(
-            global_context,
-            &site_data.site.tags_content_title.replace("$tag", tag),
-            &tagged_contents,
-            site_data,
-            tera,
-            output_dir,
-            &filename,
-        )?;
-        // Render tag-{tag}.rss for each stream
-        crate::feed::generate_rss(
-            &tagged_contents,
-            output_dir,
-            &filename.clone(),
-            &site_data.site,
-        )?;
+    site_data
+        .tag
+        .iter()
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|(tag, tagged_contents)| -> Result<(), String> {
+            let tag_slug = slugify(tag);
+            let filename = format!("tag-{}", &tag_slug);
+            handle_list_page(
+                global_context,
+                &site_data.site.tags_content_title.replace("$tag", tag),
+                tagged_contents,
+                site_data,
+                tera,
+                output_dir,
+                &filename,
+            )?;
+            // Render tag-{tag}.rss for each stream
+            crate::feed::generate_rss(
+                tagged_contents,
+                output_dir,
+                &filename.clone(),
+                &site_data.site,
+            )?;
 
-        if site_data.site.json_feed {
-            crate::feed::generate_json(&tagged_contents, output_dir, &filename, &site_data.site)?;
-        }
-    }
+            if site_data.site.json_feed {
+                crate::feed::generate_json(
+                    tagged_contents,
+                    output_dir,
+                    &filename,
+                    &site_data.site,
+                )?;
+            }
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))?;
 
     // Render tags.html group page
     let mut tag_list_context = global_context.clone();
@@ -1003,29 +1091,42 @@ fn handle_archive_pages(
     global_context: &Context,
     tera: &Tera,
 ) -> Result<(), String> {
-    for (year, archive_contents) in site_data.archive.iter() {
-        let filename = format!("archive-{year}");
-        handle_list_page(
-            global_context,
-            &site_data.site.archives_content_title.replace("$year", year),
-            &archive_contents,
-            site_data,
-            tera,
-            output_dir,
-            &filename,
-        )?;
-        // Render archive-{year}.rss for each stream
-        crate::feed::generate_rss(
-            &archive_contents,
-            output_dir,
-            &filename.clone(),
-            &site_data.site,
-        )?;
+    site_data
+        .archive
+        .iter()
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|(year, archive_contents)| -> Result<(), String> {
+            let filename = format!("archive-{year}");
+            handle_list_page(
+                global_context,
+                &site_data.site.archives_content_title.replace("$year", year),
+                archive_contents,
+                site_data,
+                tera,
+                output_dir,
+                &filename,
+            )?;
+            // Render archive-{year}.rss for each stream
+            crate::feed::generate_rss(
+                archive_contents,
+                output_dir,
+                &filename.clone(),
+                &site_data.site,
+            )?;
 
-        if site_data.site.json_feed {
-            crate::feed::generate_json(&archive_contents, output_dir, &filename, &site_data.site)?;
-        }
-    }
+            if site_data.site.json_feed {
+                crate::feed::generate_json(
+                    archive_contents,
+                    output_dir,
+                    &filename,
+                    &site_data.site,
+                )?;
+            }
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))?;
 
     // Render archive.html group page
     let mut archive_context = global_context.clone();
