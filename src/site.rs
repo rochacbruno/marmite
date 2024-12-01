@@ -3,9 +3,10 @@ use crate::content::{
     check_for_duplicate_slugs, slugify, Content, ContentBuilder, GroupedContent, Kind,
 };
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
-use crate::markdown::{get_content, process_file};
+use crate::markdown::get_content;
 use crate::tera_functions::{Group, UrlFor};
 use crate::{server, tera_filter};
+use chrono::Datelike;
 use core::str;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
 use hotwatch::{Event, EventKind, Hotwatch};
@@ -78,6 +79,38 @@ impl Data {
         self.archive.sort_all();
         self.author.sort_all();
         self.stream.sort_all();
+    }
+
+    /// takes content then classifies the content
+    /// into posts, pages, tags, authors, archive, stream
+    /// and adds the content to the respective fields in self
+    pub fn push_content(&mut self, content: Content) {
+        if let Some(date) = content.date {
+            self.posts.push(content.clone());
+            // tags
+            for tag in content.tags.clone() {
+                self.tag.entry(tag).or_default().push(content.clone());
+            }
+            // authors
+            for username in content.authors.clone() {
+                self.author
+                    .entry(username)
+                    .or_default()
+                    .push(content.clone());
+            }
+            // archive by year
+            let year = date.year().to_string();
+            self.archive.entry(year).or_default().push(content.clone());
+            // stream by name
+            if let Some(stream) = &content.stream {
+                self.stream
+                    .entry(stream.to_string())
+                    .or_default()
+                    .push(content.clone());
+            };
+        } else {
+            self.pages.push(content);
+        }
     }
 }
 
@@ -282,9 +315,11 @@ fn collect_content(
     site_data: &mut Data,
     fragments: &HashMap<String, String>,
 ) {
-    WalkDir::new(content_dir)
+    let contents = WalkDir::new(content_dir)
         .into_iter()
         .filter_map(Result::ok)
+        .collect::<Vec<_>>()
+        .into_par_iter()
         .filter(|e| {
             let file_name = e
                 .path()
@@ -298,11 +333,18 @@ fn collect_content(
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
             e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
         })
-        .for_each(|entry| {
-            if let Err(e) = process_file(entry.path(), site_data, fragments) {
-                error!("Failed to process file {}: {}", entry.path().display(), e);
+        .map(|entry| get_content(entry.path(), Some(fragments), &site_data.site))
+        .collect::<Vec<_>>();
+    for content in contents {
+        match content {
+            Ok(content) => {
+                site_data.push_content(content);
             }
-        });
+            Err(e) => {
+                error!("Failed to process content: {}", e);
+            }
+        };
+    }
 }
 
 fn detect_slug_collision(site_data: &Data) {
