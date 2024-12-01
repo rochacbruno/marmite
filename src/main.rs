@@ -8,7 +8,7 @@ mod config;
 mod content;
 mod embedded;
 mod feed;
-mod markdown;
+mod parser;
 mod server;
 mod site;
 mod templates;
