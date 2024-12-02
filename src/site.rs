@@ -125,6 +125,7 @@ struct BuildInfo {
     generated_at: String,
     timestamp: i64,
     elapsed_time: f64,
+    config: Marmite,
 }
 
 impl BuildInfo {
@@ -151,7 +152,6 @@ pub fn generate(
     let rebuild = {
         move || {
             let start_time = std::time::Instant::now();
-
             let site_data = Arc::new(Mutex::new(Data::from_file(
                 moved_config_path.clone().as_path(),
             )));
@@ -161,11 +161,9 @@ pub fn generate(
             );
             let mut site_data = site_data.lock().unwrap();
             let build_info_path = moved_output_folder.join("marmite.json");
-            if build_info_path.exists() {
-                let build_info_json = fs::read_to_string(&build_info_path).unwrap();
-                if let Ok(build_info) = BuildInfo::from_json(&build_info_json) {
-                    site_data.latest_timestamp = Some(build_info.timestamp);
-                }
+            let latest_build_info = get_latest_build_info(&build_info_path);
+            if let Some(build_info) = &latest_build_info {
+                site_data.latest_timestamp = Some(build_info.timestamp);
             }
             site_data.site.override_from_cli_args(&moved_cli_args);
 
@@ -182,30 +180,43 @@ pub fn generate(
                 process::exit(1);
             }
 
-            let tera = initialize_tera(&moved_input_folder, &site_data);
-            if let Err(e) = render_templates(
-                &content_folder,
-                &site_data,
-                &tera,
-                &output_path,
-                &moved_input_folder,
-                &moved_config_path,
-                &fragments,
-            ) {
-                error!("Failed to render templates: {}", e);
-                process::exit(1);
-            }
-
-            handle_static_artifacts(
-                &moved_input_folder,
-                &site_data,
-                &moved_output_folder,
-                &content_folder,
-            );
-
-            if site_data.site.enable_search {
-                generate_search_index(&site_data, &moved_output_folder);
-            }
+            [
+                "render_templates",
+                "handle_static_artifacts",
+                "generate_search_index",
+            ]
+            .par_iter()
+            .for_each(|step| match *step {
+                "render_templates" => {
+                    let tera = initialize_tera(&moved_input_folder, &site_data);
+                    if let Err(e) = render_templates(
+                        &content_folder,
+                        &site_data,
+                        &tera,
+                        &output_path,
+                        &moved_input_folder,
+                        &fragments,
+                        &latest_build_info,
+                    ) {
+                        error!("Failed to render templates: {}", e);
+                        process::exit(1);
+                    }
+                }
+                "handle_static_artifacts" => {
+                    handle_static_artifacts(
+                        &moved_input_folder,
+                        &site_data,
+                        &moved_output_folder,
+                        &content_folder,
+                    );
+                }
+                "generate_search_index" => {
+                    if site_data.site.enable_search {
+                        generate_search_index(&site_data, &moved_output_folder);
+                    }
+                }
+                _ => {}
+            });
 
             let end_time = start_time.elapsed().as_secs_f64();
             write_build_info(&output_path, &site_data, end_time);
@@ -243,6 +254,17 @@ pub fn generate(
             }
         }
     }
+}
+
+fn get_latest_build_info(build_info_path: &std::path::PathBuf) -> Option<BuildInfo> {
+    let mut latest_build_info: Option<BuildInfo> = None;
+    if build_info_path.exists() {
+        let build_info_json = fs::read_to_string(build_info_path).unwrap();
+        if let Ok(build_info) = BuildInfo::from_json(&build_info_json) {
+            latest_build_info = Some(build_info);
+        }
+    }
+    latest_build_info
 }
 
 /// Get the content folder from the config or default to the input folder
@@ -490,8 +512,8 @@ fn render_templates(
     tera: &Tera,
     output_dir: &Path,
     input_folder: &Path,
-    config_path: &Path,
     fragments: &HashMap<String, String>,
+    latest_build_info: &Option<BuildInfo>,
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
@@ -505,10 +527,86 @@ fn render_templates(
     debug!("Global Context site: {:?}", &site_data.site);
     collect_global_fragments(content_dir, &mut global_context, tera);
 
-    // Assuming every item on site_data.posts is a Content and has a stream field
-    // we can use this to render a {stream}.html page from list.html template
-    // by default posts will have a `index` stream.
-    // for (stream, stream_contents) in
+    handle_stream_pages(&site_data, &global_context, tera, output_dir)?;
+    // If site_data.stream.map does not contain the index stream
+    // we will render empty index.html from list.html template
+    if !site_data.stream.map.contains_key("index") {
+        handle_default_empty_site(&global_context, tera, output_dir)?;
+    }
+
+    handle_group_pages(&global_context, &site_data, tera, output_dir)?;
+
+    // Pages are treated as a list of content, no stream separation is needed
+    // pages are usually just static pages that user will link in the menu.
+    handle_list_page(
+        &global_context,
+        &site_data.site.pages_title,
+        &site_data.pages,
+        &site_data,
+        tera,
+        output_dir,
+        "pages",
+    )?;
+
+    // Check and guarantees that page 404 was generated even if _404.md is removed
+    handle_404(content_dir, &global_context, tera, output_dir)?;
+
+    // Render individual content-slug.html from content.html template
+    // content is rendered as last step so it gives the user the ability to
+    // override some prebuilt pages like tags.html, authors.html, etc.
+    handle_content_pages(
+        &site_data,
+        &global_context,
+        tera,
+        output_dir,
+        content_dir,
+        input_folder,
+        latest_build_info,
+    )?;
+
+    Ok(())
+}
+
+fn handle_group_pages(
+    global_context: &Context,
+    site_data: &Data,
+    tera: &Tera,
+    output_dir: &Path,
+) -> Result<(), String> {
+    ["tags", "archives", "authors", "streams"]
+        .par_iter()
+        .map(|step| -> Result<(), String> {
+            match *step {
+                "tags" => {
+                    handle_tag_pages(output_dir, site_data, global_context, tera)?;
+                }
+                "archives" => {
+                    handle_archive_pages(output_dir, site_data, global_context, tera)?;
+                }
+                "authors" => {
+                    handle_author_pages(output_dir, site_data, global_context, tera)?;
+                }
+                "streams" => {
+                    handle_stream_list_page(output_dir, site_data, global_context, tera)?;
+                }
+                _ => {}
+            }
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))
+}
+
+/// Assuming every item on `site_data.posts` is a Content and has a stream field
+/// we can use this to render a {stream}.html page from list.html template
+/// by default posts will have a `index` stream.
+/// for (stream, `stream_contents`) in
+fn handle_stream_pages(
+    site_data: &Data,
+    global_context: &Context,
+    tera: &Tera,
+    output_dir: &Path,
+) -> Result<(), String> {
     site_data
         .stream
         .iter()
@@ -539,10 +637,10 @@ fn render_templates(
             });
 
             handle_list_page(
-                &global_context,
+                global_context,
                 &title,
                 &sorted_stream_contents,
-                &site_data,
+                site_data,
                 tera,
                 output_dir,
                 &stream_slug,
@@ -561,49 +659,7 @@ fn render_templates(
             Ok(())
         })
         .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
-        .unwrap_or(Ok(()))?;
-
-    // Pages are treated as a list of content, no stream separation is needed
-    // pages are usually just static pages that user will link in the menu.
-    handle_list_page(
-        &global_context,
-        &site_data.site.pages_title,
-        &site_data.pages,
-        &site_data,
-        tera,
-        output_dir,
-        "pages",
-    )?;
-
-    // Check and guarantees that page 404 was generated even if 404.md is removed
-    handle_404(content_dir, &global_context, tera, output_dir)?;
-
-    // render group pages
-    handle_tag_pages(output_dir, &site_data, &global_context, tera)?;
-    handle_archive_pages(output_dir, &site_data, &global_context, tera)?;
-    handle_author_pages(output_dir, &site_data, &global_context, tera)?;
-    handle_stream_list_page(output_dir, &site_data, &global_context, tera)?;
-
-    // If site_data.stream.map does not contain the index stream
-    // we will render empty index.html from list.html template
-    if !site_data.stream.map.contains_key("index") {
-        handle_default_empty_site(&global_context, tera, output_dir)?;
-    }
-
-    // Render individual content-slug.html from content.html template
-    // content is rendered as last step so it gives the user the ability to
-    // override some prebuilt pages like tags.html, authors.html, etc.
-    handle_content_pages(
-        &site_data,
-        &global_context,
-        tera,
-        output_dir,
-        content_dir,
-        input_folder,
-        config_path,
-    )?;
-
-    Ok(())
+        .unwrap_or(Ok(()))
 }
 
 fn handle_default_empty_site(
@@ -787,7 +843,7 @@ fn handle_static_artifacts(
         // name, destination
         ("custom.css", site_data.site.static_path.clone()),
         ("custom.js", site_data.site.static_path.clone()),
-        ("favicon.ico", String::new()),
+        ("favicon.ico", site_data.site.static_path.clone()),
         ("robots.txt", String::new()),
     ];
     let output_static_destiny = output_folder.join(site_data.site.static_path.clone());
@@ -881,6 +937,7 @@ fn write_build_info(
         generated_at: chrono::Local::now().to_string(),
         timestamp: chrono::Utc::now().timestamp(),
         elapsed_time: end_time,
+        config: site_data.site.clone(),
     };
 
     let build_info_path = output_path.join("marmite.json");
@@ -1025,7 +1082,7 @@ fn handle_content_pages(
     output_dir: &Path,
     content_dir: &Path,
     input_folder: &Path,
-    config_path: &Path,
+    latest_build_info: &Option<BuildInfo>,
 ) -> Result<(), String> {
     let last_build = site_data.latest_timestamp.unwrap_or(0);
     let force_render = should_force_render(
@@ -1033,7 +1090,7 @@ fn handle_content_pages(
         site_data,
         last_build,
         content_dir,
-        config_path,
+        latest_build_info,
     );
 
     site_data
@@ -1078,7 +1135,7 @@ fn should_force_render(
     site_data: &Data,
     last_build: i64,
     content_dir: &Path,
-    config_path: &Path,
+    latest_build_info: &Option<BuildInfo>,
 ) -> bool {
     let templates_path = input_folder.join(site_data.site.templates_path.clone());
     let templates_modified = WalkDir::new(&templates_path)
@@ -1126,18 +1183,9 @@ fn should_force_render(
             true
         });
 
-    let config_modified = {
-        if let Ok(metadata) = fs::metadata(config_path) {
-            if let Ok(modified_time) = metadata.modified() {
-                return modified_time
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_secs() as i64
-                    > last_build;
-            }
-        }
-        true
-    };
+    let config_modified = latest_build_info
+        .as_ref()
+        .map_or(true, |info| info.config != site_data.site);
 
     templates_modified || fragments_modified || config_modified
 }

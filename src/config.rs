@@ -5,7 +5,7 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 
 use crate::cli::Cli;
 
-#[derive(Debug, Deserialize, Serialize, Clone, Default)]
+#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq)]
 pub struct Marmite {
     #[serde(default = "default_name")]
     pub name: String,
@@ -181,7 +181,7 @@ impl Marmite {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct Author {
     pub name: String,
     pub avatar: Option<String>,
