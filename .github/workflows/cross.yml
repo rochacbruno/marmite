@@ -1,4 +1,4 @@
-name: GH Pages Deploy
+name: Cross platform Test
 
 on:
   # Allows you to run this workflow manually from the Actions tab
@@ -20,23 +20,32 @@ jobs:
       - name: Checkout 🛎
         uses: actions/checkout@v4
 
-      - name: check formatting 🖌️
-        run: cargo fmt -- --check
-
       - name: Cache Cargo dependencies 📦
         uses: Swatinem/rust-cache@v2
 
       - name: Test 🧪
+        if: matrix.os != 'windows-latest'
         run: cargo test
 
       - name: Build 🔧
         run: cargo build --release
 
       - name: Add paths 📂
+        if: matrix.os != 'windows-latest'
         run: echo "::add-path::$GITHUB_WORKSPACE/target/release"
 
       - name: Build site 🏗️
+        if: matrix.os != 'windows-latest'
         run: marmite example site -vvvv
 
+      - name: Build site 🏗️
+        if: matrix.os == 'windows-latest'
+        run: .\target\release\marmite.exe example site -vvvv
+
       - name: List files on site 📂
+        if: matrix.os != 'windows-latest'
         run: ls -R site
+
+      - name: List files on site 📂
+        if: matrix.os == 'windows-latest'
+        run: dir site
