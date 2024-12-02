@@ -91,6 +91,7 @@ pub struct Content {
     pub stream: Option<String>,
     pub pinned: bool,
     pub toc: Option<String>,
+    pub modified_time: Option<i64>,
 }
 
 impl Content {
@@ -103,6 +104,7 @@ impl Content {
         path: &Path,
         fragments: Option<&HashMap<String, String>>,
         site: &Marmite,
+        modified_time: Option<i64>,
     ) -> Result<Content, String> {
         let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
         let (frontmatter, raw_markdown) = parse_front_matter(&file_content)?;
@@ -177,6 +179,7 @@ impl Content {
             stream,
             pinned,
             toc,
+            modified_time,
         };
         Ok(content)
     }
@@ -300,6 +303,7 @@ impl ContentBuilder {
             stream: self.stream,
             pinned: self.pinned.unwrap_or_default(),
             toc: self.toc,
+            modified_time: None,
         }
     }
 }
@@ -1121,7 +1125,7 @@ date: "2023-01-01"
 This is a test content.
 "#;
         fs::write(path, content).unwrap();
-        let result = Content::from_markdown(path, None, &Marmite::default()).unwrap();
+        let result = Content::from_markdown(path, None, &Marmite::default(), None).unwrap();
         assert_eq!(result.title, "Test Title");
         assert_eq!(result.description, Some("\"Test Description\"".to_string()));
         assert_eq!(result.slug, "test-title");
@@ -1147,7 +1151,7 @@ extra: "extra content"
 This is a test content.
 "#;
         fs::write(path, content).unwrap();
-        let result = Content::from_markdown(path, None, &Marmite::default());
+        let result = Content::from_markdown(path, None, &Marmite::default(), None);
         assert!(result.is_err());
         fs::remove_file(path).unwrap();
     }
@@ -1160,7 +1164,7 @@ This is a test content.
 This is a test content.
 ";
         fs::write(path, content).unwrap();
-        let result = Content::from_markdown(path, None, &Marmite::default()).unwrap();
+        let result = Content::from_markdown(path, None, &Marmite::default(), None).unwrap();
         assert_eq!(result.title, "Test Content".to_string());
         assert_eq!(result.description, None);
         assert_eq!(result.slug, "test_get_content_without_frontmatter");
@@ -1176,7 +1180,7 @@ This is a test content.
         let path = Path::new("test_get_content_with_empty_file.md");
         let content = "";
         fs::write(path, content).unwrap();
-        let result = Content::from_markdown(path, None, &Marmite::default()).unwrap();
+        let result = Content::from_markdown(path, None, &Marmite::default(), None).unwrap();
         assert_eq!(result.slug, "test_get_content_with_empty_file".to_string());
         fs::remove_file(path).unwrap();
     }

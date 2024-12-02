@@ -9,7 +9,6 @@ Yes! we have pagination!
 Set `pagination: 10` on your `marmite.yaml`
 
 
-
 The pagination template is very simple
 
 
