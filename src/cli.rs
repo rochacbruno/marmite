@@ -59,6 +59,10 @@ pub struct Cli {
     #[arg(long)]
     pub init_site: bool,
 
+    /// Force the rebuild of the site even if no changes detected
+    #[arg(long)]
+    pub force: bool,
+
     /// Create a new markdown file in the input folder
     #[command(flatten)]
     pub create: Create,

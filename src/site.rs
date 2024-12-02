@@ -31,6 +31,7 @@ pub struct Data {
     pub stream: GroupedContent,
     pub latest_timestamp: Option<i64>,
     pub config_path: String,
+    pub force_render: bool,
 }
 
 impl Data {
@@ -53,6 +54,7 @@ impl Data {
             stream: GroupedContent::new(Kind::Stream),
             latest_timestamp: None,
             config_path: config_path.to_string_lossy().to_string(),
+            force_render: false,
         }
     }
 
@@ -166,6 +168,9 @@ pub fn generate(
                 site_data.latest_timestamp = Some(build_info.timestamp);
             }
             site_data.site.override_from_cli_args(&moved_cli_args);
+            if moved_cli_args.force {
+                site_data.force_render = true;
+            }
 
             let fragments = collect_content_fragments(&content_folder);
             collect_content(&content_folder, &mut site_data, &fragments);
@@ -1137,6 +1142,10 @@ fn should_force_render(
     content_dir: &Path,
     latest_build_info: &Option<BuildInfo>,
 ) -> bool {
+    if site_data.force_render {
+        return true;
+    }
+
     let templates_path = input_folder.join(site_data.site.templates_path.clone());
     let templates_modified = WalkDir::new(&templates_path)
         .into_iter()
