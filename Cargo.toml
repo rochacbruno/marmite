@@ -10,7 +10,7 @@ readme = "README.md"
 keywords = ["web", "blog", "static", "site", "html"]
 
 [dependencies]
-serde = { version = "1.0.216", features = ["derive"] }
+serde = { version = "1.0.217", features = ["derive"] }
 serde_yaml = "0.9"
 serde_json = "1.0"
 hotwatch = "0.5"
