@@ -1122,6 +1122,10 @@ fn handle_content_pages(
                 )
             );
 
+            if content.comments == Some(false) {
+                content_context.remove("comments");
+            }
+
             render_html(
                 "content.html",
                 &format!("{}.html", &content.slug),

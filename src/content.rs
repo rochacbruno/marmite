@@ -92,6 +92,7 @@ pub struct Content {
     pub pinned: bool,
     pub toc: Option<String>,
     pub modified_time: Option<i64>,
+    pub comments: Option<bool>,
 }
 
 impl Content {
@@ -163,6 +164,7 @@ impl Content {
             None
         };
 
+        let comments = get_comments(&frontmatter);
         let content = Content {
             title,
             description,
@@ -180,6 +182,7 @@ impl Content {
             pinned,
             toc,
             modified_time,
+            comments,
         };
         Ok(content)
     }
@@ -203,6 +206,7 @@ pub struct ContentBuilder {
     stream: Option<String>,
     pinned: Option<bool>,
     toc: Option<String>,
+    comments: Option<bool>,
 }
 
 #[allow(dead_code)]
@@ -286,6 +290,11 @@ impl ContentBuilder {
         self
     }
 
+    pub fn comments(mut self, comments: bool) -> Self {
+        self.comments = Some(comments);
+        self
+    }
+
     pub fn build(self) -> Content {
         Content {
             title: self.title.unwrap_or_default(),
@@ -304,6 +313,7 @@ impl ContentBuilder {
             pinned: self.pinned.unwrap_or_default(),
             toc: self.toc,
             modified_time: None,
+            comments: self.comments,
         }
     }
 }
@@ -334,6 +344,13 @@ pub fn get_title<'a>(frontmatter: &'a Frontmatter, markdown: &'a str) -> (String
 pub fn get_description(frontmatter: &Frontmatter) -> Option<String> {
     if let Some(description) = frontmatter.get("description") {
         return Some(description.to_string());
+    }
+    None
+}
+
+pub fn get_comments(frontmatter: &Frontmatter) -> Option<bool> {
+    if let Some(comments) = frontmatter.get("comments") {
+        return comments.as_bool();
     }
     None
 }
