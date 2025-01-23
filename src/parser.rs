@@ -24,12 +24,14 @@ pub fn append_references(content: &str, references_path: &Path) -> String {
 /// and return them as a vector of strings
 pub fn get_links_to(html: &str) -> Option<Vec<String>> {
     let mut result = Vec::new();
-    let re = Regex::new(r#"href="([^"]+)\.html""#).unwrap();
+    let re = Regex::new(r#"href="([^"]+)\.html(#[^"]+)?""#).unwrap();
     for cap in re.captures_iter(html) {
         if let Some(m) = cap.get(1) {
             let href = m.as_str();
             if !href.starts_with("http") {
-                result.push(href.trim_start_matches("./").to_string());
+                let page = href.trim_start_matches("./").to_string();
+                let heading = cap.get(2).map_or("", |h| h.as_str());
+                result.push(format!("{page}{heading}").to_string());
             }
         }
     }
@@ -279,6 +281,14 @@ mod tests {
     fn test_get_links_to_with_empty_string() {
         let html = "";
         let expected: Option<Vec<String>> = None;
+        assert_eq!(get_links_to(html), expected);
+    }
+
+    #[test]
+    fn test_get_links_to_with_internal_link_with_heading() {
+        let html = r#"<a href="test1.html#heading">test</a>"#;
+        let expected = Some(vec!["test1#heading".to_string()]);
+
         assert_eq!(get_links_to(html), expected);
     }
 
