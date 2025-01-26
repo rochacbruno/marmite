@@ -1,0 +1,214 @@
+/* Marmite Minimal Theme */
+/* picocss.com  */
+:root {
+    --pico-border-radius: 0;
+}
+
+.content-tags a:where(a:not([role=button])),
+[role=link] {
+    --pico-color: revert;
+}
+
+[data-theme=light],
+:root:not([data-theme=dark]) {
+    --pico-background-color: #fff8ef;
+    --pico-card-background-color: #fff8ef;
+    --pico-card-sectioning-background-color: var(--pico-background-color);
+    --pico-primary: #20453f;
+    --pico-primary-opacity-25: #20453f27;
+    --pico-primary-hover: #20453f;
+    --pico-secondary: #20453f;
+    --pico-color: #24292f;
+    --pico-tag: #24292f;
+    --pico-h1-color: var(--pico-primary);
+    --pico-code-background-color: var(--pico-background-color);
+    --pico-table-border-color: var(--pico-primary-opacity-25);
+    --pico-color-azure-550: var(--pico-primary);
+    --pico-h1-color: var(--pico-primary);
+    --pico-h2-color: var(--pico-primary);
+    --pico-h3-color: var(--pico-primary);
+    --pico-h4-color: var(--pico-primary);
+    --pico-h5-color: var(--pico-primary);
+    --pico-h6-color: var(--pico-primary);
+}
+
+[data-theme=light] pre:has(> code.language-mermaid) {
+    background-color: var(--pico-card-background-color);
+}
+
+[data-theme=dark],
+:root:not([data-theme=light]) {
+    --pico-background-color: #20453f;
+    --pico-card-background-color: #20453f;
+    --pico-card-sectioning-background-color: var(--pico-background-color);
+    --pico-primary: #fff8ef;
+    --pico-primary-opacity-25: #fff8ef50;
+    --pico-primary-hover: #fff8ef;
+    --pico-secondary: #fff8ef;
+    --pico-color: #fff8ef;
+    --pico-tag: #fff8ef;
+    --pico-h1-color: var(--pico-color);
+    --pico-code-background-color: #20453f;
+    --pico-table-border-color: var(--pico-primary-opacity-25);
+    --pico-color-azure-550: var(--pico-primary);
+    --pico-h1-color: var(--pico-primary);
+    --pico-h2-color: var(--pico-primary);
+    --pico-h3-color: var(--pico-primary);
+    --pico-h4-color: var(--pico-primary);
+    --pico-h5-color: var(--pico-primary);
+    --pico-h6-color: var(--pico-primary);
+    --pico-muted-color: var(--pico-primary-opacity-25);
+}
+
+[data-theme=dark] pre:has(> code.language-mermaid) {
+    background-color: var(--pico-code-background-color);
+}
+
+body {
+    -moz-osx-font-smoothing: grayscale;
+    -webkit-font-smoothing: antialiased;
+}
+article {
+    box-shadow: none;
+    padding-left: 0;
+    padding-right: 0;
+    margin-bottom: 0;
+}
+.content-list-item {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+article>footer {
+    margin-top: 0;
+    margin-bottom: calc(var(--pico-block-spacing-vertical)* -1);
+    border-top: none;
+    border-bottom: 0 solid var(--pico-primary-opacity-25);
+    border-bottom-right-radius: var(--pico-border-radius);
+    border-bottom-left-radius: var(--pico-border-radius);
+    padding-top: 0.2rem;
+}
+.content-excerpt {
+    font-size: 90%;
+    opacity: 0.8;
+    margin-bottom: 0;
+}
+.content-title {
+    font-weight: 500;
+}
+.data-tags-footer .content-date {
+    font-size: 90%;
+    position: relative;
+    bottom: -0.25rem;
+}
+.content-tags {
+    position: relative;
+    bottom: -0.25rem;
+    padding-left: 0;
+
+    li a {
+        font-size: 90%;
+    }
+    li:hover {
+        border: 1px solid transparent;
+    }
+}
+.content-html {
+    border-top: 1px var(--pico-primary-opacity-25) solid;
+    border-bottom: 1px var(--pico-primary-opacity-25) solid;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+.content-banner-image {
+    border-radius: 0.5rem;
+}
+.content-authors ul {
+    margin-bottom: 0;
+}
+p {
+    margin-bottom: 0.85rem;
+    line-height: 1.4;
+}
+code, kbd {
+    display: inline-block;
+    padding: 0 .375rem;
+}
+pre code.hljs {
+    display: block;
+    overflow-x: auto;
+    padding: 0 1em;
+}
+blockquote {
+    border-left: .15rem solid var(--pico-table-border-color);
+}
+.announcement-wrapper {
+    background-color: var(--pico-primary);
+    padding: 0.5rem;
+    margin-bottom: 1rem;
+
+    p {
+        font-size: 1rem;
+        margin: 0;
+    }
+}
+.footer-content {
+    padding: 1.5rem 0;
+    opacity: 0.75;
+    font-weight: 300;
+    font-size: 0.85rem;
+    border-top: 1px #869d99 solid;
+
+    select {
+        font-size: 95%;
+    }
+    div {
+        text-align: left;
+    }
+}
+hgroup>:not(:first-child):last-child {
+    --pico-color: var(--pico-primary);
+    --pico-font-weight: unset;
+    font-size: 1rem;
+    opacity: 0.8;
+}
+.theme-toggle {
+    cursor: pointer;
+    color: var(--pico-primary);
+    padding: 0.45rem 0.65rem 0.35rem 0.65rem;
+    border: 1px var(--pico-primary-opacity-25) solid;
+    border-radius: 0.25rem;
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+.search-magnifier {
+    border: 2px solid var(--pico-primary);
+
+    &::after {
+        background-color: var(--pico-primary);
+    }
+}
+details summary[role=button]::after {
+    margin-bottom: -10px;
+}
+.content-list-with-sidebar {
+    ul {
+        padding-left: 0.85rem;
+        position: relative;
+        top: -0.35rem;
+    }
+    .right {
+        padding-left: 1rem;
+        margin-left: 0.5rem;
+        border-left: 1px solid var(--pico-primary-opacity-25);
+    }
+}
+.header-menu {
+    @media (max-width: 1025px) {
+        box-shadow: 0px 0px 0px 0px var(--pico-contrast-focus);
+        width: 100%;
+        border: 1px var(--pico-primary-opacity-25) solid;
+    }
+}
