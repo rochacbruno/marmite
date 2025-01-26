@@ -353,7 +353,8 @@ fn _collect_back_links(contents: &mut [Content], other_contents: &[Content]) {
         let slug = contents[i].slug.clone();
         for other_content in other_contents {
             if let Some(ref links_to) = other_content.links_to {
-                if links_to.contains(&slug) {
+                // if content and other_content has the same slug skip
+                if links_to.contains(&slug) && slug != other_content.slug {
                     contents[i].back_links.push(other_content.clone());
                 }
             }
