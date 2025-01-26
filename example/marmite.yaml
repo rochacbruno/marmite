@@ -54,6 +54,8 @@ authors:
 # extra data for template customization
 extra:
   colorscheme_toggle: true
+  # static_folders:
+  #   - content/myapp
   # colorscheme: gruvbox
   # fediverse_verification: https://mastodon.social/@me
 
