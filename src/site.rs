@@ -826,18 +826,20 @@ fn handle_static_artifacts(
     // Copy extra static folders if present
     if let Some(extra_data) = site_data.site.extra.clone() {
         if let Some(static_folders_value) = extra_data.get("static_folders") {
-            if let Ok(static_folders) = serde_yaml::from_value::<Vec<std::path::PathBuf>>(static_folders_value.clone()) {    
+            if let Ok(static_folders) =
+                serde_yaml::from_value::<Vec<std::path::PathBuf>>(static_folders_value.clone())
+            {
                 for static_folder in static_folders {
                     let source_folder = input_folder.join(&static_folder);
                     if source_folder.is_dir() {
                         let mut options = CopyOptions::new();
                         options.overwrite = true;
-    
+
                         if let Err(e) = dircopy(&source_folder, &**output_folder, &options) {
                             error!("Failed to copy extra static folders directory: {}", e);
                             process::exit(1);
                         }
-    
+
                         info!(
                             "Copied extra static folders '{}' to '{}/'",
                             source_folder.display(),
