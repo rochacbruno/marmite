@@ -315,7 +315,7 @@ With the above HTML your index page will look like:
 </figure>
 
 
-> [!INFO]  
+> [!NOTE]  
 > A custom index can be created for any **stream**, name the template `custom_{stream}.html`
 
 

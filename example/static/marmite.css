@@ -747,3 +747,93 @@ select.colorscheme-toggle option {
       --pico-font-size: 118.75%;
   }
 }
+
+/* alerts */
+.markdown-alert {
+  padding: 1rem;
+  margin: 1rem 0;
+  border-left: 4px solid;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+}
+
+.markdown-alert-title {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+[data-theme="light"],
+:root:not([data-theme="dark"]) {
+  --marmite-alert-tip-bg: #e6f7e6;
+  --marmite-alert-tip-border: #48c774;
+  --marmite-alert-tip-color: #2a623d;
+  --marmite-alert-note-bg: #f5f5ff;
+  --marmite-alert-note-border: #5b85ea;
+  --marmite-alert-note-color: #3a4c8c;
+  --marmite-alert-important-bg: #fffbea;
+  --marmite-alert-important-border: #ffdd57;
+  --marmite-alert-important-color: #8a6d1a;
+  --marmite-alert-warning-bg: #fff6f6;
+  --marmite-alert-warning-border: #ff6b6b;
+  --marmite-alert-warning-color: #9d2525;
+  --marmite-alert-caution-bg: #fdf2e9;
+  --marmite-alert-caution-border: #ff9f43;
+  --marmite-alert-caution-color: #805526;
+}
+
+[data-theme="dark"],
+:root:not([data-theme="light"]) {
+  --marmite-alert-tip-bg: #2a3d2a;
+  --marmite-alert-tip-border: #48c774;
+  --marmite-alert-tip-color: #e6f7e6;
+  --marmite-alert-note-bg: #3a4c8c;
+  --marmite-alert-note-border: #5b85ea;
+  --marmite-alert-note-color: #f5f5ff;
+  --marmite-alert-important-bg: #8a6d1a;
+  --marmite-alert-important-border: #ffdd57;
+  --marmite-alert-important-color: #fffbea;
+  --marmite-alert-warning-bg: #9d2525;
+  --marmite-alert-warning-border: #ff6b6b;
+  --marmite-alert-warning-color: #fff6f6;
+  --marmite-alert-caution-bg: #805526;
+  --marmite-alert-caution-border: #ff9f43;
+  --marmite-alert-caution-color: #fdf2e9;
+}
+
+
+/* Tip */
+.markdown-alert-tip {
+  background-color: var(--marmite-alert-tip-bg);
+  border-color: var(--marmite-alert-tip-border);
+  color: var(--marmite-alert-tip-color);
+}
+
+/* Note */
+.markdown-alert-note {
+  background-color: var(--marmite-alert-note-bg);
+  border-color: var(--marmite-alert-note-border);
+  color: var(--marmite-alert-note-color);
+}
+
+/* Important */
+.markdown-alert-important {
+  background-color: var(--marmite-alert-important-bg);
+  border-color: var(--marmite-alert-important-border);
+  color: var(--marmite-alert-important-color);
+}
+
+/* Warning */
+.markdown-alert-warning {
+  background-color: var(--marmite-alert-warning-bg);
+  border-color: var(--marmite-alert-warning-border);
+  color: var(--marmite-alert-warning-color);
+}
+
+/* Caution */
+.markdown-alert-caution {
+  background-color: var(--marmite-alert-caution-bg);
+  border-color: var(--marmite-alert-caution-border);
+  color: var(--marmite-alert-caution-color);
+}

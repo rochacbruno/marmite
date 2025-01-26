@@ -217,7 +217,7 @@ To create a custom colorscheme drop a `custom.css` on your input folder (the sam
 }
 ```
 
-> [!INFO]  
+> [!NOTE]  
 > Multiple colorschemes can also be added to `static/colorschemes/{name}.css`
 > and then enable `extra.colorscheme_toggle` on config.
 

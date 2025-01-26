@@ -100,26 +100,27 @@ pub fn get_table_of_contents_from_html(html: &str) -> String {
 /// Convert markdown to html using comrak
 pub fn get_html(markdown: &str) -> String {
     let mut options = ComrakOptions::default();
-    options.render.unsafe_ = true;
-    options.render.ignore_empty_links = true;
     options.render.figure_with_caption = true;
-    options.parse.relaxed_tasklist_matching = true;
+    options.render.ignore_empty_links = true;
+    options.render.unsafe_ = true;
     options.parse.broken_link_callback = Some(Arc::new(warn_broken_link));
+    options.parse.relaxed_tasklist_matching = true;
+    options.extension.alerts = true;
+    options.extension.autolink = true;
+    options.extension.description_lists = true;
+    options.extension.footnotes = true;
+    options.extension.greentext = true;
+    options.extension.header_ids = Some(String::new());
+    // options.extension.image_url_rewriter = TODO: implement this to point to a resized image
+    options.extension.multiline_block_quotes = true;
     options.extension.tagfilter = false;
+    options.extension.shortcodes = true;
+    options.extension.spoiler = true;
     options.extension.strikethrough = true;
     options.extension.table = true;
-    options.extension.autolink = true;
     options.extension.tasklist = true;
-    options.extension.footnotes = true;
-    options.extension.description_lists = true;
-    options.extension.multiline_block_quotes = true;
     options.extension.underline = true;
-    options.extension.spoiler = true;
-    options.extension.greentext = true;
-    options.extension.shortcodes = true;
-    options.extension.header_ids = Some(String::new());
     options.extension.wikilinks_title_before_pipe = true;
-    // options.extension.image_url_rewriter = TODO: implement this to point to a resized image
 
     fix_internal_links(&markdown_to_html(markdown, &options))
 }
