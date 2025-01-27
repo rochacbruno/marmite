@@ -137,6 +137,7 @@ impl BuildInfo {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn generate(
     config_path: &Arc<std::path::PathBuf>,
     input_folder: &Arc<std::path::PathBuf>,
@@ -724,16 +725,17 @@ fn handle_author_pages(
         .collect::<Vec<_>>()
         .par_iter()
         .map(|(username, _)| -> Result<(), String> {
+            let default_author = Author {
+                name: (*username).to_string(),
+                bio: None,
+                avatar: Some("static/avatar-placeholder.png".to_string()),
+                links: None,
+            };
             let mut author_context = global_context.clone();
             let author = if let Some(author) = site_data.site.authors.get(*username) {
                 author
             } else {
-                &Author {
-                    name: (*username).to_string(),
-                    bio: None,
-                    avatar: Some("static/avatar-placeholder.png".to_string()),
-                    links: None,
-                }
+                &default_author
             };
             author_context.insert("author", &author);
 
