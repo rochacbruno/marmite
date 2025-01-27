@@ -54,7 +54,7 @@ authors:
 # extra data for template customization
 extra:
   colorscheme_toggle: true
-  colorscheme: minimal_wb
+  # colorscheme: minimal_wb
   static_folders:
     - extrastatic
   # colorscheme: gruvbox
