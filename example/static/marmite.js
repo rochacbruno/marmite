@@ -138,6 +138,7 @@ function colorschemeSwitcher() {
         'github',
         'gruvbox',
         'iceberg',
+        'minimal',
         'monokai',
         'nord',
         'one',
