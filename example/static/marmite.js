@@ -139,6 +139,7 @@ function colorschemeSwitcher() {
         'gruvbox',
         'iceberg',
         'minimal',
+        'minimal_wb',
         'monokai',
         'nord',
         'one',
