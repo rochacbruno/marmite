@@ -212,3 +212,6 @@ details summary[role=button]::after {
         border: 1px var(--pico-primary-opacity-25) solid;
     }
 }
+.hamburger {
+    color: var(--pico-primary);
+}
