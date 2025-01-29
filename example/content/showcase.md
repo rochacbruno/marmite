@@ -5,7 +5,7 @@ comments: false
 
 ### Sites and Blogs Powered by Marmite
 
-<!-- 
+<!--
 
 List of sites powered by Marmite
 
@@ -15,6 +15,7 @@ Gabriel Saiago - Developer, https://grsaiago.github.io/wipblog, grsaiago.github.
 Gerrod - Software Engineer, https://gerrod.com, gerrod.dev.png
 Marcos Oliveira - Front-end Developer, https://blog.bymarcos.com, blog.bymarcos.com.png
 Racoonland, https://racoonland.us, racoonland.us.png
+Tone, Zicon - Digital Artist, https://blog.zicon.no, blog.zicon.no.png
 Viana Tech, https://vianatech.pt, vianatech.pt.png
  -->
 
@@ -34,7 +35,7 @@ Viana Tech, https://vianatech.pt, vianatech.pt.png
 
 <article>
 <h4>Gerrod - Software Engineer</h4>
-<a class="card" href="https://gerrod.com" target="_blank" title="Gerrod">
+<a class="card" href="https://gerrod.dev" target="_blank" title="Gerrod">
     <img src="media/showcase/gerrod.dev.png" alt="Gerrod" width="300" />
 </a>
 </article>
@@ -50,6 +51,13 @@ Viana Tech, https://vianatech.pt, vianatech.pt.png
 <h4>Raccoonland</h4>
 <a class="card" href="https://raccoonland.us" target="_blank" title="raccoonland">
     <img src="media/showcase/raccoonland.us.png" alt="Racoonland" width="300" />
+</a>
+</article>
+
+<article>
+<h4>Tone Zicon</h4>
+<a class="card" href="https://blog.zicon.no" target="_blank" title="zicon">
+    <img src="media/showcase/blog.zicon.no.png" alt="Zicon" width="300" />
 </a>
 </article>
 
