@@ -85,6 +85,7 @@
   {% endif %}
 </article>
 
+{% if site.enable_related_content %}
 {% if content.back_links %}
 <article>
   Back-links
@@ -113,6 +114,7 @@
     </ul>
   </article>
   {% endif %}
+{% endif %}
 {% endif %}
 
 {% if comments is defined %}

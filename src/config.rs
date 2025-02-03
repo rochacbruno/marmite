@@ -55,6 +55,9 @@ pub struct Marmite {
     #[serde(default)]
     pub enable_search: bool,
 
+    #[serde(default = "default_enable_related_content")]
+    pub enable_related_content: bool,
+
     #[serde(default = "default_search_title")]
     pub search_title: String,
 
@@ -145,6 +148,9 @@ impl Marmite {
         }
         if let Some(enable_search) = cli_args.configuration.enable_search {
             self.enable_search = enable_search;
+        }
+        if let Some(enable_related_content) = cli_args.configuration.enable_related_content {
+            self.enable_related_content = enable_related_content;
         }
         if let Some(toc) = cli_args.configuration.toc {
             self.toc = toc;
@@ -289,4 +295,8 @@ fn default_search_title() -> String {
 
 fn default_language() -> String {
     "en".to_string()
+}
+
+fn default_enable_related_content() -> bool {
+    true
 }
