@@ -21,7 +21,6 @@ card_image: ./media/og_image.jpg
 logo_image: media/logo.png
 
 enable_search: true
-enable_related_content: true
 
 menu:
   # - ["About", "about.html"]

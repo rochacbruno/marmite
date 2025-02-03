@@ -3,7 +3,6 @@ tagline: Static Site Generator
 url: https://rochacbruno.github.io/marmite
 pagination: 5
 enable_search: true
-enable_related_content: true
 toc: true
 json_feed: true
 menu: 

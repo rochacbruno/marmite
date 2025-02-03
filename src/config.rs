@@ -55,7 +55,7 @@ pub struct Marmite {
     #[serde(default)]
     pub enable_search: bool,
 
-    #[serde(default)]
+    #[serde(default = "default_enable_related_content")]
     pub enable_related_content: bool,
 
     #[serde(default = "default_search_title")]
@@ -295,4 +295,8 @@ fn default_search_title() -> String {
 
 fn default_language() -> String {
     "en".to_string()
+}
+
+fn default_enable_related_content() -> bool {
+    true
 }

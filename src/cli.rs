@@ -121,8 +121,8 @@ pub struct Configuration {
     #[arg(long)]
     pub enable_search: Option<bool>,
 
-    /// Enable backlinks and related content for posts [default: false or from config file]
-    #[arg(long)]
+    /// Enable backlinks and related content for posts [default: true or from config file]
+    #[arg(long, default_value = None)]
     pub enable_related_content: Option<bool>,
 
     /// Path for content subfolder [default: "content" or value from config file]
