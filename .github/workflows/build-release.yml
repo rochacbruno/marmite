@@ -36,7 +36,8 @@ jobs:
           sudo rm -f /var/lib/man-db/auto-update
       - if: ${{ runner.os == 'Linux'  }}
         name: "[Linux] Install platform dependencies"
-        uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad
+        # uses: awalsh128/cache-apt-pkgs-action@a6c3917cc929dd0345bfb2d3feaf9101823370ad
+        uses: awalsh128/cache-apt-pkgs-action@v1.4.3
         with: { packages: "musl-tools" }
 
       - name: Setup Rust toolchain
