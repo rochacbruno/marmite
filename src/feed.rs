@@ -15,9 +15,16 @@ pub fn generate_rss(
     config: &Marmite,
 ) -> Result<(), String> {
     let date_format = "%a, %d %b %Y %H:%M:%S GMT"; // Loose RFC-822 format
+
+    let feed_url = if !config.url.contains("http://") || !config.url.contains("https://") {
+        format!("http://{}", &config.url)
+    } else {
+        config.url.to_string()
+    };
+
     let mut channel = ChannelBuilder::default()
         .title(&config.name)
-        .link(&config.url)
+        .link(&feed_url)
         .description(&config.tagline)
         .generator("marmite".to_string())
         .build();
@@ -25,21 +32,21 @@ pub fn generate_rss(
     for content in contents.iter().take(15) {
         let mut item = ItemBuilder::default()
             .title(content.title.clone())
-            .link(format!("{}/{}.html", &config.url, &content.slug))
+            .link(format!("{}/{}.html", &feed_url, &content.slug))
+            .description(content.description.clone())
             .guid(
                 rss::GuidBuilder::default()
-                    .value(format!("{}/{}.html", &config.url, &content.slug))
+                    .value(format!("{}/{}.html", &feed_url, &content.slug))
                     .build(),
             )
             .pub_date(content.date.unwrap().format(date_format).to_string())
             .content(content.html.clone())
             .source(
                 rss::SourceBuilder::default()
-                    .url(&config.url)
+                    .url(&feed_url)
                     .title(filename.to_string())
                     .build(),
             )
-            .description(content.description.clone())
             .build();
 
         if let Some(author) = content.authors.first() {
@@ -62,7 +69,7 @@ pub fn generate_rss(
     if !config.card_image.is_empty() {
         channel.image = Some(
             rss::ImageBuilder::default()
-                .url(format!("{}/{}", &config.url, &config.card_image))
+                .url(format!("{}/{}", &feed_url, &config.card_image))
                 .build(),
         );
     }
