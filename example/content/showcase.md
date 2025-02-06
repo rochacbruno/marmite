@@ -27,6 +27,13 @@ Viana Tech, https://vianatech.pt, vianatech.pt.png
 </article>
 
 <article>
+<h4>Cauã Bernardino - Software Engineer</h4>
+<a class="card" href="https://cbernardino.dev" target="_blank" title="Cbernardino">
+    <img src="media/showcase/cbernardino.dev.png" alt="cbernardino" width="300" />
+</a>
+</article>
+
+<article>
 <h4>Gabriel Saiago - Developer</h4>
 <a class="card" href="https://grsaiago.github.io/wipblog" target="_blank" title="Gabriel Saiago">
     <img src="media/showcase/grsaiago.github.io__wipblog.png" alt="Gabriel Saiago" width="300" />
