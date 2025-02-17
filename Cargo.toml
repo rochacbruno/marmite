@@ -30,7 +30,7 @@ url = "2.5.4"
 rust-embed = { version = "8.5.0", features = ["interpolate-folder-path"] }
 lazy_static = "1.5.0"
 indexmap = { version = "2.7.1", features = ["serde"] }
-rss = "2.0.11"
+rss = "2.0.12"
 rayon = "1.10.0"
 
 [profile.release]
