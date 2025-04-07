@@ -4,12 +4,7 @@
     <article style="width: 250px;text-align: center;">
        <header style="text-align: center;"><a href="https://github.com/rochacbruno" target="_blank">rochacbruno</a></header>
        <a href="https://github.com/rochacbruno" target="_blank"><img src="https://avatars.githubusercontent.com/u/458654?v=4" style="width: 100px;"></a>
-       <footer style="text-align: center;">154 commits</footer>
-    </article>
-    <article style="width: 250px;text-align: center;">
-       <header style="text-align: center;"><a href="https://github.com/apps/dependabot" target="_blank">dependabot[bot]</a></header>
-       <a href="https://github.com/apps/dependabot" target="_blank"><img src="https://avatars.githubusercontent.com/in/29110?v=4" style="width: 100px;"></a>
-       <footer style="text-align: center;">16 commits</footer>
+       <footer style="text-align: center;">155 commits</footer>
     </article>
     <article style="width: 250px;text-align: center;">
        <header style="text-align: center;"><a href="https://github.com/rdenadai" target="_blank">rdenadai</a></header>
@@ -62,8 +57,8 @@
        <footer style="text-align: center;">1 commits</footer>
     </article>
     <article style="width: 250px;text-align: center;">
-       <header style="text-align: center;"><a href="https://github.com/haskelldutra" target="_blank">haskelldutra</a></header>
-       <a href="https://github.com/haskelldutra" target="_blank"><img src="https://avatars.githubusercontent.com/u/194731137?v=4" style="width: 100px;"></a>
+       <header style="text-align: center;"><a href="https://github.com/nulldutra" target="_blank">nulldutra</a></header>
+       <a href="https://github.com/nulldutra" target="_blank"><img src="https://avatars.githubusercontent.com/u/201526844?v=4" style="width: 100px;"></a>
        <footer style="text-align: center;">1 commits</footer>
     </article>
     <article style="width: 250px;text-align: center;">

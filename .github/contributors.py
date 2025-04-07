@@ -19,7 +19,10 @@ if response.status_code != 200:
 
 contributors = response.json()
 contributors_sorted = reversed(
-    sorted(contributors, key=lambda user: user["contributions"])
+    sorted(
+        filter(lambda user: user["type"] == "User", contributors),
+        key=lambda user: user["contributions"]
+    )
 )
 
 with open(filename, "w") as file:
