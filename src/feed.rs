@@ -16,7 +16,7 @@ pub fn generate_rss(
 ) -> Result<(), String> {
     let date_format = "%a, %d %b %Y %H:%M:%S GMT"; // Loose RFC-822 format
 
-    let feed_url = if !config.url.contains("http://") || !config.url.contains("https://") {
+    let feed_url = if !config.url.starts_with("http://") && !config.url.starts_with("https://") {
         format!("http://{}", &config.url)
     } else {
         config.url.to_string()
