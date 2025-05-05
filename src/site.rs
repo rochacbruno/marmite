@@ -237,12 +237,17 @@ pub fn generate(
     if watch {
         let mut hotwatch = Hotwatch::new().expect("Failed to initialize hotwatch!");
         let watch_folder = Arc::clone(input_folder).as_path().to_path_buf();
+        let out_folder = Arc::clone(output_folder).as_path().to_path_buf();
         // Watch the input folder for changes
         hotwatch
             .watch(watch_folder, move |event: Event| match event.kind {
                 EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
-                    info!("Change detected. Rebuilding site...");
-                    rebuild();
+                    for ev in event.paths.iter() {
+                        if !ev.starts_with(fs::canonicalize(out_folder.clone()).unwrap()) {
+                            info!("Change detected. Rebuilding site...");
+                            rebuild();
+                        }
+                    }
                 }
                 _ => {}
             })
