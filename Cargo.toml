@@ -27,7 +27,7 @@ unicode-normalization = "0.1"
 log = "0.4"
 env_logger = "0.11.8"
 url = "2.5.4"
-rust-embed = { version = "8.7.1", features = ["interpolate-folder-path"] }
+rust-embed = { version = "8.7.2", features = ["interpolate-folder-path"] }
 lazy_static = "1.5.0"
 indexmap = { version = "2.9.0", features = ["serde"] }
 rss = "2.0.12"
