@@ -17,7 +17,12 @@ pub fn generate_rss(
     let date_format = "%a, %d %b %Y %H:%M:%S GMT"; // Loose RFC-822 format
 
     let feed_url = if !config.url.starts_with("http://") && !config.url.starts_with("https://") {
-        format!("http://{}", &config.url)
+        let protocol = if config.https.unwrap_or(false) {
+            "https://"
+        } else {
+            "http://"
+        };
+        format!("{}{}", protocol, &config.url)
     } else {
         config.url.to_string()
     };
