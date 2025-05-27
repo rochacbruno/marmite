@@ -18,7 +18,8 @@ json_feed: true
 card_image: ./media/og_image.jpg
 # banner_image: media/og_image.jpg
 # logo_image: name of site logo image, relative to media or absolute
-logo_image: media/logo.png
+# Example:
+# logo_image: /static/logo.png
 
 enable_search: true
 
