@@ -16,6 +16,9 @@ pub struct Marmite {
     #[serde(default)]
     pub url: String,
 
+    #[serde(default)]
+    pub https: Option<bool>,
+
     #[serde(default = "default_footer")]
     pub footer: String,
 
@@ -136,6 +139,9 @@ impl Marmite {
         }
         if let Some(url) = &cli_args.configuration.url {
             self.url.clone_from(url);
+        }
+        if let Some(https) = &cli_args.configuration.https {
+            self.https = Some(*https);
         }
         if let Some(footer) = &cli_args.configuration.footer {
             self.footer.clone_from(footer);

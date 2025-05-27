@@ -1025,7 +1025,7 @@ fn handle_list_page(
         return Ok(());
     }
 
-    let total_pages = (total_content + per_page - 1) / per_page;
+    let total_pages = total_content.div_ceil(*per_page);
     context.insert("total_content", &total_content);
     context.insert("total_pages", &total_pages);
     (0..total_pages)
@@ -1234,7 +1234,7 @@ fn should_force_render(
 
     let config_modified = latest_build_info
         .as_ref()
-        .map_or(true, |info| info.config != site_data.site);
+        .is_none_or(|info| info.config != site_data.site);
 
     templates_modified || fragments_modified || config_modified
 }

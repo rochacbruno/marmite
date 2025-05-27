@@ -147,7 +147,7 @@ impl Content {
         let authors = get_authors(&frontmatter, Some(site.default_author.clone()));
         let pinned = frontmatter
             .get("pinned")
-            .map_or(false, |p| p.as_bool().unwrap_or(false));
+            .is_some_and(|p| p.as_bool().unwrap_or(false));
 
         let toc = if frontmatter
             .get("toc")
@@ -471,7 +471,7 @@ pub fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime>
                     "ERROR: Invalid date format {} when parsing {}, {}",
                     input,
                     path.display(),
-                    e.to_string()
+                    e
                 );
                 process::exit(1);
             }

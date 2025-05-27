@@ -105,6 +105,10 @@ pub struct Configuration {
     #[arg(long)]
     pub url: Option<String>,
 
+    /// If protocol is missing in the URL setting, whether to use HTTPS or not [default: false]
+    #[arg(long)]
+    pub https: Option<bool>,
+
     /// Site footer [default: from '_footer.md' or config file]
     #[arg(long)]
     pub footer: Option<String>,
