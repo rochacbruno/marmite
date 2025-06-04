@@ -17,6 +17,7 @@ Marcos Oliveira - Front-end Developer, https://blog.bymarcos.com, blog.bymarcos.
 Racoonland, https://racoonland.us, racoonland.us.png
 Tone, Zicon - Digital Artist, https://blog.zicon.no, blog.zicon.no.png
 Viana Tech, https://vianatech.pt, vianatech.pt.png
+Chris Brown/Code World, No Blanket Research Group, https://code-world-no-blanket.github.io/blog/, code_world_blog.png
  -->
 
 <article>
@@ -72,6 +73,13 @@ Viana Tech, https://vianatech.pt, vianatech.pt.png
 <h4>Viana Tech</h4>
 <a class="card" href="https://vianatech.pt" target="_blank" title="Viana Tech">
     <img src="media/showcase/vianatech.pt.png" alt="Viana Tech" width="300" />
+</a>
+</article>
+
+<article>
+<h4>Code World, No Blanket</h4>
+<a class="card" href="[https://link.tld](https://code-world-no-blanket.github.io/blog/)" target="_blank" title="Code World, No Blanket">
+    <img src="media/showcase/code_world_blog.png" alt="Code World, No Blanket" width="300" />
 </a>
 </article>
 
