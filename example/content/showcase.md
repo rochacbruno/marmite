@@ -78,7 +78,7 @@ Chris Brown/Code World, No Blanket Research Group, https://code-world-no-blanket
 
 <article>
 <h4>Code World, No Blanket</h4>
-<a class="card" href="[https://link.tld](https://code-world-no-blanket.github.io/blog/)" target="_blank" title="Code World, No Blanket">
+<a class="card" href="https://code-world-no-blanket.github.io/blog/" target="_blank" title="Code World, No Blanket">
     <img src="media/showcase/code_world_blog.png" alt="Code World, No Blanket" width="300" />
 </a>
 </article>
