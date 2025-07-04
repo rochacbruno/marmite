@@ -39,7 +39,7 @@ impl Data {
         let site: Marmite = match serde_yaml::from_str::<Marmite>(config_content) {
             Ok(site) => site,
             Err(e) => {
-                error!("Failed to parse config YAML: {}", e);
+                error!("Failed to parse config YAML: {e:?}");
                 process::exit(1);
             }
         };
@@ -61,9 +61,8 @@ impl Data {
     pub fn from_file(config_path: &Path) -> Self {
         let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
             info!(
-                "Unable to read '{}', assuming defaults.: {}",
-                &config_path.display(),
-                e
+                "Unable to read '{}', assuming defaults.: {e:?}",
+                &config_path.display()
             );
             String::new()
         });
@@ -112,7 +111,7 @@ impl Data {
                     .entry(stream.to_string())
                     .or_default()
                     .push(content.clone());
-            };
+            }
         } else {
             self.pages.push(content);
         }
@@ -182,7 +181,7 @@ pub fn generate(
             let site_path = site_data.site.site_path.clone();
             let output_path = moved_output_folder.join(site_path);
             if let Err(e) = fs::create_dir_all(&output_path) {
-                error!("Unable to create output directory: {}", e);
+                error!("Unable to create output directory: {e:?}");
                 process::exit(1);
             }
 
@@ -202,9 +201,9 @@ pub fn generate(
                         &output_path,
                         &moved_input_folder,
                         &fragments,
-                        &latest_build_info,
+                        latest_build_info.as_ref(),
                     ) {
-                        error!("Failed to render templates: {}", e);
+                        error!("Failed to render templates: {e:?}");
                         process::exit(1);
                     }
                 }
@@ -226,7 +225,7 @@ pub fn generate(
 
             let end_time = start_time.elapsed().as_secs_f64();
             write_build_info(&output_path, &site_data, end_time);
-            debug!("Site generated in {:.2}s", end_time);
+            debug!("Site generated in {end_time:.2}s");
             info!("Site generated at: {}/", moved_output_folder.display());
         }
     };
@@ -242,7 +241,7 @@ pub fn generate(
         hotwatch
             .watch(watch_folder, move |event: Event| match event.kind {
                 EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
-                    for ev in event.paths.iter() {
+                    for ev in &event.paths {
                         if !ev.starts_with(fs::canonicalize(out_folder.clone()).unwrap()) {
                             info!("Change detected. Rebuilding site...");
                             rebuild();
@@ -337,6 +336,7 @@ fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, te
     }
 }
 
+#[allow(clippy::used_underscore_items)]
 fn collect_back_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
     let other_contents = site_data
         .posts
@@ -387,7 +387,7 @@ fn collect_content(
                 .unwrap_or(
                     e.path()
                         .to_str()
-                        .unwrap_or_else(|| panic!("Could not get file name {:?}", e.path())),
+                        .unwrap_or_else(|| panic!("Could not get file name {e:?}")),
                 );
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
             e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
@@ -420,9 +420,9 @@ fn collect_content(
                 site_data.push_content(content);
             }
             Err(e) => {
-                error!("Failed to process content: {}", e);
+                error!("Failed to process content: {e:?}");
             }
-        };
+        }
     }
 }
 
@@ -435,11 +435,10 @@ fn detect_slug_collision(site_data: &Data) {
             .collect::<Vec<_>>(),
     ) {
         error!(
-            "Duplicate slug found: '{}' \
+            "Duplicate slug found: '{duplicate}' \
             - try setting `title` or `slug` as a unique text, \
             or leave both empty so filename will be assumed. \
-            - The latest content rendered will overwrite the previous one.",
-            duplicate
+            - The latest content rendered will overwrite the previous one."
         );
     }
 }
@@ -478,7 +477,7 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
         } else {
             Templates::get(template_name).map_or_else(
                 || {
-                    error!("Failed to load template: {}", template_name);
+                    error!("Failed to load template: {template_name}");
                     process::exit(1);
                 },
                 |template| {
@@ -525,7 +524,7 @@ fn render_templates(
     output_dir: &Path,
     input_folder: &Path,
     fragments: &HashMap<String, String>,
-    latest_build_info: &Option<BuildInfo>,
+    latest_build_info: Option<&BuildInfo>,
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
@@ -667,7 +666,7 @@ fn handle_stream_pages(
                     &stream_slug,
                     &site_data.site,
                 )?;
-            };
+            }
             Ok(())
         })
         .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
@@ -818,7 +817,7 @@ fn handle_static_artifacts(
         options.overwrite = true; // Overwrite files if they already exist
 
         if let Err(e) = dircopy(&static_source, &**output_folder, &options) {
-            error!("Failed to copy static directory: {}", e);
+            error!("Failed to copy static directory: {e:?}");
             process::exit(1);
         }
 
@@ -844,7 +843,7 @@ fn handle_static_artifacts(
                         options.overwrite = true;
 
                         if let Err(e) = dircopy(&source_folder, &**output_folder, &options) {
-                            error!("Failed to copy extra static folders directory: {}", e);
+                            error!("Failed to copy extra static folders directory: {e:?}");
                             process::exit(1);
                         }
 
@@ -866,7 +865,7 @@ fn handle_static_artifacts(
         options.overwrite = true; // Overwrite files if they already exist
 
         if let Err(e) = dircopy(&media_source, &**output_folder, &options) {
-            error!("Failed to copy media directory: {}", e);
+            error!("Failed to copy media directory: {e:?}");
             process::exit(1);
         }
 
@@ -909,7 +908,7 @@ fn handle_static_artifacts(
                             &destiny_path.display()
                         );
                     }
-                    Err(e) => error!("Failed to copy {}: {}", source_file.display(), e),
+                    Err(e) => error!("Failed to copy {}: {e:?}", source_file.display()),
                 }
             }
         }
@@ -960,7 +959,7 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
         search_json_path,
         serde_json::to_string(&all_content_json).unwrap(),
     ) {
-        error!("Failed to write search_index.json: {}", e);
+        error!("Failed to write search_index.json: {e:?}");
     } else {
         info!("Generated search_index.json");
     }
@@ -986,7 +985,7 @@ fn write_build_info(
         &build_info_path,
         serde_json::to_string_pretty(&build_info).unwrap(),
     ) {
-        error!("Failed to write marmite.json: {}", e);
+        error!("Failed to write marmite.json: {e:?}");
     } else {
         info!("Generated build info at marmite.json");
     }
@@ -1123,7 +1122,7 @@ fn handle_content_pages(
     output_dir: &Path,
     content_dir: &Path,
     input_folder: &Path,
-    latest_build_info: &Option<BuildInfo>,
+    latest_build_info: Option<&BuildInfo>,
 ) -> Result<(), String> {
     let last_build = site_data.latest_timestamp.unwrap_or(0);
     let force_render = should_force_render(
@@ -1180,7 +1179,7 @@ fn should_force_render(
     site_data: &Data,
     last_build: i64,
     content_dir: &Path,
-    latest_build_info: &Option<BuildInfo>,
+    latest_build_info: Option<&BuildInfo>,
 ) -> bool {
     if site_data.force_render {
         return true;
@@ -1214,7 +1213,7 @@ fn should_force_render(
                 .unwrap_or(
                     e.path()
                         .to_str()
-                        .unwrap_or_else(|| panic!("Could not get file name {:?}", e.path())),
+                        .unwrap_or_else(|| panic!("Could not get file name {e:?}")),
                 );
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
             e.path().is_file() && file_extension == Some("md") && file_name.starts_with('_')
@@ -1397,10 +1396,7 @@ fn render_html(
         .find(|t| tera.get_template(t).is_ok())
         .unwrap_or(&templates[0]);
     let rendered = tera.render(template, context).map_err(|e| {
-        error!(
-            "Error rendering template `{}` -> {}: {:#?}",
-            template, filename, e
-        );
+        error!("Error rendering template `{template}` -> {filename}: {e:#?}");
         e.to_string()
     })?;
     let output_file = output_dir.join(filename);
@@ -1417,7 +1413,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     let media_folder = content_folder.join("media");
 
     if let Err(e) = fs::create_dir_all(input_folder) {
-        error!("Failed to create input folder: {}", e);
+        error!("Failed to create input folder: {e:?}");
         process::exit(1);
     }
     if input_folder.read_dir().unwrap().next().is_some() {
@@ -1426,26 +1422,26 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     }
     crate::config::generate(input_folder, cli_args);
     if let Err(e) = fs::create_dir(&content_folder) {
-        error!("Failed to create 'content' folder: {}", e);
+        error!("Failed to create 'content' folder: {e:?}");
         process::exit(1);
     }
     if let Err(e) = fs::create_dir(&media_folder) {
-        error!("Failed to create 'content/media' folder: {}", e);
+        error!("Failed to create 'content/media' folder: {e:?}");
         process::exit(1);
     }
     // create input_folder/custom.css with `/* Custom CSS */` content
     if let Err(e) = fs::write(input_folder.join("custom.css"), "/* Custom CSS */") {
-        error!("Failed to create 'custom.css' file: {}", e);
+        error!("Failed to create 'custom.css' file: {e:?}");
         process::exit(1);
     }
     // create input_folder/custom.js with `// Custom JS` content
     if let Err(e) = fs::write(input_folder.join("custom.js"), "// Custom JS") {
-        error!("Failed to create 'custom.js' file: {}", e);
+        error!("Failed to create 'custom.js' file: {e:?}");
         process::exit(1);
     }
     // create content/_404.md with `# Not Found` content
     if let Err(e) = fs::write(content_folder.join("_404.md"), "# Not Found") {
-        error!("Failed to create 'content/_404.md' file: {}", e);
+        error!("Failed to create 'content/_404.md' file: {e:?}");
         process::exit(1);
     }
     // create content/_references.md with `[marmite]: https://github.com/rochacbruno/marmite` content
@@ -1453,7 +1449,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         content_folder.join("_references.md"),
         "[github]: https://github.com/rochacbruno/marmite",
     ) {
-        error!("Failed to create 'content/_references.md' file: {}", e);
+        error!("Failed to create 'content/_references.md' file: {e:?}");
         process::exit(1);
     }
     // create content/_markdown_header.md with `<!-- Content Injected to every content markdown header -->` content
@@ -1461,7 +1457,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         content_folder.join("_markdown_header.md"),
         "<!-- Content Injected to every content markdown header -->",
     ) {
-        error!("Failed to create 'content/_markdown_header.md' file: {}", e);
+        error!("Failed to create 'content/_markdown_header.md' file: {e:?}");
         process::exit(1);
     }
     // create content/_markdown_footer.md with `<!-- Content Injected to every content markdown footer -->` content
@@ -1469,7 +1465,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         content_folder.join("_markdown_footer.md"),
         "<!-- Content Injected to every content markdown footer -->",
     ) {
-        error!("Failed to create 'content/_markdown_footer.md' file: {}", e);
+        error!("Failed to create 'content/_markdown_footer.md' file: {e:?}");
         process::exit(1);
     }
     // create content/_announce.md with `Give us a &star; on [github]` content
@@ -1477,7 +1473,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         content_folder.join("_announce.md"),
         "Give us a &star; on [github]",
     ) {
-        error!("Failed to create 'content/_announce.md' file: {}", e);
+        error!("Failed to create 'content/_announce.md' file: {e:?}");
         process::exit(1);
     }
     // create content/_sidebar.md with `<!-- Sidebar content -->` content
@@ -1494,7 +1490,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     {% endfor %}
     ";
     if let Err(e) = fs::write(content_folder.join("_sidebar.example.md"), side_bar_content) {
-        error!("Failed to create 'content/_sidebar.md' file: {}", e);
+        error!("Failed to create 'content/_sidebar.md' file: {e:?}");
         process::exit(1);
     }
     // create content/_comments.md with `<!-- Comments -->` content
@@ -1513,7 +1509,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         </script>\n\
         ",
     ) {
-        error!("Failed to create 'content/_comments.md' file: {}", e);
+        error!("Failed to create 'content/_comments.md' file: {e:?}");
         process::exit(1);
     }
     // create content/_hero.md with `<!-- Hero content -->` content
@@ -1526,7 +1522,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         remove the file to disable the hero section.\n\
         ",
     ) {
-        error!("Failed to create 'content/_hero.md' file: {}", e);
+        error!("Failed to create 'content/_hero.md' file: {e:?}");
         process::exit(1);
     }
     // create content/about.md with `# About` content
@@ -1537,7 +1533,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         Hi, edit `about.md` to change this content.
         ",
     ) {
-        error!("Failed to create 'content/about.md' file: {}", e);
+        error!("Failed to create 'content/about.md' file: {e:?}");
         process::exit(1);
     }
     // create content/{now}-welcome.md with `# Welcome to Marmite` content
@@ -1562,7 +1558,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         read more on [marmite documentation](https://rochacbruno.github.io/marmite)\n\n\
         ",
     ) {
-        error!("Failed to create 'content/{now}-welcome.md' file: {}", e);
+        error!("Failed to create 'content/{now}-welcome.md' file: {e:?}");
         process::exit(1);
     }
     info!("Site initialized in {}", input_folder.display());

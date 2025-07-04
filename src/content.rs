@@ -542,13 +542,13 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
         ));
     }
     if path.exists() {
-        error!("File already exists: {:?}", path);
+        error!("File already exists: {}", path.display());
         return;
     }
     let mut file = match std::fs::File::create(&path) {
         Ok(file) => file,
         Err(e) => {
-            error!("Failed to create file: {:?}", e);
+            error!("Failed to create file: {e:?}");
             return;
         }
     };
@@ -567,7 +567,7 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
         format!("# {text}\n")
     };
     if let Err(e) = file.write_all(content.as_bytes()) {
-        error!("Failed to write to file: {:?}", e);
+        error!("Failed to write to file: {e:?}");
         return;
     }
     println!("{}", path.display());
@@ -581,7 +581,7 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
         });
         let status = std::process::Command::new(editor).arg(&path).status();
         if let Err(e) = status {
-            error!("Failed to open editor: {:?}", e);
+            error!("Failed to open editor: {e:?}");
         }
     }
 }

@@ -5,6 +5,7 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 
 use crate::cli::Cli;
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq)]
 pub struct Marmite {
     #[serde(default = "default_name")]
@@ -209,14 +210,14 @@ pub fn generate(input_folder: &Path, cli_args: &Arc<Cli>) {
     let config_path = input_folder.join(cli_args.config.as_str());
     // If the file already exists, do not overwrite
     if config_path.exists() {
-        error!("Config file already exists: {config_path:?}");
+        error!("Config file already exists: {}", config_path.display());
         return;
     }
     let mut config = Marmite::new();
     config.override_from_cli_args(cli_args);
     let config_str = serde_yaml::to_string(&config).unwrap();
     std::fs::write(&config_path, config_str).unwrap();
-    info!("Config file generated: {:?}", &config_path.display());
+    info!("Config file generated: {}", config_path.display());
 }
 
 // Defaults

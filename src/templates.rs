@@ -8,7 +8,7 @@ use std::path::Path;
 pub fn initialize_templates(input_folder: &Path) {
     let templates_path = input_folder.join("templates");
     if let Err(e) = fs::create_dir(&templates_path) {
-        error!("Failed to create templates directory: {}", e);
+        error!("Failed to create templates directory: {e:?}");
         return;
     }
 
@@ -17,7 +17,7 @@ pub fn initialize_templates(input_folder: &Path) {
             if let Ok(template_str) = std::str::from_utf8(template.data.as_ref()) {
                 let template_path = templates_path.join(name.as_ref());
                 if let Err(e) = fs::write(&template_path, template_str) {
-                    error!("Failed to write template '{}': {}", name.as_ref(), e);
+                    error!("Failed to write template '{}': {e:?}", name.as_ref());
                 } else {
                     info!("Generated {}", template_path.display());
                 }
@@ -38,7 +38,7 @@ pub fn initialize_theme_assets(input_folder: &Path) {
     let static_path = input_folder.join("static");
 
     if let Err(e) = fs::create_dir(&static_path) {
-        error!("Failed to create static directory: {}", e);
+        error!("Failed to create static directory: {e:?}");
         return;
     }
     generate_static(&static_path);

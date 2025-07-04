@@ -54,7 +54,7 @@ pub struct Cli {
 
     /// Init a new site with sample content and default configuration
     /// this will overwrite existing files
-    /// usually you don't need to run this because  
+    /// usually you don't need to run this because
     /// Marmite can generate a site from any folder with markdown files
     #[arg(long)]
     pub init_site: bool,

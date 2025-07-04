@@ -1,9 +1,9 @@
 use crate::content::slugify;
-
 use comrak::{markdown_to_html, BrokenLinkReference, ComrakOptions, ResolvedReference};
 use frontmatter_gen::{detect_format, extract_raw_frontmatter, parse, Frontmatter};
 use log::warn;
 use regex::Regex;
+use std::fmt::Write as _;
 
 use std::fs;
 use std::path::Path;
@@ -86,7 +86,7 @@ pub fn get_table_of_contents_from_html(html: &str) -> String {
             std::cmp::Ordering::Equal => {}
         }
 
-        toc.push_str(&format!("<li><a href=\"{slug}\">{title}</a></li>\n"));
+        write!(toc, "<li><a href=\"{slug}\">{title}</a></li>\n").unwrap();
         last_level = level;
     }
 
@@ -164,10 +164,10 @@ pub fn fix_internal_links(html: &str) -> String {
 
             let mut new_href = String::new();
             if !path.is_empty() {
-                new_href.push_str(&format!("{path}.html"));
+                write!(new_href, "{path}.html").unwrap();
             }
             if !fragment.is_empty() {
-                new_href.push_str(&format!("#{fragment}"));
+                write!(new_href, "#{fragment}").unwrap();
             }
             new_href
         } else {

@@ -52,7 +52,7 @@ fn main() {
         4..=u8::MAX => "trace",
     });
     if let Err(e) = Builder::from_env(env).try_init() {
-        error!("Logger already initialized: {}", e);
+        error!("Logger already initialized: {e:?}");
     }
     if args.debug {
         warn!("--debug flag is deprecated, use -vv for debug messages");
@@ -64,7 +64,7 @@ fn main() {
     }
 
     if !input_folder.exists() {
-        error!("Input folder does not exist: {:?}", input_folder);
+        error!("Input folder does not exist: {input_folder:?}");
         return;
     }
 

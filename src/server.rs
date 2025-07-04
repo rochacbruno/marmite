@@ -8,22 +8,19 @@ use tiny_http::{Header, Response, Server};
 pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>) {
     let server = Server::http(bind_address).unwrap();
 
-    info!(
-        "Server started at http://{}/ - Type ^C to stop.",
-        bind_address
-    );
+    info!("Server started at http://{bind_address}/ - Type ^C to stop.",);
 
     for request in server.incoming_requests() {
         let response = match handle_request(&request, output_folder.as_path()) {
             Ok(response) => response,
             Err(err) => {
-                error!("Error handling request: {}", err);
+                error!("Error handling request: {err:?}");
                 Response::from_string("Internal Server Error").with_status_code(500)
             }
         };
 
         if let Err(err) = request.respond(response) {
-            error!("Failed to send response: {}", err);
+            error!("Failed to send response: {err:?}");
         }
     }
 }
@@ -60,7 +57,7 @@ fn handle_request(
                 Ok(resp)
             }
             Err(err) => {
-                error!("Failed to read file {}: {}", file_path.display(), err);
+                error!("Failed to read file {}: {err:?}", file_path.display());
                 Err(format!("Error reading file: {err}"))
             }
         }
@@ -84,7 +81,7 @@ fn render_not_found(error_path: &PathBuf) -> Result<Response<Cursor<Vec<u8>>>, S
             Ok(resp)
         }
         Err(err) => {
-            error!("Error on rendering page 404 - {}", err);
+            error!("Error on rendering page 404 - {err:?}");
             Ok(Response::from_string("404 Not Found").with_status_code(404))
         }
     }
