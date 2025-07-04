@@ -1148,7 +1148,7 @@ This is a test content.
         assert_eq!(result.slug, "test-title");
         assert_eq!(result.tags, vec!["tag1".to_string(), "tag2".to_string()]);
         assert_eq!(result.date.unwrap().to_string(), "2023-01-01 00:00:00");
-        assert_eq!(result.html, "<h1><a href=\"#test-content\" aria-hidden=\"true\" class=\"anchor\" id=\"test-content\"></a>Test Content</h1>\n<p>This is a test content.</p>\n");
+        assert_eq!(result.html, "<h1><a inert href=\"#test-content\" aria-hidden=\"true\" class=\"anchor\" id=\"test-content\"></a>Test Content</h1>\n<p>This is a test content.</p>\n");
         fs::remove_file(path).unwrap();
     }
 
