@@ -103,18 +103,18 @@ cargo clippy
 cargo clippy --fix
 ```
 
-#### Just
+#### Mask
 
-There is a `justfile` in the root of repo, you can use it for checkings.
+There is a `maskfile.md` in the root of repo, you can use it for checkings.
 
 ```bash
-cargo install just
-just check
+cargo install mask
+mask check
 
 # Ensure your changes are committed before running.
-just fix
+mask fix
 
 # If you have free time :)
-just pedantic 
-just pedantic_fix
+mask pedantic 
+mask pedantic_fix
 ```
