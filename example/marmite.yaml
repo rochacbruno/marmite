@@ -60,6 +60,15 @@ extra:
     - extrastatic
   # colorscheme: gruvbox
   # fediverse_verification: https://mastodon.social/@me
+  media_gallery:
+    source: gallery
+    thumbnail_size: 300
+    extensions:
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - webp
 
 # Example, to enable comments:
 # Go to: https://giscus.app/ and generate your config and replace below.

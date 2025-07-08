@@ -189,6 +189,7 @@ pub fn generate(
                 "render_templates",
                 "handle_static_artifacts",
                 "generate_search_index",
+                "handle_media_gallery",
             ]
             .par_iter()
             .for_each(|step| match *step {
@@ -218,6 +219,16 @@ pub fn generate(
                 "generate_search_index" => {
                     if site_data.site.enable_search {
                         generate_search_index(&site_data, &moved_output_folder);
+                    }
+                }
+                "handle_media_gallery" => {
+                    if let Err(e) = crate::gallery::handle_media_gallery(
+                        &moved_input_folder,
+                        &site_data,
+                        &moved_output_folder,
+                        &content_folder,
+                    ) {
+                        error!("Failed to handle media gallery: {e:?}");
                     }
                 }
                 _ => {}
