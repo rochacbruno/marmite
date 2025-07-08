@@ -260,16 +260,27 @@ fn create_thumbnail(
     output_path: &Path,
     size: u32,
 ) -> Result<(u32, u32), Box<dyn std::error::Error>> {
-    let img = image::open(input_path)?;
+    let img = match image::open(input_path) {
+        Ok(img) => img,
+        Err(e) => {
+            warn!("Failed to open image {}: {}", input_path.display(), e);
+            return Err(e.into());
+        }
+    };
+    
     let (width, height) = img.dimensions();
     
     // Create thumbnail maintaining aspect ratio
     let thumbnail = img.resize(size, size, imageops::FilterType::Lanczos3);
     
     // Save as JPEG
-    thumbnail.save_with_format(output_path, ImageFormat::Jpeg)?;
-    
-    Ok((width, height))
+    match thumbnail.save_with_format(output_path, ImageFormat::Jpeg) {
+        Ok(_) => Ok((width, height)),
+        Err(e) => {
+            warn!("Failed to save thumbnail {}: {}", output_path.display(), e);
+            Err(e.into())
+        }
+    }
 }
 
 fn generate_gallery_markdown(
