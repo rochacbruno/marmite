@@ -4,10 +4,8 @@ use image::{imageops, GenericImageView, ImageFormat};
 use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MediaGalleryConfig {
@@ -123,103 +121,71 @@ pub fn handle_media_gallery(
     fs::create_dir_all(&gallery_output)?;
     fs::create_dir_all(&thumbnails_output)?;
 
-    // Scan for media files
-    let media_files = scan_media_files(&gallery_source, &gallery_config)?;
+    // Scan for gallery subfolders and process each one
+    let gallery_groups = scan_gallery_folders(&gallery_source, &gallery_config)?;
 
-    // Group media files by aggregation pattern
-    let grouped_media = group_media_files(media_files, &gallery_config)?;
-
-    // Process groups and create thumbnails
-    let mut gallery_groups = Vec::new();
-    for (group_name, files) in grouped_media {
-        let group = process_media_group(
-            &group_name,
-            files,
+    // Process each gallery folder
+    let mut processed_groups = Vec::new();
+    for (folder_name, folder_path) in gallery_groups {
+        let group = process_gallery_folder(
+            &folder_name,
+            &folder_path,
             &gallery_source,
             &gallery_output,
             &thumbnails_output,
             &gallery_config,
+            content_folder,
         )?;
-        gallery_groups.push(group);
+        processed_groups.push(group);
     }
 
     // Generate gallery.json
-    let gallery_json = serde_json::to_string_pretty(&gallery_groups)?;
+    let gallery_json = serde_json::to_string_pretty(&processed_groups)?;
     fs::write(gallery_output.join("gallery.json"), gallery_json)?;
 
-    // Generate markdown files for each group
-    for group in &gallery_groups {
-        generate_gallery_markdown(group, content_folder, &gallery_config)?;
-    }
-
-    info!("Generated gallery with {} groups", gallery_groups.len());
+    info!("Generated gallery with {} folders", processed_groups.len());
     Ok(())
 }
 
-fn scan_media_files(
+fn scan_gallery_folders(
     source_dir: &Path,
-    config: &MediaGalleryConfig,
-) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
-    let mut media_files = Vec::new();
+    _config: &MediaGalleryConfig,
+) -> Result<Vec<(String, PathBuf)>, Box<dyn std::error::Error>> {
+    let mut gallery_folders = Vec::new();
 
-    for entry in WalkDir::new(source_dir).into_iter().filter_map(|e| e.ok()) {
+    for entry in fs::read_dir(source_dir)? {
+        let entry = entry?;
         let path = entry.path();
-        if path.is_file() {
-            if let Some(extension) = path.extension().and_then(|s| s.to_str()) {
-                if config.extensions.contains(&extension.to_lowercase()) {
-                    media_files.push(path.to_path_buf());
-                }
+        if path.is_dir() {
+            if let Some(folder_name) = path.file_name().and_then(|s| s.to_str()) {
+                gallery_folders.push((folder_name.to_string(), path));
             }
         }
     }
 
-    media_files.sort();
-    Ok(media_files)
+    gallery_folders.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(gallery_folders)
 }
 
-fn group_media_files(
-    media_files: Vec<PathBuf>,
+fn process_gallery_folder(
+    folder_name: &str,
+    folder_path: &Path,
+    gallery_source: &Path,
+    gallery_output: &Path,
+    thumbnails_output: &Path,
     config: &MediaGalleryConfig,
-) -> Result<HashMap<String, Vec<PathBuf>>, Box<dyn std::error::Error>> {
-    let mut groups = HashMap::new();
-
-    for file in media_files {
-        let filename = file
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("unnamed");
-
-        // Try to match aggregation pattern
-        let group_name = if let Ok(regex) = regex::Regex::new(&config.aggregation_pattern) {
-            if let Some(captures) = regex.captures(filename) {
-                captures.get(1).map_or(filename, |m| m.as_str()).to_string()
-            } else {
-                filename.to_string()
-            }
-        } else {
-            filename.to_string()
-        };
-
-        groups.entry(group_name).or_insert_with(Vec::new).push(file);
-    }
-
-    Ok(groups)
-}
-
-fn process_media_group(
-    group_name: &str,
-    files: Vec<PathBuf>,
-    source_dir: &Path,
-    output_dir: &Path,
-    thumbnails_dir: &Path,
-    config: &MediaGalleryConfig,
+    content_folder: &Path,
 ) -> Result<GalleryGroup, Box<dyn std::error::Error>> {
+    // Scan for media files in this folder
+    let media_files = scan_media_files(folder_path, config)?;
+
+    // Process media files
     let mut items = Vec::new();
     let mut thumbnail_path = None;
 
-    for file in files {
-        let relative_path = file.strip_prefix(source_dir)?;
-        let output_path = output_dir.join(relative_path);
+    for file in media_files {
+        let relative_path = file.strip_prefix(gallery_source)?;
+        let output_path = gallery_output.join(relative_path);
 
         // Ensure output directory exists
         if let Some(parent) = output_path.parent() {
@@ -231,7 +197,7 @@ fn process_media_group(
 
         // Generate thumbnail
         let thumbnail_name = format!("{}.jpg", file.file_stem().unwrap().to_str().unwrap());
-        let thumbnail_output = thumbnails_dir.join(&thumbnail_name);
+        let thumbnail_output = thumbnails_output.join(&thumbnail_name);
 
         if let Ok(dimensions) = create_thumbnail(&file, &thumbnail_output, config.thumbnail_size) {
             let file_size = file.metadata()?.len();
@@ -256,11 +222,109 @@ fn process_media_group(
         }
     }
 
+    // Generate gallery markdown page for this folder
+    generate_folder_gallery_markdown(folder_name, &items, content_folder)?;
+
+    // Generate individual image pages if needed
+    for item in &items {
+        generate_image_page(folder_name, item, content_folder)?;
+    }
+
     Ok(GalleryGroup {
-        name: group_name.to_string(),
+        name: folder_name.to_string(),
         items,
         thumbnail: thumbnail_path,
     })
+}
+
+fn scan_media_files(
+    source_dir: &Path,
+    config: &MediaGalleryConfig,
+) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
+    let mut media_files = Vec::new();
+
+    for entry in fs::read_dir(source_dir)? {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_file() {
+            if let Some(extension) = path.extension().and_then(|s| s.to_str()) {
+                if config.extensions.contains(&extension.to_lowercase()) {
+                    media_files.push(path);
+                }
+            }
+        }
+    }
+
+    media_files.sort();
+    Ok(media_files)
+}
+
+fn generate_folder_gallery_markdown(
+    folder_name: &str,
+    items: &[MediaItem],
+    content_folder: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let markdown_path = content_folder.join(format!("{}-gallery.md", folder_name));
+
+    // Don't overwrite existing markdown files
+    if markdown_path.exists() {
+        return Ok(());
+    }
+
+    let mut markdown_content = String::new();
+    markdown_content.push_str("---\n");
+    markdown_content.push_str(&format!("title: {} Gallery\n", folder_name));
+    markdown_content.push_str(&format!("slug: {}-gallery\n", folder_name));
+    markdown_content.push_str("---\n\n");
+    markdown_content.push_str(&format!("# {} Gallery\n\n", folder_name));
+
+    for item in items {
+        markdown_content.push_str(&format!(
+            "[![{}]({})]({}-gallery-{}.html)\n\n",
+            item.title, item.thumbnail_path, folder_name, item.title
+        ));
+    }
+
+    fs::write(markdown_path, markdown_content)?;
+    Ok(())
+}
+
+fn generate_image_page(
+    folder_name: &str,
+    item: &MediaItem,
+    content_folder: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let image_md_path = content_folder.join(format!("{}.md", item.title));
+
+    // If there's a custom .md file for this image, don't generate a default one
+    if image_md_path.exists() {
+        return Ok(());
+    }
+
+    let page_path = content_folder.join(format!("{}-gallery-{}.md", folder_name, item.title));
+
+    // Don't overwrite existing files
+    if page_path.exists() {
+        return Ok(());
+    }
+
+    let mut markdown_content = String::new();
+    markdown_content.push_str("---\n");
+    markdown_content.push_str(&format!("title: {} - {}\n", folder_name, item.title));
+    markdown_content.push_str(&format!("slug: {}-gallery-{}\n", folder_name, item.title));
+    markdown_content.push_str("---\n\n");
+    markdown_content.push_str(&format!("# {} - {}\n\n", folder_name, item.title));
+    markdown_content.push_str(&format!("![{}]({})\n\n", item.title, item.path));
+
+    if let Some(desc) = &item.description {
+        markdown_content.push_str(&format!("{}\n\n", desc));
+    }
+
+    markdown_content.push_str(&format!("**Dimensions:** {}x{}\n", item.width, item.height));
+    markdown_content.push_str(&format!("**File Size:** {} bytes\n", item.file_size));
+
+    fs::write(page_path, markdown_content)?;
+    Ok(())
 }
 
 fn create_thumbnail(
@@ -291,36 +355,6 @@ fn create_thumbnail(
     }
 }
 
-fn generate_gallery_markdown(
-    group: &GalleryGroup,
-    content_folder: &Path,
-    _config: &MediaGalleryConfig,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let markdown_path = content_folder.join(format!("gallery-{}.md", group.name));
-
-    // Don't overwrite existing markdown files
-    if markdown_path.exists() {
-        return Ok(());
-    }
-
-    let mut markdown_content = String::new();
-    markdown_content.push_str("---\n");
-    markdown_content.push_str(&format!("title: Gallery - {}\n", group.name));
-    markdown_content.push_str("layout: gallery\n");
-    markdown_content.push_str("---\n\n");
-    markdown_content.push_str(&format!("# Gallery - {}\n\n", group.name));
-
-    for item in &group.items {
-        markdown_content.push_str(&format!(
-            "![{}]({})\n\n",
-            item.title, item.thumbnail_path
-        ));
-    }
-
-    fs::write(markdown_path, markdown_content)?;
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -337,20 +371,5 @@ mod tests {
     fn test_get_media_gallery_config_none() {
         let config = Marmite::new();
         assert!(get_media_gallery_config(&config).is_none());
-    }
-
-    #[test]
-    fn test_group_media_files() {
-        let config = MediaGalleryConfig::default();
-        let files = vec![
-            PathBuf::from("test_01.jpg"),
-            PathBuf::from("test_02.jpg"),
-            PathBuf::from("other.png"),
-        ];
-
-        let groups = group_media_files(files, &config).unwrap();
-        assert_eq!(groups.len(), 2);
-        assert!(groups.contains_key("test"));
-        assert!(groups.contains_key("other"));
     }
 }

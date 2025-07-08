@@ -61,7 +61,7 @@ extra:
   # colorscheme: gruvbox
   # fediverse_verification: https://mastodon.social/@me
   media_gallery:
-    source: gallery
+    source: media/gallery
     thumbnail_size: 300
     extensions:
       - jpg
