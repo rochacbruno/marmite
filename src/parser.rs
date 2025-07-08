@@ -86,7 +86,7 @@ pub fn get_table_of_contents_from_html(html: &str) -> String {
             std::cmp::Ordering::Equal => {}
         }
 
-        write!(toc, "<li><a href=\"{slug}\">{title}</a></li>\n").unwrap();
+        writeln!(toc, "<li><a href=\"{slug}\">{title}</a></li>").unwrap();
         last_level = level;
     }
 
