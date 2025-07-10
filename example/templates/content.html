@@ -117,11 +117,25 @@
 {% endif %}
 {% endif %}
 
+{% if site.show_next_prev_links and (content.previous or content.next) %}
+<article>
+  <nav style="display: flex; justify-content: space-between;">
+    <div>
+      {% if content.previous %}<a href="./{{ content.previous.slug }}.html">← {{ content.previous.title }}</a>{% endif %}
+    </div>
+    <div>
+      {% if content.next %}<a href="./{{ content.next.slug }}.html">{{ content.next.title }} →</a>{% endif %}
+    </div>
+  </nav>
+</article>
+{% endif %}
+
 {% if comments is defined %}
     <article>{{ comments }}</article>
 {% elif site.extra.comments.source is defined and content.date %}
     {%include "comments.html" ignore missing %}
 {% endif %}
+
 
 {% endblock %}
 

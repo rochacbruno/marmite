@@ -78,6 +78,21 @@ banner_image: str or None
 authors: [str] or []
 pinned: bool
 toc: str or None
+next: Content or None
+previous: Content or None
+```
+
+The `next` and `previous` attributes are available on the `content` object when rendering a single content page, and they hold the next and previous post objects, respectively. This is useful for creating navigation between posts.
+
+Example of a next/previous navigation in `content.html`:
+
+```html
+<nav>
+  <ul class="grid">
+    <li>{% if content.previous %}<a href="./{{ content.previous.slug }}.html">← {{ content.previous.title }}</a>{% endif %}</li>
+    <li>{% if content.next %}<a href="./{{ content.next.slug }}.html" style="text-align: right;">{{ content.next.title }} →</a>{% endif %}</li>
+  </ul>
+</nav>
 ```
 
 The `GroupedContent` is a map that when iterated returns a map of `name: [Content]`, this is available on global context,

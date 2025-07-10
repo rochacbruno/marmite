@@ -240,6 +240,8 @@ Options:
           Enable search [default: false or from config file] [possible values: true, false]
       --enable-related-content <ENABLE_RELATED_CONTENT>
           Enable backlinks and related content for posts [default: true or from config file] [possible values: true, false]
+      --show-next-prev-links <SHOW_NEXT_PREV_LINKS>
+          Show next and previous links in posts [default: true or from config file] [possible values: true, false]
       --content-path <CONTENT_PATH>
           Path for content subfolder [default: "content" or value from config file] this is the folder
           where markdown files are stored inside `input_folder` no need to change this if your markdown

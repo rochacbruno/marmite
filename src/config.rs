@@ -106,6 +106,13 @@ pub struct Marmite {
 
     #[serde(default)]
     pub json_feed: bool,
+
+    #[serde(default = "default_true")]
+    pub show_next_prev_links: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 impl Marmite {
@@ -127,6 +134,7 @@ impl Marmite {
             media_path: default_media_path(),
             default_date_format: default_date_format(),
             menu: default_menu(),
+            show_next_prev_links: default_true(),
             ..Default::default()
         }
     }
@@ -190,6 +198,9 @@ impl Marmite {
         }
         if let Some(json_feed) = cli_args.configuration.json_feed {
             self.json_feed = json_feed;
+        }
+        if let Some(show_next_prev_links) = cli_args.configuration.show_next_prev_links {
+            self.show_next_prev_links = show_next_prev_links;
         }
     }
 }

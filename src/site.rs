@@ -177,6 +177,7 @@ pub fn generate(
             site_data.sort_all();
             detect_slug_collision(&site_data); // Detect slug collision and warn user
             collect_back_links(&mut site_data);
+            set_next_and_previous_links(&mut site_data);
 
             let site_path = site_data.site.site_path.clone();
             let output_path = moved_output_folder.join(site_path);
@@ -363,6 +364,42 @@ fn _collect_back_links(contents: &mut [Content], other_contents: &[Content]) {
                 if links_to.contains(&slug) && slug != other_content.slug {
                     contents[i].back_links.push(other_content.clone());
                 }
+            }
+        }
+    }
+}
+
+#[allow(clippy::cast_possible_wrap)]
+fn set_next_and_previous_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
+    let mut stream_posts: HashMap<String, Vec<Content>> = HashMap::new();
+    for post in &site_data.posts {
+        if let Some(stream_name) = &post.stream {
+            stream_posts
+                .entry(stream_name.clone())
+                .or_default()
+                .push(post.clone());
+        }
+    }
+
+    for (_, posts) in stream_posts {
+        for i in 0..posts.len() {
+            let current_slug = &posts[i].slug;
+
+            let previous = if i < posts.len() - 1 {
+                Some(Box::new(posts[i + 1].clone()))
+            } else {
+                None
+            };
+
+            let next = if i > 0 {
+                Some(Box::new(posts[i - 1].clone()))
+            } else {
+                None
+            };
+
+            if let Some(content) = site_data.posts.iter_mut().find(|c| c.slug == *current_slug) {
+                content.previous = previous;
+                content.next = next;
             }
         }
     }
@@ -1562,4 +1599,86 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         process::exit(1);
     }
     info!("Site initialized in {}", input_folder.display());
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::content::ContentBuilder;
+    use chrono::NaiveDate;
+    use std::sync::Mutex;
+
+    #[test]
+    fn test_next_and_previous_links_are_stream_specific() {
+        let mut site_data = Data::new("", Path::new("marmite.yaml"));
+        let post1 = ContentBuilder::new()
+            .title("Post 1".to_string())
+            .slug("post-1".to_string())
+            .stream("blog".to_string())
+            .date(
+                NaiveDate::from_ymd_opt(2024, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            )
+            .build();
+        let post2 = ContentBuilder::new()
+            .title("Post 2".to_string())
+            .slug("post-2".to_string())
+            .stream("blog".to_string())
+            .date(
+                NaiveDate::from_ymd_opt(2024, 1, 2)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            )
+            .build();
+        let post3 = ContentBuilder::new()
+            .title("Post 3".to_string())
+            .slug("post-3".to_string())
+            .stream("news".to_string())
+            .date(
+                NaiveDate::from_ymd_opt(2024, 1, 3)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            )
+            .build();
+
+        site_data.posts.push(post1.clone());
+        site_data.posts.push(post2.clone());
+        site_data.posts.push(post3.clone());
+        site_data.sort_all();
+
+        let mutex = Mutex::new(site_data);
+        let mut site_data_guard = mutex.lock().unwrap();
+
+        set_next_and_previous_links(&mut site_data_guard);
+
+        let blog_post1 = site_data_guard
+            .posts
+            .iter()
+            .find(|p| p.slug == "post-1")
+            .unwrap();
+        assert!(blog_post1.next.is_some());
+        assert_eq!(blog_post1.next.as_ref().unwrap().slug, "post-2");
+        assert!(blog_post1.previous.is_none());
+
+        let blog_post2 = site_data_guard
+            .posts
+            .iter()
+            .find(|p| p.slug == "post-2")
+            .unwrap();
+        assert!(blog_post2.previous.is_some());
+        assert_eq!(blog_post2.previous.as_ref().unwrap().slug, "post-1");
+        assert!(blog_post2.next.is_none());
+
+        let news_post = site_data_guard
+            .posts
+            .iter()
+            .find(|p| p.slug == "post-3")
+            .unwrap();
+        assert!(news_post.next.is_none());
+        assert!(news_post.previous.is_none());
+    }
 }
