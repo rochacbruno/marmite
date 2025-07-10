@@ -387,11 +387,7 @@ fn set_next_and_previous_links(site_data: &mut std::sync::MutexGuard<'_, Data>) 
             None
         };
 
-        if let Some(content) = site_data
-            .posts
-            .iter_mut()
-            .find(|c| c.slug == *current_slug)
-        {
+        if let Some(content) = site_data.posts.iter_mut().find(|c| c.slug == *current_slug) {
             content.previous = previous;
             content.next = next;
         }
