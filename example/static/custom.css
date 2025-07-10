@@ -1,1 +1,71 @@
 /* customize me */
+
+/* Gallery Styles */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.gallery-item {
+  text-align: center;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.gallery-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery-item figure {
+  margin: 0;
+}
+
+.gallery-item a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Gallery pages layout adjustments */
+article[data-layout="gallery"] .content-html,
+article[data-layout="gallery"] .content-html > p {
+  display: contents;
+}
+
+article[data-layout="gallery"] .content-html {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+article[data-layout="gallery"] .content-html figure {
+  margin: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+article[data-layout="gallery"] .content-html figure:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+article[data-layout="gallery"] .content-html figure img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  display: block;
+}

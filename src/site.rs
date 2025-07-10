@@ -186,6 +186,16 @@ pub fn generate(
                 process::exit(1);
             }
 
+            // Handle media gallery before template rendering
+            if let Err(e) = crate::gallery::handle_media_gallery(
+                &moved_input_folder,
+                &site_data,
+                &moved_output_folder,
+                &content_folder,
+            ) {
+                error!("Failed to handle media gallery: {e:?}");
+            }
+
             [
                 "render_templates",
                 "handle_static_artifacts",
