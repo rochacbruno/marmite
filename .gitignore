@@ -21,3 +21,7 @@ example/site
 
 # Editor 
 .vscode
+
+# AI Context Files
+GEMINI.md
+CLAUDE.md

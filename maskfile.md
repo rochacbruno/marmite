@@ -2,6 +2,22 @@
 
 This file contains development tasks for the Marmite static site generator.
 
+## build
+
+> Build the release binary
+
+~~~bash
+cargo build --release
+~~~
+
+## serve
+
+> Build and serve the example site while watching for changes on the example dir
+
+~~~bash
+cargo run --quiet -- example ./example/public --serve --watch
+~~~
+
 ## check
 
 > Check code formatting and run clippy
@@ -46,10 +62,10 @@ cargo clippy --fix -- -W clippy::pedantic
 
 ## watch
 
-> Watch for changes and rebuild
+> Watch for changes on the whole source code  and rebuild the example site without serving it.
 
 ~~~bash
-cargo watch -c -q -x "run example ../site_example -vvvv"
+cargo watch -c -q -x "run example ./example/public -vvvv"
 ~~~
 
 ## bumpversion (tag)
