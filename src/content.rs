@@ -93,6 +93,8 @@ pub struct Content {
     pub toc: Option<String>,
     pub modified_time: Option<i64>,
     pub comments: Option<bool>,
+    pub next: Option<Box<Content>>,
+    pub previous: Option<Box<Content>>,
 }
 
 impl Content {
@@ -183,6 +185,8 @@ impl Content {
             toc,
             modified_time,
             comments,
+            next: None,
+            previous: None,
         };
         Ok(content)
     }
@@ -314,6 +318,8 @@ impl ContentBuilder {
             toc: self.toc,
             modified_time: None,
             comments: self.comments,
+            next: None,
+            previous: None,
         }
     }
 }

@@ -177,6 +177,7 @@ pub fn generate(
             site_data.sort_all();
             detect_slug_collision(&site_data); // Detect slug collision and warn user
             collect_back_links(&mut site_data);
+            set_next_and_previous_links(&mut site_data);
 
             let site_path = site_data.site.site_path.clone();
             let output_path = moved_output_folder.join(site_path);
@@ -364,6 +365,35 @@ fn _collect_back_links(contents: &mut [Content], other_contents: &[Content]) {
                     contents[i].back_links.push(other_content.clone());
                 }
             }
+        }
+    }
+}
+
+#[allow(clippy::cast_possible_wrap)]
+fn set_next_and_previous_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
+    let posts = site_data.posts.clone();
+    for i in 0..posts.len() {
+        let current_slug = &posts[i].slug;
+
+        let previous = if i < posts.len() - 1 {
+            Some(Box::new(posts[i + 1].clone()))
+        } else {
+            None
+        };
+
+        let next = if i > 0 {
+            Some(Box::new(posts[i - 1].clone()))
+        } else {
+            None
+        };
+
+        if let Some(content) = site_data
+            .posts
+            .iter_mut()
+            .find(|c| c.slug == *current_slug)
+        {
+            content.previous = previous;
+            content.next = next;
         }
     }
 }

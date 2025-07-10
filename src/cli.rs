@@ -166,4 +166,8 @@ pub struct Configuration {
     /// Generate JSON Feed [default: false or from config file]
     #[arg(long)]
     pub json_feed: Option<bool>,
+
+    /// Show next and previous links in posts [default: true or from config file]
+    #[arg(long)]
+    pub show_next_prev_links: Option<bool>,
 }
