@@ -1604,3 +1604,70 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     }
     info!("Site initialized in {}", input_folder.display());
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::content::ContentBuilder;
+    use chrono::NaiveDate;
+    use std::sync::Mutex;
+
+    #[test]
+    fn test_next_and_previous_links_are_stream_specific() {
+        let mut site_data = Data::new("", Path::new("marmite.yaml"));
+        let post1 = ContentBuilder::new()
+            .title("Post 1".to_string())
+            .slug("post-1".to_string())
+            .stream("blog".to_string())
+            .date(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap())
+            .build();
+        let post2 = ContentBuilder::new()
+            .title("Post 2".to_string())
+            .slug("post-2".to_string())
+            .stream("blog".to_string())
+            .date(NaiveDate::from_ymd_opt(2024, 1, 2).unwrap().and_hms_opt(0, 0, 0).unwrap())
+            .build();
+        let post3 = ContentBuilder::new()
+            .title("Post 3".to_string())
+            .slug("post-3".to_string())
+            .stream("news".to_string())
+            .date(NaiveDate::from_ymd_opt(2024, 1, 3).unwrap().and_hms_opt(0, 0, 0).unwrap())
+            .build();
+
+        site_data.posts.push(post1.clone());
+        site_data.posts.push(post2.clone());
+        site_data.posts.push(post3.clone());
+        site_data.sort_all();
+
+        let mutex = Mutex::new(site_data);
+        let mut site_data_guard = mutex.lock().unwrap();
+
+        set_next_and_previous_links(&mut site_data_guard);
+
+        let blog_post1 = site_data_guard
+            .posts
+            .iter()
+            .find(|p| p.slug == "post-1")
+            .unwrap();
+        assert!(blog_post1.next.is_some());
+        assert_eq!(blog_post1.next.as_ref().unwrap().slug, "post-2");
+        assert!(blog_post1.previous.is_none());
+
+        let blog_post2 = site_data_guard
+            .posts
+            .iter()
+            .find(|p| p.slug == "post-2")
+            .unwrap();
+        assert!(blog_post2.previous.is_some());
+        assert_eq!(blog_post2.previous.as_ref().unwrap().slug, "post-1");
+        assert!(blog_post2.next.is_none());
+
+        let news_post = site_data_guard
+            .posts
+            .iter()
+            .find(|p| p.slug == "post-3")
+            .unwrap();
+        assert!(news_post.next.is_none());
+        assert!(news_post.previous.is_none());
+    }
+}
