@@ -397,11 +397,7 @@ fn set_next_and_previous_links(site_data: &mut std::sync::MutexGuard<'_, Data>) 
                 None
             };
 
-            if let Some(content) = site_data
-                .posts
-                .iter_mut()
-                .find(|c| c.slug == *current_slug)
-            {
+            if let Some(content) = site_data.posts.iter_mut().find(|c| c.slug == *current_slug) {
                 content.previous = previous;
                 content.next = next;
             }
@@ -1619,19 +1615,34 @@ mod tests {
             .title("Post 1".to_string())
             .slug("post-1".to_string())
             .stream("blog".to_string())
-            .date(NaiveDate::from_ymd_opt(2024, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap())
+            .date(
+                NaiveDate::from_ymd_opt(2024, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            )
             .build();
         let post2 = ContentBuilder::new()
             .title("Post 2".to_string())
             .slug("post-2".to_string())
             .stream("blog".to_string())
-            .date(NaiveDate::from_ymd_opt(2024, 1, 2).unwrap().and_hms_opt(0, 0, 0).unwrap())
+            .date(
+                NaiveDate::from_ymd_opt(2024, 1, 2)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            )
             .build();
         let post3 = ContentBuilder::new()
             .title("Post 3".to_string())
             .slug("post-3".to_string())
             .stream("news".to_string())
-            .date(NaiveDate::from_ymd_opt(2024, 1, 3).unwrap().and_hms_opt(0, 0, 0).unwrap())
+            .date(
+                NaiveDate::from_ymd_opt(2024, 1, 3)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            )
             .build();
 
         site_data.posts.push(post1.clone());
