@@ -371,25 +371,40 @@ fn _collect_back_links(contents: &mut [Content], other_contents: &[Content]) {
 
 #[allow(clippy::cast_possible_wrap)]
 fn set_next_and_previous_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
-    let posts = site_data.posts.clone();
-    for i in 0..posts.len() {
-        let current_slug = &posts[i].slug;
+    let mut stream_posts: HashMap<String, Vec<Content>> = HashMap::new();
+    for post in &site_data.posts {
+        if let Some(stream_name) = &post.stream {
+            stream_posts
+                .entry(stream_name.clone())
+                .or_default()
+                .push(post.clone());
+        }
+    }
 
-        let previous = if i < posts.len() - 1 {
-            Some(Box::new(posts[i + 1].clone()))
-        } else {
-            None
-        };
+    for (_, posts) in stream_posts {
+        for i in 0..posts.len() {
+            let current_slug = &posts[i].slug;
 
-        let next = if i > 0 {
-            Some(Box::new(posts[i - 1].clone()))
-        } else {
-            None
-        };
+            let previous = if i < posts.len() - 1 {
+                Some(Box::new(posts[i + 1].clone()))
+            } else {
+                None
+            };
 
-        if let Some(content) = site_data.posts.iter_mut().find(|c| c.slug == *current_slug) {
-            content.previous = previous;
-            content.next = next;
+            let next = if i > 0 {
+                Some(Box::new(posts[i - 1].clone()))
+            } else {
+                None
+            };
+
+            if let Some(content) = site_data
+                .posts
+                .iter_mut()
+                .find(|c| c.slug == *current_slug)
+            {
+                content.previous = previous;
+                content.next = next;
+            }
         }
     }
 }
