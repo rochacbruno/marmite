@@ -1014,11 +1014,7 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
     }
 }
 
-fn copy_markdown_sources(
-    site_data: &Data,
-    content_folder: &Path,
-    output_path: &Path,
-) {
+fn copy_markdown_sources(site_data: &Data, content_folder: &Path, output_path: &Path) {
     site_data
         .posts
         .iter()
@@ -1029,16 +1025,19 @@ fn copy_markdown_sources(
                     .strip_prefix(content_folder)
                     .unwrap_or(source_path);
                 let dest_path = output_path.join(relative_path);
-                
+
                 if let Some(parent) = dest_path.parent() {
                     if let Err(e) = fs::create_dir_all(parent) {
                         error!("Failed to create directory for markdown source: {e:?}");
                         return;
                     }
                 }
-                
+
                 if let Err(e) = fs::copy(source_path, &dest_path) {
-                    error!("Failed to copy markdown source {}: {e:?}", source_path.display());
+                    error!(
+                        "Failed to copy markdown source {}: {e:?}",
+                        source_path.display()
+                    );
                 } else {
                     info!("Copied markdown source to {}", dest_path.display());
                 }

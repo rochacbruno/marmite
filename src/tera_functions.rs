@@ -126,10 +126,11 @@ impl Function for SourceLink {
         // If source_repository is configured, generate repository link
         if let Some(source_repository) = &self.site_data.site.source_repository {
             let source_path_buf = std::path::Path::new(source_path);
-            let file_name = source_path_buf.file_name()
+            let file_name = source_path_buf
+                .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("unknown.md");
-            
+
             let repo_url = format!("{}/{}", source_repository.trim_end_matches('/'), file_name);
             return to_value(repo_url).map_err(tera::Error::from);
         }
@@ -137,10 +138,11 @@ impl Function for SourceLink {
         // If publish_md is true and no source_repository, generate local link
         if self.site_data.site.publish_md {
             let source_path_buf = std::path::Path::new(source_path);
-            let file_name = source_path_buf.file_name()
+            let file_name = source_path_buf
+                .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("unknown.md");
-            
+
             let local_url = format!("./{}", file_name);
             return to_value(local_url).map_err(tera::Error::from);
         }

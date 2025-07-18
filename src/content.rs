@@ -301,7 +301,7 @@ impl ContentBuilder {
         self.comments = Some(comments);
         self
     }
-    
+
     pub fn source_path(mut self, source_path: std::path::PathBuf) -> Self {
         self.source_path = Some(source_path);
         self
