@@ -134,11 +134,23 @@ pub fn fix_internal_links(html: &str) -> String {
         let link = caps.get(0).map_or("", |m| m.as_str());
         let href = caps.get(1).map_or("", |m| m.as_str());
         let text = caps.get(2).map_or("", |m| m.as_str());
+        // Check if this is a media file link
+        let media_extensions = [
+            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif", ".bmp", ".tiff", ".tif",
+            ".ico", ".pdf", ".mp4", ".mov", ".avi", ".mkv", ".webm", ".mp3", ".wav", ".ogg",
+            ".flac", ".zip", ".tar", ".gz", ".7z", ".rar", ".doc", ".docx", ".xls", ".xlsx",
+            ".ppt", ".pptx", ".txt", ".csv", ".json", ".xml", ".yaml", ".yml", ".toml",
+        ];
+
+        let href_lower = href.to_lowercase();
+        let is_media_file = media_extensions.iter().any(|ext| href_lower.ends_with(ext));
+
         if link.contains("class=\"anchor\"")
             || link.contains("data-footnote-ref")
             || link.contains("footnote-backref")
             || link.starts_with('/')
             || href.starts_with('.')
+            || is_media_file
         {
             return link.to_string();
         }
@@ -326,6 +338,42 @@ mod tests {
         let markdown = "![alt text](media/image.jpg)";
         let expected = "<p><figure><img src=\"media/image.jpg\" alt=\"alt text\" /></figure></p>\n";
         assert_eq!(get_html(markdown), expected);
+    }
+
+    #[test]
+    fn test_fix_internal_links_with_media_files() {
+        let html = r#"<a href="media/image.jpg">View Image</a>"#;
+        let expected = r#"<a href="media/image.jpg">View Image</a>"#;
+        assert_eq!(fix_internal_links(html), expected);
+    }
+
+    #[test]
+    fn test_fix_internal_links_with_media_files_webp() {
+        let html = r#"<a href="/media/homecloudpart1-mikrotik.webp">View Image</a>"#;
+        let expected = r#"<a href="/media/homecloudpart1-mikrotik.webp">View Image</a>"#;
+        assert_eq!(fix_internal_links(html), expected);
+    }
+
+    #[test]
+    fn test_fix_internal_links_with_various_media_extensions() {
+        let test_cases = vec![
+            ("media/image.jpg", "media/image.jpg"),
+            ("media/image.jpeg", "media/image.jpeg"),
+            ("media/image.png", "media/image.png"),
+            ("media/image.gif", "media/image.gif"),
+            ("media/image.webp", "media/image.webp"),
+            ("media/image.svg", "media/image.svg"),
+            ("media/image.avif", "media/image.avif"),
+            ("media/video.mp4", "media/video.mp4"),
+            ("media/audio.mp3", "media/audio.mp3"),
+            ("media/document.pdf", "media/document.pdf"),
+        ];
+
+        for (input, expected) in test_cases {
+            let html = format!(r#"<a href="{input}">Link</a>"#);
+            let expected_html = format!(r#"<a href="{expected}">Link</a>"#);
+            assert_eq!(fix_internal_links(&html), expected_html);
+        }
     }
 
     #[test]
