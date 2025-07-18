@@ -5,7 +5,7 @@ pagination: 5
 enable_search: true
 toc: true
 json_feed: true
-menu: 
+menu:
   - ['Contributors', 'contributors.html']
   - ["Showcase", "showcase.html"]
   - ['Tags', 'tags.html']
@@ -16,6 +16,8 @@ menu:
 card_image: ./media/og_image.jpg
 # banner_image: media/og_image.jpg
 default_date_format: "%A, %d %B %Y"
+publish_md: true
+source_repository: https://github.com/rochacbruno/marmite/blob/main/example/content/
 extra:
   colorscheme_toggle: true
   # colorscheme: minimal_wb

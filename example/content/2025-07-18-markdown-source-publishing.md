@@ -83,7 +83,6 @@ $ marmite myblog output/ --publish-md true --source-repository "https://github.c
 The feature follows these rules:
 
 1. **Repository links take precedence**: If both `publish_md` and `source_repository` are configured, links will point to the repository
-2. **Posts only**: Source links only appear on posts (content with dates), not on static pages
 3. **Automatic detection**: Links are automatically added to the footer of each post
 4. **Visual indicator**: Links include a 📄 emoji and "View source" text with `rel="nofollow"` attribute
 
@@ -120,7 +119,7 @@ This feature is particularly useful for:
 If you want to customize how source links appear, you can modify the `content.html` template:
 
 ```html
-{% if site.publish_md or site.source_repository %}
+{% if content.source_path and site.publish_md or site.source_repository %}
 <div class="content-source">
   {% set source_url = source_link(content=content) %}
   {% if source_url %}
