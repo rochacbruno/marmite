@@ -18,8 +18,9 @@ target/
 
 # Marmite Example Build
 example/site
+example/public
 
-# Editor 
+# Editor
 .vscode
 
 # AI Context Files
