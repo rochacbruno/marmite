@@ -95,6 +95,7 @@ pub struct Content {
     pub comments: Option<bool>,
     pub next: Option<Box<Content>>,
     pub previous: Option<Box<Content>>,
+    pub source_path: Option<std::path::PathBuf>,
 }
 
 impl Content {
@@ -187,6 +188,7 @@ impl Content {
             comments,
             next: None,
             previous: None,
+            source_path: Some(path.to_path_buf()),
         };
         Ok(content)
     }
@@ -211,6 +213,7 @@ pub struct ContentBuilder {
     pinned: Option<bool>,
     toc: Option<String>,
     comments: Option<bool>,
+    source_path: Option<std::path::PathBuf>,
 }
 
 #[allow(dead_code)]
@@ -299,6 +302,11 @@ impl ContentBuilder {
         self
     }
 
+    pub fn source_path(mut self, source_path: std::path::PathBuf) -> Self {
+        self.source_path = Some(source_path);
+        self
+    }
+
     pub fn build(self) -> Content {
         Content {
             title: self.title.unwrap_or_default(),
@@ -320,6 +328,7 @@ impl ContentBuilder {
             comments: self.comments,
             next: None,
             previous: None,
+            source_path: self.source_path,
         }
     }
 }

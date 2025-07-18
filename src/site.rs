@@ -3,7 +3,7 @@ use crate::content::{
     check_for_duplicate_slugs, slugify, Content, ContentBuilder, GroupedContent, Kind,
 };
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
-use crate::tera_functions::{Group, UrlFor};
+use crate::tera_functions::{Group, SourceLink, UrlFor};
 use crate::{server, tera_filter};
 use chrono::Datelike;
 use core::str;
@@ -190,6 +190,7 @@ pub fn generate(
                 "render_templates",
                 "handle_static_artifacts",
                 "generate_search_index",
+                "copy_markdown_sources",
             ]
             .par_iter()
             .for_each(|step| match *step {
@@ -219,6 +220,11 @@ pub fn generate(
                 "generate_search_index" => {
                     if site_data.site.enable_search {
                         generate_search_index(&site_data, &moved_output_folder);
+                    }
+                }
+                "copy_markdown_sources" => {
+                    if site_data.site.publish_md {
+                        copy_markdown_sources(&site_data, &content_folder, &output_path);
                     }
                 }
                 _ => {}
@@ -492,6 +498,12 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
     tera.register_function(
         "group",
         Group {
+            site_data: site_data.clone(),
+        },
+    );
+    tera.register_function(
+        "source_link",
+        SourceLink {
             site_data: site_data.clone(),
         },
     );
@@ -1000,6 +1012,37 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
     } else {
         info!("Generated search_index.json");
     }
+}
+
+fn copy_markdown_sources(site_data: &Data, content_folder: &Path, output_path: &Path) {
+    site_data
+        .posts
+        .iter()
+        .chain(&site_data.pages)
+        .for_each(|content| {
+            if let Some(source_path) = &content.source_path {
+                let relative_path = source_path
+                    .strip_prefix(content_folder)
+                    .unwrap_or(source_path);
+                let dest_path = output_path.join(relative_path);
+
+                if let Some(parent) = dest_path.parent() {
+                    if let Err(e) = fs::create_dir_all(parent) {
+                        error!("Failed to create directory for markdown source: {e:?}");
+                        return;
+                    }
+                }
+
+                if let Err(e) = fs::copy(source_path, &dest_path) {
+                    error!(
+                        "Failed to copy markdown source {}: {e:?}",
+                        source_path.display()
+                    );
+                } else {
+                    info!("Copied markdown source to {}", dest_path.display());
+                }
+            }
+        });
 }
 
 fn write_build_info(
