@@ -181,6 +181,46 @@ $ marmite myblog --generate-config \
 Config file generated: "myblog/marmite.yaml"
 ```
 
+## Markdown Source Publishing
+
+Marmite can publish the original markdown source files alongside your HTML content,
+allowing readers to access the raw markdown files directly.
+
+### Enable markdown publishing
+
+Use `--publish-md` to copy markdown files to the output directory:
+
+```console
+$ marmite myblog output/ --publish-md true
+```
+
+This will copy all `.md` files to the output directory and add "📄 View source" links
+to each post that point to the local markdown files.
+
+### Link to source repository
+
+Use `--source-repository` to link to an external repository instead of local files:
+
+```console
+$ marmite myblog output/ --publish-md true --source-repository "https://github.com/user/repo/tree/main/content"
+```
+
+With this configuration, the "📄 View source" links will point to the files in your
+repository instead of local copies.
+
+### Configuration file
+
+You can also set these options in your `marmite.yaml`:
+
+```yaml
+publish_md: true
+source_repository: https://github.com/user/repo/tree/main/content
+```
+
+> [!NOTE]
+> Source links only appear on posts (content with dates), not on static pages.
+> When both options are enabled, repository links take precedence over local files.
+
 ## CLI Help
 
 
@@ -256,6 +296,10 @@ Options:
       --default-date-format <DEFAULT_DATE_FORMAT>
           Default date format [default: "%b %e, %Y" or from config file] see
           <https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html>
+      --publish-md <PUBLISH_MD>
+          Publish markdown source files alongside HTML [default: false or from config file] [possible values: true, false]
+      --source-repository <SOURCE_REPOSITORY>
+          Source repository URL to link to markdown files [default: None or from config file]
   -h, --help
           Print help
   -V, --version
