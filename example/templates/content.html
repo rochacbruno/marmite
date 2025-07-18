@@ -81,15 +81,6 @@
         </ul>
       </div>
     </div>
-    
-    {% if site.publish_md or site.source_repository %}
-    <div class="content-source">
-      {% set source_url = source_link(content=content) %}
-      {% if source_url %}
-        <a href="{{ source_url }}" rel="nofollow">📄 View source</a>
-      {% endif %}
-    </div>
-    {% endif %}
   </footer>
   {% endif %}
 </article>
@@ -143,6 +134,18 @@
     <article>{{ comments }}</article>
 {% elif site.extra.comments.source is defined and content.date %}
     {%include "comments.html" ignore missing %}
+{% endif %}
+
+
+{% if content.source_path and site.publish_md or site.source_repository %}
+<article>
+<div class="content-source">
+  {% set source_url = source_link(content=content) %}
+  {% if source_url %}
+    <a href="{{ source_url }}" rel="nofollow">📄 View source</a>
+  {% endif %}
+</div>
+</article>
 {% endif %}
 
 
