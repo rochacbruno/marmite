@@ -52,6 +52,10 @@ authors:
     links:
       - ["Github", "https://github.com/karlamagueta"]
 
+# Markdown source publishing
+publish_md: true
+# source_repository: https://github.com/rochacbruno/marmite/tree/main/example/content
+
 # extra data for template customization
 extra:
   colorscheme_toggle: true

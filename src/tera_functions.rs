@@ -102,3 +102,50 @@ impl Function for Group {
         to_value(json_value).map_err(tera::Error::from)
     }
 }
+
+/// Tera template function that generates source links for content
+/// It takes a `content` argument and returns a URL pointing to the source markdown file
+/// If `source_repository` is configured, it generates a link to the repository
+/// If `publish_md` is true, it generates a link to the local markdown file
+pub struct SourceLink {
+    pub site_data: Data,
+}
+
+impl Function for SourceLink {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let content = args
+            .get("content")
+            .ok_or_else(|| tera::Error::msg("Missing `content` argument"))?;
+
+        // Extract the source_path from the content
+        let source_path = content
+            .get("source_path")
+            .and_then(Value::as_str)
+            .ok_or_else(|| tera::Error::msg("Missing `source_path` in content"))?;
+
+        // If source_repository is configured, generate repository link
+        if let Some(source_repository) = &self.site_data.site.source_repository {
+            let source_path_buf = std::path::Path::new(source_path);
+            let file_name = source_path_buf.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("unknown.md");
+            
+            let repo_url = format!("{}/{}", source_repository.trim_end_matches('/'), file_name);
+            return to_value(repo_url).map_err(tera::Error::from);
+        }
+
+        // If publish_md is true and no source_repository, generate local link
+        if self.site_data.site.publish_md {
+            let source_path_buf = std::path::Path::new(source_path);
+            let file_name = source_path_buf.file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("unknown.md");
+            
+            let local_url = format!("./{}", file_name);
+            return to_value(local_url).map_err(tera::Error::from);
+        }
+
+        // Return empty string if neither option is enabled
+        to_value("").map_err(tera::Error::from)
+    }
+}

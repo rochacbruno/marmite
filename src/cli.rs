@@ -170,4 +170,12 @@ pub struct Configuration {
     /// Show next and previous links in posts [default: true or from config file]
     #[arg(long)]
     pub show_next_prev_links: Option<bool>,
+
+    /// Publish markdown source files alongside HTML [default: false or from config file]
+    #[arg(long)]
+    pub publish_md: Option<bool>,
+
+    /// Source repository URL to link to markdown files [default: None or from config file]
+    #[arg(long)]
+    pub source_repository: Option<String>,
 }

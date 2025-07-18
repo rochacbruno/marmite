@@ -109,6 +109,12 @@ pub struct Marmite {
 
     #[serde(default = "default_true")]
     pub show_next_prev_links: bool,
+
+    #[serde(default)]
+    pub publish_md: bool,
+
+    #[serde(default)]
+    pub source_repository: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -201,6 +207,12 @@ impl Marmite {
         }
         if let Some(show_next_prev_links) = cli_args.configuration.show_next_prev_links {
             self.show_next_prev_links = show_next_prev_links;
+        }
+        if let Some(publish_md) = cli_args.configuration.publish_md {
+            self.publish_md = publish_md;
+        }
+        if let Some(source_repository) = &cli_args.configuration.source_repository {
+            self.source_repository = Some(source_repository.clone());
         }
     }
 }
