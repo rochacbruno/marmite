@@ -143,7 +143,7 @@ impl Function for SourceLink {
                 .and_then(|n| n.to_str())
                 .unwrap_or("unknown.md");
 
-            let local_url = format!("./{}", file_name);
+            let local_url = format!("./{file_name}");
             return to_value(local_url).map_err(tera::Error::from);
         }
 
