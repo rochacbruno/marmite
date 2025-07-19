@@ -5,6 +5,12 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 
 use crate::cli::Cli;
 
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub enum ImageProvider {
+    #[serde(rename = "picsum")]
+    Picsum,
+}
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq)]
 pub struct Marmite {
@@ -115,6 +121,9 @@ pub struct Marmite {
 
     #[serde(default)]
     pub source_repository: Option<String>,
+
+    #[serde(default)]
+    pub image_provider: Option<ImageProvider>,
 }
 
 fn default_true() -> bool {
@@ -213,6 +222,14 @@ impl Marmite {
         }
         if let Some(source_repository) = &cli_args.configuration.source_repository {
             self.source_repository = Some(source_repository.clone());
+        }
+        if let Some(image_provider_str) = &cli_args.configuration.image_provider {
+            match image_provider_str.to_lowercase().as_str() {
+                "picsum" => self.image_provider = Some(ImageProvider::Picsum),
+                _ => {
+                    eprintln!("Warning: Unknown image provider '{image_provider_str}'. Available providers: picsum");
+                }
+            }
         }
     }
 }

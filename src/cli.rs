@@ -178,4 +178,9 @@ pub struct Configuration {
     /// Source repository URL to link to markdown files [default: None or from config file]
     #[arg(long)]
     pub source_repository: Option<String>,
+
+    /// Image provider for automatic banner image download [default: None or from config file]
+    /// Available providers: picsum
+    #[arg(long)]
+    pub image_provider: Option<String>,
 }
