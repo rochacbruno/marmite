@@ -173,6 +173,10 @@ Access in templates:
 ```
 
 ### Comments System
+
+The recommended way of configuring comments is using the file `_comments.md`, see more on [[Enabling Comments]] page, but alternatively 
+you can set a `comments` section in the settings file:
+
 ```yaml
 extra:
   comments:
@@ -181,16 +185,7 @@ extra:
       <script src="https://giscus.app/client.js"
               data-repo="owner/repo"
               data-repo-id="REPO_ID"
-              data-category="General"
-              data-category-id="CATEGORY_ID"
-              data-mapping="pathname"
-              data-strict="0"
-              data-reactions-enabled="1"
-              data-emit-metadata="0"
-              data-input-position="bottom"
-              data-theme="preferred_color_scheme"
-              data-lang="en"
-              crossorigin="anonymous"
+              ...
               async>
       </script>
 ```

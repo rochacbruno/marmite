@@ -44,20 +44,22 @@ tags: beginner, guide
 ---
 ```
 
+<!--
+TODO: Implement file based streams
 ### Via Filename
 
 You can also specify streams in content organization:
 
 ```
 content/
-├── tutorials/
-│   ├── 2024-01-01-getting-started.md
-│   └── 2024-01-15-advanced-tips.md
-├── news/
-│   ├── 2024-01-10-site-update.md
-│   └── 2024-01-20-new-features.md
+├── tutorial-2024-01-01-getting-started.md  # goes to "tutorial" stream
+└── tutorial-2024-01-15-advanced-tips.md  # goes to "tutorial" stream
+├── news-2024-01-10-site-update.md  # goes to "news" stream
+└── news-2024-01-20-new-features.md  # goes to "news" stream
 └── 2024-01-05-general-post.md  # goes to "index" stream
 ```
+
+-->
 
 ## Stream Configuration
 
@@ -128,21 +130,6 @@ templates/
 ├── content.html              # Default content template
 ├── custom_tutorials.html     # Custom template for tutorials
 └── custom_news.html          # Custom template for news
-```
-
-### Stream-Specific Styling
-
-Target streams with CSS:
-
-```css
-/* Stream-specific styling */
-.stream-tutorials {
-    border-left: 4px solid #3498db;
-}
-
-.stream-news {
-    border-left: 4px solid #e74c3c;
-}
 ```
 
 ### Stream Context in Templates
