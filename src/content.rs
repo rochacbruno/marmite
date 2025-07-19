@@ -1,5 +1,6 @@
 use crate::cli::Cli;
 use crate::config::Marmite;
+use crate::image_provider;
 use crate::parser::{
     append_references, get_html, get_links_to, get_table_of_contents_from_html, parse_front_matter,
 };
@@ -145,6 +146,15 @@ impl Content {
         let extra = frontmatter.get("extra").map(std::borrow::ToOwned::to_owned);
         let links_to = get_links_to(&html);
         let back_links = Vec::new(); // will be mutated later
+
+        // Download banner image if image provider is configured and this is a post (has date)
+        if date.is_some() {
+            if let Some(parent) = path.parent() {
+                let _ =
+                    image_provider::download_banner_image(site, &frontmatter, parent, &slug, &tags);
+            }
+        }
+
         let card_image = get_card_image(&frontmatter, &html, path, &slug);
         let banner_image = get_banner_image(&frontmatter, path, &slug);
         let authors = get_authors(&frontmatter, Some(site.default_author.clone()));

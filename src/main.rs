@@ -8,6 +8,7 @@ mod config;
 mod content;
 mod embedded;
 mod feed;
+mod image_provider;
 mod parser;
 mod server;
 mod site;
