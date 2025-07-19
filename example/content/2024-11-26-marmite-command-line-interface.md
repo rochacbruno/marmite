@@ -176,10 +176,46 @@ $ marmite myblog --generate-config \
   --tagline "My articles" \
   --pagination 20 \
   --colorscheme gruvbox \
-  --url "https://myblog.com"
+  --url "https://myblog.com" \
+  --image-provider picsum
 
 Config file generated: "myblog/marmite.yaml"
 ```
+
+## Automatic Image Download
+
+Marmite can automatically download banner images for your posts using image providers.
+Currently supported provider is `picsum` which generates beautiful placeholder images.
+
+### Enable automatic image download
+
+Use `--image-provider` to enable automatic image downloads:
+
+```console
+$ marmite myblog output/ --image-provider picsum
+```
+
+This will automatically download banner images for posts (not pages) when:
+- No `banner_image` is specified in the post's frontmatter
+- The banner image file doesn't already exist
+
+Images are saved as `{slug}.banner.jpg` in the media folder and use the site name,
+post slug, and tags to generate deterministic, unique images.
+
+### Configuration file
+
+You can also set this option in your `marmite.yaml`:
+
+```yaml
+image_provider: picsum
+```
+
+> [!NOTE]
+> Images are only downloaded for posts (content with dates), not for static pages.
+> If you don't like a generated image, you can delete it and rebuild, change the post's tags,
+> or manually specify a `banner_image` in the frontmatter.
+
+Read more in the [[Automatic Image Download]] guide.
 
 ## Markdown Source Publishing
 
@@ -300,6 +336,9 @@ Options:
           Publish markdown source files alongside HTML [default: false or from config file] [possible values: true, false]
       --source-repository <SOURCE_REPOSITORY>
           Source repository URL to link to markdown files [default: None or from config file]
+      --image-provider <IMAGE_PROVIDER>
+          Image provider for automatic banner image download [default: None or from config file]
+          Available providers: picsum
   -h, --help
           Print help
   -V, --version

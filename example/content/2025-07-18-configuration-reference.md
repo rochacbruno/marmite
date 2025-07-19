@@ -95,6 +95,20 @@ publish_md: true                   # Publish markdown source files (default: fal
 source_repository: "https://github.com/user/repo/tree/main/content"
 ```
 
+### Automatic Image Download
+```yaml
+image_provider: picsum             # Automatic banner image provider (default: None)
+```
+
+Configure automatic banner image download for posts. When enabled, Marmite will automatically download banner images for posts (content with dates) when:
+- No `banner_image` is specified in the post's frontmatter
+- The banner image file doesn't already exist
+
+**Available providers:**
+- `picsum` - Uses picsum.photos service to generate beautiful placeholder images
+
+Images are saved as `{slug}.banner.jpg` in the media folder and use the site name, post slug, and tags to generate deterministic, unique images.
+
 ## Path Configuration
 
 ### Folder Structure
@@ -207,6 +221,9 @@ marmite ./site --enable-search true --toc true --json-feed true
 # Source publishing
 marmite ./site --publish-md true --source-repository "https://github.com/user/repo"
 
+# Image provider
+marmite ./site --image-provider picsum
+
 # Paths
 marmite ./site --content-path "posts" --static-path "assets"
 
@@ -266,6 +283,9 @@ json_feed: true
 # Source publishing
 publish_md: true
 source_repository: "https://github.com/alexjohnson/techblog/tree/main/content"
+
+# Automatic image download
+image_provider: picsum
 
 # Section titles
 pages_title: "All Pages"
