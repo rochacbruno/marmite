@@ -3,13 +3,17 @@
         <div class="list-title">
             <article><strong> {{ title }} </strong></article>
         </div>
-        <article class="group-details">
+        <article class="group-details h-feed">
+            <h1 class="p-name" style="display: none;">{{ title }}</h1>
             {% for name, items in group(kind=kind) -%}
             <details {%if loop.index == 1%}open{%endif%}>
                 <summary role="button" class="outline contrast {{kind}}-group-title">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{{name}} <sup>{{items | length}}</sup></summary>
                 <ul>
                 {% for item in items | slice(end=10) %}
-                    <li><a href="./{{item.slug}}.html">{{item.title}}</a> <small>{{item.date | date(format="%Y-%m-%d") }}</small></li>
+                    <li class="h-entry">
+                        <a href="./{{item.slug}}.html" class="u-url p-name">{{item.title}}</a> 
+                        <small><time class="dt-published" datetime="{{ item.date | date(format='%+') }}">{{item.date | date(format="%Y-%m-%d") }}</time></small>
+                    </li>
                 {% endfor %}
                 {% if kind == "stream" %}
                 <li><a href="./{{ name | trim | slugify }}.html">more &rarr;</a></li>

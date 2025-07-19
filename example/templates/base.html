@@ -81,17 +81,17 @@
             <nav class="header-nav">
                 <ul class="header-name">
                     <li>
-                        <hgroup>
+                        <hgroup class="h-card">
                             <h2>
-                                <a href="./" class="contrast">
+                                <a href="./" class="contrast p-name u-url">
                                     {% if site.logo_image %}
-                                        <img src="{{ site.logo_image }}" alt="{{ site.name }}">
+                                        <img src="{{ site.logo_image }}" alt="{{ site.name }}" class="u-photo">
                                     {% else %}
                                         {{ site.name }}
                                     {% endif %}
                                 </a>
                             </h2>
-                            {% if site.tagline %} <p>{{ site.tagline }}</p> {% endif %}
+                            {% if site.tagline %} <p class="p-note">{{ site.tagline }}</p> {% endif %}
                         </hgroup>
                     </li>
                 </ul>
