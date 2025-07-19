@@ -18,6 +18,8 @@ card_image: ./media/og_image.jpg
 default_date_format: "%A, %d %B %Y"
 publish_md: true
 source_repository: https://github.com/rochacbruno/marmite/blob/main/example/content/
+# Image provider for automatic image download
+image_provider: picsum
 extra:
   colorscheme_toggle: true
   # colorscheme: minimal_wb

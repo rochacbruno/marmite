@@ -22,7 +22,7 @@ card_image: ./media/og_image.jpg
 # logo_image: /static/logo.png
 
 # Image provider for automatic image download
-image_provider: picsum
+# image_provider: picsum
 
 enable_search: true
 
