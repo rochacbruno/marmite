@@ -47,7 +47,12 @@
 <div class="content-banner-image" style="background-image: url({{content.banner_image}});"></div>
 {% endif %}
 
-<article>
+<article class="h-entry">
+  <data class="p-name" value="{{ content.title }}"></data>
+  <a class="u-url" href="./{{ content.slug }}.html" style="display: none;"></a>
+  {% if content.date %}
+  <time class="dt-published" datetime="{{ content.date | date(format='%+') }}" style="display: none;">{{ content.date | default_date_format }}</time>
+  {% endif %}
 
   {% include "content_title.html" ignore missing %}
   {% if content.toc %}
@@ -60,7 +65,7 @@
   </div>
   {% endif %}
 
-  <div class="content-html">{{ content.html }}</div>
+  <div class="content-html e-content">{{ content.html }}</div>
   {% if content.date %}
   <footer class="data-tags-footer">
 
@@ -76,7 +81,7 @@
 
         <ul class="content-tags">
           {% for tag in content.tags %}
-          <li><a href="./tag-{{ tag | trim | slugify }}.html">{{ tag }}</a></li>
+          <li><a href="./tag-{{ tag | trim | slugify }}.html" class="p-category">{{ tag }}</a></li>
           {% endfor %}
         </ul>
       </div>

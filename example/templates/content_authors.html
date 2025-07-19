@@ -4,18 +4,18 @@
         {% for username in content.authors %}
             {% if username in site.authors %}
             {% set author = site.authors[username] %}
-            <li>
-                <a href="author-{{username}}.html">
-                    <img src="{{ author.avatar }}" alt="{{ author.name }}" class="avatar">
-                    {{ author.name }}
+            <li class="h-card p-author">
+                <a href="author-{{username}}.html" class="u-url">
+                    <img src="{{ author.avatar }}" alt="{{ author.name }}" class="avatar u-photo">
+                    <span class="p-name">{{ author.name }}</span>
                 </a>
             </li>
             {% else %}
             {# handle the case when author is defined on content but not on config #}
-            <li >
-                <a class="secondary" href="author-{{username}}.html">
-                    <img src="static/avatar-placeholder.png" alt="{{ username }}" class="avatar">
-                    {{ username }}
+            <li class="h-card p-author">
+                <a class="secondary u-url" href="author-{{username}}.html">
+                    <img src="static/avatar-placeholder.png" alt="{{ username }}" class="avatar u-photo">
+                    <span class="p-name">{{ username }}</span>
                 </a>
             </li>
             {% endif %}
