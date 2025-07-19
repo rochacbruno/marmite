@@ -3,6 +3,7 @@ use log::{info, warn};
 use std::{fs, path::Path};
 
 use crate::config::{ImageProvider, Marmite};
+use crate::content::slugify;
 
 pub fn download_banner_image(
     config: &Marmite,
@@ -73,15 +74,4 @@ fn download_picsum_image(
     }
 
     Ok(())
-}
-
-fn slugify(text: &str) -> String {
-    text.to_lowercase()
-        .chars()
-        .map(|c| if c.is_alphanumeric() { c } else { '-' })
-        .collect::<String>()
-        .split('-')
-        .filter(|s| !s.is_empty())
-        .collect::<Vec<&str>>()
-        .join("-")
 }
