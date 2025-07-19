@@ -136,8 +136,7 @@
     {%include "comments.html" ignore missing %}
 {% endif %}
 
-
-{% if content.source_path and site.publish_md or site.source_repository %}
+{% if content.source_path is string and (site.publish_md or site.source_repository) %}
 <article>
 <div class="content-source">
   {% set source_url = source_link(content=content) %}
