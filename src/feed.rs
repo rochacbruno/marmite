@@ -34,7 +34,18 @@ pub fn generate_rss(
         .generator("marmite".to_string())
         .build();
 
-    for content in contents.iter().take(15) {
+    // Filter out content with stream "draft"
+    let filtered_contents: Vec<&Content> = contents
+        .iter()
+        .filter(|content| {
+            content
+                .stream
+                .as_ref()
+                .is_none_or(|stream| stream != "draft")
+        })
+        .collect();
+
+    for content in filtered_contents.iter().take(15) {
         let mut item = ItemBuilder::default()
             .title(content.title.clone())
             .link(format!("{}/{}.html", &feed_url, &content.slug))
@@ -136,7 +147,19 @@ pub fn generate_json(
 ) -> Result<(), String> {
     let date_format = "%Y-%m-%dT%H:%M:%S-00:00"; // Loose RFC3339 format
     let mut items = Vec::new();
-    for content in contents.iter().take(15) {
+
+    // Filter out content with stream "draft"
+    let filtered_contents: Vec<&Content> = contents
+        .iter()
+        .filter(|content| {
+            content
+                .stream
+                .as_ref()
+                .is_none_or(|stream| stream != "draft")
+        })
+        .collect();
+
+    for content in filtered_contents.iter().take(15) {
         let item = JsonFeedItem {
             id: format!("{}/{}.html", &config.url, &content.slug),
             url: format!("{}/{}.html", &config.url, &content.slug),

@@ -985,10 +985,16 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
         })
     };
 
-    // Merge posts and pages into a single list
+    // Merge posts and pages into a single list, filtering out draft content
     let all_content_json = site_data
         .posts
         .iter()
+        .filter(|content| {
+            content
+                .stream
+                .as_ref()
+                .is_none_or(|stream| stream != "draft")
+        })
         .map(convert_items_to_json)
         .collect::<Vec<_>>()
         .into_iter()
@@ -996,6 +1002,12 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
             site_data
                 .pages
                 .iter()
+                .filter(|content| {
+                    content
+                        .stream
+                        .as_ref()
+                        .is_none_or(|stream| stream != "draft")
+                })
                 .map(convert_items_to_json)
                 .collect::<Vec<_>>(),
         )
