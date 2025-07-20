@@ -11,6 +11,105 @@ pub enum ImageProvider {
     Picsum,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct RenderOptions {
+    #[serde(default = "default_render_unsafe")]
+    pub unsafe_: bool,
+    #[serde(default = "default_render_ignore_empty_links")]
+    pub ignore_empty_links: bool,
+    #[serde(default = "default_render_figure_with_caption")]
+    pub figure_with_caption: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct ParseOptions {
+    #[serde(default = "default_parse_relaxed_tasklist_matching")]
+    pub relaxed_tasklist_matching: bool,
+}
+
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct ExtensionOptions {
+    #[serde(default = "default_extension_tagfilter")]
+    pub tagfilter: bool,
+    #[serde(default = "default_extension_strikethrough")]
+    pub strikethrough: bool,
+    #[serde(default = "default_extension_table")]
+    pub table: bool,
+    #[serde(default = "default_extension_autolink")]
+    pub autolink: bool,
+    #[serde(default = "default_extension_tasklist")]
+    pub tasklist: bool,
+    #[serde(default = "default_extension_footnotes")]
+    pub footnotes: bool,
+    #[serde(default = "default_extension_description_lists")]
+    pub description_lists: bool,
+    #[serde(default = "default_extension_multiline_block_quotes")]
+    pub multiline_block_quotes: bool,
+    #[serde(default = "default_extension_underline")]
+    pub underline: bool,
+    #[serde(default = "default_extension_spoiler")]
+    pub spoiler: bool,
+    #[serde(default = "default_extension_greentext")]
+    pub greentext: bool,
+    #[serde(default = "default_extension_shortcodes")]
+    pub shortcodes: bool,
+    #[serde(default = "default_extension_wikilinks_title_before_pipe")]
+    pub wikilinks_title_before_pipe: bool,
+    #[serde(default = "default_extension_alerts")]
+    pub alerts: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
+pub struct ParserOptions {
+    #[serde(default)]
+    pub render: RenderOptions,
+    #[serde(default)]
+    pub parse: ParseOptions,
+    #[serde(default)]
+    pub extension: ExtensionOptions,
+}
+
+impl Default for RenderOptions {
+    fn default() -> Self {
+        Self {
+            unsafe_: default_render_unsafe(),
+            ignore_empty_links: default_render_ignore_empty_links(),
+            figure_with_caption: default_render_figure_with_caption(),
+        }
+    }
+}
+
+impl Default for ParseOptions {
+    fn default() -> Self {
+        Self {
+            relaxed_tasklist_matching: default_parse_relaxed_tasklist_matching(),
+        }
+    }
+}
+
+impl Default for ExtensionOptions {
+    fn default() -> Self {
+        Self {
+            tagfilter: default_extension_tagfilter(),
+            strikethrough: default_extension_strikethrough(),
+            table: default_extension_table(),
+            autolink: default_extension_autolink(),
+            tasklist: default_extension_tasklist(),
+            footnotes: default_extension_footnotes(),
+            description_lists: default_extension_description_lists(),
+            multiline_block_quotes: default_extension_multiline_block_quotes(),
+            underline: default_extension_underline(),
+            spoiler: default_extension_spoiler(),
+            greentext: default_extension_greentext(),
+            shortcodes: default_extension_shortcodes(),
+            wikilinks_title_before_pipe: default_extension_wikilinks_title_before_pipe(),
+            alerts: default_extension_alerts(),
+        }
+    }
+}
+
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq)]
 pub struct Marmite {
@@ -124,6 +223,9 @@ pub struct Marmite {
 
     #[serde(default)]
     pub image_provider: Option<ImageProvider>,
+
+    #[serde(default)]
+    pub markdown_parser: Option<ParserOptions>,
 }
 
 fn default_true() -> bool {
@@ -345,5 +447,79 @@ fn default_language() -> String {
 }
 
 fn default_enable_related_content() -> bool {
+    true
+}
+
+// Parser options defaults - matching parser.rs current values
+
+fn default_render_unsafe() -> bool {
+    true
+}
+
+fn default_render_ignore_empty_links() -> bool {
+    true
+}
+
+fn default_render_figure_with_caption() -> bool {
+    true
+}
+
+fn default_parse_relaxed_tasklist_matching() -> bool {
+    true
+}
+
+fn default_extension_tagfilter() -> bool {
+    false
+}
+
+fn default_extension_strikethrough() -> bool {
+    true
+}
+
+fn default_extension_table() -> bool {
+    true
+}
+
+fn default_extension_autolink() -> bool {
+    true
+}
+
+fn default_extension_tasklist() -> bool {
+    true
+}
+
+fn default_extension_footnotes() -> bool {
+    true
+}
+
+fn default_extension_description_lists() -> bool {
+    true
+}
+
+fn default_extension_multiline_block_quotes() -> bool {
+    true
+}
+
+fn default_extension_underline() -> bool {
+    true
+}
+
+fn default_extension_spoiler() -> bool {
+    true
+}
+
+fn default_extension_greentext() -> bool {
+    true
+}
+
+fn default_extension_shortcodes() -> bool {
+    true
+}
+
+fn default_extension_wikilinks_title_before_pipe() -> bool {
+    true
+}
+
+fn default_extension_alerts() -> bool {
     true
 }

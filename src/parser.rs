@@ -1,3 +1,4 @@
+use crate::config::ParserOptions;
 use crate::content::slugify;
 use comrak::{markdown_to_html, BrokenLinkReference, ComrakOptions, ResolvedReference};
 use frontmatter_gen::{detect_format, extract_raw_frontmatter, parse, Frontmatter};
@@ -99,28 +100,40 @@ pub fn get_table_of_contents_from_html(html: &str) -> String {
 
 /// Convert markdown to html using comrak
 pub fn get_html(markdown: &str) -> String {
+    get_html_with_options(markdown, &ParserOptions::default())
+}
+
+/// Convert markdown to html using comrak with configurable options
+pub fn get_html_with_options(markdown: &str, parser_options: &ParserOptions) -> String {
     let mut options = ComrakOptions::default();
-    options.render.figure_with_caption = true;
-    options.render.ignore_empty_links = true;
-    options.render.unsafe_ = true;
-    options.parse.broken_link_callback = Some(Arc::new(warn_broken_link));
-    options.parse.relaxed_tasklist_matching = true;
-    options.extension.alerts = true;
-    options.extension.autolink = true;
-    options.extension.description_lists = true;
-    options.extension.footnotes = true;
-    options.extension.greentext = true;
-    options.extension.header_ids = Some(String::new());
-    // options.extension.image_url_rewriter = TODO: implement this to point to a resized image
-    options.extension.multiline_block_quotes = true;
-    options.extension.tagfilter = false;
-    options.extension.shortcodes = true;
-    options.extension.spoiler = true;
-    options.extension.strikethrough = true;
-    options.extension.table = true;
-    options.extension.tasklist = true;
-    options.extension.underline = true;
-    options.extension.wikilinks_title_before_pipe = true;
+
+    // Apply configurable render options
+    options.render.figure_with_caption = parser_options.render.figure_with_caption;
+    options.render.ignore_empty_links = parser_options.render.ignore_empty_links;
+    options.render.unsafe_ = parser_options.render.unsafe_;
+
+    // Apply configurable parse options
+    options.parse.broken_link_callback = Some(Arc::new(warn_broken_link)); // Not configurable
+    options.parse.relaxed_tasklist_matching = parser_options.parse.relaxed_tasklist_matching;
+
+    // Apply configurable extension options
+    options.extension.alerts = parser_options.extension.alerts;
+    options.extension.autolink = parser_options.extension.autolink;
+    options.extension.description_lists = parser_options.extension.description_lists;
+    options.extension.footnotes = parser_options.extension.footnotes;
+    options.extension.greentext = parser_options.extension.greentext;
+    options.extension.header_ids = Some(String::new()); // Not configurable
+                                                        // options.extension.image_url_rewriter = TODO: implement this to point to a resized image
+    options.extension.multiline_block_quotes = parser_options.extension.multiline_block_quotes;
+    options.extension.tagfilter = parser_options.extension.tagfilter;
+    options.extension.shortcodes = parser_options.extension.shortcodes;
+    options.extension.spoiler = parser_options.extension.spoiler;
+    options.extension.strikethrough = parser_options.extension.strikethrough;
+    options.extension.table = parser_options.extension.table;
+    options.extension.tasklist = parser_options.extension.tasklist;
+    options.extension.underline = parser_options.extension.underline;
+    options.extension.wikilinks_title_before_pipe =
+        parser_options.extension.wikilinks_title_before_pipe;
 
     fix_internal_links(&markdown_to_html(markdown, &options))
 }
