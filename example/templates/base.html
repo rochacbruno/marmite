@@ -33,7 +33,7 @@
     {%- block feeds %}
     <link rel="alternate" type="application/rss+xml" title="index" href="index.rss">
     {% for stream, _ in group(kind="stream") -%}
-    {% if stream == "index" %}{% continue %}{% endif %}
+    {% if stream == "index" or stream == "draft" %}{% continue %}{% endif %}
     <link rel="alternate" type="application/rss+xml" title="{{stream}}" href="{{stream | slugify}}.rss">
     {% endfor %}
     {%- for tag, _ in group(kind="tag") -%}
@@ -49,7 +49,7 @@
     {% if site.json_feed %}
     <link rel="alternate" type="application/feed+json" title="JSON index" href="index.json">
     {% for stream, _ in group(kind="stream") -%}
-    {% if stream == "index" %}{% continue %}{% endif %}
+    {% if stream == "index" or stream == "draft" %}{% continue %}{% endif %}
     <link rel="alternate" type="application/feed+json" title="JSON {{stream}}" href="{{stream | slugify}}.json">
     {% endfor %}
     {%- for tag, _ in group(kind="tag") -%}
