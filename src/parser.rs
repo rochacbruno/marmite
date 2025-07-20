@@ -135,6 +135,8 @@ pub fn get_html_with_options(markdown: &str, parser_options: &ParserOptions) -> 
     options.extension.underline = parser_options.extension.underline;
     options.extension.wikilinks_title_before_pipe =
         parser_options.extension.wikilinks_title_before_pipe;
+    options.extension.wikilinks_title_after_pipe =
+        parser_options.extension.wikilinks_title_after_pipe;
 
     fix_internal_links(&markdown_to_html(markdown, &options))
 }

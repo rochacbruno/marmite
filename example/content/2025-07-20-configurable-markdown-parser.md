@@ -34,7 +34,8 @@ markdown_parser:
     spoiler: true                  # Enable/disable spoiler text (default: true)
     greentext: true                # Enable/disable greentext (default: true)
     shortcodes: true               # Enable/disable shortcodes (default: true)
-    wikilinks_title_before_pipe: true # Wiki-style links (default: true)
+    wikilinks_title_before_pipe: true # Wiki-style links with title before pipe (default: true)
+    wikilinks_title_after_pipe: false # Wiki-style links with title after pipe (default: false)
     alerts: true                   # Enable/disable alert blocks (default: true)
 ```
 

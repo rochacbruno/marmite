@@ -56,6 +56,8 @@ pub struct ExtensionOptions {
     pub shortcodes: bool,
     #[serde(default = "default_extension_wikilinks_title_before_pipe")]
     pub wikilinks_title_before_pipe: bool,
+    #[serde(default = "default_extension_wikilinks_title_after_pipe")]
+    pub wikilinks_title_after_pipe: bool,
     #[serde(default = "default_extension_alerts")]
     pub alerts: bool,
 }
@@ -104,6 +106,7 @@ impl Default for ExtensionOptions {
             greentext: default_extension_greentext(),
             shortcodes: default_extension_shortcodes(),
             wikilinks_title_before_pipe: default_extension_wikilinks_title_before_pipe(),
+            wikilinks_title_after_pipe: default_extension_wikilinks_title_after_pipe(),
             alerts: default_extension_alerts(),
         }
     }
@@ -517,6 +520,10 @@ fn default_extension_shortcodes() -> bool {
 
 fn default_extension_wikilinks_title_before_pipe() -> bool {
     true
+}
+
+fn default_extension_wikilinks_title_after_pipe() -> bool {
+    false
 }
 
 fn default_extension_alerts() -> bool {
