@@ -705,16 +705,25 @@ fn handle_stream_pages(
                 output_dir,
                 &stream_slug,
             )?;
-            // Render {stream}.rss for each stream
-            crate::feed::generate_rss(stream_contents, output_dir, &stream_slug, &site_data.site)?;
 
-            if site_data.site.json_feed {
-                crate::feed::generate_json(
+            // Skip generating feeds for draft stream
+            if *stream != "draft" {
+                // Render {stream}.rss for each stream
+                crate::feed::generate_rss(
                     stream_contents,
                     output_dir,
                     &stream_slug,
                     &site_data.site,
                 )?;
+
+                if site_data.site.json_feed {
+                    crate::feed::generate_json(
+                        stream_contents,
+                        output_dir,
+                        &stream_slug,
+                        &site_data.site,
+                    )?;
+                }
             }
             Ok(())
         })
