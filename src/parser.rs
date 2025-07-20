@@ -99,6 +99,7 @@ pub fn get_table_of_contents_from_html(html: &str) -> String {
 }
 
 /// Convert markdown to html using comrak
+#[allow(dead_code)]
 pub fn get_html(markdown: &str) -> String {
     get_html_with_options(markdown, &ParserOptions::default())
 }
