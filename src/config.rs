@@ -109,7 +109,6 @@ impl Default for ExtensionOptions {
     }
 }
 
-
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq)]
 pub struct Marmite {
