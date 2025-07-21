@@ -324,7 +324,7 @@ mod tests {
     #[test]
     fn test_get_html_basic_markdown() {
         let markdown = "# Title\n\nThis is a paragraph.";
-        let expected = "<h1><a inert href=\"#title\" aria-hidden=\"true\" class=\"anchor\" id=\"title\"></a>Title</h1>\n<p>This is a paragraph.</p>\n";
+        let expected = "<h1><a href=\"#title\" aria-hidden=\"true\" class=\"anchor\" id=\"title\"></a>Title</h1>\n<p>This is a paragraph.</p>\n";
         assert_eq!(get_html(markdown), expected);
     }
 
