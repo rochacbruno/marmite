@@ -12,15 +12,11 @@ pub fn download_banner_image(
     slug: &str,
     tags: &[String],
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let image_provider = match &config.image_provider {
-        Some(provider) => provider,
-        None => return Ok(()),
-    };
-
-    match image_provider {
-        ImageProvider::Picsum => {
+    match &config.image_provider {
+        Some(ImageProvider::Picsum) => {
             download_picsum_image(config, frontmatter, content_path, slug, tags)
         }
+        None => Ok(()),
     }
 }
 
