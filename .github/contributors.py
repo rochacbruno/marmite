@@ -15,7 +15,8 @@ contributors_url = (
 
 response = requests.get(contributors_url)
 if response.status_code != 200:
-    raise Exception(f"Failed to fetch contributors: {response.status_code}")
+    print(f"Warning: Failed to fetch contributors (HTTP {response.status_code}). Skipping contributors generation.")
+    exit(0)
 
 contributors = response.json()
 contributors_sorted = reversed(
