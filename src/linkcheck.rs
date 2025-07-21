@@ -26,7 +26,7 @@ pub fn check_links(output_folder: &Path, base_url: &str) -> Result<(), Box<dyn s
         cmd.arg("--base").arg(base_url);
     }
 
-    info!("Running: {:?}", cmd);
+    info!("Running: {cmd:?}");
 
     let output = cmd.output()?;
 

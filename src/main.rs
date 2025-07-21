@@ -125,12 +125,12 @@ fn main() {
                 bind_address.split(':').nth(1).unwrap_or("8000")
             )
         } else {
-            format!("http://{}", bind_address)
+            format!("http://{bind_address}")
         };
 
         // Check links
         if let Err(e) = linkcheck::check_links(&output_folder, &base_url) {
-            error!("Link checking failed: {}", e);
+            error!("Link checking failed: {e}");
             std::process::exit(1);
         }
 
