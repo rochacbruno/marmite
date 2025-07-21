@@ -2,7 +2,7 @@
 <html lang="{{language}}">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" type="image/x-icon" href="./static/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="{{url_for(path='static/favicon.ico')}}">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark" />
     <meta name="generator" content="Marmite" />
@@ -23,43 +23,49 @@
     {% endblock %}
     {%- block head %}
     <title>{% if title %}{{title}} | {%endif%}{{ site.name }}</title>
-    <link rel="stylesheet" type="text/css" href="./static/pico.min.css">
-    <link rel="stylesheet" type="text/css" href="./static/marmite.css">
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='static/pico.min.css')}}">
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='static/marmite.css')}}">
     {% if site.extra.colorscheme %}
     <link rel="stylesheet" type="text/css" href="./static/colorschemes/{{site.extra.colorscheme}}.css">
     {% endif %}
-    <link rel="stylesheet" type="text/css" href="./static/custom.css">
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='static/custom.css')}}">
     {% endblock -%}
     {%- block feeds %}
-    <link rel="alternate" type="application/rss+xml" title="index" href="index.rss">
+    <link rel="alternate" type="application/rss+xml" title="index" href="{{url_for(path='index.rss')}}">
     {% for stream, _ in group(kind="stream") -%}
     {% if stream == "index" or stream == "draft" %}{% continue %}{% endif %}
-    <link rel="alternate" type="application/rss+xml" title="{{stream}}" href="{{stream | slugify}}.rss">
+    {%- set stream_slug = stream | slugify -%}
+    <link rel="alternate" type="application/rss+xml" title="{{stream_display_name(stream=stream)}}" href="{{url_for(path=stream_slug ~ '.rss')}}">
     {% endfor %}
     {%- for tag, _ in group(kind="tag") -%}
-    <link rel="alternate" type="application/rss+xml" title="tag: {{tag}}" href="tag-{{tag | slugify}}.rss">
+    {%- set tag_slug = tag | slugify -%}
+    <link rel="alternate" type="application/rss+xml" title="tag: {{tag}}" href="{{url_for(path='tag-' ~ tag_slug ~ '.rss')}}">
     {% endfor %}
     {%- for author, _ in group(kind="author") -%}
-    <link rel="alternate" type="application/rss+xml" title="author: {{author}}" href="author-{{author | slugify}}.rss">
+    {%- set author_slug = author | slugify -%}
+    <link rel="alternate" type="application/rss+xml" title="author: {{author}}" href="{{url_for(path='author-' ~ author_slug ~ '.rss')}}">
     {% endfor %}
     {%- for year, _ in group(kind="archive") -%}
-    <link rel="alternate" type="application/rss+xml" title="year: {{year}}" href="archive-{{year}}.rss">
+    <link rel="alternate" type="application/rss+xml" title="year: {{year}}" href="{{url_for(path='archive-' ~ year ~ '.rss')}}">
     {% endfor %}
 
     {% if site.json_feed %}
-    <link rel="alternate" type="application/feed+json" title="JSON index" href="index.json">
+    <link rel="alternate" type="application/feed+json" title="JSON index" href="{{url_for(path='index.json')}}">
     {% for stream, _ in group(kind="stream") -%}
     {% if stream == "index" or stream == "draft" %}{% continue %}{% endif %}
-    <link rel="alternate" type="application/feed+json" title="JSON {{stream}}" href="{{stream | slugify}}.json">
+    {% set stream_slug = stream | slugify %}
+    <link rel="alternate" type="application/feed+json" title="JSON {{stream_display_name(stream=stream)}}" href="{{url_for(path=stream_slug ~ '.json')}}">
     {% endfor %}
     {%- for tag, _ in group(kind="tag") -%}
-    <link rel="alternate" type="application/feed+json" title="JSON tag: {{tag}}" href="tag-{{tag | slugify}}.json">
+    {%- set tag_slug = tag | slugify -%}
+    <link rel="alternate" type="application/feed+json" title="JSON tag: {{tag}}" href="{{url_for(path='tag-' ~ tag_slug ~ '.json')}}">
     {% endfor %}
     {%- for author, _ in group(kind="author") -%}
-    <link rel="alternate" type="application/feed+json" title="JSON author: {{author}}" href="author-{{author | slugify}}.json">
+    {%- set author_slug = author | slugify -%}
+    <link rel="alternate" type="application/feed+json" title="JSON author: {{author}}" href="{{url_for(path='author-' ~ author_slug ~ '.json')}}">
     {% endfor %}
     {%- for year, _ in group(kind="archive") -%}
-    <link rel="alternate" type="application/feed+json" title="JSON year: {{year}}" href="archive-{{year}}.json">
+    <link rel="alternate" type="application/feed+json" title="JSON year: {{year}}" href="{{url_for(path='archive-' ~ year ~ '.json')}}">
     {% endfor %}
     {% endif %}
     {% endblock %}
@@ -96,7 +102,7 @@
                     </li>
                 </ul>
                 <button id="menu-toggle" class="hamburger">&#9776;</button>
-                
+
                 <ul class="header-menu" id="header-menu">
                     {% for item in menu %}
                       {% set name = item.0 %}
@@ -147,10 +153,10 @@
         {% endif %}
     </main>
     {%- block tail %}
-    <script src="./static/marmite.js"></script>
-    <script src="./static/custom.js"></script>
+    <script src="{{url_for(path='static/marmite.js')}}"></script>
+    <script src="{{url_for(path='static/custom.js')}}"></script>
     {% if site.enable_search %}
-    <script type="module" src="./static/search.js"></script>
+    <script type="module" src="{{url_for(path='static/search.js')}}"></script>
     {% endif %}
     {% if site.extra.colorscheme_toggle %}
     <script type="application/javascript" >
