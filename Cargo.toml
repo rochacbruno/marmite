@@ -32,7 +32,7 @@ lazy_static = "1.5.0"
 indexmap = { version = "2.10.0", features = ["serde"] }
 rss = "2.0.12"
 rayon = "1.10.0"
-ureq = "2.12"
+ureq = "3.0.12"
 
 [profile.release]
 codegen-units = 1
