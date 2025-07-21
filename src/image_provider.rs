@@ -63,7 +63,8 @@ fn download_picsum_image(
 
     if response.status() == 200 {
         let mut file = fs::File::create(&banner_file)?;
-        std::io::copy(&mut response.into_reader(), &mut file)?;
+        let mut body = response.into_body();
+        std::io::copy(&mut body.as_reader(), &mut file)?;
         info!("Downloaded banner image to: {}", banner_file.display());
     } else {
         warn!("Failed to download image: HTTP {}", response.status());
