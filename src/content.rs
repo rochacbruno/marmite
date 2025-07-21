@@ -2,7 +2,8 @@ use crate::cli::Cli;
 use crate::config::Marmite;
 use crate::image_provider;
 use crate::parser::{
-    append_references, get_html, get_links_to, get_table_of_contents_from_html, parse_front_matter,
+    append_references, get_html_with_options, get_links_to, get_table_of_contents_from_html,
+    parse_front_matter,
 };
 use crate::site::{get_content_folder, Data};
 use chrono::{NaiveDate, NaiveDateTime};
@@ -116,13 +117,18 @@ impl Content {
         let (title, markdown_without_title) = get_title(&frontmatter, raw_markdown);
 
         let is_fragment = path.file_name().unwrap().to_str().unwrap().starts_with('_');
+        let default_parser_options = crate::config::ParserOptions::default();
+        let parser_options = site
+            .markdown_parser
+            .as_ref()
+            .unwrap_or(&default_parser_options);
         let html = if is_fragment {
             let references_path = path.with_file_name("_references.md");
             let mut raw_markdown = raw_markdown.to_string();
             if path != references_path {
                 raw_markdown = append_references(&raw_markdown, &references_path);
             }
-            get_html(&raw_markdown)
+            get_html_with_options(&raw_markdown, parser_options)
         } else if fragments.is_some() {
             let mut markdown_without_title = markdown_without_title.to_string();
             if let Some(header) = fragments.and_then(|f| f.get("markdown_header")) {
@@ -134,9 +140,9 @@ impl Content {
             if let Some(references) = fragments.and_then(|f| f.get("references")) {
                 markdown_without_title.push_str(format!("\n\n{references}").as_str());
             }
-            get_html(&markdown_without_title)
+            get_html_with_options(&markdown_without_title, parser_options)
         } else {
-            get_html(&markdown_without_title)
+            get_html_with_options(&markdown_without_title, parser_options)
         };
 
         let description = get_description(&frontmatter);

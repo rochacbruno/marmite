@@ -306,6 +306,10 @@ and internal content by title like
 
 ```
 
+> [!NOTE]
+> If you want to use Obsidian links with display text like in `[[link|display text]]` check
+> how the options `wikilinks_title_before_pipe` and `wikilinks_title_after_pipe` on [[Configurable Markdown Parser Options]]
+
 ### Back-links
 
 Every time you link to another page or post

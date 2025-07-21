@@ -312,7 +312,12 @@ fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
 
 /// Collect global fragments of markdown, process them and insert into the global context
 /// these are dynamic parts of text that will be processed by Tera
-fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, tera: &Tera) {
+fn collect_global_fragments(
+    content_dir: &Path,
+    global_context: &mut Context,
+    tera: &Tera,
+    site_config: &Marmite,
+) {
     let fragments = [
         "announce", "header", "hero", "sidebar", "footer", "comments", "htmlhead", "htmltail",
     ]
@@ -332,7 +337,13 @@ fn collect_global_fragments(content_dir: &Path, global_context: &mut Context, te
             .clone()
             .render_str(&fragment_content, global_context)
             .unwrap();
-        let fragment_content = crate::parser::get_html(&rendered_fragment);
+        let default_parser_options = crate::config::ParserOptions::default();
+        let parser_options = site_config
+            .markdown_parser
+            .as_ref()
+            .unwrap_or(&default_parser_options);
+        let fragment_content =
+            crate::parser::get_html_with_options(&rendered_fragment, parser_options);
         // global_context.insert((*fragment).to_string(), &fragment_content);
         debug!("{} fragment {}", fragment, &fragment_content);
         ((*fragment).to_string(), fragment_content)
@@ -585,7 +596,7 @@ fn render_templates(
     global_context.insert("menu", &site_data.site.menu);
     global_context.insert("language", &site_data.site.language);
     debug!("Global Context site: {:?}", &site_data.site);
-    collect_global_fragments(content_dir, &mut global_context, tera);
+    collect_global_fragments(content_dir, &mut global_context, tera, &site_data.site);
 
     handle_stream_pages(&site_data, &global_context, tera, output_dir)?;
     // If site_data.stream.map does not contain the index stream
