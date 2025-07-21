@@ -2,5 +2,5 @@
 {% set author = site.authors[name] %}
 <img src="{{ author.avatar }}" alt="{{ author.name }}" class="avatar u-photo">
 {% else %}
-<img src="static/avatar-placeholder.png" alt="{{ name }}" class="avatar u-photo">
+<img src="{{url_for(path='static/avatar-placeholder.png')}}" alt="{{ name }}" class="avatar u-photo">
 {% endif %}

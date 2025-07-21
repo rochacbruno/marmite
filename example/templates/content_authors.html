@@ -14,7 +14,7 @@
             {# handle the case when author is defined on content but not on config #}
             <li class="h-card p-author">
                 <a class="secondary u-url" href="author-{{username}}.html">
-                    <img src="static/avatar-placeholder.png" alt="{{ username }}" class="avatar u-photo">
+                    <img src="{{url_for(path='static/avatar-placeholder.png')}}" alt="{{ username }}" class="avatar u-photo">
                     <span class="p-name">{{ username }}</span>
                 </a>
             </li>
