@@ -9,6 +9,7 @@ mod content;
 mod embedded;
 mod feed;
 mod image_provider;
+mod linkcheck;
 mod parser;
 mod server;
 mod site;
@@ -20,14 +21,16 @@ fn main() {
     let args = cli::Cli::parse();
     let cloned_args = Arc::new(args.clone()); // Clone to pass to the server thread
     let input_folder = Arc::new(args.input_folder);
-    let serve = args.serve;
+    let serve = args.serve || args.check_links; // check_links implies serve
     let watch = args.watch;
     let bind_address: &str = args.bind.as_str();
+    let check_links = args.check_links;
     let mut verbose = args.verbose; // -v info, -vv debug
 
     if verbose == 0
         && (args.watch
             || args.serve
+            || args.check_links
             || args.start_theme
             || args.init_templates
             || args.generate_config
@@ -101,7 +104,45 @@ fn main() {
         &cloned_args,
     );
 
-    if serve && !watch {
+    // If check_links is enabled, start the server first, then check links
+    if check_links {
+        info!("Starting temporary HTTP server for link checking...");
+        let server_handle = std::thread::spawn({
+            let output_folder = Arc::clone(&output_folder);
+            let bind_address = bind_address.to_string();
+            move || {
+                server::start(&bind_address, &output_folder);
+            }
+        });
+
+        // Give the server a moment to start
+        std::thread::sleep(std::time::Duration::from_millis(1000));
+
+        // Construct base URL from bind address
+        let base_url = if bind_address.starts_with("0.0.0.0:") {
+            format!(
+                "http://127.0.0.1:{}",
+                bind_address.split(':').nth(1).unwrap_or("8000")
+            )
+        } else {
+            format!("http://{}", bind_address)
+        };
+
+        // Check links
+        if let Err(e) = linkcheck::check_links(&output_folder, &base_url) {
+            error!("Link checking failed: {}", e);
+            std::process::exit(1);
+        }
+
+        // If we're not in watch mode, we can exit after checking
+        if !watch {
+            info!("Link checking complete. Shutting down.");
+            std::process::exit(0);
+        }
+
+        // In watch mode, let the server continue running
+        server_handle.join().unwrap();
+    } else if serve && !watch {
         info!("Starting built-in HTTP server...");
         server::start(bind_address, &Arc::clone(&output_folder));
     }

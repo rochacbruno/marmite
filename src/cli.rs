@@ -63,6 +63,11 @@ pub struct Cli {
     #[arg(long)]
     pub force: bool,
 
+    /// Check all links in the generated website using Lychee
+    /// This option automatically enables --serve to allow internal link checking
+    #[arg(long)]
+    pub check_links: bool,
+
     /// Create a new markdown file in the input folder
     #[command(flatten)]
     pub create: Create,

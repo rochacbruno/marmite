@@ -217,6 +217,50 @@ image_provider: picsum
 
 Read more in the [[Automatic Image Download]] guide.
 
+## Link Checking
+
+Marmite includes built-in link checking functionality using [Lychee](https://lychee.cli.rs/),
+which helps ensure all links in your generated website are valid.
+
+### Enable link checking
+
+Use `--check-links` to check all links after building your site:
+
+```console
+$ marmite myblog output/ --check-links
+Site generated at: output/
+Starting temporary HTTP server for link checking...
+Starting link checking with Lychee...
+Link checking completed successfully!
+```
+
+This will:
+1. Build your static site 
+2. Start a temporary HTTP server (automatically enables `--serve`)
+3. Scan all HTML files for links using Lychee
+4. Check each link for validity
+5. Report any broken links and exit with error code if found
+
+### Requirements
+
+Link checking requires the Lychee binary to be installed:
+
+```console
+$ cargo install lychee
+```
+
+If Lychee is not available, Marmite will display a warning and skip link checking.
+
+### CI/CD Integration
+
+Perfect for automated deployments - the command exits with status code 1 if broken links are found:
+
+```console
+$ marmite myblog dist/ --check-links
+# Exit code 0: All links valid
+# Exit code 1: Broken links found
+```
+
 ## Markdown Source Publishing
 
 Marmite can publish the original markdown source files alongside your HTML content,
@@ -292,6 +336,9 @@ Options:
           Init a new site with sample content and default configuration this will overwrite existing files
           usually you don't need to run this because Marmite can generate a site from any folder with
           markdown files
+      --check-links
+          Check all links in the generated website using Lychee This option automatically enables
+          --serve to allow internal link checking
       --new <NEW>
           Create a new post with the given title and open in the default editor
   -e
