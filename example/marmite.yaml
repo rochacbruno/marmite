@@ -1,3 +1,4 @@
+# READ --> https://rochacbruno.github.io/marmite/configuration-reference.html
 name: My Blog
 # tagline: This blog is awesome
 url: https://www.myblog.com/blog/
@@ -92,3 +93,27 @@ extra:
 #         crossorigin="anonymous"
 #         async>
 #         </script>
+
+# markdown_parser:
+#   render:
+#     unsafe: true                   # Allow/disallow unsafe HTML (default: true)
+#     ignore_empty_links: true        # Ignore empty link references (default: true)
+#     figure_with_caption: true       # Wrap images in figure tags (default: true)
+#   parse:
+#     relaxed_tasklist_matching: true # Allow relaxed task list syntax (default: true)
+#   extension:
+#     tagfilter: false               # Enable/disable tag filtering (default: false)
+#     strikethrough: true            # Enable/disable ~~strikethrough~~ (default: true)
+#     table: true                    # Enable/disable table support (default: true)
+#     autolink: true                 # Enable/disable automatic link detection (default: true)
+#     tasklist: true                 # Enable/disable task lists (default: true)
+#     footnotes: true                # Enable/disable footnote support (default: true)
+#     description_lists: true        # Enable/disable description lists (default: true)
+#     multiline_block_quotes: true   # Enable/disable multiline block quotes (default: true)
+#     underline: true                # Enable/disable __underline__ syntax (default: true)
+#     spoiler: true                  # Enable/disable spoiler text (default: true)
+#     greentext: true                # Enable/disable greentext (default: true)
+#     shortcodes: true               # Enable/disable shortcodes (default: true)
+#     wikilinks_title_before_pipe: true # Wiki-style links with title before pipe (default: true)
+#     wikilinks_title_after_pipe: false # Wiki-style links with title after pipe (default: false)
+#     alerts: true                   # Enable/disable alert blocks (default: true)

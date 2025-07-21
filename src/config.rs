@@ -13,6 +13,7 @@ pub enum ImageProvider {
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct RenderOptions {
+    #[serde(rename = "unsafe")]
     #[serde(default = "default_render_unsafe")]
     pub unsafe_: bool,
     #[serde(default = "default_render_ignore_empty_links")]

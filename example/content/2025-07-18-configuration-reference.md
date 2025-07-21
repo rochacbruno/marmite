@@ -335,4 +335,10 @@ marmite . output/ --config prod.yaml
 marmite . output/ --config test.yaml
 ```
 
+## Markdown parser options 
+
+Marmite also allows customizing the markdown parser, the options are described on [[Configurable Markdown Parser Options]]
+
+----
+
 This comprehensive reference covers all available configuration options. Mix and match these settings to customize your Marmite site exactly as you need it.
