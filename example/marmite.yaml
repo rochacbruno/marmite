@@ -3,7 +3,7 @@ name: My Blog
 # tagline: This blog is awesome
 url: https://www.myblog.com/blog/
 # footer: This is an example site generated with Marmite
-pagination: 5
+pagination: 10
 toc: true
 json_feed: true
 # tags_title: Tags
@@ -55,6 +55,17 @@ authors:
     avatar: https://github.com/karlamagueta.png
     links:
       - ["Github", "https://github.com/karlamagueta"]
+
+# Stream display name mappings
+streams:
+  alt:
+    display_name: "Alternative Stream"
+  # tutorial:
+  #   display_name: "Python Tutorial"
+  # news:
+  #   display_name: "Latest News" 
+  # guide:
+  #   display_name: "User Guides"
 
 # Markdown source publishing
 publish_md: true

@@ -77,6 +77,11 @@
       <div class="date-tags-container">
         <div class="content-date">
           {% include "content_date.html" ignore missing %}
+          {% if content.stream and content.stream != "index" %}
+          <div class="content-stream">
+            <small><a href="./{{ content.stream | trim | slugify }}.html">{{ stream_display_name(stream=content.stream) }}</a></small>
+          </div>
+          {% endif %}
         </div>
 
         <ul class="content-tags">

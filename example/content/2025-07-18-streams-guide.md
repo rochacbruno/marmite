@@ -44,28 +44,52 @@ tags: beginner, guide
 ---
 ```
 
-<!--
-TODO: Implement file based streams
 ### Via Filename
 
-You can also specify streams in content organization:
+You can also specify streams using filename patterns:
 
 ```
 content/
 ├── tutorial-2024-01-01-getting-started.md  # goes to "tutorial" stream
-└── tutorial-2024-01-15-advanced-tips.md  # goes to "tutorial" stream
-├── news-2024-01-10-site-update.md  # goes to "news" stream
-└── news-2024-01-20-new-features.md  # goes to "news" stream
-└── 2024-01-05-general-post.md  # goes to "index" stream
+├── tutorial-2024-01-15-advanced-tips.md    # goes to "tutorial" stream  
+├── news-2024-01-10-site-update.md          # goes to "news" stream
+├── news-2024-01-20-new-features.md         # goes to "news" stream
+├── guide-S-comprehensive-guide.md          # goes to "guide" stream (page)
+└── 2024-01-05-general-post.md              # goes to "index" stream
 ```
 
--->
+**Filename patterns:**
+- `{stream}-{date}-{slug}.md` - For posts with dates
+- `{stream}-S-{slug}.md` - For pages without dates (S-pattern)
+
+For more details, see [[Filename-Based Streams: Organize Content with File Naming]].
 
 ## Stream Configuration
 
+### Stream Display Names
+
+Configure friendly display names for your streams in `marmite.yaml`:
+
+```yaml
+streams:
+  tutorial:
+    display_name: "Python Tutorials"
+  news:
+    display_name: "Latest News" 
+  guide:
+    display_name: "User Guides"
+  review:
+    display_name: "Product Reviews"
+```
+
+Use the `stream_display_name` template function to show these friendly names:
+```html
+{{ stream_display_name(stream=content.stream) }}
+```
+
 ### Stream Titles
 
-Configure stream titles in `marmite.yaml`:
+Configure section titles in `marmite.yaml`:
 
 ```yaml
 streams_title: "Content Streams"
@@ -139,8 +163,8 @@ Templates have access to stream information:
 ```html
 {% if content.stream %}
 <div class="stream-info">
-  <span class="stream-name">{{ content.stream }}</span>
-  <a href="{{ content.stream }}.html">View all {{ content.stream }} posts</a>
+  <span class="stream-name">{{ stream_display_name(stream=content.stream) }}</span>
+  <a href="{{ content.stream }}.html">View all {{ stream_display_name(stream=content.stream) }} posts</a>
 </div>
 {% endif %}
 ```
@@ -208,6 +232,15 @@ If you're migrating from a tag-based system:
 Complete stream setup in `marmite.yaml`:
 
 ```yaml
+# Stream display names
+streams:
+  tutorials:
+    display_name: "Tutorial Series"
+  reviews:
+    display_name: "Product Reviews"
+  news:
+    display_name: "Latest News"
+
 # Stream configuration
 streams_title: "Content Categories"
 streams_content_title: "All posts in '$stream'"

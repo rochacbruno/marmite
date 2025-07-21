@@ -63,6 +63,35 @@ authors:
       - ["LinkedIn", "https://linkedin.com/in/janesmith"]
 ```
 
+### Streams Configuration
+
+Configure content streams with friendly display names:
+
+```yaml
+streams:
+  tutorial:
+    display_name: "Python Tutorials"
+  
+  guide:
+    display_name: "User Guides"
+  
+  news:
+    display_name: "Latest News"
+  
+  review:
+    display_name: "Product Reviews"
+```
+
+Streams help organize content beyond tags and create focused RSS feeds. Posts can be assigned to streams via:
+- Frontmatter: `stream: tutorial`  
+- Filename patterns: `tutorial-2024-01-01-post-title.md`
+- S-pattern for pages: `guide-S-comprehensive-guide.md`
+
+Use the `stream_display_name` template function to show friendly names:
+```html
+{{ stream_display_name(stream=content.stream) }}
+```
+
 ### Navigation Menu
 ```yaml
 menu:
@@ -263,6 +292,15 @@ authors:
       - ["Website", "https://alexjohnson.dev"]
       - ["Twitter", "https://twitter.com/alexjohnson"]
       - ["GitHub", "https://github.com/alexjohnson"]
+
+# Streams
+streams:
+  tutorial:
+    display_name: "Tutorials"
+  review:
+    display_name: "Product Reviews"
+  tip:
+    display_name: "Quick Tips"
 
 # Navigation
 menu:

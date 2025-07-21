@@ -151,3 +151,27 @@ impl Function for SourceLink {
         to_value("").map_err(tera::Error::from)
     }
 }
+
+/// Tera template function that returns the display name for a stream
+/// It takes a `stream` argument and returns the configured display name
+/// If no display name is configured, returns the stream name itself
+pub struct StreamDisplayName {
+    pub site_data: Data,
+}
+
+impl Function for StreamDisplayName {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let stream_name = args
+            .get("stream")
+            .and_then(Value::as_str)
+            .ok_or_else(|| tera::Error::msg("Missing `stream` argument"))?;
+
+        // Check if there's a configured display name for this stream
+        if let Some(stream_config) = self.site_data.site.streams.get(stream_name) {
+            to_value(&stream_config.display_name).map_err(tera::Error::from)
+        } else {
+            // Return the stream name itself if no display name is configured
+            to_value(stream_name).map_err(tera::Error::from)
+        }
+    }
+}
