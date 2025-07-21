@@ -7,7 +7,7 @@
             <h1 class="p-name" style="display: none;">{{ title }}</h1>
             {% for name, items in group(kind=kind) -%}
             <details {%if loop.index == 1%}open{%endif%}>
-                <summary role="button" class="outline contrast {{kind}}-group-title">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{{name}} <sup>{{items | length}}</sup></summary>
+                <summary role="button" class="outline contrast {{kind}}-group-title">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% else %}{{name}}{% endif %} <sup>{{items | length}}</sup></summary>
                 <ul>
                 {% for item in items | slice(end=10) %}
                     <li class="h-entry">

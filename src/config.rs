@@ -210,6 +210,9 @@ pub struct Marmite {
     pub authors: HashMap<String, Author>,
 
     #[serde(default)]
+    pub streams: HashMap<String, StreamConfig>,
+
+    #[serde(default)]
     pub toc: bool,
 
     #[serde(default)]
@@ -345,6 +348,11 @@ pub struct Author {
     pub avatar: Option<String>,
     pub bio: Option<String>,
     pub links: Option<Vec<(String, String)>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct StreamConfig {
+    pub display_name: String,
 }
 
 /// Generates a default configuration file

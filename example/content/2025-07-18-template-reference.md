@@ -173,7 +173,7 @@ Access grouped content:
 
 <!-- Get all streams -->
 {% for stream_name, stream_posts in group(kind="stream") %}
-  <h3>{{ stream_name }}</h3>
+  <h3>{{ stream_display_name(stream=stream_name) }}</h3>
   <ul>
     {% for post in stream_posts %}
       <li><a href="{{ post.slug }}.html">{{ post.title }}</a></li>
@@ -187,6 +187,40 @@ Access grouped content:
   <p>{{ year_posts | length }} posts</p>
 {% endfor %}
 ```
+
+### stream_display_name()
+Get friendly display names for streams:
+
+```html
+<!-- Show display name for current content's stream -->
+{% if content.stream %}
+  <span class="stream-name">{{ stream_display_name(stream=content.stream) }}</span>
+{% endif %}
+
+<!-- Use in stream listing -->
+{% for stream_name, stream_posts in group(kind="stream") %}
+  <h3>{{ stream_display_name(stream=stream_name) }}</h3>
+  <p>{{ stream_posts | length }} posts in {{ stream_display_name(stream=stream_name) }}</p>
+{% endfor %}
+
+<!-- Link to stream page with friendly name -->
+<a href="{{ content.stream }}.html">
+  View all {{ stream_display_name(stream=content.stream) }} posts
+</a>
+```
+
+**Configuration:**
+```yaml
+streams:
+  tutorial:
+    display_name: "Python Tutorials"
+  news:
+    display_name: "Latest News"
+  guide:
+    display_name: "User Guides"
+```
+
+If no display name is configured, returns the stream name itself.
 
 ### source_link()
 Generate source file links:

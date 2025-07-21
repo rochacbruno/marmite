@@ -1,7 +1,7 @@
 name: Marmite
 tagline: Static Site Generator
 url: https://rochacbruno.github.io/marmite
-pagination: 5
+pagination: 10
 enable_search: true
 toc: true
 json_feed: true

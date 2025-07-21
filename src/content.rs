@@ -178,8 +178,10 @@ impl Content {
         };
 
         let stream = if date.is_some() {
-            get_stream(&frontmatter)
+            // For posts with dates, determine stream from frontmatter or filename patterns
+            Some(determine_stream(&frontmatter, path))
         } else {
+            // For pages without dates, stream is None (pages don't have streams)
             None
         };
 
@@ -388,12 +390,11 @@ pub fn get_comments(frontmatter: &Frontmatter) -> Option<bool> {
 
 /// Try to get the slug from the frontmatter
 /// If not found, get the title from the frontmatter
-/// If not found, get the filename without the date
-/// If a date is found in the filename, remove it from the slug
+/// If not found, get the filename without the date and stream prefix
 /// If a stream is not the default `index`, prepend it to the slug
 /// return the slug
 pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
-    let stream = get_stream(frontmatter).unwrap();
+    let stream = determine_stream(frontmatter, path);
     let mut final_slug: String;
 
     if let Some(slug) = frontmatter.get("slug") {
@@ -406,7 +407,7 @@ pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
             .and_then(|stem| stem.to_str())
             .unwrap()
             .to_string();
-        final_slug = remove_date_from_filename(&final_slug);
+        final_slug = remove_stream_and_date_from_filename(&final_slug);
     }
 
     if stream != "index" {
@@ -414,6 +415,22 @@ pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
     }
 
     final_slug
+}
+
+/// Determine stream from frontmatter or filename
+fn determine_stream(frontmatter: &Frontmatter, path: &Path) -> String {
+    // First try frontmatter
+    if let Some(stream) = frontmatter.get("stream") {
+        return stream.as_str().unwrap().trim_matches('"').to_string();
+    }
+
+    // Then try filename patterns
+    if let Some(filename_stream) = get_stream_from_filename(path) {
+        return filename_stream;
+    }
+
+    // Default
+    "index".to_string()
 }
 
 // Remove date prefix from filename `2024-01-01-myfile.md` -> `myfile.md`
@@ -424,14 +441,71 @@ fn remove_date_from_filename(filename: &str) -> String {
     date_prefix_re.replace(filename, "").to_string()
 }
 
-/// Capture `stream` from frontmatter
-/// If not defined return "index" as default
-#[allow(clippy::unnecessary_wraps)]
-pub fn get_stream(frontmatter: &Frontmatter) -> Option<String> {
-    if let Some(stream) = frontmatter.get("stream") {
-        return Some(stream.as_str().unwrap().trim_matches('"').to_string());
+// Remove stream and date prefix from filename
+// Handles patterns: `stream-2024-01-01-myfile.md` -> `myfile` and `stream-S-myfile.md` -> `myfile`
+fn remove_stream_and_date_from_filename(filename: &str) -> String {
+    // Pattern 1: stream-date-slug -> slug (handle time components too)
+    let stream_date_pattern = Regex::new(
+        r"^[a-zA-Z0-9]+-\d{4}-\d{2}-\d{2}(?:[-T]\d{2}(?:[:-]\d{2})?(?:[:-]\d{2})?)?-(.+)$",
+    )
+    .unwrap();
+    if let Some(captures) = stream_date_pattern.captures(filename) {
+        if let Some(slug_match) = captures.get(1) {
+            return slug_match.as_str().to_string();
+        }
     }
-    Some("index".to_string())
+
+    // Pattern 2: stream-S-slug -> slug
+    let stream_s_pattern = Regex::new(r"^[a-zA-Z0-9]+-S-(.+)$").unwrap();
+    if let Some(captures) = stream_s_pattern.captures(filename) {
+        if let Some(slug_match) = captures.get(1) {
+            return slug_match.as_str().to_string();
+        }
+    }
+
+    // Fallback: remove date prefix only
+    remove_date_from_filename(filename)
+}
+
+/// Extract stream from filename using patterns
+/// Returns None if no stream pattern is detected
+pub fn get_stream_from_filename(path: &Path) -> Option<String> {
+    if let Some(filename) = path.file_stem().and_then(|stem| stem.to_str()) {
+        // Pattern 1: {stream}-{date}-{slug} (single word before date)
+        if let Some(stream) = extract_stream_from_date_pattern(filename) {
+            return Some(stream);
+        }
+
+        // Pattern 2: {stream}-S-{slug} (single word before 'S' marker)
+        if let Some(stream) = extract_stream_from_s_pattern(filename) {
+            return Some(stream);
+        }
+    }
+    None
+}
+
+/// Extract stream from filename pattern: {stream}-{date}-{slug}
+/// Only accepts single word before date (no hyphens allowed in stream name)
+fn extract_stream_from_date_pattern(filename: &str) -> Option<String> {
+    let date_pattern = Regex::new(r"^([a-zA-Z0-9]+)-(\d{4}-\d{2}-\d{2})").unwrap();
+    if let Some(captures) = date_pattern.captures(filename) {
+        if let Some(stream_match) = captures.get(1) {
+            return Some(stream_match.as_str().to_string());
+        }
+    }
+    None
+}
+
+/// Extract stream from filename pattern: {stream}-S-{slug}
+/// Only accepts single word before 'S' marker
+fn extract_stream_from_s_pattern(filename: &str) -> Option<String> {
+    let s_pattern = Regex::new(r"^([a-zA-Z0-9]+)-S-").unwrap();
+    if let Some(captures) = s_pattern.captures(filename) {
+        if let Some(stream_match) = captures.get(1) {
+            return Some(stream_match.as_str().to_string());
+        }
+    }
+    None
 }
 
 pub fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
@@ -529,10 +603,25 @@ fn try_to_parse_date(input: &str) -> Result<NaiveDateTime, chrono::ParseError> {
 }
 
 /// Use regex to extract date from filename `2024-01-01-myfile.md` or `2024-01-01-15-30-myfile.md`
+/// Also handles stream prefixes like `news-2024-01-15-site-update.md`
 fn extract_date_from_filename(path: &Path) -> Option<NaiveDateTime> {
     if let Some(filename) = path.file_stem().and_then(|stem| stem.to_str()) {
+        // First try direct date parsing (existing behavior for backward compatibility)
         if let Ok(date) = try_to_parse_date(filename) {
             return Some(date);
+        }
+
+        // Try to extract date from stream-date-slug pattern
+        let stream_date_pattern = Regex::new(
+            r"^[a-zA-Z0-9]+-(\d{4}-\d{2}-\d{2}(?:[-T]\d{2}(?:[:-]\d{2})?(?:[:-]\d{2})?)?)",
+        )
+        .unwrap();
+        if let Some(captures) = stream_date_pattern.captures(filename) {
+            if let Some(date_match) = captures.get(1) {
+                if let Ok(date) = try_to_parse_date(date_match.as_str()) {
+                    return Some(date);
+                }
+            }
         }
     }
     None
@@ -687,6 +776,54 @@ fn get_banner_image(frontmatter: &Frontmatter, path: &Path, slug: &str) -> Optio
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_extract_stream_from_date_pattern() {
+        assert_eq!(
+            extract_stream_from_date_pattern("tutorial-2024-01-01-getting-started"),
+            Some("tutorial".to_string())
+        );
+        assert_eq!(
+            extract_stream_from_date_pattern("news-2024-01-15-site-update"),
+            Some("news".to_string())
+        );
+        assert_eq!(
+            extract_stream_from_date_pattern("2024-01-01-no-stream"),
+            None
+        );
+        assert_eq!(extract_stream_from_date_pattern("invalid-format"), None);
+    }
+
+    #[test]
+    fn test_extract_stream_from_s_pattern() {
+        assert_eq!(
+            extract_stream_from_s_pattern("guide-S-my-comprehensive-guide"),
+            Some("guide".to_string())
+        );
+        assert_eq!(
+            extract_stream_from_s_pattern("tutorial-S-advanced-tips"),
+            Some("tutorial".to_string())
+        );
+        assert_eq!(extract_stream_from_s_pattern("no-s-pattern-here"), None);
+    }
+
+    #[test]
+    fn test_get_stream_from_filename() {
+        use std::path::Path;
+
+        assert_eq!(
+            get_stream_from_filename(Path::new("tutorial-2024-01-01-getting-started.md")),
+            Some("tutorial".to_string())
+        );
+        assert_eq!(
+            get_stream_from_filename(Path::new("guide-S-my-guide.md")),
+            Some("guide".to_string())
+        );
+        assert_eq!(
+            get_stream_from_filename(Path::new("2024-01-01-no-stream.md")),
+            None
+        );
+    }
 
     #[test]
     fn test_get_title_from_frontmatter() {
@@ -1067,6 +1204,38 @@ Second Title
                 .and_hms_opt(0, 0, 0)
                 .unwrap()
         );
+    }
+
+    #[test]
+    fn test_extract_date_from_filename_with_stream_prefix() {
+        let path = Path::new("news-2024-01-15-site-update.md");
+        let date = extract_date_from_filename(path).unwrap();
+        assert_eq!(
+            date,
+            NaiveDate::from_ymd_opt(2024, 1, 15)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_extract_date_from_filename_with_stream_prefix_various() {
+        let test_cases = vec![
+            ("tutorial-2024-01-01-getting-started.md", (2024, 1, 1)),
+            ("news-2024-01-15-site-update.md", (2024, 1, 15)),
+            ("test-2024-01-01-simple-test.md", (2024, 1, 1)),
+        ];
+
+        for (filename, (year, month, day)) in test_cases {
+            let path = Path::new(filename);
+            let date = extract_date_from_filename(path).unwrap();
+            let expected = NaiveDate::from_ymd_opt(year, month, day)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap();
+            assert_eq!(date, expected, "Failed for filename: {filename}");
+        }
     }
 
     #[test]
