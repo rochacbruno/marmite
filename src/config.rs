@@ -370,6 +370,9 @@ impl Marmite {
                 }
             }
         }
+        if let Some(theme) = &cli_args.configuration.theme {
+            self.theme = Some(theme.clone());
+        }
     }
 }
 

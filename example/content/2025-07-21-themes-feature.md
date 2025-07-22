@@ -56,16 +56,36 @@ This creates a clean, minimal theme from the embedded theme template with:
 
 ## Using a Theme
 
-To use a theme, add it to your `marmite.yaml` configuration:
+There are two ways to specify which theme to use:
+
+### 1. Configuration File
+
+Add the theme to your `marmite.yaml` configuration:
 
 ```yaml
 theme: mytheme
 ```
 
-When a theme is set, Marmite will:
+### 2. CLI Option
+
+Use the `--theme` option to override the configuration:
+
+```bash
+marmite /path/to/site /path/to/output --theme mytheme
+```
+
+This CLI option is useful for:
+- **Testing themes** without modifying configuration
+- **Building with different themes** for different environments
+- **Overriding** the theme specified in configuration
+- **Automated builds** with different themes
+
+When a theme is set (either via config or CLI), Marmite will:
 - Look for templates in `mytheme/templates/` instead of `templates/`
 - Copy static files from `mytheme/static/` instead of `static/`
 - Fall back to embedded templates if theme files are missing
+
+> **Note**: The CLI `--theme` option takes precedence over the configuration file setting.
 
 ## Default Behavior
 
@@ -180,14 +200,19 @@ marmite /path/to/my-blog --init-site
 # Create a custom theme
 marmite /path/to/my-blog --start-theme mybrand
 
-# Edit the theme configuration
+# Option 1: Set theme in configuration
 echo "theme: mybrand" >> /path/to/my-blog/marmite.yaml
+marmite /path/to/my-blog ./output
+
+# Option 2: Use CLI to override theme (useful for testing)
+marmite /path/to/my-blog ./output --theme mybrand
+
+# Option 3: Test different themes without changing config
+marmite /path/to/my-blog ./output-clean --theme clean
+marmite /path/to/my-blog ./output-dark --theme dark-mode
 
 # Customize the theme
 editor /path/to/my-blog/mybrand/static/style.css
-
-# Generate the site with your theme
-marmite /path/to/my-blog ./output
 ```
 
 ## Technical Implementation

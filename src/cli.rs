@@ -183,4 +183,8 @@ pub struct Configuration {
     /// Available providers: picsum
     #[arg(long)]
     pub image_provider: Option<String>,
+
+    /// Theme to use for the site [default: from config file or embedded templates]
+    #[arg(long)]
+    pub theme: Option<String>,
 }

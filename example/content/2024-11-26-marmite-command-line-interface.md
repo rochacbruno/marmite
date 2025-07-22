@@ -148,12 +148,38 @@ Read more on [[Customizing Templates]]
 However, if you want to start a new theme to fully customize you can use the `--start-theme` argument.
 
 ```console
-$ marmite myblog /tmp/mysite --start-theme 
-Generated myblog/templates/*
-Generated myblog/static/*
+$ marmite myblog --start-theme mytheme
+Generated myblog/mytheme/templates/*
+Generated myblog/mytheme/static/*
+Generated myblog/mytheme/theme.json
+Generated myblog/mytheme/theme.md
 ```
 
-Now you can freely edit the static files and templates.
+This creates a complete theme directory with templates, static assets, and documentation.
+
+### Using a theme
+
+Once you have created or obtained a theme, you can use it in several ways:
+
+#### 1. Configure in marmite.yaml
+
+Add the theme name to your configuration file:
+
+```yaml
+theme: mytheme
+```
+
+#### 2. Use CLI option (override config)
+
+Use the `--theme` option to specify a theme for a single build, overriding any theme set in the config:
+
+```console
+$ marmite myblog output/ --theme mytheme
+```
+
+This is useful for testing different themes or building with different themes without modifying your config file.
+
+Now you can freely edit the theme files in the theme directory.
 
 ## Generate configuration
 
@@ -339,6 +365,8 @@ Options:
       --image-provider <IMAGE_PROVIDER>
           Image provider for automatic banner image download [default: None or from config file]
           Available providers: picsum
+      --theme <THEME>
+          Theme to use for the site [default: from config file or embedded templates]
   -h, --help
           Print help
   -V, --version
