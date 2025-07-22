@@ -25,7 +25,9 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{site.name}}">
     {% endblock %}
-
+    {% if site.extra.fediverse_verification %}
+    <link rel="me" href="{{site.extra.fediverse_verification}}">
+    {% endif %}
     <!-- RSS Feeds -->
     <!-- Auto-generated RSS feeds for your content -->
     {% block feeds %}

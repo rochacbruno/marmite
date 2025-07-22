@@ -44,13 +44,15 @@ To create a new theme, use the `--start-theme` command:
 marmite /path/to/site --start-theme mytheme
 ```
 
-This creates a clean, minimal theme with:
+This creates a clean, minimal theme from the embedded theme template with:
 - Responsive design
-- Dark mode support
-- Clean typography  
+- Dark mode support with automatic system preference detection
+- Clean typography using system fonts
 - Search functionality (when enabled)
-- SEO optimization
-- Documentation and examples
+- SEO optimization with OpenGraph meta tags
+- Comprehensive documentation and examples
+- Font files (Atkinson Hyperlegible for accessibility)
+- Essential assets (favicon, logo, robots.txt)
 
 ## Using a Theme
 
@@ -72,9 +74,9 @@ If no theme is specified (or `theme: null`), Marmite works as before:
 - Static files are copied from `static/`
 - This maintains backward compatibility with existing sites
 
-## Theme Templates
+## Embedded Theme Template
 
-The generated theme includes comprehensive templates with extensive documentation:
+Marmite now includes an embedded theme template that provides a complete, production-ready starting point. The generated theme includes comprehensive templates with extensive documentation:
 
 ### base.html
 The main layout template with:
@@ -108,17 +110,26 @@ Category/tag/archive listings with:
 ## Theme Assets
 
 ### CSS (style.css)
-- Modern CSS with custom properties
-- Responsive design
-- Dark mode support
-- Clean typography
-- Minimal dependencies
+- Modern CSS with custom properties (CSS variables)
+- Responsive design with mobile-first approach
+- Dark mode support with automatic system preference detection
+- Clean typography using system fonts for fast loading
+- Minimal dependencies - no external CSS frameworks required
 
 ### JavaScript (script.js)
-- Search functionality
-- Smooth scrolling
-- External link handling
+- Search overlay functionality
+- Smooth scrolling for anchor links
+- External link indicators
 - Mobile-friendly interactions
+- Minimal and performant
+
+### Additional Assets
+- **Atkinson-Hyperlegible-Regular-102.woff**: Accessible web font
+- **avatar-placeholder.png**: Default avatar for authors
+- **favicon.ico**: Site favicon
+- **logo.png**: Default site logo
+- **search.js**: Search functionality (from Marmite core)
+- **robots.txt**: SEO robots file
 
 ## Customizing Themes
 
@@ -133,15 +144,17 @@ Themes are designed to be customizable:
 
 ### For Site Owners
 - **Easy customization** - Change your site's entire look with one config change
-- **Professional designs** - Start with clean, well-designed templates
+- **Professional designs** - Start with clean, well-designed embedded templates
 - **Maintainable** - Keep content separate from design
 - **Future-proof** - Themes can be updated independently
+- **No external dependencies** - Everything needed is embedded in Marmite
 
 ### For Theme Creators
 - **Reusable** - One theme can be used by multiple sites
-- **Documented** - Built-in documentation and metadata
+- **Documented** - Built-in documentation and metadata (theme.json, theme.md)
 - **Flexible** - Support for various content types and layouts
 - **Shareable** - Easy to package and distribute
+- **Complete template** - Start from a production-ready base
 
 ## Best Practices
 
@@ -177,6 +190,25 @@ editor /path/to/my-blog/mybrand/static/style.css
 marmite /path/to/my-blog ./output
 ```
 
+## Technical Implementation
+
+### Embedded Theme Template
+
+As of version 0.2.6+, Marmite includes an **embedded theme template** that is compiled directly into the binary. This means:
+
+- **No external dependencies** - The theme template is always available
+- **Consistent experience** - Same starting template across all installations  
+- **Faster theme creation** - No need to locate template files on disk
+- **Version compatibility** - Template matches the Marmite version exactly
+
+When you run `--start-theme`, Marmite extracts the embedded theme template files and writes them to your chosen theme directory.
+
+### Theme Loading Priority
+
+1. **Custom theme files** (if theme is specified in config)
+2. **Embedded default templates** (fallback)
+3. **Local templates/** directory (legacy, when no theme specified)
+
 ## Future Enhancements
 
 This is just the beginning! Future theme features may include:
@@ -184,6 +216,7 @@ This is just the beginning! Future theme features may include:
 - Theme inheritance and composition
 - Advanced theme configuration options
 - Community theme sharing platform
+- Theme versioning and updates
 
 ---
 

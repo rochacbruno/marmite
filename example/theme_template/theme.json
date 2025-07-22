@@ -1,16 +1,24 @@
 {
-  "name": "Clean Theme",
-  "version": "1.0.0",
-  "author": "Marmite",
-  "description": "A clean, minimal theme for Marmite static site generator",
-  "repository": "https://github.com/rochacbruno/marmite",
-  "license": "MIT",
+  "name": "THEME_NAME",
+  "version": "0.1.0",
+  "author": "AUTHOR_NAME",
+  "description": "THEME_DESCRIPTION",
+  "repository": "THEME_REPOSITORY_URL",
+  "license": "THEME_LICENSE",
   "tags": ["minimal", "clean", "responsive", "dark-mode"],
   "created_at": "2025-07-21",
   "updated_at": "2025-07-21",
   "marmite_version": ">=0.2.6",
-  "extra_config_allowed": [
-  ],
+  "extra_config_allowed": {
+      "fediverse_verification": {
+          "enabled": true,
+          "required": false,
+          "default": false,
+          "description": "Enable Fediverse Username Verification by adding rel=\"me\" to the user's profile URL",
+          "type": "string",
+          "example": "https://mastodon.social/@username"
+      }
+  },
   "features": [
     "Responsive design",
     "Dark mode support",
