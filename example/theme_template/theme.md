@@ -39,13 +39,22 @@ The theme uses a flexible layout system. You can customize:
 
 ### Typography
 
-The theme uses system fonts for fast loading:
+The theme includes the accessible Atkinson Hyperlegible font for better readability:
+
+```css
+@font-face {
+  font-family: "Atkinson Hyperlegible";
+  src: url("./Atkinson-Hyperlegible-Regular-102.woff");
+}
+```
+
+It also uses system fonts as fallback for fast loading:
 
 ```css
 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 ```
 
-You can change this in `static/style.css` to use custom fonts.
+You can change the font settings in `static/style.css` or add additional web fonts.
 
 ### JavaScript
 
@@ -81,6 +90,10 @@ menu:
   - ["About", "about.html"]
   - ["Tags", "tags.html"]
   - ["Archive", "archive.html"]
+
+# Fediverse verification (adds rel="me" link)
+extra:
+  fediverse_verification: "https://mastodon.social/@yourusername"
 ```
 
 ## Markdown Fragments
@@ -128,6 +141,19 @@ description: "About this website"
 About page content...
 ```
 
+## Assets Included
+
+The theme comes with these pre-built assets:
+
+- **Atkinson-Hyperlegible-Regular-102.woff**: Accessible web font for better readability
+- **avatar-placeholder.png**: Default avatar image for authors
+- **favicon.ico**: Site favicon
+- **logo.png**: Default site logo placeholder
+- **robots.txt**: SEO robots file
+- **script.js**: Theme JavaScript functionality
+- **search.js**: Search functionality (provided by Marmite)
+- **style.css**: Complete theme stylesheet
+
 ## Development
 
 To customize the theme further:
@@ -135,7 +161,8 @@ To customize the theme further:
 1. **CSS**: Edit `static/style.css`
 2. **JavaScript**: Edit `static/script.js`  
 3. **Templates**: Modify files in `templates/`
-4. **Assets**: Add images, fonts, etc. to `static/`
+4. **Assets**: Replace or add images, fonts, etc. in `static/`
+5. **Fonts**: The theme includes Atkinson Hyperlegible font, or you can add your own
 
 ## Browser Support
 
@@ -150,10 +177,12 @@ The theme supports all modern browsers:
 
 The theme is optimized for performance:
 
-- **CSS**: Single file, ~15KB minified
-- **JavaScript**: Minimal, ~5KB
+- **CSS**: Single file with CSS custom properties for easy theming
+- **JavaScript**: Minimal, focused functionality
+- **Web font**: Single Atkinson Hyperlegible font file (~40KB) for accessibility
+- **System fonts**: Used as fallback for fast loading
 - **No external dependencies** (except for search.js from Marmite)
-- **System fonts** for fast loading
+- **Embedded assets**: All theme files are embedded in Marmite binary
 
 ## Accessibility
 
@@ -164,6 +193,43 @@ The theme follows accessibility best practices:
 - High contrast colors
 - Screen reader friendly
 - Focus indicators
+
+## Theme Configuration (theme.json)
+
+The theme includes a `theme.json` file that describes the theme and its capabilities:
+
+```json
+{
+  "name": "THEME_NAME",
+  "version": "0.1.0",
+  "author": "AUTHOR_NAME",
+  "description": "THEME_DESCRIPTION",
+  "marmite_version": ">=0.2.6",
+  "extra_config_allowed": {
+    "fediverse_verification": {
+      "enabled": true,
+      "required": false,
+      "description": "Enable Fediverse Username Verification",
+      "type": "string",
+      "example": "https://mastodon.social/@username"
+    }
+  }
+}
+```
+
+This configuration allows the theme to:
+- Define supported extra configuration options
+- Specify minimum Marmite version requirements
+- Document theme metadata and features
+
+## Embedded Theme Template
+
+As of Marmite 0.2.6+, this theme template is **embedded directly in the Marmite binary**. This means:
+
+- **Always available**: No need to download or locate template files
+- **Version consistency**: Template matches your Marmite version exactly
+- **Fast theme creation**: `--start-theme` extracts embedded files instantly
+- **No external dependencies**: Everything needed is included
 
 ## License
 
