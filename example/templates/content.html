@@ -55,6 +55,11 @@
   {% endif %}
 
   {% include "content_title.html" ignore missing %}
+  {% if content.series %}
+  <div class="content-series">
+    <p><small>Published as part of '<a href="{{ url_for(path='series-' ~ content.series ~ '.html') }}">{{ series_display_name(series=content.series) }}</a>' series.</small></p>
+  </div>
+  {% endif %}
   {% if content.toc %}
   <div class="content-toc">
     <a href="#" id="toc"></a>
@@ -95,7 +100,7 @@
   {% endif %}
 </article>
 
-{% if site.enable_related_content %}
+{% if site.enable_related_content and not content.series %}
 {% if content.back_links %}
 <article>
   Back-links

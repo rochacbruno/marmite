@@ -3,7 +3,7 @@ use crate::content::{
     check_for_duplicate_slugs, slugify, Content, ContentBuilder, GroupedContent, Kind,
 };
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
-use crate::tera_functions::{Group, SourceLink, StreamDisplayName, UrlFor};
+use crate::tera_functions::{DisplayName, Group, SourceLink, UrlFor};
 use crate::{server, tera_filter};
 use chrono::Datelike;
 use core::str;
@@ -29,6 +29,7 @@ pub struct Data {
     pub archive: GroupedContent,
     pub author: GroupedContent,
     pub stream: GroupedContent,
+    pub series: GroupedContent,
     pub latest_timestamp: Option<i64>,
     pub config_path: String,
     pub force_render: bool,
@@ -52,6 +53,7 @@ impl Data {
             archive: GroupedContent::new(Kind::Archive),
             author: GroupedContent::new(Kind::Author),
             stream: GroupedContent::new(Kind::Stream),
+            series: GroupedContent::new(Kind::Series),
             latest_timestamp: None,
             config_path: config_path.to_string_lossy().to_string(),
             force_render: false,
@@ -83,6 +85,7 @@ impl Data {
         self.archive.sort_all();
         self.author.sort_all();
         self.stream.sort_all();
+        self.series.sort_all();
     }
 
     /// takes content then classifies the content
@@ -109,6 +112,14 @@ impl Data {
             if let Some(stream) = &content.stream {
                 self.stream
                     .entry(stream.to_string())
+                    .or_default()
+                    .push(content.clone());
+            }
+
+            // series by name
+            if let Some(series) = &content.series {
+                self.series
+                    .entry(series.to_string())
                     .or_default()
                     .push(content.clone());
             }
@@ -388,13 +399,57 @@ fn _collect_back_links(contents: &mut [Content], other_contents: &[Content]) {
 
 #[allow(clippy::cast_possible_wrap)]
 fn set_next_and_previous_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
-    let mut stream_posts: HashMap<String, Vec<Content>> = HashMap::new();
+    // First, handle series navigation (takes precedence over stream navigation)
+    let mut series_posts: HashMap<String, Vec<Content>> = HashMap::new();
     for post in &site_data.posts {
-        if let Some(stream_name) = &post.stream {
-            stream_posts
-                .entry(stream_name.clone())
+        if let Some(series_name) = &post.series {
+            series_posts
+                .entry(series_name.clone())
                 .or_default()
                 .push(post.clone());
+        }
+    }
+
+    // Sort series posts chronologically (oldest to newest)
+    for posts in series_posts.values_mut() {
+        posts.sort_by(|a, b| a.date.cmp(&b.date));
+    }
+
+    // Set next/previous for posts in series
+    for posts in series_posts.values() {
+        for i in 0..posts.len() {
+            let current_slug = &posts[i].slug;
+
+            let previous = if i > 0 {
+                Some(Box::new(posts[i - 1].clone()))
+            } else {
+                None
+            };
+
+            let next = if i < posts.len() - 1 {
+                Some(Box::new(posts[i + 1].clone()))
+            } else {
+                None
+            };
+
+            if let Some(content) = site_data.posts.iter_mut().find(|c| c.slug == *current_slug) {
+                content.previous = previous;
+                content.next = next;
+            }
+        }
+    }
+
+    // Then handle stream navigation for posts NOT in a series
+    let mut stream_posts: HashMap<String, Vec<Content>> = HashMap::new();
+    for post in &site_data.posts {
+        // Only include posts that are NOT in a series
+        if post.series.is_none() {
+            if let Some(stream_name) = &post.stream {
+                stream_posts
+                    .entry(stream_name.clone())
+                    .or_default()
+                    .push(post.clone());
+            }
         }
     }
 
@@ -520,8 +575,16 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
     );
     tera.register_function(
         "stream_display_name",
-        StreamDisplayName {
+        DisplayName {
             site_data: site_data.clone(),
+            kind: "stream".to_string(),
+        },
+    );
+    tera.register_function(
+        "series_display_name",
+        DisplayName {
+            site_data: site_data.clone(),
+            kind: "series".to_string(),
         },
     );
     tera.register_filter(
@@ -605,6 +668,7 @@ fn render_templates(
     collect_global_fragments(content_dir, &mut global_context, tera, &site_data.site);
 
     handle_stream_pages(&site_data, &global_context, tera, output_dir)?;
+    handle_series_pages(&site_data, &global_context, tera, output_dir)?;
     // If site_data.stream.map does not contain the index stream
     // we will render empty index.html from list.html template
     if !site_data.stream.map.contains_key("index") {
@@ -650,7 +714,7 @@ fn handle_group_pages(
     tera: &Tera,
     output_dir: &Path,
 ) -> Result<(), String> {
-    ["tags", "archives", "authors", "streams"]
+    ["tags", "archives", "authors", "streams", "series"]
         .par_iter()
         .map(|step| -> Result<(), String> {
             match *step {
@@ -665,6 +729,9 @@ fn handle_group_pages(
                 }
                 "streams" => {
                     handle_stream_list_page(output_dir, site_data, global_context, tera)?;
+                }
+                "series" => {
+                    handle_series_list_page(output_dir, site_data, global_context, tera)?;
                 }
                 _ => {}
             }
@@ -748,6 +815,58 @@ fn handle_stream_pages(
         .unwrap_or(Ok(()))
 }
 
+/// Handle individual series pages
+/// Generate series-{series}.html pages from list.html template
+/// Series content is sorted chronologically (oldest to newest)
+fn handle_series_pages(
+    site_data: &Data,
+    global_context: &Context,
+    tera: &Tera,
+    output_dir: &Path,
+) -> Result<(), String> {
+    site_data
+        .series
+        .iter()
+        .collect::<Vec<_>>()
+        .par_iter()
+        .map(|(series, series_contents)| -> Result<(), String> {
+            let series_slug = format!("series-{}", slugify(series));
+            let title = site_data
+                .site
+                .series_content_title
+                .replace("$series", series);
+
+            // Series content is already sorted chronologically (oldest to newest) by GroupedContent::sort_all
+            let sorted_series_contents = series_contents.clone();
+
+            handle_list_page(
+                global_context,
+                &title,
+                &sorted_series_contents,
+                site_data,
+                tera,
+                output_dir,
+                &series_slug,
+            )?;
+
+            // Generate RSS feed for series
+            crate::feed::generate_rss(series_contents, output_dir, &series_slug, &site_data.site)?;
+
+            if site_data.site.json_feed {
+                crate::feed::generate_json(
+                    series_contents,
+                    output_dir,
+                    &series_slug,
+                    &site_data.site,
+                )?;
+            }
+
+            Ok(())
+        })
+        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+        .unwrap_or(Ok(()))
+}
+
 fn handle_default_empty_site(
     global_context: &Context,
     tera: &Tera,
@@ -787,6 +906,26 @@ fn handle_stream_list_page(
         "streams.html",
         tera,
         &stream_list_context,
+        output_dir,
+    )?;
+    Ok(())
+}
+
+fn handle_series_list_page(
+    output_dir: &Path,
+    site_data: &Data,
+    global_context: &Context,
+    tera: &Tera,
+) -> Result<(), String> {
+    let mut series_list_context = global_context.clone();
+    series_list_context.insert("title", &site_data.site.series_title);
+    series_list_context.insert("current_page", "series.html");
+    series_list_context.insert("kind", "series");
+    render_html(
+        "group.html",
+        "series.html",
+        tera,
+        &series_list_context,
         output_dir,
     )?;
     Ok(())

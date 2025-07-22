@@ -26,6 +26,7 @@ pub enum Kind {
     Archive,
     Author,
     Stream,
+    Series,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -49,7 +50,16 @@ impl GroupedContent {
 
     pub fn sort_all(&mut self) {
         for contents in self.map.values_mut() {
-            contents.sort_by(|a, b| b.date.cmp(&a.date));
+            match self.kind {
+                Kind::Series => {
+                    // Series should be sorted chronologically (oldest to newest)
+                    contents.sort_by(|a, b| a.date.cmp(&b.date));
+                }
+                _ => {
+                    // All other content types sort newest first
+                    contents.sort_by(|a, b| b.date.cmp(&a.date));
+                }
+            }
         }
     }
 
@@ -67,7 +77,7 @@ impl GroupedContent {
                 // sort by year, newest first
                 vec.sort_by(|a, b| b.0.cmp(a.0));
             }
-            Kind::Author | Kind::Stream => {
+            Kind::Author | Kind::Stream | Kind::Series => {
                 // sort alphabetically
                 vec.sort_by(|a, b| a.0.cmp(b.0));
             }
@@ -91,6 +101,7 @@ pub struct Content {
     pub banner_image: Option<String>,
     pub authors: Vec<String>,
     pub stream: Option<String>,
+    pub series: Option<String>,
     pub pinned: bool,
     pub toc: Option<String>,
     pub modified_time: Option<i64>,
@@ -185,6 +196,8 @@ impl Content {
             None
         };
 
+        let series = determine_series(&frontmatter);
+
         let comments = get_comments(&frontmatter);
         let content = Content {
             title,
@@ -200,6 +213,7 @@ impl Content {
             banner_image,
             authors,
             stream,
+            series,
             pinned,
             toc,
             modified_time,
@@ -228,6 +242,7 @@ pub struct ContentBuilder {
     banner_image: Option<String>,
     authors: Option<Vec<String>>,
     stream: Option<String>,
+    series: Option<String>,
     pinned: Option<bool>,
     toc: Option<String>,
     comments: Option<bool>,
@@ -305,6 +320,11 @@ impl ContentBuilder {
         self
     }
 
+    pub fn series(mut self, series: String) -> Self {
+        self.series = Some(series);
+        self
+    }
+
     pub fn pinned(mut self, pinned: bool) -> Self {
         self.pinned = Some(pinned);
         self
@@ -340,6 +360,7 @@ impl ContentBuilder {
             banner_image: self.banner_image,
             authors: self.authors.unwrap_or_default(),
             stream: self.stream,
+            series: self.series,
             pinned: self.pinned.unwrap_or_default(),
             toc: self.toc,
             modified_time: None,
@@ -431,6 +452,13 @@ fn determine_stream(frontmatter: &Frontmatter, path: &Path) -> String {
 
     // Default
     "index".to_string()
+}
+
+/// Determine series from frontmatter
+fn determine_series(frontmatter: &Frontmatter) -> Option<String> {
+    frontmatter
+        .get("series")
+        .and_then(|s| s.as_str().map(|s| s.trim_matches('"').to_string()))
 }
 
 // Remove date prefix from filename `2024-01-01-myfile.md` -> `myfile.md`

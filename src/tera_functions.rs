@@ -87,6 +87,7 @@ impl Function for Group {
             "archive" => &self.site_data.archive,
             "author" => &self.site_data.author,
             "stream" => &self.site_data.stream,
+            "series" => &self.site_data.series,
             _ => return Err(tera::Error::msg("Invalid `kind` argument")),
         };
 
@@ -152,26 +153,43 @@ impl Function for SourceLink {
     }
 }
 
-/// Tera template function that returns the display name for a stream
-/// It takes a `stream` argument and returns the configured display name
-/// If no display name is configured, returns the stream name itself
-pub struct StreamDisplayName {
+/// Tera template function that returns the display name for a stream or series
+/// It takes a `stream` or `series` argument and returns the configured display name
+/// If no display name is configured, returns the stream/series name itself
+pub struct DisplayName {
     pub site_data: Data,
+    pub kind: String,
 }
 
-impl Function for StreamDisplayName {
+impl Function for DisplayName {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
-        let stream_name = args
-            .get("stream")
+        let name = args
+            .get(&self.kind)
             .and_then(Value::as_str)
-            .ok_or_else(|| tera::Error::msg("Missing `stream` argument"))?;
+            .ok_or_else(|| tera::Error::msg(format!("Missing `{}` argument", self.kind)))?;
 
-        // Check if there's a configured display name for this stream
-        if let Some(stream_config) = self.site_data.site.streams.get(stream_name) {
-            to_value(&stream_config.display_name).map_err(tera::Error::from)
+        // Check if there's a configured display name based on the kind
+        let display_name = match self.kind.as_str() {
+            "stream" => self
+                .site_data
+                .site
+                .streams
+                .get(name)
+                .map(|config| &config.display_name),
+            "series" => self
+                .site_data
+                .site
+                .series
+                .get(name)
+                .map(|config| &config.display_name),
+            _ => None,
+        };
+
+        if let Some(display_name) = display_name {
+            to_value(display_name).map_err(tera::Error::from)
         } else {
-            // Return the stream name itself if no display name is configured
-            to_value(stream_name).map_err(tera::Error::from)
+            // Return the name itself if no display name is configured
+            to_value(name).map_err(tera::Error::from)
         }
     }
 }

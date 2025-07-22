@@ -158,6 +158,12 @@ pub struct Marmite {
     #[serde(default = "default_streams_content_title")]
     pub streams_content_title: String,
 
+    #[serde(default = "default_series_title")]
+    pub series_title: String,
+
+    #[serde(default = "default_series_content_title")]
+    pub series_content_title: String,
+
     #[serde(default)]
     pub default_author: String,
 
@@ -213,6 +219,9 @@ pub struct Marmite {
     pub streams: HashMap<String, StreamConfig>,
 
     #[serde(default)]
+    pub series: HashMap<String, SeriesConfig>,
+
+    #[serde(default)]
     pub toc: bool,
 
     #[serde(default)]
@@ -254,6 +263,9 @@ impl Marmite {
             archives_content_title: default_archives_content_title(),
             authors_title: default_authors_title(),
             streams_title: default_streams_title(),
+            streams_content_title: default_streams_content_title(),
+            series_title: default_series_title(),
+            series_content_title: default_series_content_title(),
             content_path: default_content_path(),
             templates_path: default_templates_path(),
             static_path: default_static_path(),
@@ -389,6 +401,12 @@ pub struct StreamConfig {
     pub display_name: String,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct SeriesConfig {
+    pub display_name: String,
+    pub description: Option<String>,
+}
+
 /// Generates a default configuration file
 /// this function writes to `marmite.yaml` in the input folder
 /// the YAML file will contain the default configuration
@@ -435,6 +453,14 @@ fn default_tags_content_title() -> String {
 
 fn default_streams_content_title() -> String {
     "Posts from '$stream'".to_string()
+}
+
+fn default_series_title() -> String {
+    "Series".to_string()
+}
+
+fn default_series_content_title() -> String {
+    "Posts from '$series' series".to_string()
 }
 
 fn default_pages_title() -> String {

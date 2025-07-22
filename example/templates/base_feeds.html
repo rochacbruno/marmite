@@ -4,6 +4,10 @@
     {%- set stream_slug = stream | slugify -%}
     <link rel="alternate" type="application/rss+xml" title="{{stream_display_name(stream=stream)}}" href="{{url_for(path=stream_slug ~ '.rss')}}">
     {% endfor %}
+    {%- for series, _ in group(kind="series") -%}
+    {%- set series_slug = series | slugify -%}
+    <link rel="alternate" type="application/rss+xml" title="{{series_display_name(series=series)}}" href="{{url_for(path='series-' ~ series_slug ~ '.rss')}}">
+    {% endfor %}
     {%- for tag, _ in group(kind="tag") -%}
     {%- set tag_slug = tag | slugify -%}
     <link rel="alternate" type="application/rss+xml" title="tag: {{tag}}" href="{{url_for(path='tag-' ~ tag_slug ~ '.rss')}}">
@@ -22,6 +26,10 @@
     {% if stream == "index" or stream == "draft" %}{% continue %}{% endif %}
     {% set stream_slug = stream | slugify %}
     <link rel="alternate" type="application/feed+json" title="JSON {{stream_display_name(stream=stream)}}" href="{{url_for(path=stream_slug ~ '.json')}}">
+    {% endfor %}
+    {%- for series, _ in group(kind="series") -%}
+    {%- set series_slug = series | slugify -%}
+    <link rel="alternate" type="application/feed+json" title="JSON {{series_display_name(series=series)}}" href="{{url_for(path='series-' ~ series_slug ~ '.json')}}">
     {% endfor %}
     {%- for tag, _ in group(kind="tag") -%}
     {%- set tag_slug = tag | slugify -%}

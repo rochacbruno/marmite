@@ -35,6 +35,7 @@ menu:
   - ["Archive", "archive.html"]
   - ["Authors", "authors.html"]
   - ["Streams", "streams.html"]
+  - ["Series", "series.html"]
   - ["Github", "https://github.com/rochacbruno/marmite"]
 
 # https://docs.rs/chrono/latest/chrono/format/strftime/index.html
@@ -61,12 +62,18 @@ authors:
 streams:
   alt:
     display_name: "Alternative Stream"
-  # tutorial:
-  #   display_name: "Python Tutorial"
-  # news:
-  #   display_name: "Latest News"
-  # guide:
-  #   display_name: "User Guides"
+  tutorial:
+    display_name: "Tutorials"
+  news:
+    display_name: "Latest News"
+  guide:
+    display_name: "User Guides"
+
+# Series display name mappings
+series:
+  python-tutorial:
+    display_name: "Python Tutorial"
+    description: "A comprehensive Python programming tutorial series"
 
 # Markdown source publishing
 publish_md: true
