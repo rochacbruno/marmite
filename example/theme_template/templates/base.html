@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="{{language}}">
+<head>
+    <!-- Basic Meta Tags -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="generator" content="Marmite" />
+    {%- block head %}
+    <title>{% if title %}{{title}} | {%endif%}{{ site.name }}</title>
+    <!-- Favicon - Place your favicon.ico in static folder -->
+    <link rel="icon" type="image/x-icon" href="{{url_for(path='static/favicon.ico')}}">
+    <!-- Theme Stylesheets -->
+    <!-- Add your custom CSS in static/style.css -->
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='static/style.css')}}">
+    {%- endblock %}
+
+    <!-- SEO and OpenGraph Meta Tags -->
+    <!-- Customize these for better social media sharing -->
+    {% block seo %}
+    <meta property="og:title" content="{% if title %}{{title}}{% else %}{{ site.name }}{% endif %}">
+    <meta property="og:description" content="{{ site.tagline }}">
+    {% if site.url %}
+    <meta property="og:url" content="{{site.url}}">
+    {% endif %}
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{site.name}}">
+    {% endblock %}
+
+    <!-- RSS Feeds -->
+    <!-- Auto-generated RSS feeds for your content -->
+    {% block feeds %}
+    {%include 'base_feeds.html' ignore missing%}
+    {% endblock %}
+
+    <!-- Custom HTML Head Content -->
+    <!-- Use content/_htmlhead.md to inject custom HTML here -->
+    {% if htmlhead is defined %}
+    {{ htmlhead }}
+    {% endif %}
+</head>
+<body>
+    <!-- Announcement Bar -->
+    <!-- Create content/_announce.md to display site announcements -->
+    {% if announce is defined %}
+    <div class="announcement">{{ announce }}</div>
+    {% endif %}
+
+    <div class="container">
+        <!-- Header Section -->
+        <!-- Customize header by creating content/_header.md -->
+        {% if header is defined %}
+           {{ header}}
+        {% else %}
+        <header class="site-header">
+            <!-- Site Title -->
+            <h1 class="site-title">
+                <a href="./">{{ site.name }}</a>
+            </h1>
+
+            <!-- Site Tagline -->
+            {% if site.tagline %}
+            <p class="site-tagline">{{ site.tagline }}</p>
+            {% endif %}
+
+            <!-- Navigation Menu -->
+            <!-- Configure menu items in marmite.yaml -->
+            {% if menu %}
+            <nav class="site-nav">
+                <ul>
+                    {% for item in menu %}
+                    {% set name = item.0 %}
+                    {% set url = item.1 %}
+                    <li>
+                        {% if current_page and current_page == url %}
+                        <span class="nav-item active">{{name}}</span>
+                        {% else %}
+                        <a class="nav-item" {% if url is starting_with("http") %} href="{{url}}" target="_blank" {% else %} href="./{{url}}"{% endif %}>{{ name }}</a>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+
+                    <!-- Search Toggle -->
+                    <!-- Enable search in marmite.yaml with enable_search: true -->
+                    {% if site.enable_search %}
+                    <li class="search-toggle">
+                        <button id="search-toggle">Search</button>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </header>
+        {% endif %}
+
+        <!-- Hero Section -->
+        <!-- Create content/_hero.md to add a hero section -->
+        {% if hero is defined  and current_page == "index.html" %}
+        <section class="hero">
+            {{ hero }}
+        </section>
+        {% endif %}
+
+        <!-- Main Content -->
+        <!-- This is where page/post content will be rendered -->
+        <main class="main-content">
+            {% block main -%}{%- endblock %}
+        </main>
+
+        <!-- Sidebar -->
+        <!-- Create content/_sidebar.md to add a sidebar -->
+        {% if sidebar is defined %}
+        <aside class="sidebar">
+            {{ sidebar }}
+        </aside>
+        {% endif %}
+
+        <!-- Footer Section -->
+        <!-- Customize footer by creating content/_footer.md -->
+        {% if footer is defined %}
+           {{ footer}}
+        {% else %}
+        <footer class="site-footer">
+            {{ site.footer | safe }}
+        </footer>
+        {% endif %}
+
+        <!-- Search Overlay -->
+        <!-- Search functionality (requires enable_search: true) -->
+        {% if site.enable_search %}
+        <div class="search-overlay" id="search-overlay" style="display: none;">
+            <div class="search-box">
+                <input type="text" id="marmite-search-input" placeholder="Search...">
+                <button id="search-close">Close</button>
+                <div class="marmite-search-bar-result">
+                    <ul id="marmite-search-bar-result"></ul>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- JavaScript -->
+    <!-- Add your custom JavaScript in static/script.js -->
+    {% block scripts %}
+    <script src="{{url_for(path='static/script.js')}}"></script>
+    {% if site.enable_search %}
+    <script type="module" src="{{url_for(path='static/search.js')}}"></script>
+    {% endif %}
+    {% endblock %}
+
+    <!-- Custom HTML Tail Content -->
+    <!-- Use content/_htmltail.md to inject custom HTML here -->
+    {% if htmltail is defined %}
+    {{ htmltail }}
+    {% endif %}
+</body>
+</html>

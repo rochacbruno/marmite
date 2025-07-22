@@ -1,7 +1,7 @@
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{collections::HashMap, path::Path, process, sync::Arc};
 
 use crate::cli::Cli;
 
@@ -232,6 +232,9 @@ pub struct Marmite {
 
     #[serde(default)]
     pub markdown_parser: Option<ParserOptions>,
+
+    #[serde(default)]
+    pub theme: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -259,6 +262,34 @@ impl Marmite {
             menu: default_menu(),
             show_next_prev_links: default_true(),
             ..Default::default()
+        }
+    }
+
+    /// Get the resolved templates path based on theme configuration
+    pub fn get_templates_path(&self, input_folder: &Path) -> std::path::PathBuf {
+        if let Some(theme) = &self.theme {
+            let theme_path = input_folder.join(theme);
+            if !theme_path.exists() {
+                error!("Theme folder '{}' does not exist", theme_path.display());
+                process::exit(1);
+            }
+            theme_path.join(&self.templates_path)
+        } else {
+            input_folder.join(&self.templates_path)
+        }
+    }
+
+    /// Get the resolved static path based on theme configuration
+    pub fn get_static_path(&self, input_folder: &Path) -> std::path::PathBuf {
+        if let Some(theme) = &self.theme {
+            let theme_path = input_folder.join(theme);
+            if !theme_path.exists() {
+                error!("Theme folder '{}' does not exist", theme_path.display());
+                process::exit(1);
+            }
+            theme_path.join(&self.static_path)
+        } else {
+            input_folder.join(&self.static_path)
         }
     }
 

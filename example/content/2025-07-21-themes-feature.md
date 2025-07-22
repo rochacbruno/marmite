@@ -1,0 +1,192 @@
+---
+title: "Introducing Themes in Marmite"
+date: 2025-07-21
+authors: ["marmite"]
+tags: ["features", "themes", "customization"]
+description: "Learn how to create and use custom themes in Marmite static site generator"
+stream: "index"
+---
+
+Marmite now supports **themes**! This powerful new feature allows you to create reusable template and static asset collections that can be easily shared and applied to different sites.
+
+## What are Themes?
+
+A theme in Marmite is a collection of templates and static assets organized in a specific folder structure. Themes allow you to:
+
+- **Separate content from design** - Keep your content in one place while switching between different visual designs
+- **Create reusable designs** - Build themes that can be applied to multiple Marmite sites
+- **Share themes with others** - Package and distribute themes for the community
+- **Rapid prototyping** - Quickly test different looks for your site
+
+## Theme Structure
+
+A theme consists of:
+
+```
+mytheme/
+├── templates/          # HTML templates
+│   ├── base.html
+│   ├── content.html
+│   ├── list.html
+│   └── group.html
+├── static/             # CSS, JS, images, fonts
+│   ├── style.css
+│   └── script.js
+├── theme.json          # Theme metadata
+└── theme.md           # Theme documentation
+```
+
+## Creating a New Theme
+
+To create a new theme, use the `--start-theme` command:
+
+```bash
+marmite /path/to/site --start-theme mytheme
+```
+
+This creates a clean, minimal theme with:
+- Responsive design
+- Dark mode support
+- Clean typography  
+- Search functionality (when enabled)
+- SEO optimization
+- Documentation and examples
+
+## Using a Theme
+
+To use a theme, add it to your `marmite.yaml` configuration:
+
+```yaml
+theme: mytheme
+```
+
+When a theme is set, Marmite will:
+- Look for templates in `mytheme/templates/` instead of `templates/`
+- Copy static files from `mytheme/static/` instead of `static/`
+- Fall back to embedded templates if theme files are missing
+
+## Default Behavior
+
+If no theme is specified (or `theme: null`), Marmite works as before:
+- Templates are loaded from `templates/`
+- Static files are copied from `static/`
+- This maintains backward compatibility with existing sites
+
+## Theme Templates
+
+The generated theme includes comprehensive templates with extensive documentation:
+
+### base.html
+The main layout template with:
+- HTML5 semantic structure
+- SEO meta tags and OpenGraph
+- Responsive viewport settings
+- Dark mode support
+- Clean, minimal design
+
+### content.html
+Individual post/page template with:
+- Article structure
+- Author and date information
+- Tags and categorization
+- Related content sections
+- Previous/next navigation
+
+### list.html
+Index and listing pages with:
+- Post excerpts
+- Pagination support
+- Author profiles
+- Responsive grid layout
+
+### group.html
+Category/tag/archive listings with:
+- Group overviews
+- Content previews
+- Hierarchical organization
+
+## Theme Assets
+
+### CSS (style.css)
+- Modern CSS with custom properties
+- Responsive design
+- Dark mode support
+- Clean typography
+- Minimal dependencies
+
+### JavaScript (script.js)
+- Search functionality
+- Smooth scrolling
+- External link handling
+- Mobile-friendly interactions
+
+## Customizing Themes
+
+Themes are designed to be customizable:
+
+1. **Colors**: Edit CSS custom properties in `static/style.css`
+2. **Layout**: Modify templates in `templates/`
+3. **Content**: Use Markdown fragments like `_header.md`, `_footer.md`
+4. **Assets**: Add custom images, fonts, etc. to `static/`
+
+## Benefits
+
+### For Site Owners
+- **Easy customization** - Change your site's entire look with one config change
+- **Professional designs** - Start with clean, well-designed templates
+- **Maintainable** - Keep content separate from design
+- **Future-proof** - Themes can be updated independently
+
+### For Theme Creators
+- **Reusable** - One theme can be used by multiple sites
+- **Documented** - Built-in documentation and metadata
+- **Flexible** - Support for various content types and layouts
+- **Shareable** - Easy to package and distribute
+
+## Best Practices
+
+1. **Start with the clean theme** - Use `--start-theme` to get a solid foundation
+2. **Document your changes** - Update `theme.md` with customization notes
+3. **Use semantic HTML** - Follow accessibility best practices
+4. **Test responsively** - Ensure themes work on all device sizes
+5. **Keep it simple** - Avoid unnecessary complexity
+
+## Backward Compatibility
+
+This feature is fully backward compatible:
+- Existing sites continue to work without changes
+- No theme specified = uses `templates/` and `static/` as before
+- All existing functionality remains unchanged
+
+## Example Usage
+
+```bash
+# Create a new site
+marmite /path/to/my-blog --init-site
+
+# Create a custom theme
+marmite /path/to/my-blog --start-theme mybrand
+
+# Edit the theme configuration
+echo "theme: mybrand" >> /path/to/my-blog/marmite.yaml
+
+# Customize the theme
+editor /path/to/my-blog/mybrand/static/style.css
+
+# Generate the site with your theme
+marmite /path/to/my-blog ./output
+```
+
+## Future Enhancements
+
+This is just the beginning! Future theme features may include:
+- Theme gallery and package manager
+- Theme inheritance and composition
+- Advanced theme configuration options
+- Community theme sharing platform
+
+---
+
+Themes make Marmite even more powerful and flexible. Whether you're a content creator who wants beautiful designs or a designer who wants to create reusable themes, this feature opens up exciting new possibilities.
+
+Give themes a try and let us know what you think!

@@ -6,6 +6,7 @@ name: My Blog
 pagination: 10
 toc: true
 json_feed: true
+# theme: theme_template
 # tags_title: Tags
 # archives_title: Archive
 # pages_title: pages
@@ -33,7 +34,7 @@ menu:
   - ["Tags", "tags.html"]
   - ["Archive", "archive.html"]
   - ["Authors", "authors.html"]
-  # - ["Streams", "streams.html"]
+  - ["Streams", "streams.html"]
   - ["Github", "https://github.com/rochacbruno/marmite"]
 
 # https://docs.rs/chrono/latest/chrono/format/strftime/index.html
@@ -63,7 +64,7 @@ streams:
   # tutorial:
   #   display_name: "Python Tutorial"
   # news:
-  #   display_name: "Latest News" 
+  #   display_name: "Latest News"
   # guide:
   #   display_name: "User Guides"
 

@@ -46,7 +46,7 @@ pub struct Cli {
 
     /// Initialize a theme with templates and static assets
     #[arg(long)]
-    pub start_theme: bool,
+    pub start_theme: Option<String>,
 
     /// Generate the configuration file
     #[arg(long)]

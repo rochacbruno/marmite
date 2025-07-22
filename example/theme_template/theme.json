@@ -1,0 +1,27 @@
+{
+  "name": "Clean Theme",
+  "version": "1.0.0",
+  "author": "Marmite",
+  "description": "A clean, minimal theme for Marmite static site generator",
+  "repository": "https://github.com/rochacbruno/marmite",
+  "license": "MIT",
+  "tags": ["minimal", "clean", "responsive", "dark-mode"],
+  "created_at": "2025-07-21",
+  "updated_at": "2025-07-21",
+  "marmite_version": ">=0.2.6",
+  "extra_config_allowed": [
+  ],
+  "features": [
+    "Responsive design",
+    "Dark mode support",
+    "Clean typography",
+    "Search functionality",
+    "SEO optimized",
+    "Fast loading"
+  ],
+  "customization": {
+    "colors": "Edit CSS custom properties in static/style.css",
+    "layout": "Modify templates in templates/ directory",
+    "content": "Use Markdown fragments in content/ directory"
+  }
+}
