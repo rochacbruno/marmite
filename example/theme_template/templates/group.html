@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{# Group template - used for tags index, authors index, archive index, etc. #}
+{# This template shows a list of groups (tags, authors, years) and their content counts #}
+
+{% block main %}
+
+{# Page Title #}
+<header class="group-header">
+    <h1 class="group-title">{{ title }}</h1>
+</header>
+
+{# Group Listing #}
+<section class="groups-list">
+
+    {% for name, items in group(kind=kind) %}
+    <div class="group-item">
+        <h2 class="group-name">
+            {% set slug = name | trim | slugify %}
+            {% if kind != "stream" %}
+            {% set slug = kind ~ "-" ~ slug %}
+            {% endif %}
+            {% set link = slug ~ ".html"%}
+            <a href="{{ link }}">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% else %}{{name}}{% endif %}</a>
+        </h2>
+        <span class="group-count">{{ items | length }} post{% if items | length != 1 %}s{% endif %}</span>
+        <div class="group-preview">
+            {# Show preview of recent posts in this tag #}
+            {% for post in items | sort(attribute="date") | reverse %}
+            <div class="group-preview-item">
+                <a href="./{{ post.slug }}.html" class="group-preview-link">{{ post.title }}</a>
+                {% if post.date %}
+                <small class="group-preview-date">{{ post.date | date(format='%B %Y') }}</small>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</section>
+
+{# Back to main navigation #}
+<nav class="group-navigation">
+    <a href="./index.html" class="nav-link">← Back to Home</a>
+</nav>
+
+{% endblock %}

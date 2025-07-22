@@ -149,6 +149,30 @@ media_path: "media"               # Media folder (default: "media")
 site_path: ""                     # Output site subfolder (default: empty)
 ```
 
+### Theme Configuration
+```yaml
+theme: "mytheme"                  # Theme name (default: none)
+```
+
+When a theme is specified, Marmite will:
+- Load templates from `{theme}/templates/` instead of `templates/`
+- Copy static files from `{theme}/static/` instead of `static/`
+- Fall back to embedded templates if theme files are missing
+
+**CLI Override**: Use `--theme mytheme` to override the configuration theme for a single build.
+
+**Examples**:
+```bash
+# Build with theme from config
+marmite myblog output/
+
+# Build with specific theme (overrides config)
+marmite myblog output/ --theme darkmode
+
+# Build without theme (ignores config theme)
+marmite myblog output/ --theme ""
+```
+
 ## Section Titles
 
 Customize titles for different sections of your site:

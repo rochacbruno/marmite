@@ -15,6 +15,10 @@ pub struct Static;
 #[folder = "$CARGO_MANIFEST_DIR/example/templates/"]
 pub struct Templates;
 
+#[derive(Embed, Debug)]
+#[folder = "$CARGO_MANIFEST_DIR/example/theme_template/"]
+pub struct ThemeTemplate;
+
 pub static EMBEDDED_TERA: LazyLock<Tera> = LazyLock::new(|| {
     let mut tera = Tera::default();
     tera.autoescape_on(vec![]);

@@ -28,7 +28,7 @@ fn main() {
     if verbose == 0
         && (args.watch
             || args.serve
-            || args.start_theme
+            || args.start_theme.is_some()
             || args.init_templates
             || args.generate_config
             || args.init_site)
@@ -79,9 +79,8 @@ fn main() {
         return;
     }
 
-    if args.start_theme {
-        templates::initialize_templates(&input_folder);
-        templates::initialize_theme_assets(&input_folder);
+    if let Some(theme_name) = args.start_theme {
+        templates::initialize_theme(&input_folder, &theme_name);
         return;
     }
 

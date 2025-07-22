@@ -531,7 +531,7 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
         },
     );
 
-    let templates_path = input_folder.join(site_data.site.templates_path.clone());
+    let templates_path = site_data.site.get_templates_path(input_folder);
     let mandatory_templates = ["base.html", "list.html", "group.html", "content.html"];
     // Required because Tera needs base templates to be loaded before extending them
     for template_name in &mandatory_templates {
@@ -886,7 +886,7 @@ fn handle_static_artifacts(
     output_folder: &Arc<std::path::PathBuf>,
     content_dir: &std::path::Path,
 ) {
-    let static_source = input_folder.join(site_data.site.static_path.clone());
+    let static_source = site_data.site.get_static_path(input_folder);
     if static_source.is_dir() {
         let mut options = CopyOptions::new();
         options.overwrite = true; // Overwrite files if they already exist
@@ -1303,7 +1303,7 @@ fn should_force_render(
         return true;
     }
 
-    let templates_path = input_folder.join(site_data.site.templates_path.clone());
+    let templates_path = site_data.site.get_templates_path(input_folder);
     let templates_modified = WalkDir::new(&templates_path)
         .into_iter()
         .filter_map(Result::ok)

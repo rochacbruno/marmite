@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block seo %}
+    {{ super()}}
+    {%- if author is defined -%}
+    {% include "json_ld_author.html" ignore missing%}
+    {%- else -%}
+    {% include "json_ld_index.html" ignore missing%}
+    {%- endif -%}
+{% endblock %}
+
+{# List template - used for index page, tag pages, author pages, etc. #}
+{# This template receives 'content_list' with an array of posts/pages to display #}
+
+{% block main %}
+
+{# Page Title (shown for non-index pages) #}
+{% if title and current_page != "index.html" %}
+<header class="list-header">
+    <h1 class="list-title">{{ title }}</h1>
+</header>
+{% endif %}
+
+{# Author Profile (for author pages) #}
+{% if author is defined %}
+<section class="author-profile">
+    <div class="author-info">
+        {% if author.avatar %}
+        <img src="{{ author.avatar }}" alt="{{ author.name }}" class="author-avatar">
+        {% endif %}
+        <div class="author-details">
+            <h1 class="author-name">{{ author.name }}</h1>
+            <p class="author-content-count">Author of {{ total_content }} post{% if total_content > 1 %}s{% endif %}</p>
+            {% if author.bio %}
+            <p class="author-bio">{{ author.bio }}</p>
+            {% endif %}
+            {% if author.links %}
+            <div class="author-links">
+                {% for link in author.links %}
+                <a href="{{ link.1 }}" class="author-link">{{ link.0 }}</a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{# Content List #}
+{% if content_list %}
+<section class="content-list">
+    {% for item in content_list %}
+    <article class="content-item">
+        {# Item Banner (if available) #}
+        {% if item.banner_image %}
+        <div class="item-banner">
+            <img src="{{ item.banner_image }}" alt="{{ item.title }}" />
+        </div>
+        {% endif %}
+
+        <header class="item-header">
+            {# Item Title #}
+            <h2 class="item-title">
+                <a href="./{{ item.slug }}.html">{{ item.title }}</a>
+            </h2>
+
+            {# Item Metadata (for posts with dates) #}
+            {% if item.date %}
+            <div class="item-meta">
+                <time class="item-date" datetime="{{ item.date | date(format='%+') }}">
+                    {{ item.date | default_date_format }}
+                </time>
+
+                {# Authors #}
+                {% if item.authors %}
+                <div class="item-authors">
+                    by
+                    {% for author in item.authors %}
+                    <a href="./author-{{ author | slugify }}.html" class="item-author">{{ author }}</a>{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </header>
+
+        {# Item Description/Excerpt #}
+        {% if item.description %}
+        <div class="item-description">
+            <p>{{ item.description }}</p>
+        </div>
+        {% else %}
+        {# Auto-generate excerpt from content #}
+        <div class="item-excerpt">
+            <p>{{ item.html | striptags | truncate(length=200, end='...') }}</p>
+        </div>
+        {% endif %}
+
+        {# Item Footer with Tags and Read More #}
+        <footer class="item-footer">
+            {# Tags #}
+            {% if item.tags %}
+            <div class="item-tags">
+                {% for tag in item.tags | slice(end=3) %}
+                <a href="./tag-{{ tag | slugify }}.html" class="item-tag">{{ tag }}</a>{% if not loop.last %} {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {# Read More Link #}
+            <div class="item-read-more">
+                <a href="./{{ item.slug }}.html" class="read-more-link">Read more →</a>
+            </div>
+        </footer>
+    </article>
+    {% endfor %}
+</section>
+{% else %}
+{# Empty State #}
+<section class="empty-content">
+    <p>No content found.</p>
+</section>
+{% endif %}
+
+{# Pagination #}
+{% if total_pages > 1 %}
+<nav class="pagination">
+    {# Previous Page #}
+    {% if previous_page %}
+    <a href="./{{ previous_page }}" class="pagination-link pagination-prev">← Previous</a>
+    {% endif %}
+
+    {# Page Info #}
+    <span class="pagination-info">
+        Page {{ current_page_number }} of {{ total_pages }}
+    </span>
+
+    {# Next Page #}
+    {% if next_page %}
+    <a href="./{{ next_page }}" class="pagination-link pagination-next">Next →</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+{% endblock %}

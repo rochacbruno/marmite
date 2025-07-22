@@ -46,7 +46,7 @@ pub struct Cli {
 
     /// Initialize a theme with templates and static assets
     #[arg(long)]
-    pub start_theme: bool,
+    pub start_theme: Option<String>,
 
     /// Generate the configuration file
     #[arg(long)]
@@ -183,4 +183,8 @@ pub struct Configuration {
     /// Available providers: picsum
     #[arg(long)]
     pub image_provider: Option<String>,
+
+    /// Theme to use for the site [default: from config file or embedded templates]
+    #[arg(long)]
+    pub theme: Option<String>,
 }

@@ -1,0 +1,250 @@
+---
+title: "Introducing Themes in Marmite"
+date: 2025-07-21
+authors: ["marmite"]
+tags: ["features", "themes", "customization"]
+description: "Learn how to create and use custom themes in Marmite static site generator"
+stream: "index"
+---
+
+Marmite now supports **themes**! This powerful new feature allows you to create reusable template and static asset collections that can be easily shared and applied to different sites.
+
+## What are Themes?
+
+A theme in Marmite is a collection of templates and static assets organized in a specific folder structure. Themes allow you to:
+
+- **Separate content from design** - Keep your content in one place while switching between different visual designs
+- **Create reusable designs** - Build themes that can be applied to multiple Marmite sites
+- **Share themes with others** - Package and distribute themes for the community
+- **Rapid prototyping** - Quickly test different looks for your site
+
+## Theme Structure
+
+A theme consists of:
+
+```
+mytheme/
+├── templates/          # HTML templates
+│   ├── base.html
+│   ├── content.html
+│   ├── list.html
+│   └── group.html
+├── static/             # CSS, JS, images, fonts
+│   ├── style.css
+│   └── script.js
+├── theme.json          # Theme metadata
+└── theme.md           # Theme documentation
+```
+
+## Creating a New Theme
+
+To create a new theme, use the `--start-theme` command:
+
+```bash
+marmite /path/to/site --start-theme mytheme
+```
+
+This creates a clean, minimal theme from the embedded theme template with:
+- Responsive design
+- Dark mode support with automatic system preference detection
+- Clean typography using system fonts
+- Search functionality (when enabled)
+- SEO optimization with OpenGraph meta tags
+- Comprehensive documentation and examples
+- Font files (Atkinson Hyperlegible for accessibility)
+- Essential assets (favicon, logo, robots.txt)
+
+## Using a Theme
+
+There are two ways to specify which theme to use:
+
+### 1. Configuration File
+
+Add the theme to your `marmite.yaml` configuration:
+
+```yaml
+theme: mytheme
+```
+
+### 2. CLI Option
+
+Use the `--theme` option to override the configuration:
+
+```bash
+marmite /path/to/site /path/to/output --theme mytheme
+```
+
+This CLI option is useful for:
+- **Testing themes** without modifying configuration
+- **Building with different themes** for different environments
+- **Overriding** the theme specified in configuration
+- **Automated builds** with different themes
+
+When a theme is set (either via config or CLI), Marmite will:
+- Look for templates in `mytheme/templates/` instead of `templates/`
+- Copy static files from `mytheme/static/` instead of `static/`
+- Fall back to embedded templates if theme files are missing
+
+> **Note**: The CLI `--theme` option takes precedence over the configuration file setting.
+
+## Default Behavior
+
+If no theme is specified (or `theme: null`), Marmite works as before:
+- Templates are loaded from `templates/`
+- Static files are copied from `static/`
+- This maintains backward compatibility with existing sites
+
+## Embedded Theme Template
+
+Marmite now includes an embedded theme template that provides a complete, production-ready starting point. The generated theme includes comprehensive templates with extensive documentation:
+
+### base.html
+The main layout template with:
+- HTML5 semantic structure
+- SEO meta tags and OpenGraph
+- Responsive viewport settings
+- Dark mode support
+- Clean, minimal design
+
+### content.html
+Individual post/page template with:
+- Article structure
+- Author and date information
+- Tags and categorization
+- Related content sections
+- Previous/next navigation
+
+### list.html
+Index and listing pages with:
+- Post excerpts
+- Pagination support
+- Author profiles
+- Responsive grid layout
+
+### group.html
+Category/tag/archive listings with:
+- Group overviews
+- Content previews
+- Hierarchical organization
+
+## Theme Assets
+
+### CSS (style.css)
+- Modern CSS with custom properties (CSS variables)
+- Responsive design with mobile-first approach
+- Dark mode support with automatic system preference detection
+- Clean typography using system fonts for fast loading
+- Minimal dependencies - no external CSS frameworks required
+
+### JavaScript (script.js)
+- Search overlay functionality
+- Smooth scrolling for anchor links
+- External link indicators
+- Mobile-friendly interactions
+- Minimal and performant
+
+### Additional Assets
+- **Atkinson-Hyperlegible-Regular-102.woff**: Accessible web font
+- **avatar-placeholder.png**: Default avatar for authors
+- **favicon.ico**: Site favicon
+- **logo.png**: Default site logo
+- **search.js**: Search functionality (from Marmite core)
+- **robots.txt**: SEO robots file
+
+## Customizing Themes
+
+Themes are designed to be customizable:
+
+1. **Colors**: Edit CSS custom properties in `static/style.css`
+2. **Layout**: Modify templates in `templates/`
+3. **Content**: Use Markdown fragments like `_header.md`, `_footer.md`
+4. **Assets**: Add custom images, fonts, etc. to `static/`
+
+## Benefits
+
+### For Site Owners
+- **Easy customization** - Change your site's entire look with one config change
+- **Professional designs** - Start with clean, well-designed embedded templates
+- **Maintainable** - Keep content separate from design
+- **Future-proof** - Themes can be updated independently
+- **No external dependencies** - Everything needed is embedded in Marmite
+
+### For Theme Creators
+- **Reusable** - One theme can be used by multiple sites
+- **Documented** - Built-in documentation and metadata (theme.json, theme.md)
+- **Flexible** - Support for various content types and layouts
+- **Shareable** - Easy to package and distribute
+- **Complete template** - Start from a production-ready base
+
+## Best Practices
+
+1. **Start with the clean theme** - Use `--start-theme` to get a solid foundation
+2. **Document your changes** - Update `theme.md` with customization notes
+3. **Use semantic HTML** - Follow accessibility best practices
+4. **Test responsively** - Ensure themes work on all device sizes
+5. **Keep it simple** - Avoid unnecessary complexity
+
+## Backward Compatibility
+
+This feature is fully backward compatible:
+- Existing sites continue to work without changes
+- No theme specified = uses `templates/` and `static/` as before
+- All existing functionality remains unchanged
+
+## Example Usage
+
+```bash
+# Create a new site
+marmite /path/to/my-blog --init-site
+
+# Create a custom theme
+marmite /path/to/my-blog --start-theme mybrand
+
+# Option 1: Set theme in configuration
+echo "theme: mybrand" >> /path/to/my-blog/marmite.yaml
+marmite /path/to/my-blog ./output
+
+# Option 2: Use CLI to override theme (useful for testing)
+marmite /path/to/my-blog ./output --theme mybrand
+
+# Option 3: Test different themes without changing config
+marmite /path/to/my-blog ./output-clean --theme clean
+marmite /path/to/my-blog ./output-dark --theme dark-mode
+
+# Customize the theme
+editor /path/to/my-blog/mybrand/static/style.css
+```
+
+## Technical Implementation
+
+### Embedded Theme Template
+
+As of version 0.2.6+, Marmite includes an **embedded theme template** that is compiled directly into the binary. This means:
+
+- **No external dependencies** - The theme template is always available
+- **Consistent experience** - Same starting template across all installations  
+- **Faster theme creation** - No need to locate template files on disk
+- **Version compatibility** - Template matches the Marmite version exactly
+
+When you run `--start-theme`, Marmite extracts the embedded theme template files and writes them to your chosen theme directory.
+
+### Theme Loading Priority
+
+1. **Custom theme files** (if theme is specified in config)
+2. **Embedded default templates** (fallback)
+3. **Local templates/** directory (legacy, when no theme specified)
+
+## Future Enhancements
+
+This is just the beginning! Future theme features may include:
+- Theme gallery and package manager
+- Theme inheritance and composition
+- Advanced theme configuration options
+- Community theme sharing platform
+- Theme versioning and updates
+
+---
+
+Themes make Marmite even more powerful and flexible. Whether you're a content creator who wants beautiful designs or a designer who wants to create reusable themes, this feature opens up exciting new possibilities.
+
+Give themes a try and let us know what you think!

@@ -15,7 +15,7 @@ cargo build --release
 > Build and serve the example site while watching for changes on the example dir
 
 ~~~bash
-cargo run --quiet -- example ./example/public --serve --watch --force
+rm -rf ./example/public && cargo run --quiet -- example ./example/public --serve --watch --force
 ~~~
 
 ## check
