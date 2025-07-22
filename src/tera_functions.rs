@@ -87,6 +87,7 @@ impl Function for Group {
             "archive" => &self.site_data.archive,
             "author" => &self.site_data.author,
             "stream" => &self.site_data.stream,
+            "series" => &self.site_data.series,
             _ => return Err(tera::Error::msg("Invalid `kind` argument")),
         };
 
@@ -172,6 +173,30 @@ impl Function for StreamDisplayName {
         } else {
             // Return the stream name itself if no display name is configured
             to_value(stream_name).map_err(tera::Error::from)
+        }
+    }
+}
+
+/// Tera template function that returns the display name for a series
+/// It takes a `series` argument and returns the configured display name
+/// If no display name is configured, returns the series name itself
+pub struct SeriesDisplayName {
+    pub site_data: Data,
+}
+
+impl Function for SeriesDisplayName {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let series_name = args
+            .get("series")
+            .and_then(Value::as_str)
+            .ok_or_else(|| tera::Error::msg("Missing `series` argument"))?;
+
+        // Check if there's a configured display name for this series
+        if let Some(series_config) = self.site_data.site.series.get(series_name) {
+            to_value(&series_config.display_name).map_err(tera::Error::from)
+        } else {
+            // Return the series name itself if no display name is configured
+            to_value(series_name).map_err(tera::Error::from)
         }
     }
 }

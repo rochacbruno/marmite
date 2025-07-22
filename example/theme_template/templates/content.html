@@ -80,6 +80,13 @@
         {% endif %}
     </header>
 
+    {# Series information (if content is part of a series) #}
+    {% if content.series %}
+    <div class="content-series">
+        <p><em>Published as part of '<a href="{{ url_for(path='series-' ~ content.series ~ '.html') }}">{{ series_display_name(series=content.series) }}</a>' series.</em></p>
+    </div>
+    {% endif %}
+
     {# Table of Contents (if enabled and available) #}
     {% if content.toc %}
     <div class="content-toc">
@@ -118,8 +125,8 @@
     {% endif %}
 </article>
 
-{# Related Content Section (if enabled) #}
-{% if site.enable_related_content %}
+{# Related Content Section (if enabled and not part of a series) #}
+{% if site.enable_related_content and not content.series %}
     {# Back-links - other content that links to this content #}
     {% if content.back_links %}
     <section class="related-content">
