@@ -1,9 +1,8 @@
 #![allow(clippy::module_name_repetitions)]
-use crate::embedded::{generate_static, Templates};
+use crate::embedded::{generate_static, Templates, ThemeTemplate};
 use log::{error, info};
 use std::fs;
 use std::path::Path;
-use walkdir::WalkDir;
 
 /// Creates the `templates/` folder and writes embedded templates to it.
 pub fn initialize_templates(input_folder: &Path) {
@@ -46,7 +45,7 @@ pub fn initialize_theme_assets(input_folder: &Path) {
     generate_static(&static_path);
 }
 
-/// Creates a new theme with templates and static assets from the theme template
+/// Creates a new theme with templates and static assets from the embedded theme template
 pub fn initialize_theme(input_folder: &Path, theme_name: &str) {
     // Validate theme name
     if theme_name.is_empty() || theme_name.contains('/') || theme_name.contains('\\') {
@@ -76,47 +75,31 @@ pub fn initialize_theme(input_folder: &Path, theme_name: &str) {
         return;
     }
 
-    // Copy theme template files from example/theme_template
-    let theme_template_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("example")
-        .join("theme_template");
+    // Copy theme template files from embedded ThemeTemplate
+    for name in ThemeTemplate::iter() {
+        if let Some(file) = ThemeTemplate::get(name.as_ref()) {
+            let file_path = Path::new(name.as_ref());
+            let dest_path = theme_path.join(file_path);
 
-    if !theme_template_path.exists() {
-        error!(
-            "Theme template directory not found: {}",
-            theme_template_path.display()
-        );
-        return;
-    }
+            // Ensure parent directory exists
+            if let Some(parent) = dest_path.parent() {
+                if let Err(e) = fs::create_dir_all(parent) {
+                    error!("Failed to create directory {}: {e:?}", parent.display());
+                    continue;
+                }
+            }
 
-    // Copy template files
-    let template_source = theme_template_path.join("templates");
-    if template_source.exists() {
-        copy_directory_contents(&template_source, &templates_path, "template");
-    }
-
-    // Copy static files
-    let static_source = theme_template_path.join("static");
-    if static_source.exists() {
-        copy_directory_contents(&static_source, &static_path, "static");
-    }
-
-    // Copy theme metadata files
-    let theme_json = theme_template_path.join("theme.json");
-    if theme_json.exists() {
-        if let Err(e) = fs::copy(&theme_json, theme_path.join("theme.json")) {
-            error!("Failed to copy theme.json: {e:?}");
+            // Write file data
+            if let Err(e) = fs::write(&dest_path, file.data.as_ref()) {
+                error!("Failed to copy theme file '{}': {e:?}", name.as_ref());
+            } else {
+                info!("Generated {}", dest_path.display());
+            }
         } else {
-            info!("Generated {}", theme_path.join("theme.json").display());
-        }
-    }
-
-    let theme_md = theme_template_path.join("theme.md");
-    if theme_md.exists() {
-        if let Err(e) = fs::copy(&theme_md, theme_path.join("theme.md")) {
-            error!("Failed to copy theme.md: {e:?}");
-        } else {
-            info!("Generated {}", theme_path.join("theme.md").display());
+            error!(
+                "Theme template file '{}' not found in embedded resources",
+                name.as_ref()
+            );
         }
     }
 
@@ -126,44 +109,4 @@ pub fn initialize_theme(input_folder: &Path, theme_name: &str) {
         theme_path.display()
     );
     info!("To use this theme, add 'theme: {theme_name}' to your marmite.yaml config file",);
-}
-
-/// Helper function to copy directory contents recursively
-fn copy_directory_contents(source: &Path, destination: &Path, file_type: &str) {
-    for entry in WalkDir::new(source) {
-        let entry = match entry {
-            Ok(e) => e,
-            Err(e) => {
-                error!("Error walking directory: {e:?}");
-                continue;
-            }
-        };
-
-        let source_path = entry.path();
-        let relative_path = source_path.strip_prefix(source).unwrap();
-        let dest_path = destination.join(relative_path);
-
-        if entry.file_type().is_dir() {
-            if let Err(e) = fs::create_dir_all(&dest_path) {
-                error!("Failed to create directory {}: {e:?}", dest_path.display());
-            }
-        } else if entry.file_type().is_file() {
-            if let Some(parent) = dest_path.parent() {
-                if let Err(e) = fs::create_dir_all(parent) {
-                    error!("Failed to create parent directory: {e:?}");
-                    continue;
-                }
-            }
-
-            if let Err(e) = fs::copy(source_path, &dest_path) {
-                error!(
-                    "Failed to copy {} file '{}': {e:?}",
-                    file_type,
-                    source_path.display()
-                );
-            } else {
-                info!("Generated {}", dest_path.display());
-            }
-        }
-    }
 }
