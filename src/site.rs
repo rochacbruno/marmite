@@ -3,7 +3,7 @@ use crate::content::{
     check_for_duplicate_slugs, slugify, Content, ContentBuilder, GroupedContent, Kind,
 };
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
-use crate::tera_functions::{Group, SeriesDisplayName, SourceLink, StreamDisplayName, UrlFor};
+use crate::tera_functions::{DisplayName, Group, SourceLink, UrlFor};
 use crate::{server, tera_filter};
 use chrono::Datelike;
 use core::str;
@@ -575,14 +575,16 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
     );
     tera.register_function(
         "stream_display_name",
-        StreamDisplayName {
+        DisplayName {
             site_data: site_data.clone(),
+            kind: "stream".to_string(),
         },
     );
     tera.register_function(
         "series_display_name",
-        SeriesDisplayName {
+        DisplayName {
             site_data: site_data.clone(),
+            kind: "series".to_string(),
         },
     );
     tera.register_filter(
