@@ -593,6 +593,7 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
             date_format: site_data.site.default_date_format.to_string(),
         },
     );
+    tera.register_filter("remove_draft", tera_filter::RemoveDraft);
 
     let templates_path = site_data.site.get_templates_path(input_folder);
     let mandatory_templates = ["base.html", "list.html", "group.html", "content.html"];
@@ -961,7 +962,9 @@ fn handle_author_pages(
             let mut author_posts = site_data
                 .posts
                 .iter()
-                .filter(|post| post.authors.contains(username))
+                .filter(|post| {
+                    post.authors.contains(username) && post.stream.as_deref() != Some("draft")
+                })
                 .cloned()
                 .collect::<Vec<Content>>();
 
@@ -1536,10 +1539,16 @@ fn handle_tag_pages(
         .map(|(tag, tagged_contents)| -> Result<(), String> {
             let tag_slug = slugify(tag);
             let filename = format!("tag-{}", &tag_slug);
+            // Filter out draft content
+            let filtered_contents: Vec<Content> = tagged_contents
+                .iter()
+                .filter(|content| content.stream.as_deref() != Some("draft"))
+                .cloned()
+                .collect();
             handle_list_page(
                 global_context,
                 &site_data.site.tags_content_title.replace("$tag", tag),
-                tagged_contents,
+                &filtered_contents,
                 site_data,
                 tera,
                 output_dir,
@@ -1547,7 +1556,7 @@ fn handle_tag_pages(
             )?;
             // Render tag-{tag}.rss for each stream
             crate::feed::generate_rss(
-                tagged_contents,
+                &filtered_contents,
                 output_dir,
                 &filename.clone(),
                 &site_data.site,
@@ -1555,7 +1564,7 @@ fn handle_tag_pages(
 
             if site_data.site.json_feed {
                 crate::feed::generate_json(
-                    tagged_contents,
+                    &filtered_contents,
                     output_dir,
                     &filename,
                     &site_data.site,
@@ -1594,10 +1603,16 @@ fn handle_archive_pages(
         .par_iter()
         .map(|(year, archive_contents)| -> Result<(), String> {
             let filename = format!("archive-{year}");
+            // Filter out draft content
+            let filtered_contents: Vec<Content> = archive_contents
+                .iter()
+                .filter(|content| content.stream.as_deref() != Some("draft"))
+                .cloned()
+                .collect();
             handle_list_page(
                 global_context,
                 &site_data.site.archives_content_title.replace("$year", year),
-                archive_contents,
+                &filtered_contents,
                 site_data,
                 tera,
                 output_dir,
@@ -1605,7 +1620,7 @@ fn handle_archive_pages(
             )?;
             // Render archive-{year}.rss for each stream
             crate::feed::generate_rss(
-                archive_contents,
+                &filtered_contents,
                 output_dir,
                 &filename.clone(),
                 &site_data.site,
@@ -1613,7 +1628,7 @@ fn handle_archive_pages(
 
             if site_data.site.json_feed {
                 crate::feed::generate_json(
-                    archive_contents,
+                    &filtered_contents,
                     output_dir,
                     &filename,
                     &site_data.site,
