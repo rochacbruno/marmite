@@ -35,6 +35,7 @@ Marmite now supports themes! [[Introducing themes in marmite]]
 - Configure themes in `marmite.yaml` with the `theme` field
 - Themes can have their own `templates/` and `static/` directories
 - Embedded theme templates for quick theme creation
+- **NEW**: Use `--set-theme <url>` to download and install remote themes
 
 ```yaml
 # Enable a theme in your configuration
@@ -190,6 +191,7 @@ markdown_parser:
 ## 🚀 New CLI Options
 
 - `--theme <name>`: Override theme from configuration
+- `--set-theme <url>`: Download and install a remote theme
 - `--https`: Enforce HTTPS protocol
 - `--publish-md`: Publish markdown source files
 - `--source-repository <url>`: Set source repository URL
@@ -205,6 +207,7 @@ This release includes comprehensive documentation for all new features:
 - [Configuration Reference](/configuration-reference.html)
 - [Template Reference](/template-reference.html)
 - [Themes Feature Guide](/introducing-themes-in-marmite)
+- [Remote Themes Guide](/remote-theme-download.html)
 - [Series Feature Guide](/organizing-content-with-series-in-marmite.html)
 - [Streams Guide](/streams-guide.html)
 - [Draft Posts Guide](/how-to-use-draft-posts-in-marmite.html)
