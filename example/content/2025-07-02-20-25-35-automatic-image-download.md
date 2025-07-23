@@ -1,6 +1,5 @@
 ---
 title: Automatic Image Download for Posts
-date: 2025-07-19 18:30:00
 slug: automatic-image-download
 description: Learn how to enable automatic banner image generation for your blog posts using Marmite's built-in image provider feature.
 tags: docs, features, images, configuration

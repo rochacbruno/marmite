@@ -1,6 +1,5 @@
 ---
 title: How to Run a Link Checker on Your Marmite Website
-date: 2025-07-21
 tags: [docs, testing, quality-assurance, tools, lychee, ci-cd]
 authors: [rochacbruno]
 ---

@@ -1,6 +1,5 @@
 ---
 title: Configurable Markdown Parser Options
-date: 2025-07-20
 tags: [docs, configuration, markdown, features]
 authors: [rochacbruno]
 ---
