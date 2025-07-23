@@ -5,6 +5,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 #[derive(Deserialize, Debug)]
+#[allow(dead_code)]
 pub struct ThemeMetadata {
     pub name: String,
     pub version: String,
@@ -21,7 +22,7 @@ pub struct ThemeMetadata {
 
 /// Downloads and sets a theme from a remote URL or local folder
 pub fn set_theme(input_folder: &Path, theme_source: &str, config_theme: Option<String>) {
-    info!("Setting theme from: {}", theme_source);
+    info!("Setting theme from: {theme_source}");
 
     let theme_name = if theme_source.starts_with("http://") || theme_source.starts_with("https://")
     {
@@ -29,7 +30,7 @@ pub fn set_theme(input_folder: &Path, theme_source: &str, config_theme: Option<S
         match download_theme(input_folder, theme_source) {
             Ok(name) => name,
             Err(e) => {
-                error!("Failed to download theme: {}", e);
+                error!("Failed to download theme: {e}");
                 return;
             }
         }
@@ -55,7 +56,7 @@ pub fn set_theme(input_folder: &Path, theme_source: &str, config_theme: Option<S
         // Remove the theme folder if it was downloaded
         if theme_source.starts_with("http://") || theme_source.starts_with("https://") {
             if let Err(e) = fs::remove_dir_all(&theme_path) {
-                error!("Failed to remove invalid theme folder: {}", e);
+                error!("Failed to remove invalid theme folder: {e}");
             }
         }
         return;
@@ -65,19 +66,19 @@ pub fn set_theme(input_folder: &Path, theme_source: &str, config_theme: Option<S
     let theme_metadata = match read_theme_metadata(&theme_json_path) {
         Ok(metadata) => metadata,
         Err(e) => {
-            error!("Failed to read theme metadata: {}", e);
+            error!("Failed to read theme metadata: {e}");
             return;
         }
     };
 
     // Update marmite.yaml
     if let Err(e) = update_config_theme(input_folder, &theme_name, config_theme) {
-        error!("Failed to update configuration: {}", e);
+        error!("Failed to update configuration: {e}");
         return;
     }
 
     // Display success message with metadata
-    println!("\n✅ Theme '{}' has been successfully set!\n", theme_name);
+    println!("\n✅ Theme '{theme_name}' has been successfully set!\n");
     println!("📦 Theme Information:");
     println!("   Name: {}", theme_metadata.name);
     println!("   Version: {}", theme_metadata.version);
@@ -87,7 +88,7 @@ pub fn set_theme(input_folder: &Path, theme_source: &str, config_theme: Option<S
     if let Some(features) = &theme_metadata.features {
         println!("\n✨ Features:");
         for feature in features {
-            println!("   - {}", feature);
+            println!("   - {feature}");
         }
     }
 
@@ -107,7 +108,7 @@ fn download_theme(input_folder: &Path, url: &str) -> Result<String, Box<dyn std:
     let download_url = determine_download_url(url)?;
     let theme_name = extract_theme_name(url)?;
 
-    info!("Downloading theme from: {}", download_url);
+    info!("Downloading theme from: {download_url}");
 
     // Create temporary directory for download
     let temp_dir = input_folder.join(".theme_download_temp");
@@ -129,7 +130,7 @@ fn download_theme(input_folder: &Path, url: &str) -> Result<String, Box<dyn std:
     // Move to final location
     let final_path = input_folder.join(&theme_name);
     if final_path.exists() {
-        return Err(format!("Theme '{}' already exists", theme_name).into());
+        return Err(format!("Theme '{theme_name}' already exists").into());
     }
 
     fs::rename(&theme_root, &final_path)?;
@@ -159,8 +160,7 @@ fn determine_download_url(url: &str) -> Result<String, Box<dyn std::error::Error
             "main"
         };
         Ok(format!(
-            "https://github.com/{}/{}/archive/refs/heads/{}.zip",
-            owner, repo, branch
+            "https://github.com/{owner}/{repo}/archive/refs/heads/{branch}.zip"
         ))
     } else if url.contains("gitlab.com") {
         // GitLab repository
@@ -176,8 +176,7 @@ fn determine_download_url(url: &str) -> Result<String, Box<dyn std::error::Error
             "main"
         };
         Ok(format!(
-            "https://gitlab.com/{}/{}/-/archive/{}/{}-{}.zip",
-            owner, repo, branch, repo, branch
+            "https://gitlab.com/{owner}/{repo}/-/archive/{branch}/{repo}-{branch}.zip"
         ))
     } else if url.contains("codeberg.org") {
         // Codeberg/Forgejo repository
@@ -193,8 +192,7 @@ fn determine_download_url(url: &str) -> Result<String, Box<dyn std::error::Error
             "main"
         };
         Ok(format!(
-            "https://codeberg.org/{}/{}/archive/{}.zip",
-            owner, repo, branch
+            "https://codeberg.org/{owner}/{repo}/archive/{branch}.zip"
         ))
     } else {
         Err("Unsupported repository host. Supported: GitHub, GitLab, Codeberg".into())
@@ -286,9 +284,36 @@ fn update_config_theme(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let config_path = input_folder.join("marmite.yaml");
 
-    if !config_path.exists() {
+    if config_path.exists() {
+        // Update existing config
+        info!("Updating marmite.yaml with theme: {theme_name}");
+
+        let content = fs::read_to_string(&config_path)?;
+        let mut lines: Vec<String> = content.lines().map(std::string::ToString::to_string).collect();
+
+        // Find and update theme line
+        let mut theme_found = false;
+        for line in &mut lines {
+            if line.trim_start().starts_with("theme:") {
+                *line = format!("theme: {theme_name}");
+                theme_found = true;
+                break;
+            }
+        }
+
+        // If theme not found, add it
+        if !theme_found {
+            lines.push(format!("theme: {theme_name}"));
+        }
+
+        // Write back
+        let mut file = fs::File::create(&config_path)?;
+        for line in lines {
+            writeln!(file, "{line}")?;
+        }
+    } else {
         // Create new config with theme
-        info!("Creating new marmite.yaml with theme: {}", theme_name);
+        info!("Creating new marmite.yaml with theme: {theme_name}");
 
         // Use marmite's generate config functionality
         let mut cmd = std::process::Command::new(std::env::current_exe()?);
@@ -300,33 +325,6 @@ fn update_config_theme(
         let output = cmd.output()?;
         if !output.status.success() {
             return Err("Failed to generate config file".into());
-        }
-    } else {
-        // Update existing config
-        info!("Updating marmite.yaml with theme: {}", theme_name);
-
-        let content = fs::read_to_string(&config_path)?;
-        let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
-
-        // Find and update theme line
-        let mut theme_found = false;
-        for line in &mut lines {
-            if line.trim_start().starts_with("theme:") {
-                *line = format!("theme: {}", theme_name);
-                theme_found = true;
-                break;
-            }
-        }
-
-        // If theme not found, add it
-        if !theme_found {
-            lines.push(format!("theme: {}", theme_name));
-        }
-
-        // Write back
-        let mut file = fs::File::create(&config_path)?;
-        for line in lines {
-            writeln!(file, "{}", line)?;
         }
     }
 

@@ -157,11 +157,34 @@ Generated myblog/mytheme/theme.md
 
 This creates a complete theme directory with templates, static assets, and documentation.
 
-### Using a theme
+### Installing and Using Themes
 
-Once you have created or obtained a theme, you can use it in several ways:
+Once you have created or obtained a theme, you can install and use it in several ways:
 
-#### 1. Configure in marmite.yaml
+#### 1. Download and install a remote theme
+
+Use the `--set-theme` option to download a theme from a remote repository:
+
+```console
+# From GitHub
+$ marmite myblog --set-theme https://github.com/username/themename
+
+# From GitLab 
+$ marmite myblog --set-theme https://gitlab.com/username/themename
+
+# From Codeberg
+$ marmite myblog --set-theme https://codeberg.org/username/themename
+
+# From direct zip URL
+$ marmite myblog --set-theme https://example.com/themes/mytheme.zip
+
+# Set a local theme
+$ marmite myblog --set-theme mytheme
+```
+
+This command will download the theme, validate it contains a `theme.json` file, install it to your project, and update your `marmite.yaml` configuration.
+
+#### 2. Configure in marmite.yaml
 
 Add the theme name to your configuration file:
 
@@ -169,7 +192,7 @@ Add the theme name to your configuration file:
 theme: mytheme
 ```
 
-#### 2. Use CLI option (override config)
+#### 3. Use CLI option (override config)
 
 Use the `--theme` option to specify a theme for a single build, overriding any theme set in the config:
 
@@ -310,8 +333,10 @@ Options:
           Path to custom configuration file [default: marmite.yaml]
       --init-templates
           Initialize templates in the project
-      --start-theme
+      --start-theme <THEME_NAME>
           Initialize a theme with templates and static assets
+      --set-theme <THEME_SOURCE>
+          Download and set a theme from a remote URL or local folder
       --generate-config
           Generate the configuration file
       --init-site
