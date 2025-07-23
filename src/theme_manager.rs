@@ -343,3 +343,175 @@ fn update_config_theme(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_determine_download_url_github() {
+        let url = "https://github.com/user/repo";
+        let result = determine_download_url(url).unwrap();
+        assert_eq!(
+            result,
+            "https://github.com/user/repo/archive/refs/heads/main.zip"
+        );
+    }
+
+    #[test]
+    fn test_determine_download_url_github_with_branch() {
+        let url = "https://github.com/user/repo/tree/develop";
+        let result = determine_download_url(url).unwrap();
+        assert_eq!(
+            result,
+            "https://github.com/user/repo/archive/refs/heads/develop.zip"
+        );
+    }
+
+    #[test]
+    fn test_determine_download_url_gitlab() {
+        let url = "https://gitlab.com/user/repo";
+        let result = determine_download_url(url).unwrap();
+        assert_eq!(
+            result,
+            "https://gitlab.com/user/repo/-/archive/main/repo-main.zip"
+        );
+    }
+
+    #[test]
+    fn test_determine_download_url_codeberg() {
+        let url = "https://codeberg.org/user/repo";
+        let result = determine_download_url(url).unwrap();
+        assert_eq!(result, "https://codeberg.org/user/repo/archive/main.zip");
+    }
+
+    #[test]
+    fn test_determine_download_url_direct_zip() {
+        let url = "https://example.com/theme.zip";
+        let result = determine_download_url(url).unwrap();
+        assert_eq!(result, "https://example.com/theme.zip");
+    }
+
+    #[test]
+    fn test_determine_download_url_unsupported() {
+        let url = "https://unsupported.com/user/repo";
+        let result = determine_download_url(url);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_extract_theme_name_github() {
+        let url = "https://github.com/user/my-theme";
+        let result = extract_theme_name(url).unwrap();
+        assert_eq!(result, "my-theme");
+    }
+
+    #[test]
+    fn test_extract_theme_name_zip() {
+        let url = "https://example.com/awesome-theme.zip";
+        let result = extract_theme_name(url).unwrap();
+        assert_eq!(result, "awesome-theme");
+    }
+
+    #[test]
+    fn test_extract_theme_name_invalid_url() {
+        let url = "invalid";
+        let result = extract_theme_name(url);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_find_theme_root_direct() {
+        let temp_dir = TempDir::new().unwrap();
+        let theme_json = temp_dir.path().join("theme.json");
+        fs::write(&theme_json, "{}").unwrap();
+
+        let result = find_theme_root(temp_dir.path()).unwrap();
+        assert_eq!(result, temp_dir.path());
+    }
+
+    #[test]
+    fn test_find_theme_root_nested() {
+        let temp_dir = TempDir::new().unwrap();
+        let nested_dir = temp_dir.path().join("nested");
+        fs::create_dir(&nested_dir).unwrap();
+        let theme_json = nested_dir.join("theme.json");
+        fs::write(&theme_json, "{}").unwrap();
+
+        let result = find_theme_root(temp_dir.path()).unwrap();
+        assert_eq!(result, nested_dir);
+    }
+
+    #[test]
+    fn test_find_theme_root_not_found() {
+        let temp_dir = TempDir::new().unwrap();
+        let result = find_theme_root(temp_dir.path());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_read_theme_metadata() {
+        let temp_dir = TempDir::new().unwrap();
+        let theme_json = temp_dir.path().join("theme.json");
+
+        let metadata = json!({
+            "name": "Test Theme",
+            "version": "1.0.0",
+            "author": "Test Author",
+            "description": "A test theme",
+            "repository": "https://github.com/test/theme",
+            "license": "MIT",
+            "tags": ["minimal", "clean"],
+            "features": ["responsive", "dark-mode"]
+        });
+
+        fs::write(
+            &theme_json,
+            serde_json::to_string_pretty(&metadata).unwrap(),
+        )
+        .unwrap();
+
+        let result = read_theme_metadata(&theme_json).unwrap();
+        assert_eq!(result.name, "Test Theme");
+        assert_eq!(result.version, "1.0.0");
+        assert_eq!(result.author, "Test Author");
+        assert_eq!(result.description, "A test theme");
+        assert_eq!(
+            result.repository,
+            Some("https://github.com/test/theme".to_string())
+        );
+        assert_eq!(result.license, Some("MIT".to_string()));
+    }
+
+    #[test]
+    fn test_update_config_theme_existing_config() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("marmite.yaml");
+
+        fs::write(&config_path, "title: My Site\ntheme: old-theme\n").unwrap();
+
+        let result = update_config_theme(temp_dir.path(), "new-theme", None);
+        assert!(result.is_ok());
+
+        let content = fs::read_to_string(&config_path).unwrap();
+        assert!(content.contains("theme: new-theme"));
+        assert!(!content.contains("theme: old-theme"));
+    }
+
+    #[test]
+    fn test_update_config_theme_add_to_existing() {
+        let temp_dir = TempDir::new().unwrap();
+        let config_path = temp_dir.path().join("marmite.yaml");
+
+        fs::write(&config_path, "title: My Site\n").unwrap();
+
+        let result = update_config_theme(temp_dir.path(), "new-theme", None);
+        assert!(result.is_ok());
+
+        let content = fs::read_to_string(&config_path).unwrap();
+        assert!(content.contains("theme: new-theme"));
+    }
+}
