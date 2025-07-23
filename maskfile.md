@@ -112,3 +112,11 @@ git tag -f $tag
 git push --force-with-lease
 git push origin $tag
 ~~~
+
+## coverage
+
+> Calculate code coverage and generate cobertura.xml
+
+~~~bash
+cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
+~~~

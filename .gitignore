@@ -26,3 +26,7 @@ example/public
 # AI Context Files
 GEMINI.md
 CLAUDE.md
+
+# Coverage
+coverage/
+cobertura.xml
