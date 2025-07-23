@@ -33,7 +33,7 @@ indexmap = { version = "2.10.0", features = ["serde"] }
 rss = "2.0.12"
 rayon = "1.10.0"
 ureq = "3.0.12"
-zip = "2.2.2"
+zip = "4.3.0"
 
 [profile.release]
 codegen-units = 1
