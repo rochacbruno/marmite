@@ -15,6 +15,7 @@ mod site;
 mod templates;
 mod tera_filter;
 mod tera_functions;
+mod theme_manager;
 
 fn main() {
     let args = cli::Cli::parse();
@@ -29,6 +30,7 @@ fn main() {
         && (args.watch
             || args.serve
             || args.start_theme.is_some()
+            || args.set_theme.is_some()
             || args.init_templates
             || args.generate_config
             || args.init_site)
@@ -81,6 +83,15 @@ fn main() {
 
     if let Some(theme_name) = args.start_theme {
         templates::initialize_theme(&input_folder, &theme_name);
+        return;
+    }
+
+    if let Some(theme_source) = args.set_theme {
+        theme_manager::set_theme(
+            &input_folder,
+            &theme_source,
+            args.configuration.theme.clone(),
+        );
         return;
     }
 

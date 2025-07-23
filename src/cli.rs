@@ -48,6 +48,10 @@ pub struct Cli {
     #[arg(long)]
     pub start_theme: Option<String>,
 
+    /// Download and set a theme from a remote URL or local folder
+    #[arg(long)]
+    pub set_theme: Option<String>,
+
     /// Generate the configuration file
     #[arg(long)]
     pub generate_config: bool,
