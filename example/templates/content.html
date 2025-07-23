@@ -49,7 +49,7 @@
 
 <article class="h-entry">
   <data class="p-name" value="{{ content.title }}"></data>
-  <a class="u-url" href="./{{ content.slug }}.html" style="display: none;"></a>
+  <a class="u-url" href="{{url_for(path=content.slug ~ '.html')}}" style="display: none;"></a>
   {% if content.date %}
   <time class="dt-published" datetime="{{ content.date | date(format='%+') }}" style="display: none;">{{ content.date | default_date_format }}</time>
   {% endif %}
@@ -90,14 +90,18 @@
           {% include "content_date.html" ignore missing %}
           {% if content.stream and content.stream != "index" %}
           <div class="content-stream">
-            <small><a href="./{{ content.stream | trim | slugify }}.html">{{ stream_display_name(stream=content.stream) }}</a></small>
+            {% set slug = content.stream | trim | slugify %}
+            {% set link = slug ~ ".html"%}
+            <small><a href="{{url_for(path=link)}}">{{ stream_display_name(stream=content.stream) }}</a></small>
           </div>
           {% endif %}
         </div>
 
         <ul class="content-tags">
           {% for tag in content.tags %}
-          <li><a href="./tag-{{ tag | trim | slugify }}.html" class="p-category">{{ tag }}</a></li>
+          {% set slug = "tag-" ~ tag | trim | slugify %}
+          {% set link = slug ~ ".html"%}
+          <li><a href="{{url_for(path=link)}}" class="p-category">{{ tag }}</a></li>
           {% endfor %}
         </ul>
       </div>
@@ -112,7 +116,7 @@
   Back-links
   <ul>
     {% for item in content.back_links | slice(end=10) %}
-    <li><a href="./{{item.slug }}.html">{{item.title}}</a></li>
+    <li><a href="{{url_for(path=item.slug ~ '.html')}}">{{item.title}}</a></li>
     {% endfor %}
   </ul>
 </article>
@@ -130,7 +134,7 @@
       {% if item.slug == content.slug or item in content.back_links %}
       {% continue %}
       {% endif %}
-      <li><a href="./{{item.slug }}.html">{{item.title}}</a></li>
+      <li><a href="{{url_for(path=item.slug ~ '.html')}}">{{item.title}}</a></li>
       {% endfor %}
     </ul>
   </article>
@@ -142,10 +146,10 @@
 <article>
   <nav style="display: flex; justify-content: space-between;">
     <div>
-      {% if content.previous %}<a href="./{{ content.previous.slug }}.html">← {{ content.previous.title }}</a>{% endif %}
+      {% if content.previous %}<a href="{{url_for(path=content.previous.slug ~ '.html')}}">← {{ content.previous.title }}</a>{% endif %}
     </div>
     <div>
-      {% if content.next %}<a href="./{{ content.next.slug }}.html">{{ content.next.title }} →</a>{% endif %}
+      {% if content.next %}<a href="{{url_for(path=content.next.slug ~ '.html')}}">{{ content.next.title }} →</a>{% endif %}
     </div>
   </nav>
 </article>
@@ -162,7 +166,7 @@
 <div class="content-source">
   {% set source_url = source_link(content=content) %}
   {% if source_url %}
-    <a href="{{ source_url }}" rel="nofollow">📄 View source</a>
+    <a href="{{url_for(path=source_url)}}" rel="nofollow">📄 View source</a>
   {% endif %}
 </div>
 </article>

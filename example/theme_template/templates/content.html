@@ -50,8 +50,13 @@
 </div>
 {% endif %}
 
-{# Main Article Content #}
-<article class="content-article">
+{# Main Article Content with IndieWeb h-entry #}
+<article class="content-article h-entry">
+    <data class="p-name" value="{{ content.title }}"></data>
+    <a class="u-url" href="{{url_for(path=content.slug ~ '.html')}}" style="display: none;"></a>
+    {% if content.date %}
+    <time class="dt-published" datetime="{{ content.date | date(format='%+') }}" style="display: none;">{{ content.date | default_date_format }}</time>
+    {% endif %}
     {# Draft Warning #}
     {% if content.stream == "draft" %}
     <div class="draft-warning" style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 12px; margin-bottom: 20px; color: #856404;">
@@ -74,12 +79,14 @@
                 {{ content.date | default_date_format }} - &#10710; {{ reading_time }} min
             </time>
 
-            {# Authors (if multiple authors supported) #}
+            {# Authors with IndieWeb h-card #}
             {% if content.authors %}
             <div class="content-authors">
                 by
                 {% for author in content.authors %}
-                <a href="./author-{{ author | slugify }}.html" class="item-author">{{ author }}</a>{% if not loop.last %}, {% endif %}
+                {% set slug = "author-" ~ author | trim | slugify %}
+                {% set link = slug ~ ".html"%}
+                <span class="h-card p-author"><a href="{{url_for(path=link)}}" class="item-author p-name u-url">{{ author }}</a></span>{% if not loop.last %}, {% endif %}
                 {% endfor %}
             </div>
             {% endif %}
@@ -104,8 +111,8 @@
     </div>
     {% endif %}
 
-    {# Main Content Body #}
-    <div class="content-body">
+    {# Main Content Body with IndieWeb e-content #}
+    <div class="content-body e-content">
         {{ content.html }}
     </div>
 
@@ -117,7 +124,9 @@
         <div class="content-tags">
             <span class="tags-label">Tags:</span>
             {% for tag in content.tags %}
-            <a href="./tag-{{ tag | slugify }}.html" class="tag-link">{{ tag }}</a>{% if not loop.last %}, {% endif %}
+            {% set slug = "tag-" ~ tag | trim | slugify %}
+            {% set link = slug ~ ".html"%}
+            <a href="{{url_for(path=link)}}" class="tag-link p-category">{{ tag }}</a>{% if not loop.last %}, {% endif %}
             {% endfor %}
         </div>
         {% endif %}
@@ -125,7 +134,9 @@
         {# Stream info (if not the default 'index' stream) #}
         {% if content.stream and content.stream != "index" %}
         <div class="content-stream">
-            <a href="./{{ content.stream | slugify }}.html" class="stream-link">{{ stream_display_name(stream=content.stream) }}</a>
+            {% set slug = content.stream | trim | slugify %}
+            {% set link = slug ~ ".html"%}
+            <a href="{{url_for(path=link)}}" class="stream-link">{{ stream_display_name(stream=content.stream) }}</a>
         </div>
         {% endif %}
     </footer>
@@ -140,7 +151,7 @@
         <h3>Referenced by:</h3>
         <ul class="backlinks-list">
             {% for item in content.back_links | slice(end=5) %}
-            <li><a href="./{{item.slug}}.html">{{item.title}}</a></li>
+            <li><a href="{{url_for(path=item.slug ~ '.html')}}">{{item.title}}</a></li>
             {% endfor %}
         </ul>
     </section>
@@ -156,7 +167,7 @@
         <ul class="related-list">
             {% for item in related_content | sort(attribute="date") | reverse | slice(end=5) %}
             {% if item.slug == content.slug %}{% continue %}{% endif %}
-            <li><a href="./{{item.slug}}.html">{{item.title}}</a></li>
+            <li><a href="{{url_for(path=item.slug ~ '.html')}}">{{item.title}}</a></li>
             {% endfor %}
         </ul>
     </section>
@@ -169,14 +180,14 @@
 <nav class="content-navigation">
     <div class="nav-previous">
         {% if content.previous %}
-        <a href="./{{ content.previous.slug }}.html" class="nav-link">
+        <a href="{{url_for(path=content.previous.slug ~ '.html')}}" class="nav-link">
             ← {{ content.previous.title }}
         </a>
         {% endif %}
     </div>
     <div class="nav-next">
         {% if content.next %}
-        <a href="./{{ content.next.slug }}.html" class="nav-link">
+        <a href="{{url_for(path=content.next.slug ~ '.html')}}" class="nav-link">
             {{ content.next.title }} →
         </a>
         {% endif %}
@@ -199,7 +210,7 @@
 <div class="content-source">
   {% set source_url = source_link(content=content) %}
   {% if source_url %}
-    <a href="{{ source_url }}" rel="nofollow">📄 View source</a>
+    <a href="{{url_for(path=source_url)}}" rel="nofollow">📄 View source</a>
   {% endif %}
 </div>
 </article>

@@ -26,7 +26,7 @@
     <link rel="stylesheet" type="text/css" href="{{url_for(path='static/pico.min.css')}}">
     <link rel="stylesheet" type="text/css" href="{{url_for(path='static/marmite.css')}}">
     {% if site.extra.colorscheme %}
-    <link rel="stylesheet" type="text/css" href="./static/colorschemes/{{site.extra.colorscheme}}.css">
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='static/colorschemes/' ~ site.extra.colorscheme ~ '.css')}}">
     {% endif %}
     <link rel="stylesheet" type="text/css" href="{{url_for(path='static/custom.css')}}">
     {% endblock -%}
@@ -53,9 +53,9 @@
                     <li>
                         <hgroup class="h-card">
                             <h2>
-                                <a href="./" class="contrast p-name u-url">
+                                <a href="{{url_for(path='')}}" class="contrast p-name u-url">
                                     {% if site.logo_image %}
-                                        <img src="{{ site.logo_image }}" alt="{{ site.name }}" class="u-photo">
+                                        <img src="{{url_for(path=site.logo_image)}}" alt="{{ site.name }}" class="u-photo">
                                     {% else %}
                                         {{ site.name }}
                                     {% endif %}
@@ -75,7 +75,7 @@
                         {% if current_page and current_page == url %}
                         <button class="menu-item active selected">{{name | safe }}</button>
                         {% else %}
-                        <a class="menu-item secondary" {% if url is starting_with("http") %} href="{{url}}" target="_blank" {% else %} href="./{{url}}"{% endif %}>{{ name | safe }}</a>
+                        <a class="menu-item secondary" {% if url is starting_with("http") %} href="{{url}}" target="_blank" {% else %} href="{{url_for(path=url)}}"{% endif %}>{{ name | safe }}</a>
                         {% endif %}
                     </li>
                     {% endfor %}
