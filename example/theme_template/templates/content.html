@@ -52,6 +52,13 @@
 
 {# Main Article Content #}
 <article class="content-article">
+    {# Draft Warning #}
+    {% if content.stream == "draft" %}
+    <div class="draft-warning" style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 12px; margin-bottom: 20px; color: #856404;">
+        <strong>⚠️ Draft Post:</strong> This post is a draft and may not be complete yet.
+    </div>
+    {% endif %}
+
     {# Content Title #}
     <header class="content-header">
         <h1 class="content-title">{{ content.title }}</h1>

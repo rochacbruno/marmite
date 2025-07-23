@@ -6,12 +6,13 @@
         <article class="group-details h-feed">
             <h1 class="p-name" style="display: none;">{{ title }}</h1>
             {% for name, items in group(kind=kind) -%}
+            {% if kind == "stream" and name == "draft" %}{% continue %}{% endif %}
             <details {%if loop.index == 1%}open{%endif%}>
-                <summary role="button" class="outline contrast {{kind}}-group-title">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% else %}{{name}}{% endif %} <sup>{{items | length}}</sup></summary>
+                <summary role="button" class="outline contrast {{kind}}-group-title">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% elif kind == "series" %}{{ series_display_name(series=name) }}{% else %}{{name}}{% endif %} <sup>{{items | remove_draft | length}}</sup></summary>
                 <ul>
-                {% for item in items | slice(end=10) %}
+                {% for item in items | remove_draft | slice(end=10) %}
                     <li class="h-entry">
-                        <a href="./{{item.slug}}.html" class="u-url p-name">{{item.title}}</a> 
+                        <a href="./{{item.slug}}.html" class="u-url p-name">{{item.title}}</a>
                         <small><time class="dt-published" datetime="{{ item.date | date(format='%+') }}">{{item.date | date(format="%Y-%m-%d") }}</time></small>
                     </li>
                 {% endfor %}
@@ -20,7 +21,7 @@
                 {% else %}
                 <li><a href="./{{kind}}-{{ name | trim | slugify }}.html">more &rarr;</a></li>
                 {% endif %}
-                
+
             </ul>
             </details>
             {%- endfor %}

@@ -54,6 +54,12 @@
   <time class="dt-published" datetime="{{ content.date | date(format='%+') }}" style="display: none;">{{ content.date | default_date_format }}</time>
   {% endif %}
 
+  {% if content.stream == "draft" %}
+  <div class="draft-warning" style="background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; padding: 12px; margin-bottom: 20px; color: #856404;">
+    <strong>⚠️ Draft Post:</strong> This post is a draft and may not be complete yet.
+  </div>
+  {% endif %}
+
   {% include "content_title.html" ignore missing %}
   {% if content.series %}
   <div class="content-series">

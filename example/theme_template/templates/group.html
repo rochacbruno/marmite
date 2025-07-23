@@ -14,6 +14,7 @@
 <section class="groups-list">
 
     {% for name, items in group(kind=kind) %}
+    {% if kind == "stream" and name == "draft" %}{% continue %}{% endif %}
     <div class="group-item">
         <h2 class="group-name">
             {% set slug = name | trim | slugify %}
@@ -21,12 +22,12 @@
             {% set slug = kind ~ "-" ~ slug %}
             {% endif %}
             {% set link = slug ~ ".html"%}
-            <a href="{{ link }}">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% else %}{{name}}{% endif %}</a>
+            <a href="{{ link }}">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% elif kind == "series" %}{{ series_display_name(series=name) }}{% else %}{{name}}{% endif %}</a>
         </h2>
-        <span class="group-count">{{ items | length }} post{% if items | length != 1 %}s{% endif %}</span>
+        <span class="group-count">{{ items | remove_draft | length }} post{% if items | remove_draft | length != 1 %}s{% endif %}</span>
         <div class="group-preview">
             {# Show preview of recent posts in this tag #}
-            {% for post in items | sort(attribute="date") | reverse %}
+            {% for post in items | remove_draft | sort(attribute="date") | reverse %}
             <div class="group-preview-item">
                 <a href="./{{ post.slug }}.html" class="group-preview-link">{{ post.title }}</a>
                 {% if post.date %}
