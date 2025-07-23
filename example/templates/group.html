@@ -12,16 +12,16 @@
                 <ul>
                 {% for item in items | remove_draft | slice(end=10) %}
                     <li class="h-entry">
-                        <a href="./{{item.slug}}.html" class="u-url p-name">{{item.title}}</a>
+                        <a href="{{url_for(path=item.slug ~ '.html')}}" class="u-url p-name">{{item.title}}</a>
                         <small><time class="dt-published" datetime="{{ item.date | date(format='%+') }}">{{item.date | date(format="%Y-%m-%d") }}</time></small>
                     </li>
                 {% endfor %}
-                {% if kind == "stream" %}
-                <li><a href="./{{ name | trim | slugify }}.html">more &rarr;</a></li>
-                {% else %}
-                <li><a href="./{{kind}}-{{ name | trim | slugify }}.html">more &rarr;</a></li>
+                {% set slug = name | trim | slugify %}
+                {% if kind != "stream" %}
+                {% set slug = kind ~ "-" ~ slug %}
                 {% endif %}
-
+                {% set link = slug ~ ".html"%}
+                <li><a href="{{url_for(path=link)}}">more &rarr;</a></li>
             </ul>
             </details>
             {%- endfor %}

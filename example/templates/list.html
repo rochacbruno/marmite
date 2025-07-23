@@ -39,7 +39,7 @@
         <div class="author-hero-profile">
             <div class="author-hero-flex">
                 <div class="author-hero-image">
-                    <img src="{{ author.avatar }}" alt="{{ author.name }}" class="avatar u-photo">
+                    <img src="{{url_for(path=author.avatar)}}" alt="{{ author.name }}" class="avatar u-photo">
                 </div>
                 <div class="author-hero-info">
                     <h1 class="p-name">{{author.name}}</h1>
@@ -52,7 +52,7 @@
             <div class="author-hero-links">
                 <ul>
                     {% for link in author.links %}
-                    <li><a href="{{link.1}}" class="u-url">{{link.0}}</a></li>
+                    <li><a href="{{ url_for(path=link.1) }}" {% if link.1 is starting_with("http") %}target="_blank"{% endif %} class="u-url">{{link.0}}</a></li>
                     {% endfor %}
                 </ul>
             </div>
@@ -67,11 +67,11 @@
     {%- for content in content_list %}
     <article class="content-list-item h-entry">
         <h2 class="p-name" style="display: none;">{{ content.title }}</h2>
-        <a class="u-url" href="./{{content.slug}}.html" style="display: none;"></a>
+        <a class="u-url" href="{{url_for(path=content.slug ~ '.html')}}" style="display: none;"></a>
         {% if content.date %}<time class="dt-published" datetime="{{ content.date | date(format='%+') }}" style="display: none;">{{ content.date | default_date_format }}</time>{% endif %}
         
         <div class="content-title-wrapper">
-            <h2 class="content-title"><a href="./{{content.slug}}.html">{{ content.title | capitalize }}</a></h2>
+            <h2 class="content-title"><a href="{{url_for(path=content.slug ~ '.html')}}">{{ content.title | capitalize }}</a></h2>
             {%if content.pinned %}<span class="content-pin">&star;</span>{%endif%} 
         </div>
         <p class="content-excerpt p-summary">
@@ -80,15 +80,17 @@
             {% else %}
             {{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=250, end=" ...") }}
             {%- endif %}
-            <a class="secondary" href="./{{content.slug}}.html">read more &rarr;</a>
+            <a class="secondary" href="{{url_for(path=content.slug ~ '.html')}}">read more &rarr;</a>
         </p>
         {% if content.date -%}
         <footer class="data-tags-footer">
-            <span class="content-date"><a class="secondary" href="./{{content.slug}}.html">{{ content.date | default_date_format }}</a></span>
+            <span class="content-date"><a class="secondary" href="{{url_for(path=content.slug ~ '.html')}}">{{ content.date | default_date_format }}</a></span>
             {% if content.tags -%}
             <ul class="content-tags overflow-auto">
                 {% for tag in content.tags | slice(end=3) -%}
-                <li><a href="./tag-{{ tag | trim | slugify }}.html" class="p-category">{{ tag }}</a></li>
+                {% set slug = "tag-" ~ tag | trim | slugify %}
+                {% set link = slug ~ ".html"%}
+                <li><a href="{{url_for(path=link)}}" class="p-category">{{ tag }}</a></li>
                 {%- endfor %}
             </ul>
             {%- endif %}

@@ -2,7 +2,7 @@
     <nav>
         <ul>
         {% if previous_page %}
-            <li><a href="{{previous_page}}"><strong>&larr;</strong></a></li>
+            <li><a href="{{url_for(path=previous_page)}}"><strong>&larr;</strong></a></li>
         {% endif %}
         </ul>
         <ul>
@@ -10,7 +10,7 @@
         </ul>
         <ul>
         {% if next_page %}
-            <li><a href="{{next_page}}"><strong>&rarr;</strong></a></li>
+            <li><a href="{{url_for(path=next_page)}}"><strong>&rarr;</strong></a></li>
         {% endif %}
         </ul>
     </nav>

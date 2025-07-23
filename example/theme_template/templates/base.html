@@ -54,15 +54,17 @@
            {{ header}}
         {% else %}
         <header class="site-header">
-            <!-- Site Title -->
-            <h1 class="site-title">
-                <a href="./">{{ site.name }}</a>
-            </h1>
+            <!-- Site Title with IndieWeb h-card -->
+            <div class="h-card">
+                <h1 class="site-title">
+                    <a href="{{url_for(path='')}}" class="p-name u-url">{% if site.logo_image %}<img src="{{url_for(path=site.logo_image)}}" alt="{{ site.name }}" class="u-photo">{% else %}{{ site.name }}{% endif %}</a>
+                </h1>
 
-            <!-- Site Tagline -->
-            {% if site.tagline %}
-            <p class="site-tagline">{{ site.tagline }}</p>
-            {% endif %}
+                <!-- Site Tagline -->
+                {% if site.tagline %}
+                <p class="site-tagline p-note">{{ site.tagline }}</p>
+                {% endif %}
+            </div>
 
             <!-- Navigation Menu -->
             <!-- Configure menu items in marmite.yaml -->
@@ -76,7 +78,7 @@
                         {% if current_page and current_page == url %}
                         <span class="nav-item active">{{name}}</span>
                         {% else %}
-                        <a class="nav-item" {% if url is starting_with("http") %} href="{{url}}" target="_blank" {% else %} href="./{{url}}"{% endif %}>{{ name }}</a>
+                        <a class="nav-item" {% if url is starting_with("http") %} href="{{url}}" target="_blank" {% else %} href="{{url_for(path=url)}}"{% endif %}>{{ name }}</a>
                         {% endif %}
                     </li>
                     {% endfor %}

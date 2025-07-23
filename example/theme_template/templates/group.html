@@ -10,8 +10,9 @@
     <h1 class="group-title">{{ title }}</h1>
 </header>
 
-{# Group Listing #}
-<section class="groups-list">
+{# Group Listing with IndieWeb h-feed #}
+<section class="groups-list h-feed">
+    <h1 class="p-name" style="display: none;">{{ title }}</h1>
 
     {% for name, items in group(kind=kind) %}
     {% if kind == "stream" and name == "draft" %}{% continue %}{% endif %}
@@ -22,16 +23,16 @@
             {% set slug = kind ~ "-" ~ slug %}
             {% endif %}
             {% set link = slug ~ ".html"%}
-            <a href="{{ link }}">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% elif kind == "series" %}{{ series_display_name(series=name) }}{% else %}{{name}}{% endif %}</a>
+            <a href="{{url_for(path=link)}}">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% elif kind == "series" %}{{ series_display_name(series=name) }}{% else %}{{name}}{% endif %}</a>
         </h2>
         <span class="group-count">{{ items | remove_draft | length }} post{% if items | remove_draft | length != 1 %}s{% endif %}</span>
         <div class="group-preview">
-            {# Show preview of recent posts in this tag #}
+            {# Show preview of recent posts in this tag with IndieWeb h-entry #}
             {% for post in items | remove_draft | sort(attribute="date") | reverse %}
-            <div class="group-preview-item">
-                <a href="./{{ post.slug }}.html" class="group-preview-link">{{ post.title }}</a>
+            <div class="group-preview-item h-entry">
+                <a href="{{url_for(path=post.slug ~ '.html')}}" class="group-preview-link u-url p-name">{{ post.title }}</a>
                 {% if post.date %}
-                <small class="group-preview-date">{{ post.date | date(format='%B %Y') }}</small>
+                <small class="group-preview-date"><time class="dt-published" datetime="{{ post.date | date(format='%+') }}">{{ post.date | date(format='%B %Y') }}</time></small>
                 {% endif %}
             </div>
             {% endfor %}
@@ -42,7 +43,7 @@
 
 {# Back to main navigation #}
 <nav class="group-navigation">
-    <a href="./index.html" class="nav-link">← Back to Home</a>
+    <a href="{{url_for(path='index.html')}}" class="nav-link">← Back to Home</a>
 </nav>
 
 {% endblock %}

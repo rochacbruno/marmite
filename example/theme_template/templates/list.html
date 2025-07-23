@@ -21,23 +21,23 @@
 </header>
 {% endif %}
 
-{# Author Profile (for author pages) #}
+{# Author Profile with IndieWeb h-card (for author pages) #}
 {% if author is defined %}
-<section class="author-profile">
+<section class="author-profile h-card">
     <div class="author-info">
         {% if author.avatar %}
-        <img src="{{ author.avatar }}" alt="{{ author.name }}" class="author-avatar">
+        <img src="{{url_for(path=author.avatar)}}" alt="{{ author.name }}" class="author-avatar u-photo">
         {% endif %}
         <div class="author-details">
-            <h1 class="author-name">{{ author.name }}</h1>
+            <h1 class="author-name p-name">{{ author.name }}</h1>
             <p class="author-content-count">Author of {{ total_content }} post{% if total_content > 1 %}s{% endif %}</p>
             {% if author.bio %}
-            <p class="author-bio">{{ author.bio }}</p>
+            <p class="author-bio p-note">{{ author.bio }}</p>
             {% endif %}
             {% if author.links %}
             <div class="author-links">
                 {% for link in author.links %}
-                <a href="{{ link.1 }}" class="author-link">{{ link.0 }}</a>
+                <a href="{{ url_for(path=link.1) }}" {% if link.1 is starting_with("http") %}target="_blank"{% endif %} class="author-link u-url">{{ link.0 }}</a>
                 {% endfor %}
             </div>
             {% endif %}
@@ -46,22 +46,26 @@
 </section>
 {% endif %}
 
-{# Content List #}
+{# Content List with IndieWeb h-feed #}
 {% if content_list %}
-<section class="content-list">
+<section class="content-list h-feed">
+    {% if title %}<h1 class="p-name" style="display: none;">{{ title }}</h1>{% endif %}
     {% for item in content_list %}
-    <article class="content-item">
+    <article class="content-item h-entry">
+        <h2 class="p-name" style="display: none;">{{ item.title }}</h2>
+        <a class="u-url" href="{{url_for(path=item.slug ~ '.html')}}" style="display: none;"></a>
+        {% if item.date %}<time class="dt-published" datetime="{{ item.date | date(format='%+') }}" style="display: none;">{{ item.date | default_date_format }}</time>{% endif %}
         {# Item Banner (if available) #}
         {% if item.banner_image %}
         <div class="item-banner">
-            <img src="{{ item.banner_image }}" alt="{{ item.title }}" />
+            <img src="{{url_for(path=item.banner_image)}}" alt="{{ item.title }}" />
         </div>
         {% endif %}
 
         <header class="item-header">
             {# Item Title #}
             <h2 class="item-title">
-                <a href="./{{ item.slug }}.html">{{ item.title }}</a>
+                <a href="{{url_for(path=item.slug ~ '.html')}}">{{ item.title }}</a>
             </h2>
 
             {# Item Metadata (for posts with dates) #}
@@ -71,12 +75,14 @@
                     {{ item.date | default_date_format }}
                 </time>
 
-                {# Authors #}
+                {# Authors with IndieWeb h-card #}
                 {% if item.authors %}
                 <div class="item-authors">
                     by
                     {% for author in item.authors %}
-                    <a href="./author-{{ author | slugify }}.html" class="item-author">{{ author }}</a>{% if not loop.last %}, {% endif %}
+                    {% set slug = "author-" ~ author | trim | slugify %}
+                    {% set link = slug ~ ".html"%}
+                    <span class="h-card p-author"><a href="{{url_for(path=link)}}" class="item-author p-name u-url">{{ author }}</a></span>{% if not loop.last %}, {% endif %}
                     {% endfor %}
                 </div>
                 {% endif %}
@@ -84,32 +90,34 @@
             {% endif %}
         </header>
 
-        {# Item Description/Excerpt #}
+        {# Item Description/Excerpt with IndieWeb p-summary #}
         {% if item.description %}
         <div class="item-description">
-            <p>{{ item.description }}</p>
+            <p class="p-summary">{{ item.description }}</p>
         </div>
         {% else %}
         {# Auto-generate excerpt from content #}
         <div class="item-excerpt">
-            <p>{{ item.html | striptags | truncate(length=200, end='...') }}</p>
+            <p class="p-summary">{{ item.html | striptags | truncate(length=200, end='...') }}</p>
         </div>
         {% endif %}
 
         {# Item Footer with Tags and Read More #}
         <footer class="item-footer">
-            {# Tags #}
+            {# Tags with IndieWeb p-category #}
             {% if item.tags %}
             <div class="item-tags">
                 {% for tag in item.tags | slice(end=3) %}
-                <a href="./tag-{{ tag | slugify }}.html" class="item-tag">{{ tag }}</a>{% if not loop.last %} {% endif %}
+                {% set slug = "tag-" ~ tag | trim | slugify %}
+                {% set link = slug ~ ".html"%}
+                <a href="{{url_for(path=link)}}" class="item-tag p-category">{{ tag }}</a>{% if not loop.last %} {% endif %}
                 {% endfor %}
             </div>
             {% endif %}
 
             {# Read More Link #}
             <div class="item-read-more">
-                <a href="./{{ item.slug }}.html" class="read-more-link">Read more →</a>
+                <a href="{{url_for(path=item.slug ~ '.html')}}" class="read-more-link">Read more →</a>
             </div>
         </footer>
     </article>
@@ -127,7 +135,7 @@
 <nav class="pagination">
     {# Previous Page #}
     {% if previous_page %}
-    <a href="./{{ previous_page }}" class="pagination-link pagination-prev">← Previous</a>
+    <a href="{{url_for(path=previous_page)}}" class="pagination-link pagination-prev">← Previous</a>
     {% endif %}
 
     {# Page Info #}
@@ -137,7 +145,7 @@
 
     {# Next Page #}
     {% if next_page %}
-    <a href="./{{ next_page }}" class="pagination-link pagination-next">Next →</a>
+    <a href="{{url_for(path=next_page)}}" class="pagination-link pagination-next">Next →</a>
     {% endif %}
 </nav>
 {% endif %}
