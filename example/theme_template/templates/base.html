@@ -12,6 +12,8 @@
     <!-- Theme Stylesheets -->
     <!-- Add your custom CSS in static/style.css -->
     <link rel="stylesheet" type="text/css" href="{{url_for(path='static/style.css')}}">
+    <!-- Custom CSS - Add custom.css in your site root to override theme styles -->
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='static/custom.css')}}">
     {%- endblock %}
 
     <!-- SEO and OpenGraph Meta Tags -->
@@ -147,6 +149,8 @@
     <!-- Add your custom JavaScript in static/script.js -->
     {% block scripts %}
     <script src="{{url_for(path='static/script.js')}}"></script>
+    <!-- Custom JavaScript - Add custom.js in your site root to override theme scripts -->
+    <script src="{{url_for(path='static/custom.js')}}"></script>
     {% if site.enable_search %}
     <script type="module" src="{{url_for(path='static/search.js')}}"></script>
     {% endif %}
