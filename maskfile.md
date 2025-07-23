@@ -100,3 +100,15 @@ git push --tags
 mask bumpversion "$tag"
 mask pushtag "$tag"
 ~~~
+
+## retag (tag)
+
+> Amend changes and retag and push tags again
+
+~~~bash
+git push origin :refs/tags/$tag
+git commit --amend --no-edit --allow-empty
+git tag -f $tag
+git push --force-with-lease
+git push origin $tag
+~~~
