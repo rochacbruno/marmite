@@ -143,7 +143,10 @@ fn download_theme(input_folder: &Path, url: &str) -> Result<String, Box<dyn std:
 
 /// Determines the download URL based on the repository URL
 fn determine_download_url(url: &str) -> Result<String, Box<dyn std::error::Error>> {
-    if url.ends_with(".zip") {
+    if std::path::Path::new(url)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("zip"))
+    {
         // Direct zip file URL
         Ok(url.to_string())
     } else if url.contains("github.com") {
@@ -201,11 +204,18 @@ fn determine_download_url(url: &str) -> Result<String, Box<dyn std::error::Error
 
 /// Extracts the theme name from the URL
 fn extract_theme_name(url: &str) -> Result<String, Box<dyn std::error::Error>> {
-    if url.ends_with(".zip") {
+    if std::path::Path::new(url)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("zip"))
+    {
         // Extract from zip filename
-        let parts: Vec<&str> = url.split('/').collect();
-        let filename = parts.last().ok_or("Invalid URL")?;
-        Ok(filename.trim_end_matches(".zip").to_string())
+        let path = std::path::Path::new(url);
+        let filename = path
+            .file_stem()
+            .ok_or("Invalid URL: no filename")?
+            .to_str()
+            .ok_or("Invalid URL: filename not UTF-8")?;
+        Ok(filename.to_string())
     } else {
         // Extract from repository URL
         let parts: Vec<&str> = url.trim_end_matches('/').split('/').collect();
@@ -289,7 +299,10 @@ fn update_config_theme(
         info!("Updating marmite.yaml with theme: {theme_name}");
 
         let content = fs::read_to_string(&config_path)?;
-        let mut lines: Vec<String> = content.lines().map(std::string::ToString::to_string).collect();
+        let mut lines: Vec<String> = content
+            .lines()
+            .map(std::string::ToString::to_string)
+            .collect();
 
         // Find and update theme line
         let mut theme_found = false;
