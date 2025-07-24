@@ -85,6 +85,31 @@ cargo install marmite
 
 Or download the pre-built **binary** from the [releases](https://github.com/rochacbruno/marmite/releases)
 
+### Alternative installation methods
+
+<details>
+<summary>Package managers</summary>
+
+**Homebrew (macOS/Linux)**
+```bash
+brew install marmite
+```
+[View formula](https://formulae.brew.sh/formula/marmite)
+
+**Arch Linux (AUR)**
+```bash
+yay -S marmite-bin
+```
+[View package](https://aur.archlinux.org/packages/marmite-bin)
+
+**FreeBSD**
+```bash
+pkg install marmite
+```
+[View port](https://www.freshports.org/www/marmite/)
+
+</details>
+
 
 <details>
 
