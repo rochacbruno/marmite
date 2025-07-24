@@ -57,6 +57,7 @@ templates/
 {{ site_data.archive.map }}        <!-- Posts grouped by year -->
 {{ site_data.author.map }}         <!-- Posts grouped by author -->
 {{ site_data.stream.map }}         <!-- Posts grouped by stream -->
+{{ site_data.series.map }}         <!-- Posts grouped by series -->
 ```
 
 #### Navigation
@@ -89,6 +90,7 @@ templates/
 {{ content.authors }}              <!-- Author names array -->
 {{ content.tags }}                 <!-- Tags array -->
 {{ content.stream }}               <!-- Stream name -->
+{{ content.series }}               <!-- Series name -->
 {{ content.pinned }}               <!-- Pinned status boolean -->
 {{ content.toc }}                  <!-- Table of contents HTML -->
 {{ content.card_image }}           <!-- Social media card image -->
@@ -100,10 +102,12 @@ templates/
 
 #### Navigation
 ```html
-{{ content.next }}                 <!-- Next post in stream -->
-{{ content.previous }}             <!-- Previous post in stream -->
+{{ content.next }}                 <!-- Next post in stream/series -->
+{{ content.previous }}             <!-- Previous post in stream/series -->
 {{ content.back_links }}           <!-- Content linking to this post -->
 ```
+
+**Note:** When both `series` and `stream` are set on content, series navigation takes precedence for next/previous links.
 
 #### Extra Fields
 ```html
@@ -131,7 +135,7 @@ templates/
 
 #### Grouping
 ```html
-{{ kind }}                         <!-- Group type: "tag", "author", "archive", "stream" -->
+{{ kind }}                         <!-- Group type: "tag", "author", "archive", "stream", "series" -->
 {{ title }}                        <!-- Group page title -->
 ```
 
@@ -186,6 +190,16 @@ Access grouped content:
   <h3>{{ year }}</h3>
   <p>{{ year_posts | length }} posts</p>
 {% endfor %}
+
+<!-- Get all series -->
+{% for series_name, series_posts in group(kind="series") %}
+  <h3>{{ series_display_name(series=series_name) }}</h3>
+  <ul>
+    {% for post in series_posts %}
+      <li><a href="{{ post.slug }}.html">{{ post.title }}</a></li>
+    {% endfor %}
+  </ul>
+{% endfor %}
 ```
 
 ### stream_display_name()
@@ -222,6 +236,38 @@ streams:
 
 If no display name is configured, returns the stream name itself.
 
+### series_display_name()
+Get friendly display names for series:
+
+```html
+<!-- Show display name for current content's series -->
+{% if content.series %}
+  <span class="series-name">{{ series_display_name(series=content.series) }}</span>
+{% endif %}
+
+<!-- Use in series listing -->
+{% for series_name, series_posts in group(kind="series") %}
+  <h3>{{ series_display_name(series=series_name) }}</h3>
+  <p>{{ series_posts | length }} posts in {{ series_display_name(series=series_name) }}</p>
+{% endfor %}
+
+<!-- Link to series page with friendly name -->
+<a href="serie-{{ content.series }}.html">
+  View all {{ series_display_name(series=content.series) }} posts
+</a>
+```
+
+**Configuration:**
+```yaml
+series:
+  python-tutorial:
+    display_name: "Python Tutorial"
+  web-dev-basics:
+    display_name: "Web Development Basics"
+```
+
+If no display name is configured, returns the series name itself.
+
 ### source_link()
 Generate source file links:
 
@@ -240,6 +286,27 @@ Format dates using the site's default format:
 
 ```html
 {{ content.date | default_date_format }}
+```
+
+### remove_draft
+Filter out draft content from arrays:
+
+```html
+<!-- Remove draft posts from a list -->
+{% for post in site_data.posts | remove_draft %}
+  <li>{{ post.title }}</li>
+{% endfor %}
+
+<!-- Get count of non-draft items -->
+{{ items | remove_draft | length }}
+
+<!-- Use with group function results -->
+{% for name, items in group(kind="tag") %}
+  <h3>{{ name }} ({{ items | remove_draft | length }} posts)</h3>
+  {% for post in items | remove_draft %}
+    <li>{{ post.title }}</li>
+  {% endfor %}
+{% endfor %}
 ```
 
 ### Built-in Tera Filters
@@ -387,6 +454,51 @@ Templates for specific streams:
 {% endblock %}
 ```
 
+### Series-Specific Templates
+Templates for specific series with chronological navigation:
+
+```html
+<!-- templates/custom_series.html -->
+{% extends "base.html" %}
+
+{% block main %}
+<div class="series-header">
+    <h1>{{ series_display_name(series=content.series) }}</h1>
+    <p>Part {{ content.series_position }} of {{ content.series_total }}</p>
+</div>
+
+<article class="series-content">
+    <h2>{{ content.title }}</h2>
+    {{ content.html }}
+</article>
+
+<nav class="series-navigation">
+    {% if content.previous %}
+    <a href="{{ content.previous.slug }}.html" class="prev-post">
+        ← Previous: {{ content.previous.title }}
+    </a>
+    {% endif %}
+    
+    {% if content.next %}
+    <a href="{{ content.next.slug }}.html" class="next-post">
+        Next: {{ content.next.title }} →
+    </a>
+    {% endif %}
+</nav>
+
+<div class="series-toc">
+    <h3>All Parts in This Series</h3>
+    <ul>
+        {% for post in site_data.series.map[content.series] %}
+        <li {% if post.slug == content.slug %}class="current"{% endif %}>
+            <a href="{{ post.slug }}.html">{{ post.title }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
+```
+
 ## Advanced Template Features
 
 ### Conditional Content
@@ -395,6 +507,13 @@ Templates for specific streams:
 {% if content.stream == "tutorials" %}
 <div class="tutorial-notice">
     This is a tutorial post. Follow along step by step!
+</div>
+{% endif %}
+
+<!-- Show series navigation -->
+{% if content.series %}
+<div class="series-notice">
+    Part of the <a href="serie-{{ content.series }}.html">{{ series_display_name(series=content.series) }}</a> series
 </div>
 {% endif %}
 

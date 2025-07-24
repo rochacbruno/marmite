@@ -52,6 +52,7 @@ site_data:
   archive: GroupedContent
   author: GroupedContent
   stream: GroupedContent
+  series: GroupedContent
 site:
   name: str
   url: str
@@ -70,6 +71,8 @@ slug: str
 html: str
 tags: [str] or []
 date: DateTimeObject or None
+stream: str or None
+series: str or None
 extra: {key: value}
 links_to: [str] or None
 back_links: [Content] or []
@@ -84,6 +87,8 @@ previous: Content or None
 
 The `next` and `previous` attributes are available on the `content` object when rendering a single content page, and they hold the next and previous post objects, respectively. This is useful for creating navigation between posts.
 
+**Note:** When both `series` and `stream` are set on content, series navigation takes precedence for next/previous links.
+
 Example of a next/previous navigation in `content.html`:
 
 ```html
@@ -96,12 +101,12 @@ Example of a next/previous navigation in `content.html`:
 ```
 
 The `GroupedContent` is a map that when iterated returns a map of `name: [Content]`, this is available on global context,
-which means `tag`, `archive` and `author` groups can be accessed on any template, however it is not recommended to access it directly,
+which means `tag`, `archive`, `author`, `stream`, and `series` groups can be accessed on any template, however it is not recommended to access it directly,
 because those are unordered, to get an ordered version use `group` function:
 
 ```html
 <ul class="content-tags">
-    {% for name, items in group(kind="tag") -%}  <!-- kind can be one of [tag,archive,author] -->
+    {% for name, items in group(kind="tag") -%}  <!-- kind can be one of [tag,archive,author,stream,series] -->
         <li><a href="./tag-{{ name | trim | slugify }}.html">{{ name }}</a><span class="tag-count"> [{{ items | length }}]</span></li>
     {%- endfor %}
 </ul>
@@ -112,7 +117,7 @@ There are 10 templates inside the `templates` folder, each adds more data to con
 - base.html
   - All other templates inherits blocks from this one.
 - list.html
-  - Renders `index.html`, `pages.html`, `tag-{name}.html`, `archive-{year}.html`, `author-{username}.html`
+  - Renders `index.html`, `pages.html`, `tag-{name}.html`, `archive-{year}.html`, `author-{username}.html`, `{stream}.html`, `serie-{series}.html`
   - adds `title:str`, `content_list: [Content]`,
   - adds `author: Author` when rendering `author-*.html` pages. 
   - pagination: `current_page: str`, `next_page:str`, `previous_page:str`, 
@@ -121,7 +126,7 @@ There are 10 templates inside the `templates` folder, each adds more data to con
   - Renders individual content page `my-post.html`
   - adds `title:str`, `content: [Content]`, `current_page: str`
 - group.html
-  - Renders grouped information such as `tags.html` and `archive.html`
+  - Renders grouped information such as `tags.html`, `archive.html`, `authors.html`, `streams.html`, and `series.html`
   - adds `title:str`, `current_page: str`, `kind:str`
 
 Include templates:
@@ -306,6 +311,14 @@ Example of a custom index template.
             </ul>
         </article>
         <article>
+            <header>Series</header>
+            <ul>
+            {% for series, _ in group(kind="series") %}
+            <li><a href="serie-{{series}}.html">{{series}}</a></li>
+            {% endfor %}
+            </ul>
+        </article>
+        <article>
             <header>Pages</header>
             <ul>
             {% for page in site_data.pages %}
@@ -331,7 +344,8 @@ With the above HTML your index page will look like:
 
 
 > [!NOTE]  
-> A custom index can be created for any **stream**, name the template `custom_{stream}.html`
+> A custom index can be created for any **stream**, name the template `custom_{stream}.html`  
+> Series pages use the `list.html` template and are generated as `serie-{series}.html`
 
 
 ## Static files
@@ -412,9 +426,12 @@ Tera {
     functions: [
             group,
             url_for,
+            stream_display_name,
+            series_display_name,
     ]
     filters: [
             default_date_format,
+            remove_draft,
             reverse,
             trim_start,
             trim,
