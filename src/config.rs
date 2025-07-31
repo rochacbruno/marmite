@@ -244,6 +244,9 @@ pub struct Marmite {
 
     #[serde(default)]
     pub theme: Option<String>,
+
+    #[serde(default)]
+    pub file_mapping: Vec<FileMapping>,
 }
 
 fn default_true() -> bool {
@@ -405,6 +408,12 @@ pub struct StreamConfig {
 pub struct SeriesConfig {
     pub display_name: String,
     pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct FileMapping {
+    pub source: String,
+    pub dest: String,
 }
 
 /// Generates a default configuration file

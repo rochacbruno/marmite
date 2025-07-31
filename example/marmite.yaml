@@ -136,3 +136,11 @@ extra:
 #     wikilinks_title_before_pipe: true # Wiki-style links with title before pipe (default: true)
 #     wikilinks_title_after_pipe: false # Wiki-style links with title after pipe (default: false)
 #     alerts: true                   # Enable/disable alert blocks (default: true)
+
+# File mapping configuration
+# Copy files from source to destination during site generation
+file_mapping:
+  - source: ai/llms.txt
+    dest: llms.txt
+  - source: static/favicon.ico
+    dest: favicon.ico

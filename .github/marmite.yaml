@@ -39,3 +39,10 @@ authors:
     avatar: https://github.com/karlamagueta.png
     links:
       - ["Github", "https://github.com/karlamagueta"]
+
+# File mapping configuration
+file_mapping:
+  - source: ai/llms.txt
+    dest: llms.txt
+  - source: static/favicon.ico
+    dest: favicon.ico

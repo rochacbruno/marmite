@@ -397,6 +397,32 @@ marmite . output/ --config prod.yaml
 marmite . output/ --config test.yaml
 ```
 
+## File Mapping
+
+Copy arbitrary files from source to destination during site generation:
+
+```yaml
+file_mapping:
+  - source: path/to/source.txt
+    dest: destination.txt
+  - source: assets/imgs/*.jpg
+    dest: media/photos
+  - source: docs_folder
+    dest: documentation
+```
+
+**Source types**:
+- Single files: `source: file.txt`
+- Directories: `source: folder_name`
+- Glob patterns: `source: pattern/*.ext`
+
+**Path resolution**:
+- Relative paths are resolved from the input directory
+- Absolute paths are used as-is
+- Destination paths are relative to the output directory
+
+See the [[File Mapping Feature]] documentation for detailed examples and use cases.
+
 ## Markdown parser options 
 
 Marmite also allows customizing the markdown parser, the options are described on [[Configurable Markdown Parser Options]]

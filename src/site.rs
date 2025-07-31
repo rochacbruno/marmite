@@ -8,6 +8,7 @@ use crate::{server, tera_filter};
 use chrono::Datelike;
 use core::str;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
+use glob::glob;
 use hotwatch::{Event, EventKind, Hotwatch};
 use log::{debug, error, info};
 use rayon::prelude::*;
@@ -1022,6 +1023,122 @@ fn handle_author_pages(
     Ok(())
 }
 
+fn handle_file_mappings(
+    input_folder: &Path,
+    output_folder: &Path,
+    file_mappings: &[crate::config::FileMapping],
+) {
+    for mapping in file_mappings {
+        let source_path = if Path::new(&mapping.source).is_absolute() {
+            std::path::PathBuf::from(&mapping.source)
+        } else {
+            input_folder.join(&mapping.source)
+        };
+
+        let dest_path = output_folder.join(&mapping.dest);
+
+        // Ensure destination directory exists
+        if let Some(parent) = dest_path.parent() {
+            if let Err(e) = fs::create_dir_all(parent) {
+                error!(
+                    "Failed to create destination directory {}: {e:?}",
+                    parent.display()
+                );
+                continue;
+            }
+        }
+
+        // Check if source is a single file
+        if source_path.is_file() {
+            match fs::copy(&source_path, &dest_path) {
+                Ok(_) => info!(
+                    "Copied file mapping: {} -> {}",
+                    source_path.display(),
+                    dest_path.display()
+                ),
+                Err(e) => error!("Failed to copy file {}: {e:?}", source_path.display()),
+            }
+        }
+        // Check if source is a directory
+        else if source_path.is_dir() {
+            // Create the destination directory if it doesn't exist
+            if let Err(e) = fs::create_dir_all(&dest_path) {
+                error!(
+                    "Failed to create destination directory {}: {e:?}",
+                    dest_path.display()
+                );
+                continue;
+            }
+
+            let mut options = CopyOptions::new();
+            options.overwrite = true;
+            options.content_only = false;
+
+            match dircopy(&source_path, &dest_path, &options) {
+                Ok(size) => {
+                    info!(
+                        "Copied directory mapping: {} -> {} ({} bytes)",
+                        source_path.display(),
+                        dest_path.display(),
+                        size
+                    );
+                }
+                Err(e) => {
+                    error!("Failed to copy directory {}: {e:?}", source_path.display());
+                }
+            }
+        }
+        // Otherwise treat as glob pattern
+        else {
+            let pattern = source_path.to_str().unwrap_or("");
+            match glob(pattern) {
+                Ok(paths) => {
+                    for path_result in paths {
+                        match path_result {
+                            Ok(path) => {
+                                if path.is_file() {
+                                    let file_name = path.file_name().unwrap_or_default();
+                                    let final_dest = if dest_path.extension().is_some() {
+                                        // If dest has extension, it's a file
+                                        dest_path.clone()
+                                    } else {
+                                        // Otherwise it's a directory
+                                        dest_path.join(file_name)
+                                    };
+
+                                    // Ensure parent directory exists
+                                    if let Some(parent) = final_dest.parent() {
+                                        let _ = fs::create_dir_all(parent);
+                                    }
+
+                                    match fs::copy(&path, &final_dest) {
+                                        Ok(_) => debug!(
+                                            "Copied glob match: {} -> {}",
+                                            path.display(),
+                                            final_dest.display()
+                                        ),
+                                        Err(e) => error!(
+                                            "Failed to copy glob file {}: {e:?}",
+                                            path.display()
+                                        ),
+                                    }
+                                }
+                            }
+                            Err(e) => error!("Glob error: {e:?}"),
+                        }
+                    }
+                    info!(
+                        "Processed glob mapping: {} -> {}",
+                        pattern,
+                        dest_path.display()
+                    );
+                }
+                Err(e) => error!("Invalid glob pattern {pattern}: {e:?}"),
+            }
+        }
+    }
+}
+
 fn handle_static_artifacts(
     input_folder: &Path,
     site_data: &Data,
@@ -1091,6 +1208,11 @@ fn handle_static_artifacts(
             &media_source.display(),
             &output_folder.display()
         );
+    }
+
+    // Handle file mappings
+    if !site_data.site.file_mapping.is_empty() {
+        handle_file_mappings(input_folder, output_folder, &site_data.site.file_mapping);
     }
 
     // we want to check if the file exists in `input_folder` and `content_dir`
@@ -1915,5 +2037,185 @@ mod tests {
             .unwrap();
         assert!(news_post.next.is_none());
         assert!(news_post.previous.is_none());
+    }
+
+    #[test]
+    fn test_file_mapping() {
+        use crate::config::FileMapping;
+        use tempfile::TempDir;
+
+        // Create temp directories
+        let input_dir = TempDir::new().unwrap();
+        let output_dir = TempDir::new().unwrap();
+
+        // Create test files in input directory
+        let test_file = input_dir.path().join("test.txt");
+        fs::write(&test_file, "test content").unwrap();
+
+        let ai_dir = input_dir.path().join("ai");
+        fs::create_dir(&ai_dir).unwrap();
+        let llms_file = ai_dir.join("llms.txt");
+        fs::write(&llms_file, "llms content").unwrap();
+
+        // Create file mappings
+        let mappings = vec![
+            FileMapping {
+                source: "test.txt".to_string(),
+                dest: "output_test.txt".to_string(),
+            },
+            FileMapping {
+                source: "ai/llms.txt".to_string(),
+                dest: "llms.txt".to_string(),
+            },
+        ];
+
+        // Execute file mappings
+        handle_file_mappings(input_dir.path(), output_dir.path(), &mappings);
+
+        // Check that files were copied correctly
+        let output_test = output_dir.path().join("output_test.txt");
+        assert!(output_test.exists());
+        assert_eq!(fs::read_to_string(output_test).unwrap(), "test content");
+
+        let output_llms = output_dir.path().join("llms.txt");
+        assert!(output_llms.exists());
+        assert_eq!(fs::read_to_string(output_llms).unwrap(), "llms content");
+    }
+
+    #[test]
+    fn test_file_mapping_glob() {
+        use crate::config::FileMapping;
+        use tempfile::TempDir;
+
+        // Create temp directories
+        let input_dir = TempDir::new().unwrap();
+        let output_dir = TempDir::new().unwrap();
+
+        // Create test files
+        let assets_dir = input_dir.path().join("assets");
+        let imgs_dir = assets_dir.join("imgs");
+        fs::create_dir_all(&imgs_dir).unwrap();
+
+        fs::write(imgs_dir.join("image1.jpg"), "image1").unwrap();
+        fs::write(imgs_dir.join("image2.jpg"), "image2").unwrap();
+        fs::write(imgs_dir.join("doc.pdf"), "pdf").unwrap();
+
+        // Create glob mapping
+        let mappings = vec![FileMapping {
+            source: "assets/imgs/*.jpg".to_string(),
+            dest: "media/photos".to_string(),
+        }];
+
+        // Execute file mappings
+        handle_file_mappings(input_dir.path(), output_dir.path(), &mappings);
+
+        // Check that only jpg files were copied
+        let photos_dir = output_dir.path().join("media/photos");
+        assert!(photos_dir.exists());
+        assert!(photos_dir.join("image1.jpg").exists());
+        assert!(photos_dir.join("image2.jpg").exists());
+        assert!(!photos_dir.join("doc.pdf").exists());
+    }
+
+    #[test]
+    fn test_file_mapping_nested_destination() {
+        use crate::config::FileMapping;
+        use tempfile::TempDir;
+
+        // Create temp directories
+        let input_dir = TempDir::new().unwrap();
+        let output_dir = TempDir::new().unwrap();
+
+        // Create test file
+        let test_file = input_dir.path().join("test.txt");
+        fs::write(&test_file, "test content").unwrap();
+
+        // Create mapping with nested destination
+        let mappings = vec![FileMapping {
+            source: "test.txt".to_string(),
+            dest: "foo/bar/baz/test.txt".to_string(),
+        }];
+
+        // Execute file mappings
+        handle_file_mappings(input_dir.path(), output_dir.path(), &mappings);
+
+        // Check that nested directories were created and file was copied
+        let nested_file = output_dir.path().join("foo/bar/baz/test.txt");
+        assert!(nested_file.exists());
+        assert_eq!(fs::read_to_string(nested_file).unwrap(), "test content");
+    }
+
+    #[test]
+    fn test_file_mapping_glob_nested_destination() {
+        use crate::config::FileMapping;
+        use tempfile::TempDir;
+
+        // Create temp directories
+        let input_dir = TempDir::new().unwrap();
+        let output_dir = TempDir::new().unwrap();
+
+        // Create test files
+        let docs_dir = input_dir.path().join("docs");
+        fs::create_dir(&docs_dir).unwrap();
+        fs::write(docs_dir.join("manual.pdf"), "manual").unwrap();
+        fs::write(docs_dir.join("guide.pdf"), "guide").unwrap();
+        fs::write(docs_dir.join("readme.txt"), "readme").unwrap();
+
+        // Create glob mapping with nested destination
+        let mappings = vec![FileMapping {
+            source: "docs/*.pdf".to_string(),
+            dest: "assets/downloads/pdfs".to_string(),
+        }];
+
+        // Execute file mappings
+        handle_file_mappings(input_dir.path(), output_dir.path(), &mappings);
+
+        // Check that nested directories were created and files were copied
+        let pdfs_dir = output_dir.path().join("assets/downloads/pdfs");
+        assert!(pdfs_dir.exists());
+        assert!(pdfs_dir.join("manual.pdf").exists());
+        assert!(pdfs_dir.join("guide.pdf").exists());
+        assert!(!pdfs_dir.join("readme.txt").exists());
+    }
+
+    #[test]
+    fn test_file_mapping_directory() {
+        use crate::config::FileMapping;
+        use tempfile::TempDir;
+
+        // Create temp directories
+        let input_dir = TempDir::new().unwrap();
+        let output_dir = TempDir::new().unwrap();
+
+        // Create a directory with files
+        let src_dir = input_dir.path().join("source_dir");
+        fs::create_dir(&src_dir).unwrap();
+        fs::write(src_dir.join("file1.txt"), "content1").unwrap();
+        fs::write(src_dir.join("file2.txt"), "content2").unwrap();
+
+        // Create directory mapping
+        let mappings = vec![FileMapping {
+            source: "source_dir".to_string(),
+            dest: "dest_dir".to_string(),
+        }];
+
+        // Execute file mappings
+        handle_file_mappings(input_dir.path(), output_dir.path(), &mappings);
+
+        // Check that directory was copied
+        // fs_extra::dir::copy copies the contents AND the directory itself into dest
+        let dest_dir = output_dir.path().join("dest_dir");
+
+        // First check if dest_dir was created
+        assert!(dest_dir.exists(), "dest_dir should exist");
+
+        // The source directory 'source_dir' should be copied INTO dest_dir
+        let copied_dir = dest_dir.join("source_dir");
+        assert!(
+            copied_dir.exists(),
+            "source_dir should be copied into dest_dir"
+        );
+        assert!(copied_dir.join("file1.txt").exists());
+        assert!(copied_dir.join("file2.txt").exists());
     }
 }

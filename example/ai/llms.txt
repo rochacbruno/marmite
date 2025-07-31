@@ -1,0 +1,69 @@
+# Marmite
+
+> Marmite is a fast, minimal static site generator written in Rust that converts Markdown files into HTML websites. It's designed for simplicity and includes features like live reloading, RSS feeds, and a built-in development server.
+
+Marmite is the easiest static site generator optimized for blogs. It doesn't require specific folder structure or complex configuration - the goal is that a blog can be generated simply by running Marmite on a folder with Markdown and media files. Written in Rust, it provides very fast builds with everything included in a single binary.
+
+## Documentation
+
+### Getting Started
+
+- [Why to use Marmite?](./why-to-use-marmite.html): Learn about Marmite's features and design philosophy
+- [Getting Started](./getting-started.html): Quick start guide to create your first blog with Marmite
+- [Command Line Interface](./marmite-command-line-interface.html): Complete reference for all CLI commands and options
+
+### Content Creation
+
+- [Content Types and Taxonomy](./content-types.html): Understanding posts, pages, tags, and streams
+- [Markdown Format](./markdown-format.html): Supported markdown syntax and extensions
+- [Using Markdown to Customize Layout](./using-markdown-to-customize-layout.html): Special markdown files for layout customization
+- [Streams Guide](./streams-guide.html): Organizing content with streams
+- [Series Feature](./series-feature.html): Creating ordered content series
+- [Draft Posts Guide](./draft-posts-guide.html): Working with draft content
+
+### Configuration
+
+- [Configuration Reference](./configuration-reference.html): Complete reference for all marmite.yaml options
+- [Configurable Markdown Parser](./configurable-markdown-parser.html): Customizing markdown processing
+- [IndieWeb Compliance](./indieweb-compliance.html): Making your site IndieWeb compatible
+
+### Templates and Theming
+
+- [Customizing Templates](./customizing-templates.html): How to customize templates and create themes
+- [Template Reference](./template-reference.html): Tera template language reference
+- [Themes Feature](./themes-feature.html): Using and creating custom themes
+- [Remote Themes](./remote-themes.html): Installing themes from remote repositories
+
+### Features
+
+- [Automatic Image Download](./automatic-image-download.html): Auto-generating banner images
+- [Markdown Source Publishing](./markdown-source-publishing.html): Publishing source files alongside HTML
+- [Link Checker with Lychee](./link-checker-with-lychee.html): Checking for broken links
+- [Enabling Comments](./enabling-comments.html): Adding comment systems to your blog
+
+### Deployment
+
+- [Hosting](./hosting.html): Deploying to GitHub Pages, Netlify, and other platforms
+
+### Community
+
+- [Contributors](./contributors.html): List of project contributors
+- [Showcase](./showcase.html): Sites built with Marmite
+
+## Tutorials
+
+### Python Tutorial Series
+
+- [Python Tutorial Part 1](./python-tutorial-part-1.html): Introduction to Python basics
+- [Python Tutorial Part 2](./python-tutorial-part-2.html): Control flow and functions
+- [Python Tutorial Part 3](./python-tutorial-part-3.html): Data structures and modules
+
+## Release Notes
+
+- [Marmite 0.2.6 Release Notes](./marmite-0-2-6-release-notes.html): Latest features and improvements
+
+## Optional
+
+- [About](./about.html): About the project
+- [Pagination](./pagination.html): How pagination works
+- [Content without metadata](./no-metadata.html): Example of content without frontmatter
