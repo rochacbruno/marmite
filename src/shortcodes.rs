@@ -466,8 +466,6 @@ mod tests {
         assert!(processor.shortcodes.contains_key("tags"));
         assert!(processor.shortcodes.contains_key("socials"));
 
-        // Check that all embedded shortcodes are loaded
-        assert_eq!(processor.shortcodes.len(), 10);
     }
 
     #[test]
@@ -607,16 +605,13 @@ mod tests {
 
         let shortcodes = processor.list_shortcodes_with_descriptions();
 
-        // Check that we have the expected builtin shortcodes
-        assert_eq!(shortcodes.len(), 10);
-
         // Check they're sorted alphabetically
         let names: Vec<&str> = shortcodes.iter().map(|(name, _)| *name).collect();
         assert_eq!(
             names,
             vec![
-                "authors", "card", "pages", "posts", "series", "socials", "streams", "tags", "toc",
-                "youtube"
+                "authors", "card", "pages", "posts", "series", "socials", "spotify", "streams",
+                "tags", "toc", "youtube"
             ]
         );
 
