@@ -5,7 +5,7 @@ use crate::content::{
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
 use crate::shortcodes::ShortcodeProcessor;
 use crate::tera_functions::{
-    DisplayName, GetPosts, GetSeries, GetStreams, GetTags, Group, SourceLink, UrlFor,
+    DisplayName, GetPosts, Group, SourceLink, UrlFor,
 };
 use crate::{server, tera_filter};
 use chrono::Datelike;
@@ -596,24 +596,6 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
     tera.register_function(
         "get_posts",
         GetPosts {
-            site_data: site_data.clone(),
-        },
-    );
-    tera.register_function(
-        "get_tags",
-        GetTags {
-            site_data: site_data.clone(),
-        },
-    );
-    tera.register_function(
-        "get_series",
-        GetSeries {
-            site_data: site_data.clone(),
-        },
-    );
-    tera.register_function(
-        "get_streams",
-        GetStreams {
             site_data: site_data.clone(),
         },
     );

@@ -1,6 +1,6 @@
 {# Display a list of all content series with post counts. Params: ord=desc, items=0 #}
 {% macro series(ord="desc", items=0) %}
-{% set series_map = get_series(ord=ord, items=items) %}
+{% set series_map = group(kind="series", ord=ord, items=items) %}
 <ul class="series-list">
 {% for series_name, posts in series_map %}
 <li><a href="/series-{{ series_name | slugify }}.html">{{ series_name }}</a> ({{ posts | length }} posts)</li>
