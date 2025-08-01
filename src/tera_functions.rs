@@ -86,6 +86,7 @@ pub struct Group {
     pub site_data: Data,
 }
 
+#[allow(clippy::cast_possible_truncation)]
 impl Function for Group {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let kind = args
@@ -251,6 +252,7 @@ pub struct GetPosts {
     pub site_data: Data,
 }
 
+#[allow(clippy::cast_possible_truncation)]
 impl Function for GetPosts {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
@@ -287,6 +289,7 @@ pub struct GetDataBySlug {
 }
 
 impl Function for GetDataBySlug {
+    #[allow(clippy::too_many_lines)]
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let slug = args
             .get("slug")

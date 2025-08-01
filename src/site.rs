@@ -556,6 +556,7 @@ fn detect_slug_collision(site_data: &Data) {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<ShortcodeProcessor>) {
     let mut tera = Tera::default();
     tera.autoescape_on(vec![]);
