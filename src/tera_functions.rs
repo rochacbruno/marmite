@@ -281,7 +281,7 @@ impl Function for GetPosts {
 }
 
 /// Tera function to get data by slug for card display
-/// Takes a slug and resolves which content type it refers to, returning SlugData
+/// Takes a slug and resolves which content type it refers to, returning `SlugData`
 pub struct GetDataBySlug {
     pub site_data: Data,
 }
@@ -303,8 +303,7 @@ impl Function for GetDataBySlug {
                     .site
                     .series
                     .get(series_name)
-                    .map(|config| &config.display_name)
-                    .unwrap_or(&series_name.to_string())
+                    .map_or(&series_name.to_string(), |config| &config.display_name)
                     .clone();
 
                 let description = self
@@ -342,8 +341,7 @@ impl Function for GetDataBySlug {
                     .site
                     .streams
                     .get(stream_name)
-                    .map(|config| &config.display_name)
-                    .unwrap_or(&stream_name.to_string())
+                    .map_or(&stream_name.to_string(), |config| &config.display_name)
                     .clone();
 
                 let description = format!("{} posts", stream_contents.len());
@@ -392,8 +390,7 @@ impl Function for GetDataBySlug {
             if let Some(author_contents) = self.site_data.author.map.get(author_name) {
                 let author_info = self.site_data.site.authors.get(author_name);
                 let title = author_info
-                    .map(|a| &a.name)
-                    .unwrap_or(&author_name.to_string())
+                    .map_or(&author_name.to_string(), |a| &a.name)
                     .clone();
 
                 let image = author_info
@@ -446,7 +443,7 @@ impl Function for GetDataBySlug {
                         .clone(),
                     slug: slug.to_string(),
                     title: page.title.clone(),
-                    text: page.description.as_ref().unwrap_or(&"".to_string()).clone(),
+                    text: page.description.as_ref().unwrap_or(&String::new()).clone(),
                     content_type: "page".to_string(),
                 }
             } else if let Some(post) = self.site_data.posts.iter().find(|p| p.slug == slug) {
@@ -460,9 +457,7 @@ impl Function for GetDataBySlug {
                     slug: slug.to_string(),
                     title: post.title.clone(),
                     text: post
-                        .date
-                        .map(|d| d.format("%Y-%m-%d").to_string())
-                        .unwrap_or_else(|| "".to_string()),
+                        .date.map_or_else(String::new, |d| d.format("%Y-%m-%d").to_string()),
                     content_type: "post".to_string(),
                 }
             } else {
@@ -589,7 +584,7 @@ mod tests {
         args.insert("content".to_string(), content);
 
         let result = source_link.call(&args).unwrap();
-        assert_eq!(result, Value::String("".to_string()));
+        assert_eq!(result, Value::String(String::new()));
     }
 
     #[test]

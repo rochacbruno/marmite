@@ -330,13 +330,11 @@ impl ShortcodeProcessor {
                     if let Some(&'=') = chars.peek() {
                         chars.next(); // consume the =
                         break;
-                    } else {
-                        // No = found, this is not a valid key=value pair
-                        break;
                     }
-                } else {
-                    key.push(current_char);
+                    // No = found, this is not a valid key=value pair
+                    break;
                 }
+                key.push(current_char);
 
                 if let Some(next_ch) = chars.next() {
                     current_char = next_ch;
@@ -392,9 +390,8 @@ impl ShortcodeProcessor {
                     while let Some(&next_ch) = chars.peek() {
                         if next_ch.is_whitespace() {
                             break;
-                        } else {
-                            value.push(chars.next().unwrap());
                         }
+                        value.push(chars.next().unwrap());
                     }
                 }
             }
@@ -416,11 +413,11 @@ mod tests {
     #[test]
     fn test_shortcode_pattern() {
         let processor = ShortcodeProcessor::new(None);
-        let html = r#"<p>Some text</p>
+        let html = r"<p>Some text</p>
 <!-- .youtube id=abc123 -->
 <p>More text</p>
 <!-- .toc -->
-<!-- .authors -->"#;
+<!-- .authors -->";
 
         let matches: Vec<_> = processor.pattern.captures_iter(html).collect();
         assert_eq!(matches.len(), 3);
@@ -432,11 +429,11 @@ mod tests {
     #[test]
     fn test_shortcode_pattern_with_params() {
         let processor = ShortcodeProcessor::new(None);
-        let html = r#"<p>Some text</p>
+        let html = r"<p>Some text</p>
 <!-- .posts -->
 <!-- .posts ord=asc items=5 -->
 <!-- .youtube id=abc123 width=400 height=300 -->
-"#;
+";
 
         let matches: Vec<_> = processor.pattern.captures_iter(html).collect();
         assert_eq!(matches.len(), 3);
@@ -482,9 +479,9 @@ mod tests {
         fs::create_dir(&shortcodes_dir).unwrap();
 
         // Create a test HTML shortcode
-        let test_html = r#"{% macro test() %}
+        let test_html = r"{% macro test() %}
 <div>Test shortcode</div>
-{% endmacro test %}"#;
+{% endmacro test %}";
         fs::write(shortcodes_dir.join("test.html"), test_html).unwrap();
 
         // Create a test markdown shortcode
@@ -507,9 +504,9 @@ mod tests {
         fs::create_dir(&shortcodes_dir).unwrap();
 
         // Create an HTML shortcode with wrong macro name
-        let wrong_macro = r#"{% macro bar() %}
+        let wrong_macro = r"{% macro bar() %}
 <div>Wrong macro name</div>
-{% endmacro bar %}"#;
+{% endmacro bar %}";
         fs::write(shortcodes_dir.join("foo.html"), wrong_macro).unwrap();
 
         let mut processor = ShortcodeProcessor::new(None);
@@ -528,13 +525,13 @@ mod tests {
         fs::create_dir(&shortcodes_dir).unwrap();
 
         // Create an HTML shortcode with multiple macros including the correct one
-        let multi_macro = r#"{% macro helper() %}
+        let multi_macro = r"{% macro helper() %}
 <span>Helper</span>
 {% endmacro helper %}
 
 {% macro multi() %}
 <div>Correct macro</div>
-{% endmacro multi %}"#;
+{% endmacro multi %}";
         fs::write(shortcodes_dir.join("multi.html"), multi_macro).unwrap();
 
         let mut processor = ShortcodeProcessor::new(None);
