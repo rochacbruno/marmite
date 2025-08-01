@@ -11,6 +11,7 @@ mod feed;
 mod image_provider;
 mod parser;
 mod server;
+mod shortcodes;
 mod site;
 mod templates;
 mod tera_filter;
@@ -97,6 +98,19 @@ fn main() {
 
     if args.generate_config {
         config::generate(&input_folder, &cloned_args);
+        return;
+    }
+
+    if args.shortcodes {
+        let mut processor = shortcodes::ShortcodeProcessor::new(None);
+        if let Err(e) = processor.collect_shortcodes(&input_folder) {
+            error!("Failed to collect shortcodes: {e}");
+            return;
+        }
+        println!("Available shortcodes:");
+        for shortcode in processor.list_shortcodes() {
+            println!("  - {shortcode}");
+        }
         return;
     }
 
