@@ -311,7 +311,8 @@ impl Function for GetDataBySlug {
                     .site
                     .series
                     .get(series_name)
-                    .and_then(|config| config.description.as_ref()).cloned()
+                    .and_then(|config| config.description.as_ref())
+                    .cloned()
                     .unwrap_or_else(|| format!("{} posts", series_contents.len()));
 
                 let image = series_contents
@@ -328,9 +329,7 @@ impl Function for GetDataBySlug {
                     content_type: "series".to_string(),
                 }
             } else {
-                return Err(tera::Error::msg(format!(
-                    "Series not found: {series_name}"
-                )));
+                return Err(tera::Error::msg(format!("Series not found: {series_name}")));
             }
         } else if slug.starts_with("stream-") {
             // Stream slug: stream-{name}
@@ -360,9 +359,7 @@ impl Function for GetDataBySlug {
                     content_type: "stream".to_string(),
                 }
             } else {
-                return Err(tera::Error::msg(format!(
-                    "Stream not found: {stream_name}"
-                )));
+                return Err(tera::Error::msg(format!("Stream not found: {stream_name}")));
             }
         } else if slug.starts_with("tag-") {
             // Tag slug: tag-{name}
@@ -406,9 +403,7 @@ impl Function for GetDataBySlug {
                     content_type: "author".to_string(),
                 }
             } else {
-                return Err(tera::Error::msg(format!(
-                    "Author not found: {author_name}"
-                )));
+                return Err(tera::Error::msg(format!("Author not found: {author_name}")));
             }
         } else if slug.starts_with("archive-") {
             // Archive slug: archive-{year}
@@ -428,9 +423,7 @@ impl Function for GetDataBySlug {
                     content_type: "archive".to_string(),
                 }
             } else {
-                return Err(tera::Error::msg(format!(
-                    "Archive year not found: {year}"
-                )));
+                return Err(tera::Error::msg(format!("Archive year not found: {year}")));
             }
         } else {
             // Check if it's a page
@@ -457,7 +450,8 @@ impl Function for GetDataBySlug {
                     slug: slug.to_string(),
                     title: post.title.clone(),
                     text: post
-                        .date.map_or_else(String::new, |d| d.format("%Y-%m-%d").to_string()),
+                        .date
+                        .map_or_else(String::new, |d| d.format("%Y-%m-%d").to_string()),
                     content_type: "post".to_string(),
                 }
             } else {

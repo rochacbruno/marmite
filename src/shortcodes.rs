@@ -213,9 +213,7 @@ impl ShortcodeProcessor {
 
             match self.render_shortcode(shortcode_name, params, context, tera) {
                 Ok(rendered) => {
-                    debug!(
-                        "Successfully rendered shortcode '{shortcode_name}': '{rendered}'"
-                    );
+                    debug!("Successfully rendered shortcode '{shortcode_name}': '{rendered}'");
                     result = result.replace(full_match, &rendered);
                 }
                 Err(e) => {
