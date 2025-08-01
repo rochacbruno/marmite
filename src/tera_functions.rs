@@ -205,7 +205,14 @@ impl Function for GetPosts {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
 
-        let items = args.get("items").and_then(Value::as_u64).unwrap_or(0) as usize;
+        let items = args
+            .get("items")
+            .and_then(|v| match v {
+                Value::Number(n) => n.as_u64(),
+                Value::String(s) => s.parse::<u64>().ok(),
+                _ => None,
+            })
+            .unwrap_or(0) as usize;
 
         let mut posts = self.site_data.posts.clone();
 
@@ -233,7 +240,14 @@ impl Function for GetTags {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
 
-        let items = args.get("items").and_then(Value::as_u64).unwrap_or(0) as usize;
+        let items = args
+            .get("items")
+            .and_then(|v| match v {
+                Value::Number(n) => n.as_u64(),
+                Value::String(s) => s.parse::<u64>().ok(),
+                _ => None,
+            })
+            .unwrap_or(0) as usize;
 
         // Convert tag map to vector of (name, posts) tuples
         let mut tag_list: Vec<(String, Vec<Content>)> = self
@@ -276,7 +290,14 @@ impl Function for GetSeries {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
 
-        let items = args.get("items").and_then(Value::as_u64).unwrap_or(0) as usize;
+        let items = args
+            .get("items")
+            .and_then(|v| match v {
+                Value::Number(n) => n.as_u64(),
+                Value::String(s) => s.parse::<u64>().ok(),
+                _ => None,
+            })
+            .unwrap_or(0) as usize;
 
         // Convert series map to vector of (name, posts) tuples
         let mut series_list: Vec<(String, Vec<Content>)> = self
@@ -319,7 +340,14 @@ impl Function for GetStreams {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
 
-        let items = args.get("items").and_then(Value::as_u64).unwrap_or(0) as usize;
+        let items = args
+            .get("items")
+            .and_then(|v| match v {
+                Value::Number(n) => n.as_u64(),
+                Value::String(s) => s.parse::<u64>().ok(),
+                _ => None,
+            })
+            .unwrap_or(0) as usize;
 
         // Convert stream map to vector of (name, posts) tuples
         let mut stream_list: Vec<(String, Vec<Content>)> = self
@@ -513,6 +541,17 @@ mod tests {
         let get_posts = GetPosts { site_data };
         let mut args = HashMap::new();
         args.insert("ord".to_string(), Value::String("asc".to_string()));
+
+        let result = get_posts.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_posts_with_string_limit() {
+        let site_data = create_test_data();
+        let get_posts = GetPosts { site_data };
+        let mut args = HashMap::new();
+        args.insert("items".to_string(), Value::String("5".to_string()));
 
         let result = get_posts.call(&args);
         assert!(result.is_ok());
