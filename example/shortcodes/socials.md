@@ -1,3 +1,4 @@
+{# Display social network links #}
 ## My social networks
 
 {% if site_data.site.extra.social_networks %}

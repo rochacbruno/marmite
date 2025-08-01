@@ -11,6 +11,7 @@ pub struct Shortcode {
     pub name: String,
     pub content: String,
     pub is_html: bool,
+    pub description: Option<String>,
 }
 
 pub struct ShortcodeProcessor {
@@ -90,6 +91,9 @@ impl ShortcodeProcessor {
             .and_then(|s| s.to_str())
             .is_some_and(|ext| ext == "html");
 
+        // Extract description from Tera comment on first line
+        let description = self.extract_description(&content);
+
         if is_html {
             // For HTML files, validate that they contain macros
             if !content.contains("{% macro") {
@@ -98,12 +102,30 @@ impl ShortcodeProcessor {
                     path.display()
                 ));
             }
+
+            // Validate that the file contains a macro with the same name as the filename
+            let macro_pattern =
+                Regex::new(r"\{%\s*macro\s+(\w+)\s*\(").expect("Invalid macro pattern");
+            let macro_names: Vec<String> = macro_pattern
+                .captures_iter(&content)
+                .map(|cap| cap[1].to_string())
+                .collect();
+
+            if !macro_names.contains(&file_name.to_string()) {
+                return Err(format!(
+                    "HTML shortcode file {} must contain a macro named '{}'. Found macros: {:?}",
+                    path.display(),
+                    file_name,
+                    macro_names
+                ));
+            }
         }
 
         let shortcode = Shortcode {
             name: file_name.to_string(),
             content: content.clone(),
             is_html,
+            description,
         };
 
         debug!("Loaded shortcode: {file_name}");
@@ -112,11 +134,35 @@ impl ShortcodeProcessor {
         Ok(())
     }
 
+    #[allow(clippy::unused_self)]
+    fn extract_description(&self, content: &str) -> Option<String> {
+        // Check if the first line is a Tera comment {# ... #}
+        let first_line = content.lines().next()?;
+        let trimmed = first_line.trim();
+
+        if trimmed.starts_with("{#") && trimmed.ends_with("#}") {
+            // Extract content between {# and #}
+            let desc = trimmed
+                .strip_prefix("{#")?
+                .strip_suffix("#}")?
+                .trim()
+                .to_string();
+
+            if !desc.is_empty() {
+                return Some(desc);
+            }
+        }
+
+        None
+    }
+
     fn add_builtin_shortcodes(&mut self) {
         // TOC shortcode
         let toc_macro = r#"{% macro toc() %}
 <nav class="table-of-contents">
+<div class="content-toc">
 {{ content.toc | safe }}
+</div>
 </nav>
 {% endmacro toc %}"#;
 
@@ -126,6 +172,7 @@ impl ShortcodeProcessor {
                 name: "toc".to_string(),
                 content: toc_macro.to_string(),
                 is_html: true,
+                description: Some("Display table of contents for the current content".to_string()),
             },
         );
 
@@ -134,7 +181,7 @@ impl ShortcodeProcessor {
 {% if id is not starting_with("http") %}
 {% set id = "https://www.youtube.com/embed/" ~ id %}
 {% endif %}
-<p><iframe width="{{width}}" height="{{height}}" src="{{id}}" title="" frameBorder="0" allow="accelerometer;" allowFullScreen></iframe></p>
+<p><iframe width="{{width}}" height="{{height}}" src="{{id}}" frameBorder="0" allow="accelerometer;" allowFullScreen></iframe></p>
 {% endmacro youtube %}"#;
 
         self.shortcodes.insert(
@@ -143,6 +190,9 @@ impl ShortcodeProcessor {
                 name: "youtube".to_string(),
                 content: youtube_macro.to_string(),
                 is_html: true,
+                description: Some(
+                    "Embed YouTube videos. Params: id, width=560, height=315".to_string(),
+                ),
             },
         );
 
@@ -161,6 +211,10 @@ impl ShortcodeProcessor {
                 name: "authors".to_string(),
                 content: authors_macro.to_string(),
                 is_html: true,
+                description: Some(
+                    "Display a list of all authors with post counts. Params: ord=asc, items=0"
+                        .to_string(),
+                ),
             },
         );
 
@@ -179,6 +233,9 @@ impl ShortcodeProcessor {
                 name: "streams".to_string(),
                 content: streams_macro.to_string(),
                 is_html: true,
+                description: Some(
+                    "Display a list of all content streams with post counts. Params: ord=asc, items=0".to_string(),
+                ),
             },
         );
     }
@@ -266,15 +323,15 @@ impl ShortcodeProcessor {
         }
     }
 
-    /// Get list of available shortcodes
-    pub fn list_shortcodes(&self) -> Vec<&str> {
-        let mut names: Vec<&str> = self
+    /// Get list of available shortcodes with descriptions
+    pub fn list_shortcodes_with_descriptions(&self) -> Vec<(&str, Option<&str>)> {
+        let mut shortcodes: Vec<(&str, Option<&str>)> = self
             .shortcodes
-            .keys()
-            .map(std::string::String::as_str)
+            .iter()
+            .map(|(name, sc)| (name.as_str(), sc.description.as_deref()))
             .collect();
-        names.sort_unstable();
-        names
+        shortcodes.sort_by_key(|(name, _)| *name);
+        shortcodes
     }
 }
 
@@ -333,5 +390,130 @@ mod tests {
         assert!(processor.shortcodes.contains_key("testmd"));
         assert!(processor.shortcodes.get("test").unwrap().is_html);
         assert!(!processor.shortcodes.get("testmd").unwrap().is_html);
+    }
+
+    #[test]
+    fn test_html_shortcode_must_contain_macro_with_same_name() {
+        let temp_dir = TempDir::new().unwrap();
+        let shortcodes_dir = temp_dir.path().join("shortcodes");
+        fs::create_dir(&shortcodes_dir).unwrap();
+
+        // Create an HTML shortcode with wrong macro name
+        let wrong_macro = r#"{% macro bar() %}
+<div>Wrong macro name</div>
+{% endmacro bar %}"#;
+        fs::write(shortcodes_dir.join("foo.html"), wrong_macro).unwrap();
+
+        let mut processor = ShortcodeProcessor::new(None);
+        let result = processor.collect_shortcodes(temp_dir.path());
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("must contain a macro named 'foo'"));
+    }
+
+    #[test]
+    fn test_html_shortcode_with_multiple_macros() {
+        let temp_dir = TempDir::new().unwrap();
+        let shortcodes_dir = temp_dir.path().join("shortcodes");
+        fs::create_dir(&shortcodes_dir).unwrap();
+
+        // Create an HTML shortcode with multiple macros including the correct one
+        let multi_macro = r#"{% macro helper() %}
+<span>Helper</span>
+{% endmacro helper %}
+
+{% macro multi() %}
+<div>Correct macro</div>
+{% endmacro multi %}"#;
+        fs::write(shortcodes_dir.join("multi.html"), multi_macro).unwrap();
+
+        let mut processor = ShortcodeProcessor::new(None);
+        processor.collect_shortcodes(temp_dir.path()).unwrap();
+
+        assert!(processor.shortcodes.contains_key("multi"));
+    }
+
+    #[test]
+    fn test_html_shortcode_without_any_macro() {
+        let temp_dir = TempDir::new().unwrap();
+        let shortcodes_dir = temp_dir.path().join("shortcodes");
+        fs::create_dir(&shortcodes_dir).unwrap();
+
+        // Create an HTML shortcode without any macro
+        let no_macro = "<div>Just HTML, no macro</div>";
+        fs::write(shortcodes_dir.join("nomacro.html"), no_macro).unwrap();
+
+        let mut processor = ShortcodeProcessor::new(None);
+        let result = processor.collect_shortcodes(temp_dir.path());
+
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("must contain at least one macro"));
+    }
+
+    #[test]
+    fn test_shortcode_description_extraction() {
+        let temp_dir = TempDir::new().unwrap();
+        let shortcodes_dir = temp_dir.path().join("shortcodes");
+        fs::create_dir(&shortcodes_dir).unwrap();
+
+        // Create an HTML shortcode with description
+        let with_desc = r#"{# Display a custom alert box #}
+{% macro alert(type="info", message) %}
+<div class="alert alert-{{type}}">{{message}}</div>
+{% endmacro alert %}"#;
+        fs::write(shortcodes_dir.join("alert.html"), with_desc).unwrap();
+
+        // Create an HTML shortcode without description
+        let without_desc = r#"{% macro info() %}
+<div class="info">Information</div>
+{% endmacro info %}"#;
+        fs::write(shortcodes_dir.join("info.html"), without_desc).unwrap();
+
+        // Create a markdown shortcode with description
+        let md_with_desc =
+            "{# List of recent posts #}\n## Recent Posts\n\nThis is markdown content.";
+        fs::write(shortcodes_dir.join("recent.md"), md_with_desc).unwrap();
+
+        let mut processor = ShortcodeProcessor::new(None);
+        processor.collect_shortcodes(temp_dir.path()).unwrap();
+
+        // Check HTML shortcode with description
+        let alert = processor.shortcodes.get("alert").unwrap();
+        assert_eq!(
+            alert.description,
+            Some("Display a custom alert box".to_string())
+        );
+
+        // Check HTML shortcode without description
+        let info = processor.shortcodes.get("info").unwrap();
+        assert_eq!(info.description, None);
+
+        // Check markdown shortcode with description
+        let recent = processor.shortcodes.get("recent").unwrap();
+        assert_eq!(recent.description, Some("List of recent posts".to_string()));
+    }
+
+    #[test]
+    fn test_list_shortcodes_with_descriptions() {
+        let mut processor = ShortcodeProcessor::new(None);
+        processor.add_builtin_shortcodes();
+
+        let shortcodes = processor.list_shortcodes_with_descriptions();
+
+        // Check that we have the expected builtin shortcodes
+        assert_eq!(shortcodes.len(), 4);
+
+        // Check they're sorted alphabetically
+        let names: Vec<&str> = shortcodes.iter().map(|(name, _)| *name).collect();
+        assert_eq!(names, vec!["authors", "streams", "toc", "youtube"]);
+
+        // Check descriptions are present
+        for (name, desc) in shortcodes {
+            assert!(desc.is_some(), "Shortcode {name} should have a description");
+        }
     }
 }

@@ -667,6 +667,7 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
     (tera, shortcode_processor)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_templates(
     content_dir: &Path,
     site_data: &Data,
@@ -1518,6 +1519,7 @@ fn handle_list_page(
         .unwrap_or(Ok(()))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_content_pages(
     site_data: &Data,
     global_context: &Context,
