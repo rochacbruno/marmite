@@ -4,6 +4,24 @@
 
 Marmite is the easiest static site generator optimized for blogs. It doesn't require specific folder structure or complex configuration - the goal is that a blog can be generated simply by running Marmite on a folder with Markdown and media files. Written in Rust, it provides very fast builds with everything included in a single binary.
 
+## Key Features
+
+- **Shortcodes**: Insert dynamic content using simple markers like `<!-- .youtube id=VIDEO_ID -->`, `<!-- .spotify url="album/ID" -->`, or `<!-- .card slug=content-slug -->`
+- **Enhanced Tera Functions**: New template functions including `get_data_by_slug()` for content lookup and enhanced `group()` function with sorting and limiting
+- **Content Cards**: Display linked previews of any content (posts, pages, tags, authors, series) with automatic data resolution
+- **External URL Support**: Card shortcodes automatically detect and handle external URLs with proper targeting
+- **Template URL Functions**: All shortcode templates use the `url_for()` function for proper URL generation
+- **File Mapping**: Copy arbitrary files during site generation with flexible source and destination patterns, supporting single files, directories, and glob patterns
+- **Themes**: Complete theme system with remote theme installation and customization
+- **Series Support**: Group related content in chronological order with automatic navigation
+- **Enhanced Streams**: Filename-based stream detection with configurable display names
+- **Configurable Markdown Parser**: Full control over CommonMark extensions and rendering options
+- **IndieWeb Compliance**: Built-in microformats and semantic HTML for better web interoperability
+- **Navigation Links**: Automatic next/previous post navigation with stream-aware linking
+- **Draft Content Management**: Special handling of draft posts with filtering from feeds and search
+- **Related Content**: Configurable related content and backlinks between posts
+- **Markdown Alerts**: Support for GitHub-style callouts and alert boxes in markdown
+
 ## Documentation
 
 ### Getting Started
@@ -18,28 +36,32 @@ Marmite is the easiest static site generator optimized for blogs. It doesn't req
 - [Markdown Format](./markdown-format.html): Supported markdown syntax and extensions
 - [Using Markdown to Customize Layout](./using-markdown-to-customize-layout.html): Special markdown files for layout customization
 - [Streams Guide](./streams-guide.html): Organizing content with streams
-- [Series Feature](./series-feature.html): Creating ordered content series
-- [Draft Posts Guide](./draft-posts-guide.html): Working with draft content
+- [Series Feature](./organizing-content-with-series-in-marmite.html): Creating ordered content series
+- [Draft Posts Guide](./how-to-use-draft-posts-in-marmite.html): Working with draft content
 
 ### Configuration
 
 - [Configuration Reference](./configuration-reference.html): Complete reference for all marmite.yaml options
-- [Configurable Markdown Parser](./configurable-markdown-parser.html): Customizing markdown processing
+- [Configurable Markdown Parser](./configurable-markdown-parser-options.html): Customizing markdown processing
 - [IndieWeb Compliance](./indieweb-compliance.html): Making your site IndieWeb compatible
 
 ### Templates and Theming
 
 - [Customizing Templates](./customizing-templates.html): How to customize templates and create themes
 - [Template Reference](./template-reference.html): Tera template language reference
-- [Themes Feature](./themes-feature.html): Using and creating custom themes
-- [Remote Themes](./remote-themes.html): Installing themes from remote repositories
+- [Themes Feature](./introducing-themes-in-marmite.html): Using and creating custom themes
+- [Remote Themes](./remote-theme-download.html): Installing themes from remote repositories
 
 ### Features
 
+- [Shortcodes Guide](./shortcodes-guide.html): Using shortcodes to add dynamic content to posts and pages
+- [Shortcodes Demo](./shortcodes-demo.html): Examples of all available shortcodes including YouTube, Spotify, cards, and content listings
+- [File Mapping Feature](./file-mapping-feature.html): Copy arbitrary files during site generation using configurable mappings
 - [Automatic Image Download](./automatic-image-download.html): Auto-generating banner images
 - [Markdown Source Publishing](./markdown-source-publishing.html): Publishing source files alongside HTML
 - [Link Checker with Lychee](./link-checker-with-lychee.html): Checking for broken links
 - [Enabling Comments](./enabling-comments.html): Adding comment systems to your blog
+- [Draft Posts Guide](./how-to-use-draft-posts-in-marmite.html): Working with draft content and publishing workflow
 
 ### Deployment
 

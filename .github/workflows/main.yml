@@ -67,7 +67,12 @@ jobs:
       - name: Prepare site 🏗️
         run: |
           cp -R example marmitesite
-          cp README.md marmitesite/content/docs.md
+          echo "---" >> marmitesite/content/docs.md
+          echo "pinned: true" >> marmitesite/content/docs.md
+          echo "date: 2025-08-02" >> marmitesite/content/docs.md
+          echo "tags: docs" >> marmitesite/content/docs.md
+          echo "---" >> marmitesite/content/docs.md
+          cat marmitesite/ai/llms.txt >> marmitesite/content/docs.md
           rm marmitesite/marmite.yaml
           cp .github/marmite.yaml marmitesite/marmite.yaml
 
