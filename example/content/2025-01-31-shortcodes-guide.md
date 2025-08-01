@@ -6,6 +6,9 @@ authors: ["rochacbruno"]
 
 # Shortcodes Guide
 
+> [!IMPORTANT]
+> This is a **Beta** feature currently available only on the main branch. It has not been released in a stable version yet.
+
 Shortcodes are a powerful feature in Marmite that allow you to insert dynamic content into your posts and pages using simple markers. They work similar to macros in other static site generators.
 
 ## What are Shortcodes?
