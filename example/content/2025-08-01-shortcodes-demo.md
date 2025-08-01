@@ -32,6 +32,33 @@ You can also specify custom dimensions:
 
 <!-- .youtube id=dQw4w9WgXcQ width=400 height=300 -->
 
+## Spotify Embed
+
+Embed Spotify albums, playlists, or tracks:
+
+```
+<!-- .spotify url="album/3aJozZhPbj8hKmJePJ2LtF" -->
+```
+
+<!-- .spotify url="album/3aJozZhPbj8hKmJePJ2LtF" -->
+
+You can also embed playlists with custom dimensions:
+
+```
+<!-- .spotify url="playlist/2GLlqaI9fD5bVwE7LIAQCh" width="100%" height="280" -->
+```
+
+<!-- .spotify url="playlist/2GLlqaI9fD5bVwE7LIAQCh" -->
+
+Or a podcast episode:
+
+```
+<!-- .spotify url="episode/7ph7Vszk9Hld8y0MOEc0rl" -->
+```
+
+<!-- .spotify url="episode/7ph7Vszk9Hld8y0MOEc0rl" -->
+
+
 ## Table of Contents
 
 This page's table of contents:

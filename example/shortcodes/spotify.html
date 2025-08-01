@@ -1,0 +1,9 @@
+{# Embed Spotify content with custom dimensions #}
+{% macro spotify(url, width="100%", height="352") %}
+{% if url is starting_with("http") %}
+    {% set spotify_url = url %}
+{% else %}
+    {% set spotify_url = "https://open.spotify.com/embed/" ~ url %}
+{% endif %}
+<iframe data-testid="embed-iframe" style="border-radius:12px" src="{{ spotify_url }}?utm_source=generator&theme=0" width="{{ width }}" height="{{ height }}" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>
+{% endmacro spotify %}
