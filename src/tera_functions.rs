@@ -1,10 +1,19 @@
 use indexmap::IndexMap;
+use serde::Serialize;
 use std::collections::HashMap;
 use tera::{to_value, Function, Result as TeraResult, Value};
 use url::Url;
 
 use crate::content::Content;
 use crate::site::Data;
+
+#[derive(Serialize)]
+pub struct SlugData {
+    pub image: String,
+    pub slug: String,
+    pub title: String,
+    pub text: String,
+}
 
 #[derive(Default)]
 pub struct UrlFor {
@@ -270,6 +279,200 @@ impl Function for GetPosts {
     }
 }
 
+/// Tera function to get data by slug for card display
+/// Takes a slug and resolves which content type it refers to, returning SlugData
+pub struct GetDataBySlug {
+    pub site_data: Data,
+}
+
+impl Function for GetDataBySlug {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let slug = args
+            .get("slug")
+            .and_then(Value::as_str)
+            .ok_or_else(|| tera::Error::msg("Missing `slug` argument"))?;
+
+        // Check what kind of content this slug refers to
+        let slug_data = if slug.starts_with("series-") {
+            // Series slug: series-{name}
+            let series_name = slug.strip_prefix("series-").unwrap();
+            if let Some(series_contents) = self.site_data.series.map.get(series_name) {
+                let title = self
+                    .site_data
+                    .site
+                    .series
+                    .get(series_name)
+                    .map(|config| &config.display_name)
+                    .unwrap_or(&series_name.to_string())
+                    .clone();
+
+                let description = self
+                    .site_data
+                    .site
+                    .series
+                    .get(series_name)
+                    .and_then(|config| config.description.as_ref())
+                    .map(|d| d.clone())
+                    .unwrap_or_else(|| format!("{} posts", series_contents.len()));
+
+                let image = series_contents
+                    .first()
+                    .and_then(|content| content.banner_image.as_ref())
+                    .unwrap_or(&self.site_data.site.banner_image)
+                    .clone();
+
+                SlugData {
+                    image,
+                    slug: slug.to_string(),
+                    title,
+                    text: description,
+                }
+            } else {
+                return Err(tera::Error::msg(format!(
+                    "Series not found: {}",
+                    series_name
+                )));
+            }
+        } else if slug.starts_with("stream-") {
+            // Stream slug: stream-{name}
+            let stream_name = slug.strip_prefix("stream-").unwrap();
+            if let Some(stream_contents) = self.site_data.stream.map.get(stream_name) {
+                let title = self
+                    .site_data
+                    .site
+                    .streams
+                    .get(stream_name)
+                    .map(|config| &config.display_name)
+                    .unwrap_or(&stream_name.to_string())
+                    .clone();
+
+                let description = format!("{} posts", stream_contents.len());
+
+                let image = stream_contents
+                    .first()
+                    .and_then(|content| content.banner_image.as_ref())
+                    .unwrap_or(&self.site_data.site.banner_image)
+                    .clone();
+
+                SlugData {
+                    image,
+                    slug: slug.to_string(),
+                    title,
+                    text: description,
+                }
+            } else {
+                return Err(tera::Error::msg(format!(
+                    "Stream not found: {}",
+                    stream_name
+                )));
+            }
+        } else if slug.starts_with("tag-") {
+            // Tag slug: tag-{name}
+            let tag_name = slug.strip_prefix("tag-").unwrap();
+            if let Some(tag_contents) = self.site_data.tag.map.get(tag_name) {
+                let image = tag_contents
+                    .first()
+                    .and_then(|content| content.banner_image.as_ref())
+                    .unwrap_or(&self.site_data.site.banner_image)
+                    .clone();
+
+                SlugData {
+                    image,
+                    slug: slug.to_string(),
+                    title: tag_name.to_string(),
+                    text: format!("{} posts", tag_contents.len()),
+                }
+            } else {
+                return Err(tera::Error::msg(format!("Tag not found: {}", tag_name)));
+            }
+        } else if slug.starts_with("author-") {
+            // Author slug: author-{name}
+            let author_name = slug.strip_prefix("author-").unwrap();
+            if let Some(author_contents) = self.site_data.author.map.get(author_name) {
+                let author_info = self.site_data.site.authors.get(author_name);
+                let title = author_info
+                    .map(|a| &a.name)
+                    .unwrap_or(&author_name.to_string())
+                    .clone();
+
+                let image = author_info
+                    .and_then(|a| a.avatar.as_ref())
+                    .unwrap_or(&self.site_data.site.banner_image)
+                    .clone();
+
+                SlugData {
+                    image,
+                    slug: slug.to_string(),
+                    title,
+                    text: format!("{} posts", author_contents.len()),
+                }
+            } else {
+                return Err(tera::Error::msg(format!(
+                    "Author not found: {}",
+                    author_name
+                )));
+            }
+        } else if slug.starts_with("archive-") {
+            // Archive slug: archive-{year}
+            let year = slug.strip_prefix("archive-").unwrap();
+            if let Some(archive_contents) = self.site_data.archive.map.get(year) {
+                let image = archive_contents
+                    .first()
+                    .and_then(|content| content.banner_image.as_ref())
+                    .unwrap_or(&self.site_data.site.banner_image)
+                    .clone();
+
+                SlugData {
+                    image,
+                    slug: slug.to_string(),
+                    title: format!("Posts from {}", year),
+                    text: format!("{} posts", archive_contents.len()),
+                }
+            } else {
+                return Err(tera::Error::msg(format!(
+                    "Archive year not found: {}",
+                    year
+                )));
+            }
+        } else {
+            // Check if it's a page
+            if let Some(page) = self.site_data.pages.iter().find(|p| p.slug == slug) {
+                SlugData {
+                    image: page
+                        .banner_image
+                        .as_ref()
+                        .unwrap_or(&self.site_data.site.banner_image)
+                        .clone(),
+                    slug: slug.to_string(),
+                    title: page.title.clone(),
+                    text: page.description.as_ref().unwrap_or(&"".to_string()).clone(),
+                }
+            } else if let Some(post) = self.site_data.posts.iter().find(|p| p.slug == slug) {
+                // Check if it's a post
+                SlugData {
+                    image: post
+                        .banner_image
+                        .as_ref()
+                        .unwrap_or(&self.site_data.site.banner_image)
+                        .clone(),
+                    slug: slug.to_string(),
+                    title: post.title.clone(),
+                    text: post
+                        .date
+                        .map(|d| d.format("%Y-%m-%d").to_string())
+                        .unwrap_or_else(|| "".to_string()),
+                }
+            } else {
+                return Err(tera::Error::msg(format!(
+                    "Content not found for slug: {}",
+                    slug
+                )));
+            }
+        };
+
+        to_value(slug_data).map_err(tera::Error::from)
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -483,5 +686,52 @@ mod tests {
 
         let result = group.call(&args);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_data_by_slug_missing_slug() {
+        let site_data = create_test_data();
+        let get_data_by_slug = GetDataBySlug { site_data };
+        let args = HashMap::new();
+
+        let result = get_data_by_slug.call(&args);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Missing `slug` argument"));
+    }
+
+    #[test]
+    fn test_get_data_by_slug_nonexistent_slug() {
+        let site_data = create_test_data();
+        let get_data_by_slug = GetDataBySlug { site_data };
+        let mut args = HashMap::new();
+        args.insert(
+            "slug".to_string(),
+            Value::String("nonexistent-slug".to_string()),
+        );
+
+        let result = get_data_by_slug.call(&args);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Content not found for slug"));
+    }
+
+    #[test]
+    fn test_get_data_by_slug_tag_not_found() {
+        let site_data = create_test_data();
+        let get_data_by_slug = GetDataBySlug { site_data };
+        let mut args = HashMap::new();
+        args.insert(
+            "slug".to_string(),
+            Value::String("tag-nonexistent".to_string()),
+        );
+
+        let result = get_data_by_slug.call(&args);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Tag not found"));
     }
 }

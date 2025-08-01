@@ -130,6 +130,57 @@ Limited tags:
 
 <!-- .socials -->
 
+## Card Display
+
+Card shortcodes allow you to display content previews with image, title and description:
+
+```
+<!-- .card slug=tag-markdown -->
+```
+
+<!-- .card slug=tag-markdown -->
+
+You can also display cards for other content types:
+
+```
+<!-- .card slug=getting-started -->
+```
+
+<!-- .card slug=getting-started -->
+
+Card for author:
+
+```
+<!-- .card slug=author-rochacbruno -->
+```
+
+<!-- .card slug=author-rochacbruno -->
+
+Card for stream:
+
+```
+<!-- .card slug=stream-alt -->
+```
+
+<!-- .card slug=stream-alt -->
+
+Card for series:
+
+```
+<!-- .card slug=series-python-tutorial -->
+```
+
+<!-- .card slug=series-python-tutorial -->
+
+Card for page:
+
+```
+<!-- .card slug=about -->
+```
+
+<!-- .card slug=about -->
+
+
 ## Conclusion
 
 Shortcodes make it easy to add dynamic content to your static site! With 8 builtin shortcodes, you can create rich, interactive content while keeping your markdown clean and readable.

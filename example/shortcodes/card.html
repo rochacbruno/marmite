@@ -1,0 +1,15 @@
+{# Display a card for content based on slug #}
+{% macro card(slug) %}
+{% set data = get_data_by_slug(slug=slug) %}
+<div class="card" style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 16px 0; text-decoration: none; color: inherit;">
+    <a href="/{{ data.slug }}.html" style="display: flex; align-items: center; text-decoration: none; color: inherit; width: 100%;">
+        <div class="card-image" style="flex-shrink: 0; margin-right: 16px;">
+            <img src="{{ data.image }}" alt="{{ data.title }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
+        </div>
+        <div class="card-content" style="flex: 1;">
+            <div class="card-title" style="font-weight: bold; font-size: 1.1em; margin-bottom: 4px;">{{ data.title }}</div>
+            <div class="card-text" style="color: #666; font-size: 0.9em;">{{ data.text }}</div>
+        </div>
+    </a>
+</div>
+{% endmacro card %}

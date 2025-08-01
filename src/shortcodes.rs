@@ -207,11 +207,17 @@ impl ShortcodeProcessor {
             let shortcode_name = &captures[1];
             let params = captures.get(2).map_or("", |m| m.as_str().trim());
 
-            debug!("Processing shortcode: name='{}', params='{}', full_match='{}'", shortcode_name, params, full_match);
+            debug!(
+                "Processing shortcode: name='{}', params='{}', full_match='{}'",
+                shortcode_name, params, full_match
+            );
 
             match self.render_shortcode(shortcode_name, params, context, tera) {
                 Ok(rendered) => {
-                    debug!("Successfully rendered shortcode '{}': '{}'", shortcode_name, rendered);
+                    debug!(
+                        "Successfully rendered shortcode '{}': '{}'",
+                        shortcode_name, rendered
+                    );
                     result = result.replace(full_match, &rendered);
                 }
                 Err(e) => {
@@ -328,16 +334,16 @@ mod tests {
 
         let matches: Vec<_> = processor.pattern.captures_iter(html).collect();
         assert_eq!(matches.len(), 3);
-        
+
         // First match: .posts with no params
         assert_eq!(&matches[0][1], "posts");
         assert!(matches[0].get(2).is_none());
-        
+
         // Second match: .posts with params
         assert_eq!(&matches[1][1], "posts");
         let params = matches[1].get(2).unwrap().as_str().trim();
         assert_eq!(params, "ord=asc items=5");
-        
+
         // Third match: .youtube with params
         assert_eq!(&matches[2][1], "youtube");
         let params = matches[2].get(2).unwrap().as_str().trim();
