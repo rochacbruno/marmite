@@ -83,7 +83,6 @@ Recent posts:
 ```
 <!-- .posts -->
 ```
-
 <!-- .posts -->
 
 With custom parameters:
@@ -91,8 +90,8 @@ With custom parameters:
 ```
 <!-- .posts ord=asc items=5 -->
 ```
-
 <!-- .posts ord=asc items=5 -->
+
 
 ## Pages List
 

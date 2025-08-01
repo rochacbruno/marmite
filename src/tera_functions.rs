@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use tera::{to_value, Function, Result as TeraResult, Value};
 use url::Url;
 
+use crate::content::Content;
 use crate::site::Data;
 
 #[derive(Default)]
@@ -194,6 +195,163 @@ impl Function for DisplayName {
     }
 }
 
+/// Tera function to get filtered and sorted posts
+/// Args: ord (optional, default="desc"), items (optional, default=0 for all)
+pub struct GetPosts {
+    pub site_data: Data,
+}
+
+impl Function for GetPosts {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
+
+        let items = args.get("items").and_then(Value::as_u64).unwrap_or(0) as usize;
+
+        let mut posts = self.site_data.posts.clone();
+
+        // Sort posts
+        if ord == "asc" {
+            posts.reverse();
+        }
+
+        // Limit items if specified
+        if items > 0 && items < posts.len() {
+            posts.truncate(items);
+        }
+
+        to_value(posts).map_err(tera::Error::from)
+    }
+}
+
+/// Tera function to get filtered and sorted tags
+/// Args: ord (optional, default="desc"), items (optional, default=0 for all)
+pub struct GetTags {
+    pub site_data: Data,
+}
+
+impl Function for GetTags {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
+
+        let items = args.get("items").and_then(Value::as_u64).unwrap_or(0) as usize;
+
+        // Convert tag map to vector of (name, posts) tuples
+        let mut tag_list: Vec<(String, Vec<Content>)> = self
+            .site_data
+            .tag
+            .map
+            .iter()
+            .map(|(name, posts)| (name.clone(), posts.clone()))
+            .collect();
+
+        // Sort by post count (desc) or alphabetically by name (asc)
+        if ord == "asc" {
+            tag_list.sort_by(|a, b| a.0.cmp(&b.0));
+        } else {
+            tag_list.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+        }
+
+        // Limit items if specified
+        if items > 0 && items < tag_list.len() {
+            tag_list.truncate(items);
+        }
+
+        // Convert back to IndexMap to preserve order
+        let mut ordered_map = IndexMap::new();
+        for (name, posts) in tag_list {
+            ordered_map.insert(name, posts);
+        }
+
+        to_value(ordered_map).map_err(tera::Error::from)
+    }
+}
+
+/// Tera function to get filtered and sorted series
+/// Args: ord (optional, default="desc"), items (optional, default=0 for all)
+pub struct GetSeries {
+    pub site_data: Data,
+}
+
+impl Function for GetSeries {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
+
+        let items = args.get("items").and_then(Value::as_u64).unwrap_or(0) as usize;
+
+        // Convert series map to vector of (name, posts) tuples
+        let mut series_list: Vec<(String, Vec<Content>)> = self
+            .site_data
+            .series
+            .map
+            .iter()
+            .map(|(name, posts)| (name.clone(), posts.clone()))
+            .collect();
+
+        // Sort by post count (desc) or alphabetically by name (asc)
+        if ord == "asc" {
+            series_list.sort_by(|a, b| a.0.cmp(&b.0));
+        } else {
+            series_list.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+        }
+
+        // Limit items if specified
+        if items > 0 && items < series_list.len() {
+            series_list.truncate(items);
+        }
+
+        // Convert back to IndexMap to preserve order
+        let mut ordered_map = IndexMap::new();
+        for (name, posts) in series_list {
+            ordered_map.insert(name, posts);
+        }
+
+        to_value(ordered_map).map_err(tera::Error::from)
+    }
+}
+
+/// Tera function to get filtered and sorted streams
+/// Args: ord (optional, default="desc"), items (optional, default=0 for all)
+pub struct GetStreams {
+    pub site_data: Data,
+}
+
+impl Function for GetStreams {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
+
+        let items = args.get("items").and_then(Value::as_u64).unwrap_or(0) as usize;
+
+        // Convert stream map to vector of (name, posts) tuples
+        let mut stream_list: Vec<(String, Vec<Content>)> = self
+            .site_data
+            .stream
+            .map
+            .iter()
+            .map(|(name, posts)| (name.clone(), posts.clone()))
+            .collect();
+
+        // Sort by post count (desc) or alphabetically by name (asc)
+        if ord == "asc" {
+            stream_list.sort_by(|a, b| a.0.cmp(&b.0));
+        } else {
+            stream_list.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+        }
+
+        // Limit items if specified
+        if items > 0 && items < stream_list.len() {
+            stream_list.truncate(items);
+        }
+
+        // Convert back to IndexMap to preserve order
+        let mut ordered_map = IndexMap::new();
+        for (name, posts) in stream_list {
+            ordered_map.insert(name, posts);
+        }
+
+        to_value(ordered_map).map_err(tera::Error::from)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -322,5 +480,82 @@ mod tests {
 
         let result = display_name.call(&args).unwrap();
         assert_eq!(result, Value::String("main".to_string()));
+    }
+
+    #[test]
+    fn test_get_posts_default() {
+        let site_data = create_test_data();
+        let get_posts = GetPosts { site_data };
+        let args = HashMap::new();
+
+        let result = get_posts.call(&args);
+        assert!(result.is_ok());
+
+        // Should return all posts in default desc order
+        let posts = result.unwrap();
+        assert!(posts.is_array());
+    }
+
+    #[test]
+    fn test_get_posts_with_limit() {
+        let site_data = create_test_data();
+        let get_posts = GetPosts { site_data };
+        let mut args = HashMap::new();
+        args.insert("items".to_string(), Value::Number(2.into()));
+
+        let result = get_posts.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_posts_asc_order() {
+        let site_data = create_test_data();
+        let get_posts = GetPosts { site_data };
+        let mut args = HashMap::new();
+        args.insert("ord".to_string(), Value::String("asc".to_string()));
+
+        let result = get_posts.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_tags_default() {
+        let site_data = create_test_data();
+        let get_tags = GetTags { site_data };
+        let args = HashMap::new();
+
+        let result = get_tags.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_tags_with_limit() {
+        let site_data = create_test_data();
+        let get_tags = GetTags { site_data };
+        let mut args = HashMap::new();
+        args.insert("items".to_string(), Value::Number(2.into()));
+
+        let result = get_tags.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_series_default() {
+        let site_data = create_test_data();
+        let get_series = GetSeries { site_data };
+        let args = HashMap::new();
+
+        let result = get_series.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_streams_default() {
+        let site_data = create_test_data();
+        let get_streams = GetStreams { site_data };
+        let args = HashMap::new();
+
+        let result = get_streams.call(&args);
+        assert!(result.is_ok());
     }
 }
