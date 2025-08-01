@@ -1,0 +1,8 @@
+{# Display table of contents for the current content #}
+{% macro toc() %}
+<nav class="table-of-contents">
+<div class="content-toc">
+{{ content.toc | safe }}
+</div>
+</nav>
+{% endmacro toc %}

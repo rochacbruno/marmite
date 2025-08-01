@@ -1,3 +1,4 @@
+use crate::embedded::EMBEDDED_SHORTCODES;
 use log::{debug, warn};
 use regex::Regex;
 use serde::Serialize;
@@ -156,188 +157,45 @@ impl ShortcodeProcessor {
         None
     }
 
-    #[allow(clippy::too_many_lines)]
     fn add_builtin_shortcodes(&mut self) {
-        // TOC shortcode
-        let toc_macro = r#"{% macro toc() %}
-<nav class="table-of-contents">
-<div class="content-toc">
-{{ content.toc | safe }}
-</div>
-</nav>
-{% endmacro toc %}"#;
+        // Load shortcodes from embedded files
+        for (file_name, file_data) in EMBEDDED_SHORTCODES.iter() {
+            let content = match std::str::from_utf8(file_data) {
+                Ok(content) => content,
+                Err(e) => {
+                    warn!("Failed to read embedded shortcode '{file_name}': {e}");
+                    continue;
+                }
+            };
 
-        self.shortcodes.insert(
-            "toc".to_string(),
-            Shortcode {
-                name: "toc".to_string(),
-                content: toc_macro.to_string(),
-                is_html: true,
-                description: Some("Display table of contents for the current content".to_string()),
-            },
-        );
+            // Extract filename without extension
+            let lowercase_name = file_name.to_lowercase();
+            let shortcode_name = if let Some(name) = lowercase_name.strip_suffix(".html") {
+                name
+            } else if let Some(name) = lowercase_name.strip_suffix(".md") {
+                name
+            } else {
+                warn!("Embedded shortcode '{file_name}' does not have .html or .md extension");
+                continue;
+            };
 
-        // YouTube shortcode
-        let youtube_macro = r#"{% macro youtube(id, width="560", height="315") %}
-{% if id is not starting_with("http") %}
-{% set id = "https://www.youtube.com/embed/" ~ id %}
-{% endif %}
-<p><iframe width="{{width}}" height="{{height}}" src="{{id}}" frameBorder="0" allow="accelerometer;" allowFullScreen></iframe></p>
-{% endmacro youtube %}"#;
+            // Determine if it's HTML or markdown
+            let is_html = file_name.to_lowercase().ends_with(".html");
 
-        self.shortcodes.insert(
-            "youtube".to_string(),
-            Shortcode {
-                name: "youtube".to_string(),
-                content: youtube_macro.to_string(),
-                is_html: true,
-                description: Some(
-                    "Embed YouTube videos. Params: id, width=560, height=315".to_string(),
-                ),
-            },
-        );
+            // Extract description from content
+            let description = self.extract_description(content);
 
-        // Authors shortcode
-        let authors_macro = r#"{% macro authors() %}
-<ul class="authors-list">
-{% for author_name, posts in site_data.author.map %}
-<li><a href="/author-{{ author_name | slugify }}.html">{{ author_name }}</a> ({{ posts | length }} posts)</li>
-{% endfor %}
-</ul>
-{% endmacro authors %}"#;
+            let shortcode = Shortcode {
+                name: shortcode_name.to_string(),
+                content: content.to_string(),
+                is_html,
+                description,
+            };
 
-        self.shortcodes.insert(
-            "authors".to_string(),
-            Shortcode {
-                name: "authors".to_string(),
-                content: authors_macro.to_string(),
-                is_html: true,
-                description: Some(
-                    "Display a list of all authors with post counts. Params: ord=asc, items=0"
-                        .to_string(),
-                ),
-            },
-        );
-
-        // Streams shortcode
-        let streams_macro = r#"{% macro streams(ord="asc", items=0) %}
-<ul class="streams-list">
-{% for stream_name, posts in site_data.stream.map %}
-<li><a href="/{{ stream_name }}.html">{{ stream_name }}</a> ({{ posts | length }} posts)</li>
-{% endfor %}
-</ul>
-{% endmacro streams %}"#;
-
-        self.shortcodes.insert(
-            "streams".to_string(),
-            Shortcode {
-                name: "streams".to_string(),
-                content: streams_macro.to_string(),
-                is_html: true,
-                description: Some(
-                    "Display a list of all content streams with post counts. Params: ord=asc, items=0".to_string(),
-                ),
-            },
-        );
-
-        // Series shortcode
-        let series_macro = r#"{% macro series(ord="asc", items=0) %}
-<ul class="series-list">
-{% for series_name, posts in site_data.series.map %}
-<li><a href="/series-{{ series_name | slugify }}.html">{{ series_name }}</a> ({{ posts | length }} posts)</li>
-{% endfor %}
-</ul>
-{% endmacro series %}"#;
-
-        self.shortcodes.insert(
-            "series".to_string(),
-            Shortcode {
-                name: "series".to_string(),
-                content: series_macro.to_string(),
-                is_html: true,
-                description: Some(
-                    "Display a list of all content series with post counts. Params: ord=asc, items=0".to_string(),
-                ),
-            },
-        );
-
-        // Posts shortcode
-        let posts_macro = r#"{% macro posts(ord="desc", items=10) %}
-<ul class="posts-list">
-{% set post_list = site_data.posts %}
-{% if ord == "desc" %}
-{% set post_list = post_list | reverse %}
-{% endif %}
-{% if items > 0 %}
-{% set post_list = post_list | slice(end=items) %}
-{% endif %}
-{% for post in post_list %}
-<li><a href="/{{ post.slug }}.html">{{ post.title }}</a> - {{ post.date | date(format="%Y-%m-%d") }}</li>
-{% endfor %}
-</ul>
-{% endmacro posts %}"#;
-
-        self.shortcodes.insert(
-            "posts".to_string(),
-            Shortcode {
-                name: "posts".to_string(),
-                content: posts_macro.to_string(),
-                is_html: true,
-                description: Some(
-                    "Display a list of recent posts. Params: ord=desc, items=10".to_string(),
-                ),
-            },
-        );
-
-        // Pages shortcode
-        let pages_macro = r#"{% macro pages(ord="asc", items=0) %}
-<ul class="pages-list">
-{% set page_list = site_data.pages %}
-{% if ord == "desc" %}
-{% set page_list = page_list | reverse %}
-{% endif %}
-{% if items > 0 %}
-{% set page_list = page_list | slice(end=items) %}
-{% endif %}
-{% for page in page_list %}
-<li><a href="/{{ page.slug }}.html">{{ page.title }}</a></li>
-{% endfor %}
-</ul>
-{% endmacro pages %}"#;
-
-        self.shortcodes.insert(
-            "pages".to_string(),
-            Shortcode {
-                name: "pages".to_string(),
-                content: pages_macro.to_string(),
-                is_html: true,
-                description: Some(
-                    "Display a list of all pages. Params: ord=asc, items=0".to_string(),
-                ),
-            },
-        );
-
-        // Tags shortcode
-        let tags_macro = r#"{% macro tags(ord="asc", items=0) %}
-<ul class="tags-list">
-{% for tag_name, posts in site_data.tag.map %}
-<li><a href="/tag-{{ tag_name | slugify }}.html">{{ tag_name }}</a> ({{ posts | length }} posts)</li>
-{% endfor %}
-</ul>
-{% endmacro tags %}"#;
-
-        self.shortcodes.insert(
-            "tags".to_string(),
-            Shortcode {
-                name: "tags".to_string(),
-                content: tags_macro.to_string(),
-                is_html: true,
-                description: Some(
-                    "Display a list of all tags with post counts. Params: ord=asc, items=0"
-                        .to_string(),
-                ),
-            },
-        );
+            debug!("Loaded embedded shortcode: {shortcode_name}");
+            self.shortcodes
+                .insert(shortcode_name.to_string(), shortcode);
+        }
     }
 
     /// Process shortcodes in HTML content
@@ -469,6 +327,10 @@ mod tests {
         assert!(processor.shortcodes.contains_key("posts"));
         assert!(processor.shortcodes.contains_key("pages"));
         assert!(processor.shortcodes.contains_key("tags"));
+        assert!(processor.shortcodes.contains_key("socials"));
+
+        // Check that all embedded shortcodes are loaded
+        assert_eq!(processor.shortcodes.len(), 9);
     }
 
     #[test]
@@ -609,18 +471,24 @@ mod tests {
         let shortcodes = processor.list_shortcodes_with_descriptions();
 
         // Check that we have the expected builtin shortcodes
-        assert_eq!(shortcodes.len(), 8);
+        assert_eq!(shortcodes.len(), 9);
 
         // Check they're sorted alphabetically
         let names: Vec<&str> = shortcodes.iter().map(|(name, _)| *name).collect();
         assert_eq!(
             names,
-            vec!["authors", "pages", "posts", "series", "streams", "tags", "toc", "youtube"]
+            vec![
+                "authors", "pages", "posts", "series", "socials", "streams", "tags", "toc",
+                "youtube"
+            ]
         );
 
-        // Check descriptions are present
+        // Check descriptions are present for HTML shortcodes
         for (name, desc) in shortcodes {
-            assert!(desc.is_some(), "Shortcode {name} should have a description");
+            if name != "socials" {
+                // socials.md might not have description
+                assert!(desc.is_some(), "Shortcode {name} should have a description");
+            }
         }
     }
 }

@@ -1,0 +1,8 @@
+{# Display a list of all content series with post counts #}
+{% macro series() %}
+<ul class="series-list">
+{% for series_name, posts in site_data.series.map %}
+<li><a href="/series-{{ series_name | slugify }}.html">{{ series_name }}</a> ({{ posts | length }} posts)</li>
+{% endfor %}
+</ul>
+{% endmacro series %}

@@ -1,0 +1,8 @@
+{# Display a list of all authors with post counts #}
+{% macro authors() %}
+<ul class="authors-list">
+{% for author_name, posts in site_data.author.map %}
+<li><a href="/author-{{ author_name | slugify }}.html">{{ author_name }}</a> ({{ posts | length }} posts)</li>
+{% endfor %}
+</ul>
+{% endmacro authors %}

@@ -1,0 +1,15 @@
+{# Display a list of recent posts. Params: ord=desc, items=10 #}
+{% macro posts(ord="desc", items=10) %}
+<ul class="posts-list">
+{% set post_list = site_data.posts %}
+{% if ord == "desc" %}
+{% set post_list = post_list | reverse %}
+{% endif %}
+{% if items > 0 %}
+{% set post_list = post_list | slice(end=items) %}
+{% endif %}
+{% for post in post_list %}
+<li><a href="/{{ post.slug }}.html">{{ post.title }}</a> - {{ post.date | date(format="%Y-%m-%d") }}</li>
+{% endfor %}
+</ul>
+{% endmacro posts %}

@@ -1,0 +1,8 @@
+{# Display a list of all content streams with post counts #}
+{% macro streams(ord="asc", items=0) %}
+<ul class="streams-list">
+{% for stream_name, posts in site_data.stream.map %}
+<li><a href="/{{ stream_name }}.html">{{ stream_name }}</a> ({{ posts | length }} posts)</li>
+{% endfor %}
+</ul>
+{% endmacro streams %}

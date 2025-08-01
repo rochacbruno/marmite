@@ -24,10 +24,10 @@ Here's a video about static site generators:
 You can also specify custom dimensions:
 
 ```
-<!-- .youtube id=dQw4w9WgXcQ width=800 height=600 -->
+<!-- .youtube id=dQw4w9WgXcQ width=400 height=300 -->
 ```
 
-<!-- .youtube id=dQw4w9WgXcQ width=800 height=600 -->
+<!-- .youtube id=dQw4w9WgXcQ width=400 height=300 -->
 
 ## Table of Contents
 
@@ -58,6 +58,71 @@ Available content streams:
 
 <!-- .streams ord=desc items=5 -->
 
+## Series List
+
+All content series:
+
+```
+<!-- .series -->
+```
+
+<!-- .series -->
+
+With parameters:
+
+```
+<!-- .series ord=desc items=3 -->
+```
+
+<!-- .series ord=desc items=3 -->
+
+## Posts List
+
+Recent posts:
+
+```
+<!-- .posts -->
+```
+
+<!-- .posts -->
+
+With custom parameters:
+
+```
+<!-- .posts ord=asc items=5 -->
+```
+
+<!-- .posts ord=asc items=5 -->
+
+## Pages List
+
+All pages:
+
+```
+<!-- .pages -->
+```
+
+<!-- .pages -->
+
+## Tags List
+
+All tags with post counts:
+
+```
+<!-- .tags -->
+```
+
+<!-- .tags -->
+
+Limited tags:
+
+```
+<!-- .tags ord=desc items=5 -->
+```
+
+<!-- .tags ord=desc items=5 -->
+
+
 ## Social Networks
 
 ```
@@ -68,4 +133,4 @@ Available content streams:
 
 ## Conclusion
 
-Shortcodes make it easy to add dynamic content to your static site!
+Shortcodes make it easy to add dynamic content to your static site! With 8 builtin shortcodes, you can create rich, interactive content while keeping your markdown clean and readable.
