@@ -246,18 +246,20 @@ impl ShortcodeProcessor {
             let macro_args = if params.is_empty() {
                 String::new()
             } else {
-                // Parse key=value pairs
+                // Parse key=value pairs with proper quote handling
                 let mut args = Vec::new();
-                for param in params.split_whitespace() {
-                    if let Some((key, value)) = param.split_once('=') {
-                        // Quote the value if it's not already quoted
-                        let quoted_value = if value.starts_with('"') && value.ends_with('"') {
-                            value.to_string()
-                        } else {
-                            format!("\"{value}\"")
-                        };
-                        args.push(format!("{key}={quoted_value}"));
-                    }
+                let parsed_params = Self::parse_parameters(params);
+                for (key, value) in parsed_params {
+                    // Ensure value is properly quoted for Tera
+                    let quoted_value = if value.starts_with('"') && value.ends_with('"') {
+                        value
+                    } else if value.starts_with('\'') && value.ends_with('\'') {
+                        // Convert single quotes to double quotes for Tera
+                        format!("\"{}\"", &value[1..value.len()-1])
+                    } else {
+                        format!("\"{value}\"")
+                    };
+                    args.push(format!("{key}={quoted_value}"));
                 }
                 args.join(", ")
             };
@@ -299,6 +301,112 @@ impl ShortcodeProcessor {
             .collect();
         shortcodes.sort_by_key(|(name, _)| *name);
         shortcodes
+    }
+
+    /// Parse parameters from a string, handling quoted values correctly
+    fn parse_parameters(params: &str) -> Vec<(String, String)> {
+        let mut result = Vec::new();
+        let mut chars = params.chars().peekable();
+        
+        while let Some(ch) = chars.next() {
+            if ch.is_whitespace() {
+                continue;
+            }
+            
+            // Parse key
+            let mut key = String::new();
+            let mut current_char = ch;
+            
+            loop {
+                if current_char == '=' {
+                    break;
+                } else if current_char.is_whitespace() {
+                    // Skip whitespace before =
+                    while let Some(&next_ch) = chars.peek() {
+                        if next_ch.is_whitespace() {
+                            chars.next();
+                        } else {
+                            break;
+                        }
+                    }
+                    if let Some(&'=') = chars.peek() {
+                        chars.next(); // consume the =
+                        break;
+                    } else {
+                        // No = found, this is not a valid key=value pair
+                        break;
+                    }
+                } else {
+                    key.push(current_char);
+                }
+                
+                if let Some(next_ch) = chars.next() {
+                    current_char = next_ch;
+                } else {
+                    break;
+                }
+            }
+            
+            if key.is_empty() {
+                continue;
+            }
+            
+            // Skip whitespace after =
+            while let Some(&next_ch) = chars.peek() {
+                if next_ch.is_whitespace() {
+                    chars.next();
+                } else {
+                    break;
+                }
+            }
+            
+            // Parse value
+            let mut value = String::new();
+            
+            if let Some(&quote_char) = chars.peek() {
+                if quote_char == '"' || quote_char == '\'' {
+                    // Handle quoted value
+                    chars.next(); // consume opening quote
+                    value.push(quote_char);
+                    
+                    while let Some(ch) = chars.next() {
+                        value.push(ch);
+                        if ch == quote_char {
+                            // Check if it's escaped
+                            let mut backslash_count = 0;
+                            let temp_chars: Vec<char> = value.chars().rev().skip(1).collect();
+                            for &c in &temp_chars {
+                                if c == '\\' {
+                                    backslash_count += 1;
+                                } else {
+                                    break;
+                                }
+                            }
+                            
+                            // If even number of backslashes (including 0), quote is not escaped
+                            if backslash_count % 2 == 0 {
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    // Handle unquoted value
+                    while let Some(&next_ch) = chars.peek() {
+                        if next_ch.is_whitespace() {
+                            break;
+                        } else {
+                            value.push(chars.next().unwrap());
+                        }
+                    }
+                }
+            }
+            
+            if !value.is_empty() {
+                result.push((key, value));
+            }
+        }
+        
+        result
     }
 }
 
@@ -366,7 +474,7 @@ mod tests {
         assert!(processor.shortcodes.contains_key("socials"));
 
         // Check that all embedded shortcodes are loaded
-        assert_eq!(processor.shortcodes.len(), 9);
+        assert_eq!(processor.shortcodes.len(), 10);
     }
 
     #[test]
@@ -507,14 +615,14 @@ mod tests {
         let shortcodes = processor.list_shortcodes_with_descriptions();
 
         // Check that we have the expected builtin shortcodes
-        assert_eq!(shortcodes.len(), 9);
+        assert_eq!(shortcodes.len(), 10);
 
         // Check they're sorted alphabetically
         let names: Vec<&str> = shortcodes.iter().map(|(name, _)| *name).collect();
         assert_eq!(
             names,
             vec![
-                "authors", "pages", "posts", "series", "socials", "streams", "tags", "toc",
+                "authors", "card", "pages", "posts", "series", "socials", "streams", "tags", "toc",
                 "youtube"
             ]
         );
@@ -526,5 +634,48 @@ mod tests {
                 assert!(desc.is_some(), "Shortcode {name} should have a description");
             }
         }
+    }
+
+    #[test]
+    fn test_parse_parameters() {
+        // Test simple parameters
+        let params = ShortcodeProcessor::parse_parameters("key1=value1 key2=value2");
+        assert_eq!(params, vec![
+            ("key1".to_string(), "value1".to_string()),
+            ("key2".to_string(), "value2".to_string())
+        ]);
+
+        // Test quoted parameters with spaces
+        let params = ShortcodeProcessor::parse_parameters(r#"title="Custom Title" text='Single quoted' url=http://example.com"#);
+        assert_eq!(params, vec![
+            ("title".to_string(), r#""Custom Title""#.to_string()),
+            ("text".to_string(), "'Single quoted'".to_string()),
+            ("url".to_string(), "http://example.com".to_string())
+        ]);
+
+        // Test mixed parameters
+        let params = ShortcodeProcessor::parse_parameters(r#"slug=author-rochacbruno image="https://github.com/dynaconf.png" title="Custom Title" text='Custom Description' content_type="Author""#);
+        assert_eq!(params, vec![
+            ("slug".to_string(), "author-rochacbruno".to_string()),
+            ("image".to_string(), r#""https://github.com/dynaconf.png""#.to_string()),
+            ("title".to_string(), r#""Custom Title""#.to_string()),
+            ("text".to_string(), "'Custom Description'".to_string()),
+            ("content_type".to_string(), r#""Author""#.to_string())
+        ]);
+
+        // Test parameters with spaces around equals
+        let params = ShortcodeProcessor::parse_parameters("key1 = value1   key2= \"quoted value\"");
+        assert_eq!(params, vec![
+            ("key1".to_string(), "value1".to_string()),
+            ("key2".to_string(), r#""quoted value""#.to_string())
+        ]);
+
+        // Test empty parameters
+        let params = ShortcodeProcessor::parse_parameters("");
+        assert_eq!(params, vec![]);
+
+        // Test just whitespace
+        let params = ShortcodeProcessor::parse_parameters("   ");
+        assert_eq!(params, vec![]);
     }
 }

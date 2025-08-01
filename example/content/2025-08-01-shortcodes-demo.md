@@ -156,6 +156,14 @@ Card for author:
 
 <!-- .card slug=author-rochacbruno -->
 
+With custom parameters:
+
+```
+<!-- .card slug=author-rochacbruno image="https://github.com/rochacbruno.png" title="Custom Title" text="Custom Description" content_type="Author" -->
+```
+
+<!-- .card slug=author-rochacbruno image="https://github.com/dynaconf.png" title="Custom Title" text="Custom Description" content_type="Project" -->
+
 Card for stream:
 
 ```
