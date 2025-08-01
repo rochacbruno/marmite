@@ -2274,3 +2274,305 @@ mod tests {
         assert!(copied_dir.join("file2.txt").exists());
     }
 }
+
+/// Show all site URLs organized by content type
+#[allow(clippy::too_many_lines)]
+pub fn show_urls(
+    config_path: &Arc<std::path::PathBuf>,
+    input_folder: &Arc<std::path::PathBuf>,
+    args: &Arc<crate::cli::Cli>,
+) {
+    // Load site data from config
+    let mut site_data = Data::from_file(config_path.as_path());
+    let content_folder = get_content_folder(&site_data.site, input_folder.as_path());
+
+    // Override site config with CLI arguments
+    site_data.site.override_from_cli_args(args);
+
+    // Collect content fragments and process content
+    let fragments = collect_content_fragments(&content_folder);
+    collect_content(&content_folder, &mut site_data, &fragments);
+    site_data.sort_all();
+
+    // Create a minimal Tera instance with just the UrlFor function
+    let mut tera = Tera::default();
+    tera.autoescape_on(vec![]);
+    tera.register_function(
+        "url_for",
+        UrlFor {
+            base_url: site_data.site.url.to_string(),
+        },
+    );
+
+    // Determine if we should use absolute URLs
+    let use_abs = !site_data.site.url.is_empty();
+
+    // Build context for tera function calls
+    let mut context = std::collections::HashMap::new();
+    context.insert("abs".to_string(), tera::Value::Bool(use_abs));
+
+    println!("Site URLs organized by content type:");
+    println!("====================================");
+
+    // Posts
+    if !site_data.posts.is_empty() {
+        println!("\nPosts ({}):", site_data.posts.len());
+        println!("------------");
+        for post in &site_data.posts {
+            context.insert(
+                "path".to_string(),
+                tera::Value::String(format!("{}.html", post.slug)),
+            );
+            if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+                if let Some(url_str) = url.as_str() {
+                    println!("  {} - {}", post.title, url_str);
+                }
+            }
+        }
+    }
+
+    // Pages
+    if !site_data.pages.is_empty() {
+        println!("\nPages ({}):", site_data.pages.len());
+        println!("------------");
+        for page in &site_data.pages {
+            context.insert(
+                "path".to_string(),
+                tera::Value::String(format!("{}.html", page.slug)),
+            );
+            if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+                if let Some(url_str) = url.as_str() {
+                    println!("  {} - {}", page.title, url_str);
+                }
+            }
+        }
+    }
+
+    // Tags
+    if !site_data.tag.map.is_empty() {
+        println!("\nTags ({}):", site_data.tag.map.len());
+        println!("----------");
+        for (tag_name, tag_contents) in site_data.tag.iter() {
+            let tag_slug = slugify(tag_name);
+            context.insert(
+                "path".to_string(),
+                tera::Value::String(format!("tag-{tag_slug}.html")),
+            );
+            if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+                if let Some(url_str) = url.as_str() {
+                    println!(
+                        "  {} ({} posts) - {}",
+                        tag_name,
+                        tag_contents.len(),
+                        url_str
+                    );
+                }
+            }
+        }
+
+        // Tags index page
+        context.insert(
+            "path".to_string(),
+            tera::Value::String("tags.html".to_string()),
+        );
+        if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+            if let Some(url_str) = url.as_str() {
+                println!("  [Tags Index] - {url_str}");
+            }
+        }
+    }
+
+    // Authors
+    if !site_data.author.map.is_empty() {
+        println!("\nAuthors ({}):", site_data.author.map.len());
+        println!("-------------");
+        for (author_name, author_contents) in site_data.author.iter() {
+            let author_slug = slugify(author_name);
+            context.insert(
+                "path".to_string(),
+                tera::Value::String(format!("author-{author_slug}.html")),
+            );
+            if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+                if let Some(url_str) = url.as_str() {
+                    println!(
+                        "  {} ({} posts) - {}",
+                        author_name,
+                        author_contents.len(),
+                        url_str
+                    );
+                }
+            }
+        }
+
+        // Authors index page
+        context.insert(
+            "path".to_string(),
+            tera::Value::String("authors.html".to_string()),
+        );
+        if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+            if let Some(url_str) = url.as_str() {
+                println!("  [Authors Index] - {url_str}");
+            }
+        }
+    }
+
+    // Series
+    if !site_data.series.map.is_empty() {
+        println!("\nSeries ({}):", site_data.series.map.len());
+        println!("------------");
+        for (series_name, series_contents) in site_data.series.iter() {
+            let series_slug = slugify(series_name);
+            context.insert(
+                "path".to_string(),
+                tera::Value::String(format!("series-{series_slug}.html")),
+            );
+            if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+                if let Some(url_str) = url.as_str() {
+                    println!(
+                        "  {} ({} posts) - {}",
+                        series_name,
+                        series_contents.len(),
+                        url_str
+                    );
+                }
+            }
+        }
+
+        // Series index page
+        context.insert(
+            "path".to_string(),
+            tera::Value::String("series.html".to_string()),
+        );
+        if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+            if let Some(url_str) = url.as_str() {
+                println!("  [Series Index] - {url_str}");
+            }
+        }
+    }
+
+    // Streams
+    if !site_data.stream.map.is_empty() {
+        println!("\nStreams ({}):", site_data.stream.map.len());
+        println!("-------------");
+        for (stream_name, stream_contents) in site_data.stream.iter() {
+            let stream_slug = slugify(stream_name);
+            let filename = if stream_name == "index" {
+                "index.html".to_string()
+            } else {
+                format!("{stream_slug}.html")
+            };
+            context.insert("path".to_string(), tera::Value::String(filename));
+            if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+                if let Some(url_str) = url.as_str() {
+                    println!(
+                        "  {} ({} posts) - {}",
+                        stream_name,
+                        stream_contents.len(),
+                        url_str
+                    );
+                }
+            }
+        }
+
+        // Streams index page (if not already shown as index stream)
+        if !site_data.stream.map.contains_key("index") {
+            context.insert(
+                "path".to_string(),
+                tera::Value::String("streams.html".to_string()),
+            );
+            if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+                if let Some(url_str) = url.as_str() {
+                    println!("  [Streams Index] - {url_str}");
+                }
+            }
+        }
+    }
+
+    // Archive
+    if !site_data.archive.map.is_empty() {
+        println!("\nArchive ({}):", site_data.archive.map.len());
+        println!("-------------");
+        for (year, archive_contents) in site_data.archive.iter() {
+            context.insert(
+                "path".to_string(),
+                tera::Value::String(format!("archive-{year}.html")),
+            );
+            if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+                if let Some(url_str) = url.as_str() {
+                    println!(
+                        "  {} ({} posts) - {}",
+                        year,
+                        archive_contents.len(),
+                        url_str
+                    );
+                }
+            }
+        }
+
+        // Archive index page
+        context.insert(
+            "path".to_string(),
+            tera::Value::String("archive.html".to_string()),
+        );
+        if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+            if let Some(url_str) = url.as_str() {
+                println!("  [Archive Index] - {url_str}");
+            }
+        }
+    }
+
+    // RSS Feeds
+    println!("\nRSS Feeds:");
+    println!("-----------");
+    for (stream_name, _) in site_data.stream.iter() {
+        if stream_name != "draft" {
+            let stream_slug = slugify(stream_name);
+            context.insert(
+                "path".to_string(),
+                tera::Value::String(format!("{stream_slug}.rss")),
+            );
+            if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+                if let Some(url_str) = url.as_str() {
+                    println!("  {stream_name} RSS - {url_str}");
+                }
+            }
+        }
+    }
+
+    // JSON Feeds (if enabled)
+    if site_data.site.json_feed {
+        println!("\nJSON Feeds:");
+        println!("------------");
+        for (stream_name, _) in site_data.stream.iter() {
+            if stream_name != "draft" {
+                let stream_slug = slugify(stream_name);
+                context.insert(
+                    "path".to_string(),
+                    tera::Value::String(format!("{stream_slug}.json")),
+                );
+                if let Ok(url) = tera.get_function("url_for").unwrap().call(&context) {
+                    if let Some(url_str) = url.as_str() {
+                        println!("  {stream_name} JSON - {url_str}");
+                    }
+                }
+            }
+        }
+    }
+
+    println!("\n====================================");
+    let total_urls = site_data.posts.len()
+        + site_data.pages.len()
+        + site_data.tag.map.len()
+        + site_data.author.map.len()
+        + site_data.series.map.len()
+        + site_data.stream.map.len()
+        + site_data.archive.map.len();
+    println!("Total content URLs: {total_urls}");
+    if use_abs {
+        println!("Base URL configured: {}", site_data.site.url);
+        println!("URLs shown as absolute");
+    } else {
+        println!("No base URL configured - URLs shown as relative");
+        println!("Set 'url' in marmite.yaml or use --url flag for absolute URLs");
+    }
+}

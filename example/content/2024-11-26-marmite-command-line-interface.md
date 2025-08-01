@@ -306,6 +306,92 @@ source_repository: https://github.com/user/repo/tree/main/content
 > Source links only appear on posts (content with dates), not on static pages.
 > When both options are enabled, repository links take precedence over local files.
 
+## List Available Shortcodes
+
+Use `--shortcodes` to list all available shortcodes in your project:
+
+```console
+$ marmite myblog --shortcodes
+Shortcodes:
+Reusable blocks of content that can be used in your markdown files.
+They are defined in the shortcodes/ directory and are rendered using the Tera template engine.
+Check the documentation for details on how to use and create shortcodes.
+================
+Examples:
+<!-- .youtube id=dQw4w9WgXcQ -->
+<!-- .youtube id=dQw4w9WgXcQ width=800 height=600 -->
+<!-- .toc -->
+<!-- .authors -->
+<!-- .streams ord=desc items=5 -->
+--------------------------------
+Available shortcodes:
+  - youtube: Embed a YouTube video
+  - toc: Display table of contents
+  - authors: Display list of authors
+  ...
+```
+
+This command lists both built-in and custom shortcodes available in your project.
+
+## Show Site URLs (Dry Run)
+
+Use `--show-urls` to display all URLs that will be generated without actually building the site. This serves as a dry run to preview your site structure:
+
+```console
+$ marmite myblog --show-urls
+Site URLs organized by content type:
+====================================
+
+Posts (15):
+------------
+  Getting Started - /getting-started.html
+  My First Post - /my-first-post.html
+  ...
+
+Pages (3):
+-----------
+  About - /about.html
+  Contact - /contact.html
+  ...
+
+Tags (8):
+----------
+  tutorial (5 posts) - /tag-tutorial.html
+  marmite (3 posts) - /tag-marmite.html
+  ...
+
+====================================
+Total content URLs: 42
+No base URL configured - URLs shown as relative
+Set 'url' in marmite.yaml or use --url flag for absolute URLs
+```
+
+### With base URL configured
+
+When you have a base URL configured or use the `--url` flag:
+
+```console
+$ marmite myblog --show-urls --url "https://myblog.com"
+Site URLs organized by content type:
+====================================
+
+Posts (15):
+------------
+  Getting Started - https://myblog.com/getting-started.html
+  My First Post - https://myblog.com/my-first-post.html
+  ...
+```
+
+This command is useful for:
+- Previewing site structure before building
+- Verifying URL patterns and slugs
+- Planning site organization
+- Debugging URL generation issues
+- Creating sitemaps or navigation structures
+
+> [!TIP]
+> Use `--show-urls` as a dry run to check how your site will be structured without actually generating any files.
+
 ## CLI Help
 
 
@@ -343,6 +429,12 @@ Options:
           Init a new site with sample content and default configuration this will overwrite existing files
           usually you don't need to run this because Marmite can generate a site from any folder with
           markdown files
+      --force
+          Force the rebuild of the site even if no changes detected
+      --shortcodes
+          List all available shortcodes
+      --show-urls
+          Show all site URLs organized by content type
       --new <NEW>
           Create a new post with the given title and open in the default editor
   -e

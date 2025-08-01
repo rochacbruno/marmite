@@ -130,6 +130,11 @@ fn main() {
         return;
     }
 
+    if args.show_urls {
+        site::show_urls(&config_path, &input_folder, &cloned_args);
+        return;
+    }
+
     let output_folder = Arc::new(args.output_folder.unwrap_or(input_folder.join("site")));
     site::generate(
         &config_path,

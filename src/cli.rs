@@ -71,6 +71,10 @@ pub struct Cli {
     #[arg(long)]
     pub shortcodes: bool,
 
+    /// Show all site URLs organized by content type
+    #[arg(long)]
+    pub show_urls: bool,
+
     /// Create a new markdown file in the input folder
     #[command(flatten)]
     pub create: Create,
