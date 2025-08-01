@@ -255,7 +255,7 @@ impl ShortcodeProcessor {
                         value
                     } else if value.starts_with('\'') && value.ends_with('\'') {
                         // Convert single quotes to double quotes for Tera
-                        format!("\"{}\"", &value[1..value.len()-1])
+                        format!("\"{}\"", &value[1..value.len() - 1])
                     } else {
                         format!("\"{value}\"")
                     };
@@ -307,16 +307,16 @@ impl ShortcodeProcessor {
     fn parse_parameters(params: &str) -> Vec<(String, String)> {
         let mut result = Vec::new();
         let mut chars = params.chars().peekable();
-        
+
         while let Some(ch) = chars.next() {
             if ch.is_whitespace() {
                 continue;
             }
-            
+
             // Parse key
             let mut key = String::new();
             let mut current_char = ch;
-            
+
             loop {
                 if current_char == '=' {
                     break;
@@ -339,18 +339,18 @@ impl ShortcodeProcessor {
                 } else {
                     key.push(current_char);
                 }
-                
+
                 if let Some(next_ch) = chars.next() {
                     current_char = next_ch;
                 } else {
                     break;
                 }
             }
-            
+
             if key.is_empty() {
                 continue;
             }
-            
+
             // Skip whitespace after =
             while let Some(&next_ch) = chars.peek() {
                 if next_ch.is_whitespace() {
@@ -359,16 +359,16 @@ impl ShortcodeProcessor {
                     break;
                 }
             }
-            
+
             // Parse value
             let mut value = String::new();
-            
+
             if let Some(&quote_char) = chars.peek() {
                 if quote_char == '"' || quote_char == '\'' {
                     // Handle quoted value
                     chars.next(); // consume opening quote
                     value.push(quote_char);
-                    
+
                     while let Some(ch) = chars.next() {
                         value.push(ch);
                         if ch == quote_char {
@@ -382,7 +382,7 @@ impl ShortcodeProcessor {
                                     break;
                                 }
                             }
-                            
+
                             // If even number of backslashes (including 0), quote is not escaped
                             if backslash_count % 2 == 0 {
                                 break;
@@ -400,12 +400,12 @@ impl ShortcodeProcessor {
                     }
                 }
             }
-            
+
             if !value.is_empty() {
                 result.push((key, value));
             }
         }
-        
+
         result
     }
 }
@@ -640,35 +640,54 @@ mod tests {
     fn test_parse_parameters() {
         // Test simple parameters
         let params = ShortcodeProcessor::parse_parameters("key1=value1 key2=value2");
-        assert_eq!(params, vec![
-            ("key1".to_string(), "value1".to_string()),
-            ("key2".to_string(), "value2".to_string())
-        ]);
+        assert_eq!(
+            params,
+            vec![
+                ("key1".to_string(), "value1".to_string()),
+                ("key2".to_string(), "value2".to_string())
+            ]
+        );
 
         // Test quoted parameters with spaces
-        let params = ShortcodeProcessor::parse_parameters(r#"title="Custom Title" text='Single quoted' url=http://example.com"#);
-        assert_eq!(params, vec![
-            ("title".to_string(), r#""Custom Title""#.to_string()),
-            ("text".to_string(), "'Single quoted'".to_string()),
-            ("url".to_string(), "http://example.com".to_string())
-        ]);
+        let params = ShortcodeProcessor::parse_parameters(
+            r#"title="Custom Title" text='Single quoted' url=http://example.com"#,
+        );
+        assert_eq!(
+            params,
+            vec![
+                ("title".to_string(), r#""Custom Title""#.to_string()),
+                ("text".to_string(), "'Single quoted'".to_string()),
+                ("url".to_string(), "http://example.com".to_string())
+            ]
+        );
 
         // Test mixed parameters
-        let params = ShortcodeProcessor::parse_parameters(r#"slug=author-rochacbruno image="https://github.com/dynaconf.png" title="Custom Title" text='Custom Description' content_type="Author""#);
-        assert_eq!(params, vec![
-            ("slug".to_string(), "author-rochacbruno".to_string()),
-            ("image".to_string(), r#""https://github.com/dynaconf.png""#.to_string()),
-            ("title".to_string(), r#""Custom Title""#.to_string()),
-            ("text".to_string(), "'Custom Description'".to_string()),
-            ("content_type".to_string(), r#""Author""#.to_string())
-        ]);
+        let params = ShortcodeProcessor::parse_parameters(
+            r#"slug=author-rochacbruno image="https://github.com/dynaconf.png" title="Custom Title" text='Custom Description' content_type="Author""#,
+        );
+        assert_eq!(
+            params,
+            vec![
+                ("slug".to_string(), "author-rochacbruno".to_string()),
+                (
+                    "image".to_string(),
+                    r#""https://github.com/dynaconf.png""#.to_string()
+                ),
+                ("title".to_string(), r#""Custom Title""#.to_string()),
+                ("text".to_string(), "'Custom Description'".to_string()),
+                ("content_type".to_string(), r#""Author""#.to_string())
+            ]
+        );
 
         // Test parameters with spaces around equals
         let params = ShortcodeProcessor::parse_parameters("key1 = value1   key2= \"quoted value\"");
-        assert_eq!(params, vec![
-            ("key1".to_string(), "value1".to_string()),
-            ("key2".to_string(), r#""quoted value""#.to_string())
-        ]);
+        assert_eq!(
+            params,
+            vec![
+                ("key1".to_string(), "value1".to_string()),
+                ("key2".to_string(), r#""quoted value""#.to_string())
+            ]
+        );
 
         // Test empty parameters
         let params = ShortcodeProcessor::parse_parameters("");

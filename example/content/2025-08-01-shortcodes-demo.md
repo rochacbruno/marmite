@@ -11,6 +11,9 @@ authors: ["marmite"]
 
 This post demonstrates the new shortcodes feature in Marmite.
 
+
+Read more about how to create your own shortcodes on [[Shortcodes Guide#creating-custom-shortcodes]]
+
 ## YouTube Video
 
 Here's a video about static site generators:
@@ -159,10 +162,18 @@ Card for author:
 With custom parameters:
 
 ```
-<!-- .card slug=author-rochacbruno image="https://github.com/rochacbruno.png" title="Custom Title" text="Custom Description" content_type="Author" -->
+<!-- .card slug="https://dynaconf.com" image="https://github.com/dynaconf.png" title="Custom Title" text="Custom Description" content_type="Project" -->
 ```
 
-<!-- .card slug=author-rochacbruno image="https://github.com/dynaconf.png" title="Custom Title" text="Custom Description" content_type="Project" -->
+<!-- .card slug="https://dynaconf.com" image="https://github.com/dynaconf.png" title="Custom Title" text="Custom Description" content_type="Project" -->
+
+External link card:
+
+```
+<!-- .card slug="https://github.com/rochacbruno/marmite" title="Marmite Repository" text="Static site generator written in Rust" content_type="GitHub" image="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" -->
+```
+
+<!-- .card slug="https://github.com/rochacbruno/marmite" title="Marmite Repository" text="Static site generator written in Rust" content_type="GitHub" image="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" -->
 
 Card for stream:
 
@@ -187,6 +198,7 @@ Card for page:
 ```
 
 <!-- .card slug=about -->
+
 
 
 ## Conclusion
