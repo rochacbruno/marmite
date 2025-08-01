@@ -19,6 +19,22 @@ pub struct Templates;
 #[folder = "$CARGO_MANIFEST_DIR/example/theme_template/"]
 pub struct ThemeTemplate;
 
+#[derive(Embed, Debug)]
+#[folder = "$CARGO_MANIFEST_DIR/example/shortcodes/"]
+pub struct Shortcodes;
+
+pub static EMBEDDED_SHORTCODES: LazyLock<Vec<(String, Vec<u8>)>> = LazyLock::new(|| {
+    let mut files: Vec<(String, Vec<u8>)> = Vec::new();
+
+    for name in Shortcodes::iter() {
+        let shortcode = Shortcodes::get(name.as_ref()).unwrap();
+        let file_data = shortcode.data;
+        files.push((name.clone().to_string(), file_data.clone().to_vec()));
+    }
+
+    files
+});
+
 pub static EMBEDDED_TERA: LazyLock<Tera> = LazyLock::new(|| {
     let mut tera = Tera::default();
     tera.autoescape_on(vec![]);

@@ -1,0 +1,7 @@
+{# Embed a YouTube video #}
+{% macro youtube(id, width="560", height="315") %}
+{% if id is not starting_with("http") %}
+{% set id = "https://www.youtube.com/embed/" ~ id %}
+{% endif %}
+<p><iframe width="{{width}}" height="{{height}}" src="{{id}}" title="" frameBorder="0" allow="accelerometer;" allowFullScreen></iframe></p>
+{% endmacro youtube %}

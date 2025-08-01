@@ -11,12 +11,14 @@ mod feed;
 mod image_provider;
 mod parser;
 mod server;
+mod shortcodes;
 mod site;
 mod templates;
 mod tera_filter;
 mod tera_functions;
 mod theme_manager;
 
+#[allow(clippy::too_many_lines)]
 fn main() {
     let args = cli::Cli::parse();
     let cloned_args = Arc::new(args.clone()); // Clone to pass to the server thread
@@ -97,6 +99,34 @@ fn main() {
 
     if args.generate_config {
         config::generate(&input_folder, &cloned_args);
+        return;
+    }
+
+    if args.shortcodes {
+        let mut processor = shortcodes::ShortcodeProcessor::new(None);
+        if let Err(e) = processor.collect_shortcodes(&input_folder) {
+            error!("Failed to collect shortcodes: {e}");
+            return;
+        }
+        println!("Shortcodes:");
+        println!("Reusable blocks of content that can be used in your markdown files.");
+        println!("They are defined in the shortcodes/ directory and are rendered using the Tera template engine.");
+        println!("Check the documentation for details on how to use and create shortcodes.");
+        println!("================");
+        println!("Examples:");
+        println!("<!-- .youtube id=dQw4w9WgXcQ -->");
+        println!("<!-- .youtube id=dQw4w9WgXcQ width=800 height=600 -->");
+        println!("<!-- .toc -->");
+        println!("<!-- .authors -->");
+        println!("<!-- .streams ord=desc items=5 -->");
+        println!("--------------------------------");
+        println!("Available shortcodes:");
+        for (name, description) in processor.list_shortcodes_with_descriptions() {
+            match description {
+                Some(desc) => println!("  - {name}: {desc}"),
+                None => println!("  - {name}"),
+            }
+        }
         return;
     }
 

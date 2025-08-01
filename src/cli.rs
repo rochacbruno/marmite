@@ -67,6 +67,10 @@ pub struct Cli {
     #[arg(long)]
     pub force: bool,
 
+    /// List all available shortcodes
+    #[arg(long)]
+    pub shortcodes: bool,
+
     /// Create a new markdown file in the input folder
     #[command(flatten)]
     pub create: Create,

@@ -1,0 +1,9 @@
+{# Display a list of all authors with post counts. Params: ord=desc, items=0 #}
+{% macro authors(ord="desc", items=0) %}
+{% set author_map = group(kind="author", ord=ord, items=items) %}
+<ul class="authors-list">
+{% for author_name, posts in author_map %}
+<li><a href="/author-{{ author_name | slugify }}.html">{{ author_name }}</a> ({{ posts | length }} posts)</li>
+{% endfor %}
+</ul>
+{% endmacro authors %}

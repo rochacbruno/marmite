@@ -7,6 +7,9 @@ authors: rochacbruno
 
 # File Mapping Feature
 
+> [!IMPORTANT]
+> This is a **Beta** feature currently available only on the main branch. It has not been released in a stable version yet.
+
 Marmite now supports file mapping, which allows you to copy arbitrary files from source locations to destination paths during site generation. This feature is useful for copying files that aren't handled by the standard static or media directory copying.
 
 ## Configuration

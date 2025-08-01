@@ -87,6 +87,13 @@ extra:
     - extrastatic
   # colorscheme: gruvbox
   # fediverse_verification: https://mastodon.social/@me
+  social_networks:
+    linkedin:
+      url: https://www.linkedin.com/in/rochacbruno/
+    github:
+      url: https://github.com/rochacbruno
+    links:
+      url: https://bruno.rocha.social
 
 # Example, to enable comments:
 # Go to: https://giscus.app/ and generate your config and replace below.

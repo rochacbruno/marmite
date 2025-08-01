@@ -156,7 +156,7 @@ Generate URLs with proper base URL handling:
 ```
 
 ### group()
-Access grouped content:
+Access grouped content with optional sorting and limiting:
 
 ```html
 <!-- Get all tags -->
@@ -169,8 +169,8 @@ Access grouped content:
   </ul>
 {% endfor %}
 
-<!-- Get all authors -->
-{% for author_name, author_posts in group(kind="author") %}
+<!-- Get all authors with sorting and limiting -->
+{% for author_name, author_posts in group(kind="author", ord="desc", items=5) %}
   <h3>{{ author_name }}</h3>
   <p>{{ author_posts | length }} posts</p>
 {% endfor %}
@@ -191,8 +191,8 @@ Access grouped content:
   <p>{{ year_posts | length }} posts</p>
 {% endfor %}
 
-<!-- Get all series -->
-{% for series_name, series_posts in group(kind="series") %}
+<!-- Get all series with limiting -->
+{% for series_name, series_posts in group(kind="series", items=10) %}
   <h3>{{ series_display_name(series=series_name) }}</h3>
   <ul>
     {% for post in series_posts %}
@@ -201,6 +201,63 @@ Access grouped content:
   </ul>
 {% endfor %}
 ```
+
+**Parameters:**
+- `kind`: Required. One of "tag", "author", "archive", "stream", "series"
+- `ord`: Optional. Sort order: "asc" or "desc" (default: "asc")
+- `items`: Optional. Maximum number of groups to return (default: all)
+
+### get_data_by_slug()
+Retrieve standardized data for any content by its slug:
+
+```html
+<!-- Get data for a specific post -->
+{% set data = get_data_by_slug(slug="my-blog-post") %}
+<div class="content-card">
+  <img src="{{ data.image }}" alt="{{ data.title }}">
+  <h3>{{ data.title }}</h3>
+  <p>{{ data.text }}</p>
+  <small>{{ data.content_type }}</small>
+</div>
+
+<!-- Get data for a tag -->
+{% set tag_data = get_data_by_slug(slug="tag-javascript") %}
+<div class="tag-info">
+  <h3>{{ tag_data.title }}</h3>
+  <p>{{ tag_data.text }}</p>
+</div>
+
+<!-- Get data for an author -->
+{% set author_data = get_data_by_slug(slug="author-rochacbruno") %}
+<div class="author-profile">
+  <img src="{{ author_data.image }}" alt="{{ author_data.title }}">
+  <h3>{{ author_data.title }}</h3>
+  <p>{{ author_data.text }}</p>
+</div>
+
+<!-- Get data for a series -->
+{% set series_data = get_data_by_slug(slug="series-python-tutorial") %}
+<div class="series-info">
+  <h3>{{ series_data.title }}</h3>
+  <p>{{ series_data.text }}</p>
+</div>
+```
+
+**Returns SlugData object with:**
+- `image`: Content banner/avatar image or placeholder
+- `slug`: The content slug
+- `title`: Content title, author name, or group name
+- `text`: Content description, date, or post count
+- `content_type`: Type identifier ("post", "page", "tag", "author", "series", "stream", "archive")
+
+**Supported slug patterns:**
+- Posts: `"post-slug"`
+- Pages: `"page-slug"`
+- Tags: `"tag-tagname"`
+- Authors: `"author-username"`
+- Series: `"series-seriesname"`
+- Streams: `"stream-streamname"`
+- Archives: `"archive-year"`
 
 ### stream_display_name()
 Get friendly display names for streams:

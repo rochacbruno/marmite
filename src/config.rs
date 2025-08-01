@@ -247,6 +247,12 @@ pub struct Marmite {
 
     #[serde(default)]
     pub file_mapping: Vec<FileMapping>,
+
+    #[serde(default = "default_true")]
+    pub enable_shortcodes: bool,
+
+    #[serde(default)]
+    pub shortcode_pattern: Option<String>,
 }
 
 fn default_true() -> bool {

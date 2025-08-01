@@ -1,9 +1,20 @@
 use indexmap::IndexMap;
+use serde::Serialize;
 use std::collections::HashMap;
 use tera::{to_value, Function, Result as TeraResult, Value};
 use url::Url;
 
+use crate::content::Content;
 use crate::site::Data;
+
+#[derive(Serialize)]
+pub struct SlugData {
+    pub image: String,
+    pub slug: String,
+    pub title: String,
+    pub text: String,
+    pub content_type: String,
+}
 
 #[derive(Default)]
 pub struct UrlFor {
@@ -75,12 +86,24 @@ pub struct Group {
     pub site_data: Data,
 }
 
+#[allow(clippy::cast_possible_truncation)]
 impl Function for Group {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let kind = args
             .get("kind")
             .and_then(Value::as_str)
             .ok_or_else(|| tera::Error::msg("Missing `kind` argument"))?;
+
+        let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
+
+        let items = args
+            .get("items")
+            .and_then(|v| match v {
+                Value::Number(n) => n.as_u64(),
+                Value::String(s) => s.parse::<u64>().ok(),
+                _ => None,
+            })
+            .unwrap_or(0) as usize;
 
         let grouped_content = match kind {
             "tag" => &self.site_data.tag,
@@ -91,10 +114,39 @@ impl Function for Group {
             _ => return Err(tera::Error::msg("Invalid `kind` argument")),
         };
 
-        // create an IndexMap from the iterated content
+        // Convert to vector for sorting
+        let mut group_list: Vec<(String, Vec<Content>)> = grouped_content
+            .iter()
+            .map(|(name, posts)| (name.clone(), posts.clone()))
+            .collect();
+
+        // Sort based on kind and ord parameter
+        match kind {
+            "archive" => {
+                // Archive is already sorted by year, just reverse if needed
+                if ord == "asc" {
+                    group_list.reverse();
+                }
+            }
+            _ => {
+                // For tag, author, stream, series - sort by post count (desc) or alphabetically by name (asc)
+                if ord == "asc" {
+                    group_list.sort_by(|a, b| a.0.cmp(&b.0));
+                } else {
+                    group_list.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+                }
+            }
+        }
+
+        // Limit items if specified
+        if items > 0 && items < group_list.len() {
+            group_list.truncate(items);
+        }
+
+        // Convert back to IndexMap to preserve order
         let mut ordered_map = IndexMap::new();
-        for (k, v) in grouped_content.iter() {
-            ordered_map.insert(k.clone(), v.clone());
+        for (name, posts) in group_list {
+            ordered_map.insert(name, posts);
         }
 
         let json_value = serde_json::to_value(&ordered_map)
@@ -191,6 +243,228 @@ impl Function for DisplayName {
             // Return the name itself if no display name is configured
             to_value(name).map_err(tera::Error::from)
         }
+    }
+}
+
+/// Tera function to get filtered and sorted posts
+/// Args: ord (optional, default="desc"), items (optional, default=0 for all)
+pub struct GetPosts {
+    pub site_data: Data,
+}
+
+#[allow(clippy::cast_possible_truncation)]
+impl Function for GetPosts {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
+
+        let items = args
+            .get("items")
+            .and_then(|v| match v {
+                Value::Number(n) => n.as_u64(),
+                Value::String(s) => s.parse::<u64>().ok(),
+                _ => None,
+            })
+            .unwrap_or(0) as usize;
+
+        let mut posts = self.site_data.posts.clone();
+
+        // Sort posts
+        if ord == "asc" {
+            posts.reverse();
+        }
+
+        // Limit items if specified
+        if items > 0 && items < posts.len() {
+            posts.truncate(items);
+        }
+
+        to_value(posts).map_err(tera::Error::from)
+    }
+}
+
+/// Tera function to get data by slug for card display
+/// Takes a slug and resolves which content type it refers to, returning `SlugData`
+pub struct GetDataBySlug {
+    pub site_data: Data,
+}
+
+impl Function for GetDataBySlug {
+    #[allow(clippy::too_many_lines)]
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let slug = args
+            .get("slug")
+            .and_then(Value::as_str)
+            .ok_or_else(|| tera::Error::msg("Missing `slug` argument"))?;
+
+        // Check what kind of content this slug refers to
+        let slug_data = if slug.starts_with("series-") {
+            // Series slug: series-{name}
+            let series_name = slug.strip_prefix("series-").unwrap();
+            if let Some(series_contents) = self.site_data.series.map.get(series_name) {
+                let title = self
+                    .site_data
+                    .site
+                    .series
+                    .get(series_name)
+                    .map_or(&series_name.to_string(), |config| &config.display_name)
+                    .clone();
+
+                let description = self
+                    .site_data
+                    .site
+                    .series
+                    .get(series_name)
+                    .and_then(|config| config.description.as_ref())
+                    .cloned()
+                    .unwrap_or_else(|| format!("{} posts", series_contents.len()));
+
+                let image = series_contents
+                    .first()
+                    .and_then(|content| content.banner_image.as_ref())
+                    .unwrap_or(&self.site_data.site.banner_image)
+                    .clone();
+
+                SlugData {
+                    image,
+                    slug: slug.to_string(),
+                    title,
+                    text: description,
+                    content_type: "series".to_string(),
+                }
+            } else {
+                return Err(tera::Error::msg(format!("Series not found: {series_name}")));
+            }
+        } else if slug.starts_with("stream-") {
+            // Stream slug: stream-{name}
+            let stream_name = slug.strip_prefix("stream-").unwrap();
+            if let Some(stream_contents) = self.site_data.stream.map.get(stream_name) {
+                let title = self
+                    .site_data
+                    .site
+                    .streams
+                    .get(stream_name)
+                    .map_or(&stream_name.to_string(), |config| &config.display_name)
+                    .clone();
+
+                let description = format!("{} posts", stream_contents.len());
+
+                let image = stream_contents
+                    .first()
+                    .and_then(|content| content.banner_image.as_ref())
+                    .unwrap_or(&self.site_data.site.banner_image)
+                    .clone();
+
+                SlugData {
+                    image,
+                    slug: slug.to_string(),
+                    title,
+                    text: description,
+                    content_type: "stream".to_string(),
+                }
+            } else {
+                return Err(tera::Error::msg(format!("Stream not found: {stream_name}")));
+            }
+        } else if slug.starts_with("tag-") {
+            // Tag slug: tag-{name}
+            let tag_name = slug.strip_prefix("tag-").unwrap();
+            if let Some(tag_contents) = self.site_data.tag.map.get(tag_name) {
+                let image = tag_contents
+                    .first()
+                    .and_then(|content| content.banner_image.as_ref())
+                    .unwrap_or(&self.site_data.site.banner_image)
+                    .clone();
+
+                SlugData {
+                    image,
+                    slug: slug.to_string(),
+                    title: tag_name.to_string(),
+                    text: format!("{} posts", tag_contents.len()),
+                    content_type: "tag".to_string(),
+                }
+            } else {
+                return Err(tera::Error::msg(format!("Tag not found: {tag_name}")));
+            }
+        } else if slug.starts_with("author-") {
+            // Author slug: author-{name}
+            let author_name = slug.strip_prefix("author-").unwrap();
+            if let Some(author_contents) = self.site_data.author.map.get(author_name) {
+                let author_info = self.site_data.site.authors.get(author_name);
+                let title = author_info
+                    .map_or(&author_name.to_string(), |a| &a.name)
+                    .clone();
+
+                let image = author_info
+                    .and_then(|a| a.avatar.as_ref())
+                    .unwrap_or(&self.site_data.site.banner_image)
+                    .clone();
+
+                SlugData {
+                    image,
+                    slug: slug.to_string(),
+                    title,
+                    text: format!("{} posts", author_contents.len()),
+                    content_type: "author".to_string(),
+                }
+            } else {
+                return Err(tera::Error::msg(format!("Author not found: {author_name}")));
+            }
+        } else if slug.starts_with("archive-") {
+            // Archive slug: archive-{year}
+            let year = slug.strip_prefix("archive-").unwrap();
+            if let Some(archive_contents) = self.site_data.archive.map.get(year) {
+                let image = archive_contents
+                    .first()
+                    .and_then(|content| content.banner_image.as_ref())
+                    .unwrap_or(&self.site_data.site.banner_image)
+                    .clone();
+
+                SlugData {
+                    image,
+                    slug: slug.to_string(),
+                    title: format!("Posts from {year}"),
+                    text: format!("{} posts", archive_contents.len()),
+                    content_type: "archive".to_string(),
+                }
+            } else {
+                return Err(tera::Error::msg(format!("Archive year not found: {year}")));
+            }
+        } else {
+            // Check if it's a page
+            if let Some(page) = self.site_data.pages.iter().find(|p| p.slug == slug) {
+                SlugData {
+                    image: page
+                        .banner_image
+                        .as_ref()
+                        .unwrap_or(&self.site_data.site.banner_image)
+                        .clone(),
+                    slug: slug.to_string(),
+                    title: page.title.clone(),
+                    text: page.description.as_ref().unwrap_or(&String::new()).clone(),
+                    content_type: "page".to_string(),
+                }
+            } else if let Some(post) = self.site_data.posts.iter().find(|p| p.slug == slug) {
+                // Check if it's a post
+                SlugData {
+                    image: post
+                        .banner_image
+                        .as_ref()
+                        .unwrap_or(&self.site_data.site.banner_image)
+                        .clone(),
+                    slug: slug.to_string(),
+                    title: post.title.clone(),
+                    text: post
+                        .date
+                        .map_or_else(String::new, |d| d.format("%Y-%m-%d").to_string()),
+                    content_type: "post".to_string(),
+                }
+            } else {
+                return Err(tera::Error::msg(format!(
+                    "Content not found for slug: {slug}"
+                )));
+            }
+        };
+
+        to_value(slug_data).map_err(tera::Error::from)
     }
 }
 
@@ -307,7 +581,7 @@ mod tests {
         args.insert("content".to_string(), content);
 
         let result = source_link.call(&args).unwrap();
-        assert_eq!(result, Value::String("".to_string()));
+        assert_eq!(result, Value::String(String::new()));
     }
 
     #[test]
@@ -322,5 +596,136 @@ mod tests {
 
         let result = display_name.call(&args).unwrap();
         assert_eq!(result, Value::String("main".to_string()));
+    }
+
+    #[test]
+    fn test_get_posts_default() {
+        let site_data = create_test_data();
+        let get_posts = GetPosts { site_data };
+        let args = HashMap::new();
+
+        let result = get_posts.call(&args);
+        assert!(result.is_ok());
+
+        // Should return all posts in default desc order
+        let posts = result.unwrap();
+        assert!(posts.is_array());
+    }
+
+    #[test]
+    fn test_get_posts_with_limit() {
+        let site_data = create_test_data();
+        let get_posts = GetPosts { site_data };
+        let mut args = HashMap::new();
+        args.insert("items".to_string(), Value::Number(2.into()));
+
+        let result = get_posts.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_posts_asc_order() {
+        let site_data = create_test_data();
+        let get_posts = GetPosts { site_data };
+        let mut args = HashMap::new();
+        args.insert("ord".to_string(), Value::String("asc".to_string()));
+
+        let result = get_posts.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_posts_with_string_limit() {
+        let site_data = create_test_data();
+        let get_posts = GetPosts { site_data };
+        let mut args = HashMap::new();
+        args.insert("items".to_string(), Value::String("5".to_string()));
+
+        let result = get_posts.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_group_function_tags_with_params() {
+        let site_data = create_test_data();
+        let group = Group { site_data };
+        let mut args = HashMap::new();
+        args.insert("kind".to_string(), Value::String("tag".to_string()));
+        args.insert("ord".to_string(), Value::String("asc".to_string()));
+        args.insert("items".to_string(), Value::Number(2.into()));
+
+        let result = group.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_group_function_series_with_params() {
+        let site_data = create_test_data();
+        let group = Group { site_data };
+        let mut args = HashMap::new();
+        args.insert("kind".to_string(), Value::String("series".to_string()));
+        args.insert("ord".to_string(), Value::String("desc".to_string()));
+
+        let result = group.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_group_function_streams_with_params() {
+        let site_data = create_test_data();
+        let group = Group { site_data };
+        let mut args = HashMap::new();
+        args.insert("kind".to_string(), Value::String("stream".to_string()));
+        args.insert("items".to_string(), Value::String("5".to_string()));
+
+        let result = group.call(&args);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_get_data_by_slug_missing_slug() {
+        let site_data = create_test_data();
+        let get_data_by_slug = GetDataBySlug { site_data };
+        let args = HashMap::new();
+
+        let result = get_data_by_slug.call(&args);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Missing `slug` argument"));
+    }
+
+    #[test]
+    fn test_get_data_by_slug_nonexistent_slug() {
+        let site_data = create_test_data();
+        let get_data_by_slug = GetDataBySlug { site_data };
+        let mut args = HashMap::new();
+        args.insert(
+            "slug".to_string(),
+            Value::String("nonexistent-slug".to_string()),
+        );
+
+        let result = get_data_by_slug.call(&args);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Content not found for slug"));
+    }
+
+    #[test]
+    fn test_get_data_by_slug_tag_not_found() {
+        let site_data = create_test_data();
+        let get_data_by_slug = GetDataBySlug { site_data };
+        let mut args = HashMap::new();
+        args.insert(
+            "slug".to_string(),
+            Value::String("tag-nonexistent".to_string()),
+        );
+
+        let result = get_data_by_slug.call(&args);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Tag not found"));
     }
 }

@@ -3,7 +3,8 @@ use crate::content::{
     check_for_duplicate_slugs, slugify, Content, ContentBuilder, GroupedContent, Kind,
 };
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
-use crate::tera_functions::{DisplayName, Group, SourceLink, UrlFor};
+use crate::shortcodes::ShortcodeProcessor;
+use crate::tera_functions::{DisplayName, GetDataBySlug, GetPosts, Group, SourceLink, UrlFor};
 use crate::{server, tera_filter};
 use chrono::Datelike;
 use core::str;
@@ -207,7 +208,8 @@ pub fn generate(
             .par_iter()
             .for_each(|step| match *step {
                 "render_templates" => {
-                    let tera = initialize_tera(&moved_input_folder, &site_data);
+                    let (tera, shortcode_processor) =
+                        initialize_tera(&moved_input_folder, &site_data);
                     if let Err(e) = render_templates(
                         &content_folder,
                         &site_data,
@@ -216,6 +218,7 @@ pub fn generate(
                         &moved_input_folder,
                         &fragments,
                         latest_build_info.as_ref(),
+                        shortcode_processor.as_ref(),
                     ) {
                         error!("Failed to render templates: {e:?}");
                         process::exit(1);
@@ -553,7 +556,8 @@ fn detect_slug_collision(site_data: &Data) {
     }
 }
 
-fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
+#[allow(clippy::too_many_lines)]
+fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<ShortcodeProcessor>) {
     let mut tera = Tera::default();
     tera.autoescape_on(vec![]);
     tera.register_function(
@@ -586,6 +590,18 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
         DisplayName {
             site_data: site_data.clone(),
             kind: "series".to_string(),
+        },
+    );
+    tera.register_function(
+        "get_posts",
+        GetPosts {
+            site_data: site_data.clone(),
+        },
+    );
+    tera.register_function(
+        "get_data_by_slug",
+        GetDataBySlug {
+            site_data: site_data.clone(),
         },
     );
     tera.register_filter(
@@ -644,10 +660,27 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> Tera {
 
     // Now extend the remaining templates from the embedded::Templates struct
     tera.extend(&EMBEDDED_TERA).unwrap();
+
+    // Initialize shortcode processor if enabled
+    let shortcode_processor = if site_data.site.enable_shortcodes {
+        let mut processor = ShortcodeProcessor::new(site_data.site.shortcode_pattern.as_deref());
+        if let Err(e) = processor.collect_shortcodes(input_folder) {
+            error!("Failed to collect shortcodes: {e}");
+        }
+        // Add shortcodes to Tera
+        if let Err(e) = processor.add_shortcodes_to_tera(&mut tera) {
+            error!("Failed to add shortcodes to Tera: {e}");
+        }
+        Some(processor)
+    } else {
+        None
+    };
+
     debug!("{:#?}", &tera);
-    tera
+    (tera, shortcode_processor)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn render_templates(
     content_dir: &Path,
     site_data: &Data,
@@ -656,6 +689,7 @@ fn render_templates(
     input_folder: &Path,
     fragments: &HashMap<String, String>,
     latest_build_info: Option<&BuildInfo>,
+    shortcode_processor: Option<&ShortcodeProcessor>,
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
@@ -705,6 +739,7 @@ fn render_templates(
         content_dir,
         input_folder,
         latest_build_info,
+        shortcode_processor,
     )?;
 
     Ok(())
@@ -1497,6 +1532,7 @@ fn handle_list_page(
         .unwrap_or(Ok(()))
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_content_pages(
     site_data: &Data,
     global_context: &Context,
@@ -1505,6 +1541,7 @@ fn handle_content_pages(
     content_dir: &Path,
     input_folder: &Path,
     latest_build_info: Option<&BuildInfo>,
+    shortcode_processor: Option<&ShortcodeProcessor>,
 ) -> Result<(), String> {
     let last_build = site_data.latest_timestamp.unwrap_or(0);
     let force_render = should_force_render(
@@ -1543,12 +1580,13 @@ fn handle_content_pages(
                 content_context.remove("comments");
             }
 
-            render_html(
+            render_html_with_shortcodes(
                 "content.html",
                 &format!("{}.html", &content.slug),
                 tera,
                 &content_context,
                 output_dir,
+                shortcode_processor,
             )
         })
         .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
@@ -1784,15 +1822,32 @@ fn render_html(
     context: &Context,
     output_dir: &Path,
 ) -> Result<(), String> {
+    render_html_with_shortcodes(template, filename, tera, context, output_dir, None)
+}
+
+fn render_html_with_shortcodes(
+    template: &str,
+    filename: &str,
+    tera: &Tera,
+    context: &Context,
+    output_dir: &Path,
+    shortcode_processor: Option<&ShortcodeProcessor>,
+) -> Result<(), String> {
     let templates = template.split(',').collect::<Vec<_>>();
     let template = templates
         .iter()
         .find(|t| tera.get_template(t).is_ok())
         .unwrap_or(&templates[0]);
-    let rendered = tera.render(template, context).map_err(|e| {
+    let mut rendered = tera.render(template, context).map_err(|e| {
         error!("Error rendering template `{template}` -> {filename}: {e:#?}");
         e.to_string()
     })?;
+
+    // Process shortcodes if processor is available
+    if let Some(processor) = shortcode_processor {
+        rendered = processor.process_shortcodes(&rendered, context, tera);
+    }
+
     let output_file = output_dir.join(filename);
     fs::write(&output_file, rendered).map_err(|e| e.to_string())?;
     info!("Generated {}", &output_file.display());
