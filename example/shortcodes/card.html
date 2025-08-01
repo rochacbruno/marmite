@@ -47,7 +47,7 @@
     {% else %}
         {% set final_content_type = data.content_type %}
     {% endif %}
-    {% set final_url = "/" ~ data.slug ~ ".html" %}
+    {% set final_url = url_for(path=data.slug ~ ".html") %}
     {% set target_blank = false %}
 {% endif %}
 <div class="card" style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 16px 0; text-decoration: none; color: inherit;">

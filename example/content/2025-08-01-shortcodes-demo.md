@@ -48,16 +48,14 @@ You can also embed playlists with custom dimensions:
 <!-- .spotify url="playlist/2GLlqaI9fD5bVwE7LIAQCh" width="100%" height="280" -->
 ```
 
-<!-- .spotify url="playlist/2GLlqaI9fD5bVwE7LIAQCh" -->
-
 Or a podcast episode:
 
 ```
 <!-- .spotify url="episode/7ph7Vszk9Hld8y0MOEc0rl" -->
 ```
 
-<!-- .spotify url="episode/7ph7Vszk9Hld8y0MOEc0rl" -->
-
+> [!NOTE]
+> Spotify does not allow multiple embeds on the same page.
 
 ## Table of Contents
 

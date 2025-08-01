@@ -3,7 +3,7 @@
 {% set stream_map = group(kind="stream", ord=ord, items=items) %}
 <ul class="streams-list">
 {% for stream_name, posts in stream_map %}
-<li><a href="/{{ stream_name }}.html">{{ stream_name }}</a> ({{ posts | length }} posts)</li>
+<li><a href="{{ url_for(path=stream_name ~ '.html') }}">{{ stream_name }}</a> ({{ posts | length }} posts)</li>
 {% endfor %}
 </ul>
 {% endmacro streams %}

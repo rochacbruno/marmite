@@ -3,7 +3,7 @@
 {% set post_list = get_posts(ord=ord, items=items) %}
 <ul class="posts-list">
 {% for post in post_list %}
-<li><a href="/{{ post.slug }}.html">{{ post.title }}</a> - {{ post.date | date(format="%Y-%m-%d") }}</li>
+<li><a href="{{ url_for(path=post.slug ~ '.html') }}">{{ post.title }}</a> - {{ post.date | date(format="%Y-%m-%d") }}</li>
 {% else %}
 <li>No posts found</li>
 {% endfor %}

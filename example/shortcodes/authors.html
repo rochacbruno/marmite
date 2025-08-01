@@ -3,7 +3,8 @@
 {% set author_map = group(kind="author", ord=ord, items=items) %}
 <ul class="authors-list">
 {% for author_name, posts in author_map %}
-<li><a href="/author-{{ author_name | slugify }}.html">{{ author_name }}</a> ({{ posts | length }} posts)</li>
+{% set author_slug = author_name | slugify %}
+<li><a href="{{ url_for(path='author-' ~ author_slug ~ '.html') }}">{{ author_name }}</a> ({{ posts | length }} posts)</li>
 {% endfor %}
 </ul>
 {% endmacro authors %}
