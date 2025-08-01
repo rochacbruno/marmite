@@ -312,8 +312,7 @@ impl Function for GetDataBySlug {
                     .site
                     .series
                     .get(series_name)
-                    .and_then(|config| config.description.as_ref())
-                    .map(|d| d.clone())
+                    .and_then(|config| config.description.as_ref()).cloned()
                     .unwrap_or_else(|| format!("{} posts", series_contents.len()));
 
                 let image = series_contents
@@ -331,8 +330,7 @@ impl Function for GetDataBySlug {
                 }
             } else {
                 return Err(tera::Error::msg(format!(
-                    "Series not found: {}",
-                    series_name
+                    "Series not found: {series_name}"
                 )));
             }
         } else if slug.starts_with("stream-") {
@@ -365,8 +363,7 @@ impl Function for GetDataBySlug {
                 }
             } else {
                 return Err(tera::Error::msg(format!(
-                    "Stream not found: {}",
-                    stream_name
+                    "Stream not found: {stream_name}"
                 )));
             }
         } else if slug.starts_with("tag-") {
@@ -387,7 +384,7 @@ impl Function for GetDataBySlug {
                     content_type: "tag".to_string(),
                 }
             } else {
-                return Err(tera::Error::msg(format!("Tag not found: {}", tag_name)));
+                return Err(tera::Error::msg(format!("Tag not found: {tag_name}")));
             }
         } else if slug.starts_with("author-") {
             // Author slug: author-{name}
@@ -413,8 +410,7 @@ impl Function for GetDataBySlug {
                 }
             } else {
                 return Err(tera::Error::msg(format!(
-                    "Author not found: {}",
-                    author_name
+                    "Author not found: {author_name}"
                 )));
             }
         } else if slug.starts_with("archive-") {
@@ -430,14 +426,13 @@ impl Function for GetDataBySlug {
                 SlugData {
                     image,
                     slug: slug.to_string(),
-                    title: format!("Posts from {}", year),
+                    title: format!("Posts from {year}"),
                     text: format!("{} posts", archive_contents.len()),
                     content_type: "archive".to_string(),
                 }
             } else {
                 return Err(tera::Error::msg(format!(
-                    "Archive year not found: {}",
-                    year
+                    "Archive year not found: {year}"
                 )));
             }
         } else {
@@ -472,8 +467,7 @@ impl Function for GetDataBySlug {
                 }
             } else {
                 return Err(tera::Error::msg(format!(
-                    "Content not found for slug: {}",
-                    slug
+                    "Content not found for slug: {slug}"
                 )));
             }
         };

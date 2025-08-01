@@ -208,20 +208,18 @@ impl ShortcodeProcessor {
             let params = captures.get(2).map_or("", |m| m.as_str().trim());
 
             debug!(
-                "Processing shortcode: name='{}', params='{}', full_match='{}'",
-                shortcode_name, params, full_match
+                "Processing shortcode: name='{shortcode_name}', params='{params}', full_match='{full_match}'"
             );
 
             match self.render_shortcode(shortcode_name, params, context, tera) {
                 Ok(rendered) => {
                     debug!(
-                        "Successfully rendered shortcode '{}': '{}'",
-                        shortcode_name, rendered
+                        "Successfully rendered shortcode '{shortcode_name}': '{rendered}'"
                     );
                     result = result.replace(full_match, &rendered);
                 }
                 Err(e) => {
-                    warn!("Shortcode '{}' failed to render: {}", shortcode_name, e);
+                    warn!("Shortcode '{shortcode_name}' failed to render: {e}");
                 }
             }
         }
@@ -369,7 +367,7 @@ impl ShortcodeProcessor {
                     chars.next(); // consume opening quote
                     value.push(quote_char);
 
-                    while let Some(ch) = chars.next() {
+                    for ch in chars.by_ref() {
                         value.push(ch);
                         if ch == quote_char {
                             // Check if it's escaped
