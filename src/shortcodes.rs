@@ -156,6 +156,7 @@ impl ShortcodeProcessor {
         None
     }
 
+    #[allow(clippy::too_many_lines)]
     fn add_builtin_shortcodes(&mut self) {
         // TOC shortcode
         let toc_macro = r#"{% macro toc() %}
@@ -235,6 +236,105 @@ impl ShortcodeProcessor {
                 is_html: true,
                 description: Some(
                     "Display a list of all content streams with post counts. Params: ord=asc, items=0".to_string(),
+                ),
+            },
+        );
+
+        // Series shortcode
+        let series_macro = r#"{% macro series(ord="asc", items=0) %}
+<ul class="series-list">
+{% for series_name, posts in site_data.series.map %}
+<li><a href="/series-{{ series_name | slugify }}.html">{{ series_name }}</a> ({{ posts | length }} posts)</li>
+{% endfor %}
+</ul>
+{% endmacro series %}"#;
+
+        self.shortcodes.insert(
+            "series".to_string(),
+            Shortcode {
+                name: "series".to_string(),
+                content: series_macro.to_string(),
+                is_html: true,
+                description: Some(
+                    "Display a list of all content series with post counts. Params: ord=asc, items=0".to_string(),
+                ),
+            },
+        );
+
+        // Posts shortcode
+        let posts_macro = r#"{% macro posts(ord="desc", items=10) %}
+<ul class="posts-list">
+{% set post_list = site_data.posts %}
+{% if ord == "desc" %}
+{% set post_list = post_list | reverse %}
+{% endif %}
+{% if items > 0 %}
+{% set post_list = post_list | slice(end=items) %}
+{% endif %}
+{% for post in post_list %}
+<li><a href="/{{ post.slug }}.html">{{ post.title }}</a> - {{ post.date | date(format="%Y-%m-%d") }}</li>
+{% endfor %}
+</ul>
+{% endmacro posts %}"#;
+
+        self.shortcodes.insert(
+            "posts".to_string(),
+            Shortcode {
+                name: "posts".to_string(),
+                content: posts_macro.to_string(),
+                is_html: true,
+                description: Some(
+                    "Display a list of recent posts. Params: ord=desc, items=10".to_string(),
+                ),
+            },
+        );
+
+        // Pages shortcode
+        let pages_macro = r#"{% macro pages(ord="asc", items=0) %}
+<ul class="pages-list">
+{% set page_list = site_data.pages %}
+{% if ord == "desc" %}
+{% set page_list = page_list | reverse %}
+{% endif %}
+{% if items > 0 %}
+{% set page_list = page_list | slice(end=items) %}
+{% endif %}
+{% for page in page_list %}
+<li><a href="/{{ page.slug }}.html">{{ page.title }}</a></li>
+{% endfor %}
+</ul>
+{% endmacro pages %}"#;
+
+        self.shortcodes.insert(
+            "pages".to_string(),
+            Shortcode {
+                name: "pages".to_string(),
+                content: pages_macro.to_string(),
+                is_html: true,
+                description: Some(
+                    "Display a list of all pages. Params: ord=asc, items=0".to_string(),
+                ),
+            },
+        );
+
+        // Tags shortcode
+        let tags_macro = r#"{% macro tags(ord="asc", items=0) %}
+<ul class="tags-list">
+{% for tag_name, posts in site_data.tag.map %}
+<li><a href="/tag-{{ tag_name | slugify }}.html">{{ tag_name }}</a> ({{ posts | length }} posts)</li>
+{% endfor %}
+</ul>
+{% endmacro tags %}"#;
+
+        self.shortcodes.insert(
+            "tags".to_string(),
+            Shortcode {
+                name: "tags".to_string(),
+                content: tags_macro.to_string(),
+                is_html: true,
+                description: Some(
+                    "Display a list of all tags with post counts. Params: ord=asc, items=0"
+                        .to_string(),
                 ),
             },
         );
@@ -365,6 +465,10 @@ mod tests {
         assert!(processor.shortcodes.contains_key("youtube"));
         assert!(processor.shortcodes.contains_key("authors"));
         assert!(processor.shortcodes.contains_key("streams"));
+        assert!(processor.shortcodes.contains_key("series"));
+        assert!(processor.shortcodes.contains_key("posts"));
+        assert!(processor.shortcodes.contains_key("pages"));
+        assert!(processor.shortcodes.contains_key("tags"));
     }
 
     #[test]
@@ -505,11 +609,14 @@ mod tests {
         let shortcodes = processor.list_shortcodes_with_descriptions();
 
         // Check that we have the expected builtin shortcodes
-        assert_eq!(shortcodes.len(), 4);
+        assert_eq!(shortcodes.len(), 8);
 
         // Check they're sorted alphabetically
         let names: Vec<&str> = shortcodes.iter().map(|(name, _)| *name).collect();
-        assert_eq!(names, vec!["authors", "streams", "toc", "youtube"]);
+        assert_eq!(
+            names,
+            vec!["authors", "pages", "posts", "series", "streams", "tags", "toc", "youtube"]
+        );
 
         // Check descriptions are present
         for (name, desc) in shortcodes {

@@ -74,9 +74,77 @@ Parameters:
 - `ord`: Sort order (`asc` or `desc`, default: `asc`)
 - `items`: Maximum number of items to display (default: all)
 
+### Series List (`series`)
+
+Display a list of all content series:
+
+```
+<!-- .series -->
+<!-- .series ord=desc items=5 -->
+```
+
+Parameters:
+- `ord`: Sort order (`asc` or `desc`, default: `asc`)
+- `items`: Maximum number of items to display (default: all)
+
+### Posts List (`posts`)
+
+Display a list of posts:
+
+```
+<!-- .posts -->
+<!-- .posts ord=asc items=5 -->
+```
+
+Parameters:
+- `ord`: Sort order (`asc` or `desc`, default: `desc`)
+- `items`: Maximum number of items to display (default: 10)
+
+### Pages List (`pages`)
+
+Display a list of pages:
+
+```
+<!-- .pages -->
+<!-- .pages ord=desc items=5 -->
+```
+
+Parameters:
+- `ord`: Sort order (`asc` or `desc`, default: `asc`)
+- `items`: Maximum number of items to display (default: all)
+
+### Tags List (`tags`)
+
+Display a list of all tags with post counts:
+
+```
+<!-- .tags -->
+<!-- .tags ord=desc items=10 -->
+```
+
+Parameters:
+- `ord`: Sort order (`asc` or `desc`, default: `asc`)
+- `items`: Maximum number of items to display (default: all)
+
 ## Creating Custom Shortcodes
 
 You can create your own shortcodes by adding files to the `shortcodes` directory in your input folder.
+
+> [!IMPORTANT]
+> For HTML shortcodes, the macro name MUST match the filename. For example, a file named `alert.html` must contain `{% macro alert(...) %}`. This is the macro that will be called when the shortcode is used.
+
+### Adding Descriptions to Shortcodes
+
+You can add descriptions to your shortcodes by including a Tera comment as the first line of the file:
+
+```html
+{# Display a custom alert box #}
+{% macro alert(type="info", message="") %}
+...
+{% endmacro alert %}
+```
+
+These descriptions will be shown when you run `marmite --shortcodes`.
 
 ### HTML Shortcodes
 
@@ -84,6 +152,7 @@ Create `.html` files with Tera macros:
 
 ```html
 {# shortcodes/alert.html #}
+{# Display a custom alert box #}
 {% macro alert(type="info", message="") %}
 <div class="alert alert-{{type}}">
   {{message}}
@@ -102,6 +171,7 @@ Create `.md` files that will be processed as Markdown:
 
 ```markdown
 {# shortcodes/feature.md #}
+{# Display a feature highlight box #}
 ## Feature: {{ title }}
 
 {{ description }}
