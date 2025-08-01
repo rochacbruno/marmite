@@ -7,6 +7,7 @@
             <img src="{{ data.image }}" alt="{{ data.title }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
         </div>
         <div class="card-content" style="flex: 1;">
+            <div class="card-type" style="font-size: 0.75em; color: #999; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">{{ data.content_type }}</div>
             <div class="card-title" style="font-weight: bold; font-size: 1.1em; margin-bottom: 4px;">{{ data.title }}</div>
             <div class="card-text" style="color: #666; font-size: 0.9em;">{{ data.text }}</div>
         </div>

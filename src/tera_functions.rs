@@ -13,6 +13,7 @@ pub struct SlugData {
     pub slug: String,
     pub title: String,
     pub text: String,
+    pub content_type: String,
 }
 
 #[derive(Default)]
@@ -326,6 +327,7 @@ impl Function for GetDataBySlug {
                     slug: slug.to_string(),
                     title,
                     text: description,
+                    content_type: "series".to_string(),
                 }
             } else {
                 return Err(tera::Error::msg(format!(
@@ -359,6 +361,7 @@ impl Function for GetDataBySlug {
                     slug: slug.to_string(),
                     title,
                     text: description,
+                    content_type: "stream".to_string(),
                 }
             } else {
                 return Err(tera::Error::msg(format!(
@@ -381,6 +384,7 @@ impl Function for GetDataBySlug {
                     slug: slug.to_string(),
                     title: tag_name.to_string(),
                     text: format!("{} posts", tag_contents.len()),
+                    content_type: "tag".to_string(),
                 }
             } else {
                 return Err(tera::Error::msg(format!("Tag not found: {}", tag_name)));
@@ -405,6 +409,7 @@ impl Function for GetDataBySlug {
                     slug: slug.to_string(),
                     title,
                     text: format!("{} posts", author_contents.len()),
+                    content_type: "author".to_string(),
                 }
             } else {
                 return Err(tera::Error::msg(format!(
@@ -427,6 +432,7 @@ impl Function for GetDataBySlug {
                     slug: slug.to_string(),
                     title: format!("Posts from {}", year),
                     text: format!("{} posts", archive_contents.len()),
+                    content_type: "archive".to_string(),
                 }
             } else {
                 return Err(tera::Error::msg(format!(
@@ -446,6 +452,7 @@ impl Function for GetDataBySlug {
                     slug: slug.to_string(),
                     title: page.title.clone(),
                     text: page.description.as_ref().unwrap_or(&"".to_string()).clone(),
+                    content_type: "page".to_string(),
                 }
             } else if let Some(post) = self.site_data.posts.iter().find(|p| p.slug == slug) {
                 // Check if it's a post
@@ -461,6 +468,7 @@ impl Function for GetDataBySlug {
                         .date
                         .map(|d| d.format("%Y-%m-%d").to_string())
                         .unwrap_or_else(|| "".to_string()),
+                    content_type: "post".to_string(),
                 }
             } else {
                 return Err(tera::Error::msg(format!(
