@@ -465,7 +465,6 @@ mod tests {
         assert!(processor.shortcodes.contains_key("pages"));
         assert!(processor.shortcodes.contains_key("tags"));
         assert!(processor.shortcodes.contains_key("socials"));
-
     }
 
     #[test]
