@@ -209,9 +209,22 @@ get_latest_release() {
     
     # Find matching asset
     if command_exists grep && command_exists cut; then
-        # Parse JSON manually for portability
-        asset_name=$(grep -o '"name": *"[^"]*'"$target_platform"'[^"]*"' "$api_response" | cut -d'"' -f4 | head -n1)
-        download_url=$(grep -A1 '"name": *"'"$asset_name"'"' "$api_response" | grep '"browser_download_url"' | cut -d'"' -f4 | head -n1)
+        # Parse JSON manually for portability - look for appropriate archive format
+        if echo "$target_platform" | grep -q "windows"; then
+            # Windows uses .zip files
+            asset_name=$(grep '"name":' "$api_response" | grep "$target_platform" | grep '\.zip' | cut -d'"' -f4 | head -n1)
+        else
+            # Unix-like systems use .tar.gz files
+            asset_name=$(grep '"name":' "$api_response" | grep "$target_platform" | grep '\.tar\.gz' | cut -d'"' -f4 | head -n1)
+        fi
+        
+        if [ -z "$asset_name" ]; then
+            # Fallback: try to find any asset containing the platform
+            asset_name=$(grep '"name":' "$api_response" | grep "$target_platform" | cut -d'"' -f4 | head -n1)
+        fi
+        
+        # Extract download URL from the same asset block (within 30 lines after the name)
+        download_url=$(grep -A30 '"name": *"'"$asset_name"'"' "$api_response" | grep '"browser_download_url"' | cut -d'"' -f4 | head -n1)
     else
         log_error "grep and cut are required for JSON parsing"
         rm -f "$api_response"
