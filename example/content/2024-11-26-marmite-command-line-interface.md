@@ -335,51 +335,107 @@ This command lists both built-in and custom shortcodes available in your project
 
 ## Show Site URLs (Dry Run)
 
-Use `--show-urls` to display all URLs that will be generated without actually building the site. This serves as a dry run to preview your site structure:
+Use `--show-urls` to display all URLs that will be generated without actually building the site. This serves as a dry run to preview your site structure. The output is in JSON format for easy parsing:
 
 ```console
 $ marmite myblog --show-urls
-Site URLs organized by content type:
-====================================
-
-Posts (15):
-------------
-  Getting Started - /getting-started.html
-  My First Post - /my-first-post.html
-  ...
-
-Pages (3):
------------
-  About - /about.html
-  Contact - /contact.html
-  ...
-
-Tags (8):
-----------
-  tutorial (5 posts) - /tag-tutorial.html
-  marmite (3 posts) - /tag-marmite.html
-  ...
-
-====================================
-Total content URLs: 42
-No base URL configured - URLs shown as relative
-Set 'url' in marmite.yaml or use --url flag for absolute URLs
+{
+  "posts": [
+    "/getting-started.html",
+    "/my-first-post.html"
+  ],
+  "pages": [
+    "/about.html",
+    "/contact.html"
+  ],
+  "tags": [
+    "/tag-tutorial.html",
+    "/tag-marmite.html"
+  ],
+  "authors": [
+    "/author-john.html"
+  ],
+  "series": [
+    "/series-tutorial.html"
+  ],
+  "streams": [
+    "/tutorial.html"
+  ],
+  "archives": [
+    "/archive-2024.html"
+  ],
+  "feeds": [
+    "/index.rss",
+    "/index.json",
+    "/tag-tutorial.rss"
+  ],
+  "pagination": [
+    "/index-1.html",
+    "/tag-tutorial-1.html"
+  ],
+  "file_mappings": [
+    "/favicon.ico"
+  ],
+  "misc": [
+    "/index.html"
+  ],
+  "summary": {
+    "posts": 15,
+    "pages": 3,
+    "tags": 8,
+    "authors": 1,
+    "series": 1,
+    "streams": 1,
+    "archives": 1,
+    "feeds": 12,
+    "pagination": 8,
+    "file_mappings": 1,
+    "misc": 1,
+    "total": 52,
+    "meta": {
+      "url": "",
+      "absolute_urls": false
+    }
+  }
+}
 ```
 
 ### With base URL configured
 
-When you have a base URL configured or use the `--url` flag:
+When you have a base URL configured or use the `--url` flag, all URLs become absolute:
 
 ```console
 $ marmite myblog --show-urls --url "https://myblog.com"
-Site URLs organized by content type:
-====================================
+{
+  "posts": [
+    "https://myblog.com/getting-started.html",
+    "https://myblog.com/my-first-post.html"
+  ],
+  "summary": {
+    "meta": {
+      "url": "https://myblog.com",
+      "absolute_urls": true
+    }
+  }
+}
+```
 
-Posts (15):
-------------
-  Getting Started - https://myblog.com/getting-started.html
-  My First Post - https://myblog.com/my-first-post.html
-  ...
+### Processing with jq
+
+Since the output is JSON, you can easily process it with tools like `jq`:
+
+```console
+# Count total URLs
+$ marmite myblog --show-urls | jq '.summary.total'
+
+# List only post URLs
+$ marmite myblog --show-urls | jq -r '.posts[]'
+
+# Get feed URLs
+$ marmite myblog --show-urls | jq -r '.feeds[]'
+
+# Count posts
+$ marmite myblog --show-urls | jq '.summary.posts'
 ```
 
 This command is useful for:
@@ -388,9 +444,10 @@ This command is useful for:
 - Planning site organization
 - Debugging URL generation issues
 - Creating sitemaps or navigation structures
+- Automated testing and validation scripts
 
 > [!TIP]
-> Use `--show-urls` as a dry run to check how your site will be structured without actually generating any files.
+> Use `--show-urls` as a dry run to check how your site will be structured without actually generating any files. The JSON output makes it easy to integrate with scripts and automation tools.
 
 ## CLI Help
 
