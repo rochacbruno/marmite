@@ -1,7 +1,10 @@
 use clap::Parser;
 use env_logger::{Builder, Env};
 use log::{error, info, warn, SetLoggerError};
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 mod cli;
 mod config;
@@ -55,7 +58,7 @@ fn determine_verbosity(args: &cli::Cli) -> u8 {
     verbose
 }
 
-fn get_config_path(input_folder: &PathBuf, config: &str) -> PathBuf {
+fn get_config_path(input_folder: &Path, config: &str) -> PathBuf {
     if config.starts_with('.') || config.starts_with('/') {
         PathBuf::new().join(config)
     } else {
@@ -72,7 +75,7 @@ fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
     let bind_address: &str = args.bind.as_str();
     let verbose = determine_verbosity(&args);
 
-    let config_path = Arc::new(get_config_path(&args.input_folder, &args.config));
+    let config_path = Arc::new(get_config_path(args.input_folder.as_path(), &args.config));
 
     if let Err(e) = setup_logging(verbose, args.debug) {
         error!("Logger already initialized: {e:?}");

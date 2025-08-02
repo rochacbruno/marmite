@@ -310,10 +310,7 @@ mod tests {
         let content = &contents[0];
         assert_eq!(item.title(), Some(content.title.as_str()));
         assert!(item.link().unwrap().contains(&content.slug));
-        assert_eq!(
-            item.description(),
-            content.description.as_ref().map(|s| s.as_str())
-        );
+        assert_eq!(item.description(), content.description.as_deref());
     }
 
     #[test]

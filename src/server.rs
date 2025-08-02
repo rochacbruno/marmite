@@ -119,7 +119,7 @@ mod tests {
         let content = "<html><body><h1>404 - Page Not Found</h1></body></html>";
         fs::write(&error_path, content).unwrap();
 
-        let response = render_not_found(&error_path).unwrap();
+        let _response = render_not_found(&error_path).unwrap();
         // Response should be created successfully
         // Testing the actual content is difficult without accessing internal data
     }
@@ -129,7 +129,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let error_path = temp_dir.path().join("non_existent_404.html");
 
-        let response = render_not_found(&error_path).unwrap();
+        let _response = render_not_found(&error_path).unwrap();
         // Should return fallback 404 response
         // Testing the actual content is difficult without accessing internal data
     }

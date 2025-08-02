@@ -649,7 +649,7 @@ mod tests {
 
         // Since this tries to call the marmite binary, it will likely fail in tests
         // But we can test that it handles the error gracefully
-        let result = update_config_theme(temp_dir.path(), "new-theme", None);
+        let _result = update_config_theme(temp_dir.path(), "new-theme", None);
         // This might succeed or fail depending on environment, both are acceptable
         // The important thing is it doesn't panic
     }
