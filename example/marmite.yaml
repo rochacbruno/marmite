@@ -156,3 +156,5 @@ file_mapping:
     dest: favicon.ico
   - source: scripts/install.sh
     dest: install.sh
+  - source: scripts/install.ps1
+    dest: install.ps1
