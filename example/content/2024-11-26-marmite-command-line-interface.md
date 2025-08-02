@@ -306,6 +306,149 @@ source_repository: https://github.com/user/repo/tree/main/content
 > Source links only appear on posts (content with dates), not on static pages.
 > When both options are enabled, repository links take precedence over local files.
 
+## List Available Shortcodes
+
+Use `--shortcodes` to list all available shortcodes in your project:
+
+```console
+$ marmite myblog --shortcodes
+Shortcodes:
+Reusable blocks of content that can be used in your markdown files.
+They are defined in the shortcodes/ directory and are rendered using the Tera template engine.
+Check the documentation for details on how to use and create shortcodes.
+================
+Examples:
+<!-- .youtube id=dQw4w9WgXcQ -->
+<!-- .youtube id=dQw4w9WgXcQ width=800 height=600 -->
+<!-- .toc -->
+<!-- .authors -->
+<!-- .streams ord=desc items=5 -->
+--------------------------------
+Available shortcodes:
+  - youtube: Embed a YouTube video
+  - toc: Display table of contents
+  - authors: Display list of authors
+  ...
+```
+
+This command lists both built-in and custom shortcodes available in your project.
+
+## Show Site URLs (Dry Run)
+
+Use `--show-urls` to display all URLs that will be generated without actually building the site. This serves as a dry run to preview your site structure. The output is in JSON format for easy parsing:
+
+```console
+$ marmite myblog --show-urls
+{
+  "posts": [
+    "/getting-started.html",
+    "/my-first-post.html"
+  ],
+  "pages": [
+    "/about.html",
+    "/contact.html"
+  ],
+  "tags": [
+    "/tag-tutorial.html",
+    "/tag-marmite.html"
+  ],
+  "authors": [
+    "/author-john.html"
+  ],
+  "series": [
+    "/series-tutorial.html"
+  ],
+  "streams": [
+    "/tutorial.html"
+  ],
+  "archives": [
+    "/archive-2024.html"
+  ],
+  "feeds": [
+    "/index.rss",
+    "/index.json",
+    "/tag-tutorial.rss"
+  ],
+  "pagination": [
+    "/index-1.html",
+    "/tag-tutorial-1.html"
+  ],
+  "file_mappings": [
+    "/favicon.ico"
+  ],
+  "misc": [
+    "/index.html"
+  ],
+  "summary": {
+    "posts": 15,
+    "pages": 3,
+    "tags": 8,
+    "authors": 1,
+    "series": 1,
+    "streams": 1,
+    "archives": 1,
+    "feeds": 12,
+    "pagination": 8,
+    "file_mappings": 1,
+    "misc": 1,
+    "total": 52,
+    "meta": {
+      "url": "",
+      "absolute_urls": false
+    }
+  }
+}
+```
+
+### With base URL configured
+
+When you have a base URL configured or use the `--url` flag, all URLs become absolute:
+
+```console
+$ marmite myblog --show-urls --url "https://myblog.com"
+{
+  "posts": [
+    "https://myblog.com/getting-started.html",
+    "https://myblog.com/my-first-post.html"
+  ],
+  "summary": {
+    "meta": {
+      "url": "https://myblog.com",
+      "absolute_urls": true
+    }
+  }
+}
+```
+
+### Processing with jq
+
+Since the output is JSON, you can easily process it with tools like `jq`:
+
+```console
+# Count total URLs
+$ marmite myblog --show-urls | jq '.summary.total'
+
+# List only post URLs
+$ marmite myblog --show-urls | jq -r '.posts[]'
+
+# Get feed URLs
+$ marmite myblog --show-urls | jq -r '.feeds[]'
+
+# Count posts
+$ marmite myblog --show-urls | jq '.summary.posts'
+```
+
+This command is useful for:
+- Previewing site structure before building
+- Verifying URL patterns and slugs
+- Planning site organization
+- Debugging URL generation issues
+- Creating sitemaps or navigation structures
+- Automated testing and validation scripts
+
+> [!TIP]
+> Use `--show-urls` as a dry run to check how your site will be structured without actually generating any files. The JSON output makes it easy to integrate with scripts and automation tools.
+
 ## CLI Help
 
 
@@ -343,6 +486,12 @@ Options:
           Init a new site with sample content and default configuration this will overwrite existing files
           usually you don't need to run this because Marmite can generate a site from any folder with
           markdown files
+      --force
+          Force the rebuild of the site even if no changes detected
+      --shortcodes
+          List all available shortcodes
+      --show-urls
+          Show all site URLs organized by content type
       --new <NEW>
           Create a new post with the given title and open in the default editor
   -e

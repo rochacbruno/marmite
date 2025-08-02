@@ -203,10 +203,10 @@ External link card:
 Card for stream:
 
 ```
-<!-- .card slug=stream-alt -->
+<!-- .card slug=alt -->
 ```
 
-<!-- .card slug=stream-alt -->
+<!-- .card slug=alt -->
 
 Card for series:
 

@@ -91,7 +91,7 @@ jobs:
       - name: Build site with alternative theme 🏗️
         run: |
           rm -rf marmitesite/content/_hero.md
-          marmite marmitesite site/theme_template -vvvv --theme theme_template --url https://rochacbruno.github.io/marmite/theme_template
+          marmite marmitesite site/theme_template -vvvv --theme theme_template --url https://marmite.blog/theme_template
 
       - name: List files on site 📂
         run: ls -R site

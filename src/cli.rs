@@ -71,6 +71,10 @@ pub struct Cli {
     #[arg(long)]
     pub shortcodes: bool,
 
+    /// Show all site URLs organized by content type
+    #[arg(long)]
+    pub show_urls: bool,
+
     /// Create a new markdown file in the input folder
     #[command(flatten)]
     pub create: Create,
@@ -162,7 +166,7 @@ pub struct Configuration {
     pub default_date_format: Option<String>,
 
     /// Name of the colorscheme to use [default: "default" or from config file]
-    /// see <https://rochacbruno.github.io/marmite/getting-started.html#colorschemes>
+    /// see <https://marmite.blog/getting-started.html#colorschemes>
     #[arg(long)]
     pub colorscheme: Option<String>,
 
@@ -195,4 +199,12 @@ pub struct Configuration {
     /// Theme to use for the site [default: from config file or embedded templates]
     #[arg(long)]
     pub theme: Option<String>,
+
+    /// Generate sitemap.xml file [default: true or from config file]
+    #[arg(long)]
+    pub build_sitemap: Option<bool>,
+
+    /// Generate urls.json file [default: true or from config file]
+    #[arg(long)]
+    pub publish_urls_json: Option<bool>,
 }

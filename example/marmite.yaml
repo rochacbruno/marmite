@@ -1,4 +1,4 @@
-# READ --> https://rochacbruno.github.io/marmite/configuration-reference.html
+# READ --> https://marmite.blog/configuration-reference.html
 name: My Blog
 # tagline: This blog is awesome
 # url: https://www.myblog.com/blog/
@@ -78,6 +78,9 @@ series:
 # Markdown source publishing
 publish_md: true
 # source_repository: https://github.com/rochacbruno/marmite/tree/main/example/content
+
+# URLs JSON publishing (generates /urls.json)
+publish_urls_json: true
 
 # extra data for template customization
 extra:

@@ -6,7 +6,7 @@ Marmite [**Mar**kdown **m**akes s**ite**s] is a **very!** simple static site gen
 
 [![AGPL License](https://img.shields.io/badge/license-AGPL-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
 [![Crates.io Version](https://img.shields.io/crates/v/marmite)](https://crates.io/crates/marmite)
-[![Docs and Demo](https://img.shields.io/badge/docs-demo-blue)](https://rochacbruno.github.io/marmite/)  
+[![Docs and Demo](https://img.shields.io/badge/docs-demo-blue)](https://marmite.blog/)  
   
 [![Create blog](https://img.shields.io/badge/CREATE%20YOUR%20BLOG%20WITH%20ONE%20CLICK-20B2AA?style=for-the-badge)](https://github.com/rochacbruno/blog)
 
@@ -174,12 +174,12 @@ Options:
 
 ## Getting started
 
-Read a tutorial on how to get started https://rochacbruno.github.io/marmite/getting-started.html and create your blog in minutes.
+Read a tutorial on how to get started https://marmite.blog/getting-started.html and create your blog in minutes.
 
 
 ## Docs 
 
-Read more on how to customize templates, add comments etc on https://rochacbruno.github.io/marmite/ 
+Read more on how to customize templates, add comments etc on https://marmite.blog/ 
 
 
 ## That's all!

@@ -253,6 +253,12 @@ pub struct Marmite {
 
     #[serde(default)]
     pub shortcode_pattern: Option<String>,
+
+    #[serde(default = "default_true")]
+    pub build_sitemap: bool,
+
+    #[serde(default = "default_true")]
+    pub publish_urls_json: bool,
 }
 
 fn default_true() -> bool {
@@ -393,6 +399,12 @@ impl Marmite {
         }
         if let Some(theme) = &cli_args.configuration.theme {
             self.theme = Some(theme.clone());
+        }
+        if let Some(build_sitemap) = cli_args.configuration.build_sitemap {
+            self.build_sitemap = build_sitemap;
+        }
+        if let Some(publish_urls_json) = cli_args.configuration.publish_urls_json {
+            self.publish_urls_json = publish_urls_json;
         }
     }
 }
