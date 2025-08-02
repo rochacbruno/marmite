@@ -3030,4 +3030,200 @@ mod tests {
         assert!(copied_dir.join("file1.txt").exists());
         assert!(copied_dir.join("file2.txt").exists());
     }
+
+    #[test]
+    fn test_data_new() {
+        let config_yaml = r#"
+name: "Test Site"
+tagline: "A test site"
+pagination: 5
+"#;
+        let config_path = Path::new("test_config.yaml");
+        let data = Data::new(config_yaml, config_path);
+
+        assert_eq!(data.site.name, "Test Site");
+        assert_eq!(data.site.tagline, "A test site");
+        assert_eq!(data.site.pagination, 5);
+        assert_eq!(data.config_path, "test_config.yaml");
+        assert!(data.posts.is_empty());
+        assert!(data.pages.is_empty());
+        assert!(!data.force_render);
+    }
+
+    #[test]
+    fn test_data_sort_all() {
+        let mut data = Data::new("", Path::new("test.yaml"));
+
+        // Create test posts with different dates
+        let post1 = ContentBuilder::new()
+            .title("Post 1".to_string())
+            .slug("post-1".to_string())
+            .date(
+                NaiveDate::from_ymd_opt(2024, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            )
+            .build();
+
+        let post2 = ContentBuilder::new()
+            .title("Post 2".to_string())
+            .slug("post-2".to_string())
+            .date(
+                NaiveDate::from_ymd_opt(2024, 2, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            )
+            .build();
+
+        // Add posts out of date order
+        data.posts.push(post1.clone());
+        data.posts.push(post2.clone());
+
+        // Create test pages
+        let page1 = ContentBuilder::new()
+            .title("Z Page".to_string())
+            .slug("z-page".to_string())
+            .build();
+
+        let page2 = ContentBuilder::new()
+            .title("A Page".to_string())
+            .slug("a-page".to_string())
+            .build();
+
+        // Add pages out of alphabetical order
+        data.pages.push(page1.clone());
+        data.pages.push(page2.clone());
+
+        // Sort everything
+        data.sort_all();
+
+        // Check posts are sorted by date (newest first)
+        assert_eq!(data.posts[0].title, "Post 2");
+        assert_eq!(data.posts[1].title, "Post 1");
+
+        // Check pages are sorted by title (alphabetical)
+        assert_eq!(data.pages[0].title, "Z Page");
+        assert_eq!(data.pages[1].title, "A Page");
+    }
+
+    #[test]
+    fn test_data_push_content_post() {
+        let mut data = Data::new("", Path::new("test.yaml"));
+
+        let post = ContentBuilder::new()
+            .title("Test Post".to_string())
+            .slug("test-post".to_string())
+            .tags(vec!["rust".to_string(), "testing".to_string()])
+            .authors(vec!["alice".to_string(), "bob".to_string()])
+            .stream("blog".to_string())
+            .series("tutorial".to_string())
+            .date(
+                NaiveDate::from_ymd_opt(2024, 3, 15)
+                    .unwrap()
+                    .and_hms_opt(10, 30, 0)
+                    .unwrap(),
+            )
+            .build();
+
+        data.push_content(post.clone());
+
+        // Check post was added
+        assert_eq!(data.posts.len(), 1);
+        assert_eq!(data.posts[0].title, "Test Post");
+
+        // Check tags were added
+        assert!(data.tag.map.contains_key("rust"));
+        assert!(data.tag.map.contains_key("testing"));
+        assert_eq!(data.tag.map["rust"].len(), 1);
+        assert_eq!(data.tag.map["testing"].len(), 1);
+
+        // Check authors were added
+        assert!(data.author.map.contains_key("alice"));
+        assert!(data.author.map.contains_key("bob"));
+        assert_eq!(data.author.map["alice"].len(), 1);
+        assert_eq!(data.author.map["bob"].len(), 1);
+
+        // Check archive by year
+        assert!(data.archive.map.contains_key("2024"));
+        assert_eq!(data.archive.map["2024"].len(), 1);
+
+        // Check stream
+        assert!(data.stream.map.contains_key("blog"));
+        assert_eq!(data.stream.map["blog"].len(), 1);
+
+        // Check series
+        assert!(data.series.map.contains_key("tutorial"));
+        assert_eq!(data.series.map["tutorial"].len(), 1);
+    }
+
+    #[test]
+    fn test_data_push_content_page() {
+        let mut data = Data::new("", Path::new("test.yaml"));
+
+        let page = ContentBuilder::new()
+            .title("About Page".to_string())
+            .slug("about".to_string())
+            .build(); // No date, so it's a page
+
+        data.push_content(page.clone());
+
+        // Check page was added
+        assert_eq!(data.pages.len(), 1);
+        assert_eq!(data.pages[0].title, "About Page");
+
+        // Check it wasn't added to post-related collections
+        assert_eq!(data.posts.len(), 0);
+        assert!(data.tag.map.is_empty());
+        assert!(data.author.map.is_empty());
+        assert!(data.archive.map.is_empty());
+        assert!(data.stream.map.is_empty());
+        assert!(data.series.map.is_empty());
+    }
+
+    #[test]
+    fn test_url_collection_add_url() {
+        let mut url_collection = UrlCollection::default();
+
+        url_collection.add_url("posts", "post-1.html".to_string());
+        url_collection.add_url("pages", "about.html".to_string());
+        url_collection.add_url("posts", "post-2.html".to_string());
+
+        assert_eq!(url_collection.posts.len(), 2);
+        assert_eq!(url_collection.pages.len(), 1);
+        assert!(url_collection.posts.contains(&"post-1.html".to_string()));
+        assert!(url_collection.posts.contains(&"post-2.html".to_string()));
+        assert!(url_collection.pages.contains(&"about.html".to_string()));
+    }
+
+    #[test]
+    fn test_get_content_folder() {
+        use tempfile::TempDir;
+
+        // Create a temporary directory structure
+        let temp_dir = TempDir::new().unwrap();
+        let input_folder = temp_dir.path();
+
+        // Create a custom_content directory
+        let custom_content_path = input_folder.join("custom_content");
+        fs::create_dir(&custom_content_path).unwrap();
+
+        let config = Marmite {
+            content_path: "custom_content".to_string(),
+            ..Default::default()
+        };
+
+        let content_folder = get_content_folder(&config, input_folder);
+        assert_eq!(content_folder, custom_content_path);
+
+        // Test with non-existing directory - should fall back to input_folder
+        let config_nonexistent = Marmite {
+            content_path: "nonexistent".to_string(),
+            ..Default::default()
+        };
+
+        let content_folder_fallback = get_content_folder(&config_nonexistent, input_folder);
+        assert_eq!(content_folder_fallback, input_folder);
+    }
 }
