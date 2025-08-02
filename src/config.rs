@@ -253,6 +253,9 @@ pub struct Marmite {
 
     #[serde(default)]
     pub shortcode_pattern: Option<String>,
+
+    #[serde(default = "default_true")]
+    pub build_sitemap: bool,
 }
 
 fn default_true() -> bool {

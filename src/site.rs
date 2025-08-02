@@ -6,6 +6,7 @@ use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
 use crate::shortcodes::ShortcodeProcessor;
 use crate::tera_functions::{DisplayName, GetDataBySlug, GetPosts, Group, SourceLink, UrlFor};
 use crate::{server, tera_filter};
+use tera::{Function, Value};
 use chrono::Datelike;
 use core::str;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
@@ -244,6 +245,10 @@ pub fn generate(
                 }
                 _ => {}
             });
+
+            // Generate sitemap after all templates are rendered
+            let (tera, _) = initialize_tera(&moved_input_folder, &site_data);
+            generate_sitemap(&site_data, &tera, &output_path);
 
             let end_time = start_time.elapsed().as_secs_f64();
             write_build_info(&output_path, &site_data, end_time);
@@ -1405,6 +1410,122 @@ fn write_build_info(
         error!("Failed to write marmite.json: {e:?}");
     } else {
         info!("Generated build info at marmite.json");
+    }
+}
+
+fn generate_sitemap(site_data: &Data, tera: &Tera, output_path: &Path) {
+    if !site_data.site.build_sitemap {
+        return;
+    }
+
+    let mut sitemap_urls = Vec::new();
+    
+    // Create UrlFor function instance
+    let url_for = UrlFor {
+        base_url: site_data.site.url.clone(),
+    };
+    
+    // Helper to generate URL using url_for
+    let generate_url = |path: &str| -> String {
+        let mut args = HashMap::new();
+        args.insert("path".to_string(), Value::String(path.to_string()));
+        
+        if site_data.site.url.is_empty() {
+            // Use relative URLs
+            match url_for.call(&args) {
+                Ok(Value::String(url)) => url,
+                _ => format!("/{}", path),
+            }
+        } else {
+            // Use absolute URLs
+            args.insert("abs".to_string(), Value::Bool(true));
+            match url_for.call(&args) {
+                Ok(Value::String(url)) => url,
+                _ => format!("{}/{}", site_data.site.url.trim_end_matches('/'), path),
+            }
+        }
+    };
+
+    // Add homepage
+    sitemap_urls.push(generate_url("index.html"));
+
+    // Add all posts
+    for post in &site_data.posts {
+        sitemap_urls.push(generate_url(&format!("{}.html", post.slug)));
+    }
+
+    // Add all pages
+    for page in &site_data.pages {
+        sitemap_urls.push(generate_url(&format!("{}.html", page.slug)));
+    }
+
+    // Add tag pages
+    for tag in site_data.tag.iter() {
+        let tag_slug = format!("tag-{}.html", slugify(tag.0));
+        sitemap_urls.push(generate_url(&tag_slug));
+    }
+    if !site_data.tag.map.is_empty() {
+        sitemap_urls.push(generate_url("tags.html"));
+    }
+
+    // Add author pages
+    for author in site_data.author.iter() {
+        let author_slug = format!("author-{}.html", slugify(author.0));
+        sitemap_urls.push(generate_url(&author_slug));
+    }
+    if !site_data.author.map.is_empty() {
+        sitemap_urls.push(generate_url("authors.html"));
+    }
+
+    // Add series pages
+    for series in site_data.series.iter() {
+        let series_slug = format!("series-{}.html", slugify(series.0));
+        sitemap_urls.push(generate_url(&series_slug));
+    }
+    if !site_data.series.map.is_empty() {
+        sitemap_urls.push(generate_url("series.html"));
+    }
+
+    // Add stream pages (excluding draft)
+    for (stream, _) in site_data.stream.iter() {
+        if stream != "draft" {
+            let stream_slug = if stream == "index" {
+                "index.html".to_string()
+            } else {
+                format!("{}.html", stream)
+            };
+            sitemap_urls.push(generate_url(&stream_slug));
+        }
+    }
+    if site_data.stream.map.len() > 1 { // More than just draft
+        sitemap_urls.push(generate_url("streams.html"));
+    }
+
+    // Add archive pages
+    for year in site_data.archive.iter() {
+        let archive_slug = format!("archive-{}.html", year.0);
+        sitemap_urls.push(generate_url(&archive_slug));
+    }
+    if !site_data.archive.map.is_empty() {
+        sitemap_urls.push(generate_url("archive.html"));
+    }
+
+    // Render sitemap
+    let mut context = Context::new();
+    context.insert("sitemap_urls", &sitemap_urls);
+    
+    match tera.render("sitemap.xml", &context) {
+        Ok(rendered) => {
+            let sitemap_path = output_path.join("sitemap.xml");
+            if let Err(e) = fs::write(&sitemap_path, rendered) {
+                error!("Failed to write sitemap.xml: {e:?}");
+            } else {
+                info!("Generated sitemap.xml with {} URLs", sitemap_urls.len());
+            }
+        }
+        Err(e) => {
+            error!("Failed to render sitemap.xml: {e:?}");
+        }
     }
 }
 

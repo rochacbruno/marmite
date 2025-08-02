@@ -397,6 +397,19 @@ marmite . output/ --config prod.yaml
 marmite . output/ --config test.yaml
 ```
 
+## Sitemap Generation
+
+Control automatic sitemap.xml generation:
+
+```yaml
+# Generate sitemap.xml (default: true)
+build_sitemap: true
+```
+
+When enabled, Marmite automatically generates a sitemap.xml file containing all your site's URLs. The sitemap uses absolute URLs when a `url` is configured, otherwise relative URLs.
+
+See the [[Automatic Sitemap Generation]] documentation for more details.
+
 ## File Mapping
 
 Copy arbitrary files from source to destination during site generation:
