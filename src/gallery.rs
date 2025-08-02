@@ -89,6 +89,14 @@ fn process_single_gallery(
     let config = load_gallery_config(&config_path);
 
     let mut files = Vec::new();
+    
+    // Create thumbnails directory if creating thumbnails
+    let thumbnails_dir = gallery_path.join("thumbnails");
+    if create_thumbnails && !thumbnails_dir.exists() {
+        if let Err(e) = fs::create_dir(&thumbnails_dir) {
+            error!("Failed to create thumbnails directory: {}", e);
+        }
+    }
 
     for entry in WalkDir::new(gallery_path)
         .max_depth(1)
@@ -104,18 +112,19 @@ fn process_single_gallery(
             continue;
         };
 
-        if filename.contains(".thumb.") {
+        // Skip thumbnails directory
+        if path.parent() == Some(&thumbnails_dir) {
             continue;
         }
 
         let thumb_name = if create_thumbnails {
-            generate_thumbnail(path, thumb_size).unwrap_or_else(|| filename.to_string())
+            generate_thumbnail(path, &thumbnails_dir, thumb_size).unwrap_or_else(|| filename.to_string())
         } else {
             filename.to_string()
         };
 
         files.push(GalleryItem {
-            thumb: thumb_name,
+            thumb: format!("thumbnails/{}", thumb_name),
             image: filename.to_string(),
         });
     }
@@ -177,22 +186,21 @@ fn is_image_file(path: &Path) -> bool {
     )
 }
 
-fn generate_thumbnail(image_path: &Path, size: u32) -> Option<String> {
-    let Some(stem) = image_path.file_stem().and_then(|s| s.to_str()) else {
+fn generate_thumbnail(image_path: &Path, thumbnails_dir: &Path, size: u32) -> Option<String> {
+    let Some(filename) = image_path.file_name().and_then(|n| n.to_str()) else {
         return None;
     };
 
-    let thumb_name = format!("{}.thumb.png", stem);
-    let thumb_path = image_path.with_file_name(&thumb_name);
+    let thumb_path = thumbnails_dir.join(filename);
 
     if thumb_path.exists() {
-        return Some(thumb_name);
+        return Some(filename.to_string());
     }
 
     match create_thumbnail(image_path, &thumb_path, size) {
         Ok(()) => {
             info!("Created thumbnail: {}", thumb_path.display());
-            Some(thumb_name)
+            Some(filename.to_string())
         }
         Err(e) => {
             error!(
@@ -207,7 +215,7 @@ fn generate_thumbnail(image_path: &Path, size: u32) -> Option<String> {
 
 fn create_thumbnail(input_path: &Path, output_path: &Path, size: u32) -> Result<(), ImageError> {
     let img = image::open(input_path)?;
-    let thumbnail = img.resize(size, size, FilterType::Lanczos3);
+    let thumbnail = img.resize(size, size, FilterType::Nearest);
     thumbnail.save(output_path)?;
     Ok(())
 }
@@ -374,9 +382,9 @@ cover: "test1.jpg"
         assert_eq!(gallery.ord, GalleryOrder::Asc);
         assert_eq!(gallery.files.len(), 2);
         
-        // Check thumbnails were created
-        assert!(gallery_dir.join("test1.thumb.png").exists());
-        assert!(gallery_dir.join("test2.thumb.png").exists());
+        // Check thumbnails were created in thumbnails directory
+        assert!(gallery_dir.join("thumbnails").join("test1.jpg").exists());
+        assert!(gallery_dir.join("thumbnails").join("test2.png").exists());
     }
 
     #[test]
@@ -385,16 +393,18 @@ cover: "test1.jpg"
         
         let temp_dir = TempDir::new().unwrap();
         let image_path = temp_dir.path().join("test.jpg");
+        let thumbnails_dir = temp_dir.path().join("thumbnails");
+        fs::create_dir(&thumbnails_dir).unwrap();
         
         // Create a test image
         let img = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(200, 200);
         img.save(&image_path).unwrap();
         
-        let thumb_name = generate_thumbnail(&image_path, 50);
+        let thumb_name = generate_thumbnail(&image_path, &thumbnails_dir, 50);
         
         assert!(thumb_name.is_some());
-        assert_eq!(thumb_name.unwrap(), "test.thumb.png");
-        assert!(temp_dir.path().join("test.thumb.png").exists());
+        assert_eq!(thumb_name.unwrap(), "test.jpg");
+        assert!(thumbnails_dir.join("test.jpg").exists());
     }
 
     #[test]
