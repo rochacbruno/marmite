@@ -1,28 +1,35 @@
-# Marmite
+# Marmite Documentation
+
+**Mar**kdown **M**akes S**ite**s  
 
 > Marmite is a fast, minimal static site generator written in Rust that converts Markdown files into HTML websites. It's designed for simplicity and includes features like live reloading, RSS feeds, and a built-in development server.
 
 Marmite is the easiest static site generator optimized for blogs. It doesn't require specific folder structure or complex configuration - the goal is that a blog can be generated simply by running Marmite on a folder with Markdown and media files. Written in Rust, it provides very fast builds with everything included in a single binary.
 
-## Key Features
+## Quick Start
 
-- **Shortcodes**: Insert dynamic content using simple markers like `<!-- .youtube id=VIDEO_ID -->`, `<!-- .spotify url="album/ID" -->`, or `<!-- .card slug=content-slug -->`
-- **Enhanced Tera Functions**: New template functions including `get_data_by_slug()` for content lookup and enhanced `group()` function with sorting and limiting
-- **Content Cards**: Display linked previews of any content (posts, pages, tags, authors, series) with automatic data resolution
-- **External URL Support**: Card shortcodes automatically detect and handle external URLs with proper targeting
-- **Template URL Functions**: All shortcode templates use the `url_for()` function for proper URL generation
-- **URL Preview (Dry Run)**: Use `--show-urls` command to preview all site URLs without building, perfect for verification and planning
-- **Automatic Sitemap Generation**: Built-in sitemap.xml generation for better SEO, enabled by default with support for absolute and relative URLs
-- **File Mapping**: Copy arbitrary files during site generation with flexible source and destination patterns, supporting single files, directories, and glob patterns
-- **Themes**: Complete theme system with remote theme installation and customization
-- **Series Support**: Group related content in chronological order with automatic navigation
-- **Enhanced Streams**: Filename-based stream detection with configurable display names
-- **Configurable Markdown Parser**: Full control over CommonMark extensions and rendering options
-- **IndieWeb Compliance**: Built-in microformats and semantic HTML for better web interoperability
-- **Navigation Links**: Automatic next/previous post navigation with stream-aware linking
-- **Draft Content Management**: Special handling of draft posts with filtering from feeds and search
-- **Related Content**: Configurable related content and backlinks between posts
-- **Markdown Alerts**: Support for GitHub-style callouts and alert boxes in markdown
+### Install
+
+```console
+$ curl -sS https://marmite.blog/install.sh | sh
+```
+
+<small> or check [installation guide](https://marmite.blog/installation.html) for more install options </small>
+
+### Start blogging
+
+```console
+$ marmite myblog --init-site \
+    --name Mysite \
+    --tagline "My Articles and Notes" \
+    --colorscheme nord \
+    --toc true \
+    --enable-search true 
+
+$ marmite myblog --new "My First Blog Post" -t "new,post"
+
+$ marmite myblog --serve
+```
 
 ## Documentation
 
@@ -93,3 +100,23 @@ Marmite is the easiest static site generator optimized for blogs. It doesn't req
 - [About](https://marmite.blog/about.html): About the project
 - [Pagination](https://marmite.blog/pagination.html): How pagination works
 - [Content without metadata](https://marmite.blog/no-metadata.html): Example of content without frontmatter
+
+## Key Features
+
+- **Shortcodes**: Insert dynamic content using simple markers like `<!-- .youtube id=VIDEO_ID -->`, `<!-- .spotify url="album/ID" -->`, or `<!-- .card slug=content-slug -->`
+- **Enhanced Tera Functions**: New template functions including `get_data_by_slug()` for content lookup and enhanced `group()` function with sorting and limiting
+- **Content Cards**: Display linked previews of any content (posts, pages, tags, authors, series) with automatic data resolution
+- **External URL Support**: Card shortcodes automatically detect and handle external URLs with proper targeting
+- **Template URL Functions**: All shortcode templates use the `url_for()` function for proper URL generation
+- **URL Preview (Dry Run)**: Use `--show-urls` command to preview all site URLs without building, perfect for verification and planning
+- **Automatic Sitemap Generation**: Built-in sitemap.xml generation for better SEO, enabled by default with support for absolute and relative URLs
+- **File Mapping**: Copy arbitrary files during site generation with flexible source and destination patterns, supporting single files, directories, and glob patterns
+- **Themes**: Complete theme system with remote theme installation and customization
+- **Series Support**: Group related content in chronological order with automatic navigation
+- **Enhanced Streams**: Filename-based stream detection with configurable display names
+- **Configurable Markdown Parser**: Full control over CommonMark extensions and rendering options
+- **IndieWeb Compliance**: Built-in microformats and semantic HTML for better web interoperability
+- **Navigation Links**: Automatic next/previous post navigation with stream-aware linking
+- **Draft Content Management**: Special handling of draft posts with filtering from feeds and search
+- **Related Content**: Configurable related content and backlinks between posts
+- **Markdown Alerts**: Support for GitHub-style callouts and alert boxes in markdown

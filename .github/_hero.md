@@ -20,24 +20,20 @@ curl -sS https://marmite.blog/install.sh | sh
 
 <small> or check [[Installation]] for more install options </small>
 
-### Create a blog
+### Start blogging
 
 ```bash
+# Create a new blog (or simply use a folder with markdown files)
 marmite myblog --init-site \
     --name Mysite \
     --tagline "My Articles and Notes" \
     --colorscheme nord \
     --toc true \
     --enable-search true 
-```
-### Write a post
 
-```bash
+# Create a new post
 marmite myblog --new "My First Blog Post" -t "new,post"
-```
 
-### Serve the blog
-
-```bash
+# Build and serve the blog
 marmite myblog --serve
 ```
