@@ -75,6 +75,7 @@ jobs:
           cat marmitesite/ai/llms.txt >> marmitesite/content/docs.md
           rm marmitesite/marmite.yaml
           cp .github/marmite.yaml marmitesite/marmite.yaml
+          cp .github/_hero.md marmitesite/content/_hero.md
 
       - uses: actions/setup-python@v5
         with:

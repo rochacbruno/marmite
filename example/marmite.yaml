@@ -154,3 +154,5 @@ file_mapping:
     dest: llms.txt
   - source: static/favicon.ico
     dest: favicon.ico
+  - source: scripts/install.sh
+    dest: install.sh
