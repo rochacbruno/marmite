@@ -301,13 +301,21 @@ impl Function for GetDataBySlug {
             // Series slug: series-{name}
             let series_name = slug.strip_prefix("series-").unwrap();
             if let Some(series_contents) = self.site_data.series.map.get(series_name) {
-                let title = self
-                    .site_data
-                    .site
-                    .series
-                    .get(series_name)
-                    .map_or(&series_name.to_string(), |config| &config.display_name)
-                    .clone();
+                let display_name_fn = DisplayName {
+                    site_data: self.site_data.clone(),
+                    kind: "series".to_string(),
+                };
+                let mut args = std::collections::HashMap::new();
+                args.insert(
+                    "series".to_string(),
+                    tera::Value::String(series_name.to_string()),
+                );
+                let title = display_name_fn
+                    .call(&args)
+                    .unwrap_or_else(|_| tera::Value::String(series_name.to_string()))
+                    .as_str()
+                    .unwrap_or(series_name)
+                    .to_string();
 
                 let description = self
                     .site_data
@@ -339,13 +347,21 @@ impl Function for GetDataBySlug {
             // This is a special case, because streams are not prefixed with stream-
             let stream_name = slug.strip_prefix("stream-").unwrap();
             if let Some(stream_contents) = self.site_data.stream.map.get(stream_name) {
-                let title = self
-                    .site_data
-                    .site
-                    .streams
-                    .get(stream_name)
-                    .map_or(&stream_name.to_string(), |config| &config.display_name)
-                    .clone();
+                let display_name_fn = DisplayName {
+                    site_data: self.site_data.clone(),
+                    kind: "stream".to_string(),
+                };
+                let mut args = std::collections::HashMap::new();
+                args.insert(
+                    "stream".to_string(),
+                    tera::Value::String(stream_name.to_string()),
+                );
+                let title = display_name_fn
+                    .call(&args)
+                    .unwrap_or_else(|_| tera::Value::String(stream_name.to_string()))
+                    .as_str()
+                    .unwrap_or(stream_name)
+                    .to_string();
 
                 let description = format!("{} posts", stream_contents.len());
 
@@ -463,13 +479,21 @@ impl Function for GetDataBySlug {
                 // to identify we must look to the site data streams map
                 let stream_name = slug;
                 let stream_contents = self.site_data.stream.map.get(stream_name).unwrap();
-                let title = self
-                    .site_data
-                    .site
-                    .streams
-                    .get(stream_name)
-                    .map_or(&stream_name.to_string(), |config| &config.display_name)
-                    .clone();
+                let display_name_fn = DisplayName {
+                    site_data: self.site_data.clone(),
+                    kind: "stream".to_string(),
+                };
+                let mut args = std::collections::HashMap::new();
+                args.insert(
+                    "stream".to_string(),
+                    tera::Value::String(stream_name.to_string()),
+                );
+                let title = display_name_fn
+                    .call(&args)
+                    .unwrap_or_else(|_| tera::Value::String(stream_name.to_string()))
+                    .as_str()
+                    .unwrap_or(stream_name)
+                    .to_string();
                 SlugData {
                     image: stream_contents
                         .first()
