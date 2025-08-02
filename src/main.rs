@@ -11,6 +11,7 @@ mod config;
 mod content;
 mod embedded;
 mod feed;
+mod gallery;
 mod image_provider;
 mod parser;
 mod server;

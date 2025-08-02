@@ -3,8 +3,9 @@ use crate::content::{
     check_for_duplicate_slugs, slugify, Content, ContentBuilder, GroupedContent, Kind,
 };
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
+use crate::gallery::Gallery;
 use crate::shortcodes::ShortcodeProcessor;
-use crate::tera_functions::{DisplayName, GetDataBySlug, GetPosts, Group, SourceLink, UrlFor};
+use crate::tera_functions::{DisplayName, GetDataBySlug, GetGallery, GetPosts, Group, SourceLink, UrlFor};
 use crate::{server, tera_filter};
 use chrono::Datelike;
 use core::str;
@@ -52,6 +53,7 @@ pub struct Data {
     pub config_path: String,
     pub force_render: bool,
     pub generated_urls: UrlCollection,
+    pub galleries: HashMap<String, Gallery>,
 }
 
 impl Data {
@@ -77,6 +79,7 @@ impl Data {
             config_path: config_path.to_string_lossy().to_string(),
             force_render: false,
             generated_urls: UrlCollection::default(),
+            galleries: HashMap::new(),
         }
     }
 
@@ -481,6 +484,16 @@ pub fn generate(
 
             let fragments = collect_content_fragments(&content_folder);
             collect_content(&content_folder, &mut site_data, &fragments);
+            
+            // Process galleries
+            let media_path = content_folder.join(&site_data.site.media_path);
+            site_data.galleries = crate::gallery::process_galleries(
+                &media_path,
+                &site_data.site.gallery_path,
+                site_data.site.gallery_create_thumbnails,
+                site_data.site.gallery_thumb_size,
+            );
+            
             site_data.sort_all();
             detect_slug_collision(&site_data); // Detect slug collision and warn user
             collect_back_links(&mut site_data);
@@ -908,6 +921,12 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
             site_data: site_data.clone(),
         },
     );
+    tera.register_function(
+        "get_gallery",
+        GetGallery {
+            site_data: site_data.clone(),
+        },
+    );
     tera.register_filter(
         "default_date_format",
         tera_filter::DefaultDateFormat {
@@ -1005,6 +1024,7 @@ fn render_templates(
     global_context.insert("menu", &site_data.site.menu);
     global_context.insert("language", &site_data.site.language);
     debug!("Global Context site: {:?}", &site_data.site);
+    debug!("Site data galleries count: {}", site_data.galleries.len());
     collect_global_fragments(content_dir, &mut global_context, tera, &site_data.site);
 
     handle_stream_pages(&site_data, &global_context, tera, output_dir)?;
