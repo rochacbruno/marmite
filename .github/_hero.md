@@ -14,17 +14,17 @@ Or try an alternative [theme](https://marmite.blog/theme_template/)
 
 ### Install
 
-```bash
-curl -sS https://marmite.blog/install.sh | sh
+```console
+$ curl -sS https://marmite.blog/install.sh | sh
 ```
 
 <small> or check [[Installation]] for more install options </small>
 
 ### Start blogging
 
-```bash
+```console
 # Create a new blog (or simply use a folder with markdown files)
-marmite myblog --init-site \
+$ marmite myblog --init-site \
     --name Mysite \
     --tagline "My Articles and Notes" \
     --colorscheme nord \
@@ -32,8 +32,8 @@ marmite myblog --init-site \
     --enable-search true 
 
 # Create a new post
-marmite myblog --new "My First Blog Post" -t "new,post"
+$ marmite myblog --new "My First Blog Post" -t "new,post"
 
 # Build and serve the blog
-marmite myblog --serve
+$ marmite myblog --serve
 ```
