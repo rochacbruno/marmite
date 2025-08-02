@@ -199,4 +199,12 @@ pub struct Configuration {
     /// Theme to use for the site [default: from config file or embedded templates]
     #[arg(long)]
     pub theme: Option<String>,
+
+    /// Generate sitemap.xml file [default: true or from config file]
+    #[arg(long)]
+    pub build_sitemap: Option<bool>,
+
+    /// Generate urls.json file [default: true or from config file]
+    #[arg(long)]
+    pub publish_urls_json: Option<bool>,
 }

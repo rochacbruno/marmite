@@ -271,6 +271,9 @@ marmite ./site --url "https://mysite.com" --https true
 # Features
 marmite ./site --enable-search true --toc true --json-feed true
 
+# Site generation
+marmite ./site --build-sitemap true --publish-urls-json true
+
 # Source publishing
 marmite ./site --publish-md true --source-repository "https://github.com/user/repo"
 
@@ -409,6 +412,25 @@ build_sitemap: true
 When enabled, Marmite automatically generates a sitemap.xml file containing all your site's URLs. The sitemap uses absolute URLs when a `url` is configured, otherwise relative URLs.
 
 See the [[Automatic Sitemap Generation]] documentation for more details.
+
+## URLs JSON Generation
+
+Control automatic URLs JSON file generation:
+
+```yaml
+# Generate urls.json (default: true)
+publish_urls_json: true
+```
+
+When enabled, Marmite automatically generates a `urls.json` file containing all your site's URLs organized by content type. This file has the same structure as the `--show-urls` command output and includes:
+
+- Posts, pages, tags, authors, series, streams, and archive URLs
+- RSS and JSON feed URLs  
+- Pagination page URLs
+- File mapping URLs
+- Summary with counts and metadata
+
+The JSON uses absolute URLs when a `url` is configured, otherwise relative URLs.
 
 ## File Mapping
 

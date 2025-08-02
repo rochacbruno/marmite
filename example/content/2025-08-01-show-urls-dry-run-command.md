@@ -34,68 +34,81 @@ This will display a comprehensive list of all URLs organized by content type.
 
 ## Output Format
 
-The command provides a well-structured output showing:
+The command outputs a comprehensive JSON structure containing all URLs organized by content type:
 
-```
-Site URLs organized by content type:
-====================================
-
-Posts (31):
-------------
-  Getting Started - /getting-started.html
-  Why to use Marmite? - /why-to-use-marmite.html
-  Python Tutorial - Part 1 - /tutorial-python-tutorial-part-1.html
-  ...
-
-Pages (4):
------------
-  About - /about.html
-  Contributors - /contributors.html
-  ...
-
-Tags (25):
-----------
-  tutorial (8 posts) - /tag-tutorial.html
-  docs (15 posts) - /tag-docs.html
-  ...
-
-Authors (3):
-------------
-  rochacbruno (28 posts) - /author-rochacbruno.html
-  marmite (2 posts) - /author-marmite.html
-  ...
-
-Series (1):
------------
-  Python Tutorial (3 posts) - /series-python-tutorial.html
-
-Streams (3):
-------------
-  index (25 posts) - /index.html
-  tutorial (3 posts) - /tutorial.html
-  ...
-
-Archive (3):
--------------
-  2025 (20 posts) - /archive-2025.html
-  2024 (10 posts) - /archive-2024.html
-  ...
-
-RSS Feeds:
------------
-  index RSS - /index.rss
-  tutorial RSS - /tutorial.rss
-  ...
-
-JSON Feeds:
-------------
-  index JSON - /index.json
-  tutorial JSON - /tutorial.json
-  ...
-
-====================================
-Total content URLs: 86
-No base URL configured - URLs shown as relative
+```json
+{
+  "posts": [
+    "/getting-started.html",
+    "/why-to-use-marmite.html",
+    "/tutorial-python-tutorial-part-1.html"
+  ],
+  "pages": [
+    "/about.html",
+    "/contributors.html",
+    "/pages.html"
+  ],
+  "tags": [
+    "/tag-tutorial.html",
+    "/tag-docs.html",
+    "/tags.html"
+  ],
+  "authors": [
+    "/author-rochacbruno.html",
+    "/author-marmite.html",
+    "/authors.html"
+  ],
+  "series": [
+    "/series-python-tutorial.html",
+    "/series.html"
+  ],
+  "streams": [
+    "/index.html",
+    "/tutorial.html",
+    "/streams.html"
+  ],
+  "archives": [
+    "/archive-2025.html",
+    "/archive-2024.html",
+    "/archive.html"
+  ],
+  "feeds": [
+    "/index.rss",
+    "/tutorial.rss",
+    "/index.json",
+    "/tutorial.json"
+  ],
+  "pagination": [
+    "/index-1.html",
+    "/index-2.html",
+    "/tag-docs-1.html"
+  ],
+  "file_mappings": [
+    "/favicon.ico",
+    "/robots.txt"
+  ],
+  "misc": [
+    "/index.html"
+  ],
+  "summary": {
+    "posts": 33,
+    "pages": 5,
+    "tags": 43,
+    "authors": 5,
+    "series": 2,
+    "streams": 3,
+    "archives": 4,
+    "feeds": 106,
+    "pagination": 64,
+    "file_mappings": 2,
+    "misc": 1,
+    "total": 268,
+    "meta": {
+      "url": "",
+      "absolute_urls": false
+    }
+  }
+}
 ```
 
 ## With Base URL
@@ -106,47 +119,58 @@ When you have a base URL configured in your `marmite.yaml` or use the `--url` fl
 $ marmite myblog --show-urls --url "https://myblog.com"
 ```
 
-The output will show absolute URLs:
+The output will show absolute URLs and the metadata will reflect this:
 
-```
-Posts (31):
-------------
-  Getting Started - https://myblog.com/getting-started.html
-  Why to use Marmite? - https://myblog.com/why-to-use-marmite.html
-  ...
+```json
+{
+  "posts": [
+    "https://myblog.com/getting-started.html",
+    "https://myblog.com/why-to-use-marmite.html"
+  ],
+  "summary": {
+    "meta": {
+      "url": "https://myblog.com",
+      "absolute_urls": true
+    }
+  }
+}
 ```
 
 ## Understanding the Output
 
-### Content Types
+### JSON Structure
 
-The command shows URLs for all content types:
+The output is organized into categories with each containing an array of URLs:
 
-1. **Posts**: Individual blog posts with dates
-2. **Pages**: Static pages without dates
-3. **Tags**: Tag archive pages listing posts by tag
-4. **Authors**: Author pages listing posts by author
-5. **Series**: Ordered collections of related posts
-6. **Streams**: Content streams (like categories)
-7. **Archive**: Yearly archive pages
-8. **RSS/JSON Feeds**: Feed URLs for subscriptions
+1. **posts**: Individual blog posts with dates
+2. **pages**: Static pages without dates  
+3. **tags**: Tag archive pages and the tags index page
+4. **authors**: Author pages and the authors index page
+5. **series**: Series pages and the series index page
+6. **streams**: Content streams and the streams index page
+7. **archives**: Yearly archive pages and the archives index page
+8. **feeds**: All RSS and JSON feed URLs
+9. **pagination**: Pagination pages (e.g., `/index-2.html`, `/tag-docs-1.html`)
+10. **file_mappings**: Mapped files (e.g., `/favicon.ico`, `/robots.txt`)
+11. **misc**: Other generated files
 
-### Post Counts
+### Summary Section
 
-For grouped content (tags, authors, series, etc.), the output shows the number of posts in parentheses:
+The `summary` object provides:
+- **Counts**: Number of items in each category
+- **total**: Total number of URLs generated  
+- **meta**: Contains the base URL and whether absolute URLs are used
 
+```json
+"summary": {
+  "posts": 33,
+  "total": 268,
+  "meta": {
+    "url": "https://myblog.com",
+    "absolute_urls": true
+  }
+}
 ```
-tutorial (8 posts) - /tag-tutorial.html
-```
-
-### Special Pages
-
-The command also includes special index pages:
-- `[Tags Index]` - The main tags listing page
-- `[Authors Index]` - The main authors listing page
-- `[Series Index]` - The main series listing page
-- `[Streams Index]` - The main streams listing page
-- `[Archive Index]` - The main archive listing page
 
 ## Use Cases
 
@@ -159,12 +183,22 @@ $ marmite myblog --show-urls | grep "404"
 $ marmite myblog --show-urls | wc -l  # Count total URLs
 ```
 
-### 2. Creating External Sitemaps
+### 2. Processing URLs with JSON
 
-Export the URL list for creating sitemaps or documentation:
+Extract specific URL types using JSON tools like `jq`:
 
 ```console
-$ marmite myblog --show-urls > site-urls.txt
+# Get all post URLs
+$ marmite myblog --show-urls | jq -r '.posts[]'
+
+# Get total count
+$ marmite myblog --show-urls | jq '.summary.total'
+
+# Get feed URLs only  
+$ marmite myblog --show-urls | jq -r '.feeds[]'
+
+# Export to other formats
+$ marmite myblog --show-urls > site-urls.json
 ```
 
 ### 3. Debugging Slug Generation
@@ -172,8 +206,7 @@ $ marmite myblog --show-urls > site-urls.txt
 Check how your content titles are converted to URL slugs:
 
 ```console
-$ marmite myblog --show-urls | grep "My Complex Title!"
-  My Complex Title! - /my-complex-title.html
+$ marmite myblog --show-urls | jq -r '.posts[]' | grep "my-complex-title"
 ```
 
 ### 4. Planning Site Navigation
@@ -187,8 +220,11 @@ Include `--show-urls` in your CI pipeline to verify expected URLs are generated:
 ```yaml
 - name: Verify site structure
   run: |
-    marmite content --show-urls > urls.txt
-    grep -q "getting-started.html" urls.txt || exit 1
+    marmite content --show-urls > urls.json
+    # Check if specific URLs exist
+    jq -e '.posts[] | select(. == "/getting-started.html")' urls.json
+    # Verify minimum URL count  
+    [ $(jq '.summary.total' urls.json) -ge 50 ] || exit 1
 ```
 
 ## Combining with Other Options
@@ -212,7 +248,9 @@ $ marmite myblog --show-urls --enable-search true
 - Draft posts are excluded from the output (except in the draft stream)
 - The command uses the same URL generation logic as the actual site builder
 - URLs are generated using the `url_for` Tera function internally
-- File mappings and static files are not included in the output
+- File mappings are included in the `file_mappings` array
+- The output is formatted as JSON for easy parsing and integration
+- Use tools like `jq` to extract specific data from the JSON output
 
 ## Comparison with Site Generation
 
