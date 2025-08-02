@@ -544,6 +544,11 @@ pub fn generate(
             let (tera, _) = initialize_tera(&moved_input_folder, &site_data);
             generate_sitemap(&site_data, &tera, &output_path);
 
+            // Generate urls.json if enabled
+            if site_data.site.publish_urls_json {
+                generate_urls_json(&site_data, &output_path);
+            }
+
             let end_time = start_time.elapsed().as_secs_f64();
             write_build_info(&output_path, &site_data, end_time);
             debug!("Site generated in {end_time:.2}s");
@@ -1768,6 +1773,318 @@ fn generate_sitemap(site_data: &Data, tera: &Tera, output_path: &Path) {
     }
 }
 
+#[allow(clippy::too_many_lines)]
+fn create_urls_json(site_data: &Data) -> serde_json::Value {
+    // Create UrlFor function instance
+    let url_for = UrlFor {
+        base_url: site_data.site.url.clone(),
+    };
+
+    // Determine if we should use absolute URLs
+    let use_abs = !site_data.site.url.is_empty();
+
+    // Helper to generate URL using url_for
+    let generate_url = |path: &str| -> String {
+        let mut args = HashMap::new();
+        args.insert("path".to_string(), Value::String(path.to_string()));
+
+        if use_abs {
+            args.insert("abs".to_string(), Value::Bool(true));
+        }
+
+        match url_for.call(&args) {
+            Ok(Value::String(url)) => url,
+            _ => {
+                if use_abs {
+                    format!("{}/{}", site_data.site.url.trim_end_matches('/'), path)
+                } else {
+                    format!("/{path}")
+                }
+            }
+        }
+    };
+
+    // Convert URL collection to full URLs with proper formatting
+    let mut output = serde_json::Map::new();
+
+    // Add posts
+    let posts: Vec<String> = site_data
+        .generated_urls
+        .posts
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "posts".to_string(),
+        serde_json::Value::Array(
+            posts
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add pages
+    let pages: Vec<String> = site_data
+        .generated_urls
+        .pages
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "pages".to_string(),
+        serde_json::Value::Array(
+            pages
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add tags
+    let tags: Vec<String> = site_data
+        .generated_urls
+        .tags
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "tags".to_string(),
+        serde_json::Value::Array(
+            tags.iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add authors
+    let authors: Vec<String> = site_data
+        .generated_urls
+        .authors
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "authors".to_string(),
+        serde_json::Value::Array(
+            authors
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add series
+    let series: Vec<String> = site_data
+        .generated_urls
+        .series
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "series".to_string(),
+        serde_json::Value::Array(
+            series
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add streams
+    let streams: Vec<String> = site_data
+        .generated_urls
+        .streams
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "streams".to_string(),
+        serde_json::Value::Array(
+            streams
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add archives
+    let archives: Vec<String> = site_data
+        .generated_urls
+        .archives
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "archives".to_string(),
+        serde_json::Value::Array(
+            archives
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add feeds
+    let feeds: Vec<String> = site_data
+        .generated_urls
+        .feeds
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "feeds".to_string(),
+        serde_json::Value::Array(
+            feeds
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add pagination
+    let pagination: Vec<String> = site_data
+        .generated_urls
+        .pagination
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "pagination".to_string(),
+        serde_json::Value::Array(
+            pagination
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add file_mappings
+    let file_mappings: Vec<String> = site_data
+        .generated_urls
+        .file_mappings
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "file_mappings".to_string(),
+        serde_json::Value::Array(
+            file_mappings
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add misc
+    let misc: Vec<String> = site_data
+        .generated_urls
+        .misc
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "misc".to_string(),
+        serde_json::Value::Array(
+            misc.iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add summary
+    let mut summary = serde_json::Map::new();
+    summary.insert(
+        "posts".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(posts.len())),
+    );
+    summary.insert(
+        "pages".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(pages.len())),
+    );
+    summary.insert(
+        "tags".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(tags.len())),
+    );
+    summary.insert(
+        "authors".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(authors.len())),
+    );
+    summary.insert(
+        "series".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(series.len())),
+    );
+    summary.insert(
+        "streams".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(streams.len())),
+    );
+    summary.insert(
+        "archives".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(archives.len())),
+    );
+    summary.insert(
+        "feeds".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(feeds.len())),
+    );
+    summary.insert(
+        "pagination".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(pagination.len())),
+    );
+    summary.insert(
+        "file_mappings".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(file_mappings.len())),
+    );
+    summary.insert(
+        "misc".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(misc.len())),
+    );
+    summary.insert(
+        "total".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(
+            site_data.generated_urls.total_count(),
+        )),
+    );
+
+    // Add meta information
+    let mut meta = serde_json::Map::new();
+    meta.insert(
+        "url".to_string(),
+        serde_json::Value::String(site_data.site.url.clone()),
+    );
+    meta.insert(
+        "absolute_urls".to_string(),
+        serde_json::Value::Bool(use_abs),
+    );
+
+    summary.insert("meta".to_string(), serde_json::Value::Object(meta));
+    output.insert("summary".to_string(), serde_json::Value::Object(summary));
+
+    serde_json::Value::Object(output)
+}
+
+fn generate_urls_json(site_data: &Data, output_path: &Path) {
+    if !site_data.site.publish_urls_json {
+        return;
+    }
+
+    let json = create_urls_json(site_data);
+
+    // Write JSON to file
+    let urls_file = output_path.join("urls.json");
+    match serde_json::to_string_pretty(&json) {
+        Ok(json_string) => {
+            if let Err(e) = fs::write(&urls_file, json_string) {
+                error!("Failed to write urls.json: {e:?}");
+            } else {
+                info!("Generated urls.json");
+            }
+        }
+        Err(e) => {
+            error!("Failed to serialize URLs to JSON: {e}");
+        }
+    }
+}
+
 fn handle_list_page(
     global_context: &Context,
     title: &str,
@@ -2443,293 +2760,12 @@ pub fn show_urls(
     // Collect all URLs including pagination, feeds, and file mappings
     site_data.collect_all_urls();
 
-    // Create UrlFor function instance
-    let url_for = UrlFor {
-        base_url: site_data.site.url.clone(),
-    };
-
-    // Determine if we should use absolute URLs
-    let use_abs = !site_data.site.url.is_empty();
-
-    // Helper to generate URL using url_for
-    let generate_url = |path: &str| -> String {
-        let mut args = HashMap::new();
-        args.insert("path".to_string(), Value::String(path.to_string()));
-
-        if use_abs {
-            args.insert("abs".to_string(), Value::Bool(true));
-        }
-
-        match url_for.call(&args) {
-            Ok(Value::String(url)) => url,
-            _ => {
-                if use_abs {
-                    format!("{}/{}", site_data.site.url.trim_end_matches('/'), path)
-                } else {
-                    format!("/{path}")
-                }
-            }
-        }
-    };
-
-    // Convert URL collection to full URLs with proper formatting
-    let mut output = serde_json::Map::new();
-
-    // Add posts
-    let posts: Vec<String> = site_data
-        .generated_urls
-        .posts
-        .iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert(
-        "posts".to_string(),
-        serde_json::Value::Array(
-            posts
-                .iter()
-                .map(|url| serde_json::Value::String(url.clone()))
-                .collect(),
-        ),
-    );
-
-    // Add pages
-    let pages: Vec<String> = site_data
-        .generated_urls
-        .pages
-        .iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert(
-        "pages".to_string(),
-        serde_json::Value::Array(
-            pages
-                .iter()
-                .map(|url| serde_json::Value::String(url.clone()))
-                .collect(),
-        ),
-    );
-
-    // Add tags
-    let tags: Vec<String> = site_data
-        .generated_urls
-        .tags
-        .iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert(
-        "tags".to_string(),
-        serde_json::Value::Array(
-            tags.iter()
-                .map(|url| serde_json::Value::String(url.clone()))
-                .collect(),
-        ),
-    );
-
-    // Add authors
-    let authors: Vec<String> = site_data
-        .generated_urls
-        .authors
-        .iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert(
-        "authors".to_string(),
-        serde_json::Value::Array(
-            authors
-                .iter()
-                .map(|url| serde_json::Value::String(url.clone()))
-                .collect(),
-        ),
-    );
-
-    // Add series
-    let series: Vec<String> = site_data
-        .generated_urls
-        .series
-        .iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert(
-        "series".to_string(),
-        serde_json::Value::Array(
-            series
-                .iter()
-                .map(|url| serde_json::Value::String(url.clone()))
-                .collect(),
-        ),
-    );
-
-    // Add streams
-    let streams: Vec<String> = site_data
-        .generated_urls
-        .streams
-        .iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert(
-        "streams".to_string(),
-        serde_json::Value::Array(
-            streams
-                .iter()
-                .map(|url| serde_json::Value::String(url.clone()))
-                .collect(),
-        ),
-    );
-
-    // Add archives
-    let archives: Vec<String> = site_data
-        .generated_urls
-        .archives
-        .iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert(
-        "archives".to_string(),
-        serde_json::Value::Array(
-            archives
-                .iter()
-                .map(|url| serde_json::Value::String(url.clone()))
-                .collect(),
-        ),
-    );
-
-    // Add feeds
-    let feeds: Vec<String> = site_data
-        .generated_urls
-        .feeds
-        .iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert(
-        "feeds".to_string(),
-        serde_json::Value::Array(
-            feeds
-                .iter()
-                .map(|url| serde_json::Value::String(url.clone()))
-                .collect(),
-        ),
-    );
-
-    // Add pagination
-    let pagination: Vec<String> = site_data
-        .generated_urls
-        .pagination
-        .iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert(
-        "pagination".to_string(),
-        serde_json::Value::Array(
-            pagination
-                .iter()
-                .map(|url| serde_json::Value::String(url.clone()))
-                .collect(),
-        ),
-    );
-
-    // Add file_mappings
-    let file_mappings: Vec<String> = site_data
-        .generated_urls
-        .file_mappings
-        .iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert(
-        "file_mappings".to_string(),
-        serde_json::Value::Array(
-            file_mappings
-                .iter()
-                .map(|url| serde_json::Value::String(url.clone()))
-                .collect(),
-        ),
-    );
-
-    // Add misc (other)
-    let misc: Vec<String> = site_data
-        .generated_urls
-        .misc
-        .iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert(
-        "misc".to_string(),
-        serde_json::Value::Array(
-            misc.iter()
-                .map(|url| serde_json::Value::String(url.clone()))
-                .collect(),
-        ),
-    );
-
-    // Add summary
-    let mut summary = serde_json::Map::new();
-    summary.insert(
-        "posts".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(posts.len())),
-    );
-    summary.insert(
-        "pages".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(pages.len())),
-    );
-    summary.insert(
-        "tags".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(tags.len())),
-    );
-    summary.insert(
-        "authors".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(authors.len())),
-    );
-    summary.insert(
-        "series".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(series.len())),
-    );
-    summary.insert(
-        "streams".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(streams.len())),
-    );
-    summary.insert(
-        "archives".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(archives.len())),
-    );
-    summary.insert(
-        "feeds".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(feeds.len())),
-    );
-    summary.insert(
-        "pagination".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(pagination.len())),
-    );
-    summary.insert(
-        "file_mappings".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(file_mappings.len())),
-    );
-    summary.insert(
-        "misc".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(misc.len())),
-    );
-    summary.insert(
-        "total".to_string(),
-        serde_json::Value::Number(serde_json::Number::from(
-            site_data.generated_urls.total_count(),
-        )),
-    );
-
-    // Add meta information
-    let mut meta = serde_json::Map::new();
-    meta.insert(
-        "url".to_string(),
-        serde_json::Value::String(site_data.site.url.clone()),
-    );
-    meta.insert(
-        "absolute_urls".to_string(),
-        serde_json::Value::Bool(use_abs),
-    );
-
-    summary.insert("meta".to_string(), serde_json::Value::Object(meta));
-    output.insert("summary".to_string(), serde_json::Value::Object(summary));
+    // Generate JSON using the shared function
+    let json = create_urls_json(&site_data);
 
     // Output JSON
-    match serde_json::to_string_pretty(&serde_json::Value::Object(output)) {
-        Ok(json) => println!("{json}"),
+    match serde_json::to_string_pretty(&json) {
+        Ok(json_string) => println!("{json_string}"),
         Err(e) => error!("Failed to serialize URLs to JSON: {e}"),
     }
 }

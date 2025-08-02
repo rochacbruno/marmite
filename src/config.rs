@@ -256,6 +256,9 @@ pub struct Marmite {
 
     #[serde(default = "default_true")]
     pub build_sitemap: bool,
+
+    #[serde(default = "default_true")]
+    pub publish_urls_json: bool,
 }
 
 fn default_true() -> bool {
