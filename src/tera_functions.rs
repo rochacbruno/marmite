@@ -336,6 +336,7 @@ impl Function for GetDataBySlug {
             }
         } else if slug.starts_with("stream-") {
             // Stream slug: stream-{name}
+            // This is a special case, because streams are not prefixed with stream-
             let stream_name = slug.strip_prefix("stream-").unwrap();
             if let Some(stream_contents) = self.site_data.stream.map.get(stream_name) {
                 let title = self
@@ -356,7 +357,7 @@ impl Function for GetDataBySlug {
 
                 SlugData {
                     image,
-                    slug: slug.to_string(),
+                    slug: stream_name.to_string(),
                     title,
                     text: description,
                     content_type: "stream".to_string(),
@@ -456,6 +457,29 @@ impl Function for GetDataBySlug {
                         .date
                         .map_or_else(String::new, |d| d.format("%Y-%m-%d").to_string()),
                     content_type: "post".to_string(),
+                }
+            } else if self.site_data.stream.map.contains_key(slug) {
+                // Check if it's a Stream (streams does not start with stream-, those are just bare slugs)
+                // to identify we must look to the site data streams map
+                let stream_name = slug;
+                let stream_contents = self.site_data.stream.map.get(stream_name).unwrap();
+                let title = self
+                    .site_data
+                    .site
+                    .streams
+                    .get(stream_name)
+                    .map_or(&stream_name.to_string(), |config| &config.display_name)
+                    .clone();
+                SlugData {
+                    image: stream_contents
+                        .first()
+                        .and_then(|content| content.banner_image.as_ref())
+                        .unwrap_or(&self.site_data.site.banner_image)
+                        .clone(),
+                    slug: slug.to_string(),
+                    title,
+                    text: format!("{} posts", stream_contents.len()),
+                    content_type: "stream".to_string(),
                 }
             } else {
                 return Err(tera::Error::msg(format!(
