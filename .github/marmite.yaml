@@ -1,5 +1,5 @@
 name: Marmite
-tagline: Static Site Generator
+tagline: Static Site Generator <br> <small>for blogs</small> <br> <small>made with ❤️ and 🦀</small>
 url: https://marmite.blog
 pagination: 10
 enable_search: true
@@ -24,6 +24,14 @@ image_provider: picsum
 extra:
   colorscheme_toggle: true
   # colorscheme: minimal_wb
+  social_networks:
+    linkedin:
+      url: https://www.linkedin.com/in/rochacbruno/
+    github:
+      url: https://github.com/rochacbruno
+    links:
+      url: https://bruno.rocha.social
+
 default_author: rochacbruno
 authors:
   rochacbruno:
@@ -47,3 +55,20 @@ file_mapping:
     dest: llms.txt
   - source: static/favicon.ico
     dest: favicon.ico
+
+# Stream display name mappings
+streams:
+  alt:
+    display_name: "Alternative Stream"
+  tutorial:
+    display_name: "Tutorials"
+  news:
+    display_name: "Latest News"
+  guide:
+    display_name: "User Guides"
+
+# Series display name mappings
+series:
+  python-tutorial:
+    display_name: "Python Tutorial"
+    description: "A comprehensive Python programming tutorial series"
