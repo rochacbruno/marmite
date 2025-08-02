@@ -358,7 +358,7 @@ install_marmite() {
     echo "Quick start:"
     echo "  marmite myblog --init-site --name 'My Blog' --tagline 'My thoughts'"
     echo "  marmite myblog --new 'My First Post'"  
-    echo "  marmite myblog --serve --watch"
+    echo "  marmite myblog --serve"
     echo ""
     echo "For more information, visit: https://marmite.blog"
 }

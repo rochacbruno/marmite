@@ -39,5 +39,5 @@ marmite myblog --new "My First Blog Post" -t "new,post"
 ### Serve the blog
 
 ```bash
-marmite myblog --serve --watch
+marmite myblog --serve
 ```

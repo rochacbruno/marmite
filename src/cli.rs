@@ -20,7 +20,7 @@ pub struct Cli {
     pub verbose: u8,
 
     /// Detect changes and rebuild the site automatically
-    #[arg(long, short, requires = "output_folder")]
+    #[arg(long, short)]
     pub watch: bool,
 
     /// Serve the site with a built-in HTTP server

@@ -187,7 +187,7 @@ try {
         Write-Host "Quick start:"
         Write-Host "  marmite myblog --init-site --name 'My Blog' --tagline 'My thoughts'"
         Write-Host "  marmite myblog --new 'My First Post'"
-        Write-Host "  marmite myblog --serve --watch"
+        Write-Host "  marmite myblog --serve"
         Write-Host ""
         Write-Host "For more information, visit: https://marmite.blog"
 
