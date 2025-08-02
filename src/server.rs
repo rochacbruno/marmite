@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::{fs::File, path::Path};
 use tiny_http::{Header, Response, Server};
+use urlencoding::decode;
 
 pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>) {
     let server = Server::http(bind_address).unwrap();
@@ -30,7 +31,15 @@ fn handle_request(
     request: &tiny_http::Request,
     output_folder: &Path,
 ) -> Result<Response<Cursor<Vec<u8>>>, String> {
-    let request_path = match request.url() {
+    let decoded_url = match decode(request.url()) {
+        Ok(decoded) => decoded.into_owned(),
+        Err(err) => {
+            error!("Error decoding url {}: {err:?}", request.url());
+            return Err(format!("Error decoding url: {err}"));
+        }
+    };
+
+    let request_path = match decoded_url.as_str() {
         "/" => "index.html",
         url => &url[1..], // Remove the leading '/'
     };
