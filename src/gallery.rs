@@ -198,9 +198,7 @@ fn is_image_file(path: &Path) -> bool {
 }
 
 fn generate_thumbnail(image_path: &Path, thumbnails_dir: &Path, size: u32) -> Option<String> {
-    let Some(filename) = image_path.file_name().and_then(|n| n.to_str()) else {
-        return None;
-    };
+    let filename = image_path.file_name().and_then(|n| n.to_str())?;
 
     let thumb_path = thumbnails_dir.join(filename);
 
