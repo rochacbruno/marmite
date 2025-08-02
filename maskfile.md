@@ -18,6 +18,27 @@ cargo build --release
 rm -rf ./example/public && cargo run --quiet -- example ./example/public --serve --watch --force -vvvv
 ~~~
 
+## serve_site
+
+> Build and serve the marmite.blog site locally including the CI customizations
+
+~~~bash
+.github/prepare_site.sh
+python .github/contributors.py marmitesite/content/contributors.md
+cargo run --quiet -- marmitesite --serve --watch --force -vvvv
+~~~
+
+## serve_theme
+
+> Build and serve with theme_template
+
+~~~bash
+rm -rf marmitesite
+cp -R example marmitesite
+rm -rf marmitesite/content/_hero.md
+cargo run --quiet -- marmitesite --serve --watch --force -vvvv --theme theme_template
+~~~
+
 ## check
 
 > Check code formatting and run clippy

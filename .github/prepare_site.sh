@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+rm -rf marmitesite
 cp -R example marmitesite
 # template customization
 sed -i '/block head/a <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/github.min.css" id="highlightjs-theme" />' marmitesite/templates/base.html
