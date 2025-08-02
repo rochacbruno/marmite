@@ -609,8 +609,8 @@ mod tests {
         assert_eq!(
             names,
             vec![
-                "authors", "card", "pages", "posts", "series", "socials", "spotify", "streams",
-                "tags", "toc", "youtube"
+                "authors", "card", "gallery", "pages", "posts", "series", "socials", "spotify",
+                "streams", "tags", "toc", "youtube"
             ]
         );
 

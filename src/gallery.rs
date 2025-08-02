@@ -52,12 +52,18 @@ pub fn process_galleries(
     info!("Processing galleries from: {}", gallery_dir.display());
 
     if !gallery_dir.exists() {
-        info!("Gallery directory does not exist: {}", gallery_dir.display());
+        info!(
+            "Gallery directory does not exist: {}",
+            gallery_dir.display()
+        );
         return galleries;
     }
 
     for entry in fs::read_dir(&gallery_dir).unwrap_or_else(|_| {
-        panic!("Failed to read gallery directory: {}", gallery_dir.display())
+        panic!(
+            "Failed to read gallery directory: {}",
+            gallery_dir.display()
+        )
     }) {
         let Ok(entry) = entry else { continue };
         let path = entry.path();
@@ -71,7 +77,11 @@ pub fn process_galleries(
         };
 
         let gallery = process_single_gallery(&path, folder_name, create_thumbnails, thumb_size);
-        info!("Found gallery: {} with {} files", folder_name, gallery.files.len());
+        info!(
+            "Found gallery: {} with {} files",
+            folder_name,
+            gallery.files.len()
+        );
         galleries.insert(folder_name.to_string(), gallery);
     }
 
@@ -89,7 +99,7 @@ fn process_single_gallery(
     let config = load_gallery_config(&config_path);
 
     let mut files = Vec::new();
-    
+
     // Create thumbnails directory if creating thumbnails
     let thumbnails_dir = gallery_path.join("thumbnails");
     if create_thumbnails && !thumbnails_dir.exists() {
@@ -118,7 +128,8 @@ fn process_single_gallery(
         }
 
         let thumb_name = if create_thumbnails {
-            generate_thumbnail(path, &thumbnails_dir, thumb_size).unwrap_or_else(|| filename.to_string())
+            generate_thumbnail(path, &thumbnails_dir, thumb_size)
+                .unwrap_or_else(|| filename.to_string())
         } else {
             filename.to_string()
         };
@@ -130,7 +141,7 @@ fn process_single_gallery(
     }
 
     let ord = config.ord.unwrap_or_default();
-    
+
     match ord {
         GalleryOrder::Asc => files.sort_by(|a, b| a.image.cmp(&b.image)),
         GalleryOrder::Desc => files.sort_by(|a, b| b.image.cmp(&a.image)),
@@ -352,7 +363,7 @@ cover: "main.jpg"
     #[test]
     fn test_process_galleries_with_images() {
         use image::{ImageBuffer, Rgb};
-        
+
         let temp_dir = TempDir::new().unwrap();
         let media_path = temp_dir.path();
         let gallery_dir = media_path.join("gallery").join("test-gallery");
@@ -375,13 +386,13 @@ cover: "test1.jpg"
 
         assert_eq!(galleries.len(), 1);
         assert!(galleries.contains_key("test-gallery"));
-        
+
         let gallery = &galleries["test-gallery"];
         assert_eq!(gallery.name, "Test Gallery");
         assert_eq!(gallery.cover, "test1.jpg");
         assert_eq!(gallery.ord, GalleryOrder::Asc);
         assert_eq!(gallery.files.len(), 2);
-        
+
         // Check thumbnails were created in thumbnails directory
         assert!(gallery_dir.join("thumbnails").join("test1.jpg").exists());
         assert!(gallery_dir.join("thumbnails").join("test2.png").exists());
@@ -390,18 +401,18 @@ cover: "test1.jpg"
     #[test]
     fn test_generate_thumbnail() {
         use image::{ImageBuffer, Rgb};
-        
+
         let temp_dir = TempDir::new().unwrap();
         let image_path = temp_dir.path().join("test.jpg");
         let thumbnails_dir = temp_dir.path().join("thumbnails");
         fs::create_dir(&thumbnails_dir).unwrap();
-        
+
         // Create a test image
         let img = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(200, 200);
         img.save(&image_path).unwrap();
-        
+
         let thumb_name = generate_thumbnail(&image_path, &thumbnails_dir, 50);
-        
+
         assert!(thumb_name.is_some());
         assert_eq!(thumb_name.unwrap(), "test.jpg");
         assert!(thumbnails_dir.join("test.jpg").exists());
@@ -410,22 +421,24 @@ cover: "test1.jpg"
     #[test]
     fn test_generate_thumbnail_existing() {
         use image::{ImageBuffer, Rgb};
-        
+
         let temp_dir = TempDir::new().unwrap();
         let image_path = temp_dir.path().join("test.jpg");
-        let thumb_path = temp_dir.path().join("test.thumb.png");
-        
+        let thumbnails_dir = temp_dir.path().join("thumbnails");
+        fs::create_dir(&thumbnails_dir).unwrap();
+        let thumb_path = thumbnails_dir.join("test.jpg");
+
         // Create a test image
         let img = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(200, 200);
         img.save(&image_path).unwrap();
-        
+
         // Create existing thumbnail
         let thumb = ImageBuffer::<Rgb<u8>, Vec<u8>>::new(50, 50);
         thumb.save(&thumb_path).unwrap();
-        
-        let thumb_name = generate_thumbnail(&image_path, 50);
-        
+
+        let thumb_name = generate_thumbnail(&image_path, &thumbnails_dir, 50);
+
         assert!(thumb_name.is_some());
-        assert_eq!(thumb_name.unwrap(), "test.thumb.png");
+        assert_eq!(thumb_name.unwrap(), "test.jpg");
     }
 }

@@ -792,7 +792,10 @@ impl Function for GetGallery {
             .ok_or_else(|| tera::Error::msg("Missing `path` argument"))?;
 
         log::info!("GetGallery called with path: {}", path);
-        log::info!("Available galleries: {:?}", self.site_data.galleries.keys().collect::<Vec<_>>());
+        log::info!(
+            "Available galleries: {:?}",
+            self.site_data.galleries.keys().collect::<Vec<_>>()
+        );
 
         // Get the gallery from site_data
         if let Some(gallery) = self.site_data.galleries.get(path) {
