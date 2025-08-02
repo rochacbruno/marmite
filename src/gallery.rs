@@ -104,7 +104,7 @@ fn process_single_gallery(
     let thumbnails_dir = gallery_path.join("thumbnails");
     if create_thumbnails && !thumbnails_dir.exists() {
         if let Err(e) = fs::create_dir(&thumbnails_dir) {
-            error!("Failed to create thumbnails directory: {}", e);
+            error!("Failed to create thumbnails directory: {e}");
         }
     }
 
@@ -135,7 +135,7 @@ fn process_single_gallery(
         };
 
         files.push(GalleryItem {
-            thumb: format!("thumbnails/{}", thumb_name),
+            thumb: format!("thumbnails/{thumb_name}"),
             image: filename.to_string(),
         });
     }
@@ -171,7 +171,7 @@ fn load_gallery_config(config_path: &Path) -> GalleryConfig {
 
     match fs::read_to_string(config_path) {
         Ok(content) => serde_yaml::from_str(&content).unwrap_or_else(|e| {
-            error!("Failed to parse gallery config: {}", e);
+            error!("Failed to parse gallery config: {e}");
             GalleryConfig {
                 name: None,
                 ord: None,
@@ -241,10 +241,10 @@ pub fn copy_galleries(input_media: &Path, output_media: &Path, gallery_path: &st
 
     if let Err(e) = fs_extra::dir::copy(
         &input_gallery,
-        &output_media,
+        output_media,
         &fs_extra::dir::CopyOptions::new().overwrite(true),
     ) {
-        error!("Failed to copy gallery directory: {}", e);
+        error!("Failed to copy gallery directory: {e}");
     }
 }
 
