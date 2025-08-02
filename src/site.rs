@@ -149,6 +149,7 @@ impl Data {
     }
 
     /// Collect all generated URLs based on the site structure
+    #[allow(clippy::too_many_lines)]
     pub fn collect_all_urls(&mut self) {
         // Clear existing URL collection
         self.generated_urls = UrlCollection::default();
@@ -171,18 +172,20 @@ impl Data {
 
         // Add pages listing and pagination
         if !self.pages.is_empty() {
-            self.generated_urls.add_url("pages", "pages.html".to_string());
-            
+            self.generated_urls
+                .add_url("pages", "pages.html".to_string());
+
             // Add pagination for pages listing
             let content_count = self.pages.len();
             // Always add -1 page (same as base page but with consistent naming)
-            self.generated_urls.add_url("pagination", "pages-1.html".to_string());
-            
+            self.generated_urls
+                .add_url("pagination", "pages-1.html".to_string());
+
             // Add additional pagination pages if content exceeds pagination limit
             if content_count > self.site.pagination {
-                let total_pages = (content_count + self.site.pagination - 1) / self.site.pagination;
+                let total_pages = content_count.div_ceil(self.site.pagination);
                 for page_num in 2..=total_pages {
-                    let pagination_slug = format!("pages-{}.html", page_num);
+                    let pagination_slug = format!("pages-{page_num}.html");
                     self.generated_urls.add_url("pagination", pagination_slug);
                 }
             }
@@ -199,10 +202,10 @@ impl Data {
                 // Always add -1 page (same as base page but with consistent naming)
                 let pagination_slug_1 = format!("tag-{}-1.html", slugify(tag.0));
                 self.generated_urls.add_url("pagination", pagination_slug_1);
-                
+
                 // Add additional pagination pages if content exceeds pagination limit
                 if content_count > self.site.pagination {
-                    let total_pages = (content_count + self.site.pagination - 1) / self.site.pagination;
+                    let total_pages = content_count.div_ceil(self.site.pagination);
                     for page_num in 2..=total_pages {
                         let pagination_slug = format!("tag-{}-{}.html", slugify(tag.0), page_num);
                         self.generated_urls.add_url("pagination", pagination_slug);
@@ -225,12 +228,13 @@ impl Data {
                 // Always add -1 page (same as base page but with consistent naming)
                 let pagination_slug_1 = format!("author-{}-1.html", slugify(author.0));
                 self.generated_urls.add_url("pagination", pagination_slug_1);
-                
+
                 // Add additional pagination pages if content exceeds pagination limit
                 if content_count > self.site.pagination {
-                    let total_pages = (content_count + self.site.pagination - 1) / self.site.pagination;
+                    let total_pages = content_count.div_ceil(self.site.pagination);
                     for page_num in 2..=total_pages {
-                        let pagination_slug = format!("author-{}-{}.html", slugify(author.0), page_num);
+                        let pagination_slug =
+                            format!("author-{}-{}.html", slugify(author.0), page_num);
                         self.generated_urls.add_url("pagination", pagination_slug);
                     }
                 }
@@ -252,12 +256,13 @@ impl Data {
                 // Always add -1 page (same as base page but with consistent naming)
                 let pagination_slug_1 = format!("series-{}-1.html", slugify(series.0));
                 self.generated_urls.add_url("pagination", pagination_slug_1);
-                
+
                 // Add additional pagination pages if content exceeds pagination limit
                 if content_count > self.site.pagination {
-                    let total_pages = (content_count + self.site.pagination - 1) / self.site.pagination;
+                    let total_pages = content_count.div_ceil(self.site.pagination);
                     for page_num in 2..=total_pages {
-                        let pagination_slug = format!("series-{}-{}.html", slugify(series.0), page_num);
+                        let pagination_slug =
+                            format!("series-{}-{}.html", slugify(series.0), page_num);
                         self.generated_urls.add_url("pagination", pagination_slug);
                     }
                 }
@@ -283,12 +288,13 @@ impl Data {
                     // Always add -1 page (same as base page but with consistent naming)
                     let pagination_slug_1 = format!("{}-1.html", slugify(stream.0));
                     self.generated_urls.add_url("pagination", pagination_slug_1);
-                    
+
                     // Add additional pagination pages if content exceeds pagination limit
                     if content_count > self.site.pagination {
-                        let total_pages = (content_count + self.site.pagination - 1) / self.site.pagination;
+                        let total_pages = content_count.div_ceil(self.site.pagination);
                         for page_num in 2..=total_pages {
-                            let pagination_slug = format!("{}-{}.html", slugify(stream.0), page_num);
+                            let pagination_slug =
+                                format!("{}-{}.html", slugify(stream.0), page_num);
                             self.generated_urls.add_url("pagination", pagination_slug);
                         }
                     }
@@ -311,10 +317,10 @@ impl Data {
                 // Always add -1 page (same as base page but with consistent naming)
                 let pagination_slug_1 = format!("archive-{}-1.html", archive.0);
                 self.generated_urls.add_url("pagination", pagination_slug_1);
-                
+
                 // Add additional pagination pages if content exceeds pagination limit
                 if content_count > self.site.pagination {
-                    let total_pages = (content_count + self.site.pagination - 1) / self.site.pagination;
+                    let total_pages = content_count.div_ceil(self.site.pagination);
                     for page_num in 2..=total_pages {
                         let pagination_slug = format!("archive-{}-{}.html", archive.0, page_num);
                         self.generated_urls.add_url("pagination", pagination_slug);
@@ -330,12 +336,13 @@ impl Data {
         // Add main index pagination
         let posts_count = self.posts.len();
         if posts_count > self.site.pagination {
-            let total_pages = (posts_count + self.site.pagination - 1) / self.site.pagination;
+            let total_pages = posts_count.div_ceil(self.site.pagination);
             // Add -1 page (same as base page but with consistent naming)
-            self.generated_urls.add_url("pagination", "index-1.html".to_string());
+            self.generated_urls
+                .add_url("pagination", "index-1.html".to_string());
             // Add remaining pagination pages
             for page_num in 2..=total_pages {
-                let pagination_slug = format!("index-{}.html", page_num);
+                let pagination_slug = format!("index-{page_num}.html");
                 self.generated_urls.add_url("pagination", pagination_slug);
             }
         }
@@ -1719,7 +1726,7 @@ fn generate_sitemap(site_data: &Data, tera: &Tera, output_path: &Path) {
             // Use relative URLs
             match url_for.call(&args) {
                 Ok(Value::String(url)) => url,
-                _ => format!("/{}", path),
+                _ => format!("/{path}"),
             }
         } else {
             // Use absolute URLs
@@ -1737,7 +1744,7 @@ fn generate_sitemap(site_data: &Data, tera: &Tera, output_path: &Path) {
         .iter()
         .map(|url| {
             // Remove leading slash if present for consistent path handling
-            let path = if url.starts_with('/') { &url[1..] } else { url };
+            let path = url.strip_prefix('/').unwrap_or(url);
             generate_url(path)
         })
         .collect();
@@ -2405,13 +2412,326 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         edit the files starting with `_` in the `content` folder to change the layout\n\n\
         or edit the templates to create a custom layout\n\n\
         ## Deploy your site\n\n\
-        read more on [marmite documentation](https://rochacbruno.github.io/marmite)\n\n\
+        read more on [marmite documentation](https://marmite.blog)\n\n\
         ",
     ) {
         error!("Failed to create 'content/{now}-welcome.md' file: {e:?}");
         process::exit(1);
     }
     info!("Site initialized in {}", input_folder.display());
+}
+
+/// Show all site URLs in JSON format
+#[allow(clippy::too_many_lines)]
+pub fn show_urls(
+    config_path: &Arc<std::path::PathBuf>,
+    input_folder: &Arc<std::path::PathBuf>,
+    args: &Arc<crate::cli::Cli>,
+) {
+    // Load site data from config
+    let mut site_data = Data::from_file(config_path.as_path());
+    let content_folder = get_content_folder(&site_data.site, input_folder.as_path());
+
+    // Override site config with CLI arguments
+    site_data.site.override_from_cli_args(args);
+
+    // Collect content fragments and process content
+    let fragments = collect_content_fragments(&content_folder);
+    collect_content(&content_folder, &mut site_data, &fragments);
+    site_data.sort_all();
+
+    // Collect all URLs including pagination, feeds, and file mappings
+    site_data.collect_all_urls();
+
+    // Create UrlFor function instance
+    let url_for = UrlFor {
+        base_url: site_data.site.url.clone(),
+    };
+
+    // Determine if we should use absolute URLs
+    let use_abs = !site_data.site.url.is_empty();
+
+    // Helper to generate URL using url_for
+    let generate_url = |path: &str| -> String {
+        let mut args = HashMap::new();
+        args.insert("path".to_string(), Value::String(path.to_string()));
+
+        if use_abs {
+            args.insert("abs".to_string(), Value::Bool(true));
+        }
+
+        match url_for.call(&args) {
+            Ok(Value::String(url)) => url,
+            _ => {
+                if use_abs {
+                    format!("{}/{}", site_data.site.url.trim_end_matches('/'), path)
+                } else {
+                    format!("/{path}")
+                }
+            }
+        }
+    };
+
+    // Convert URL collection to full URLs with proper formatting
+    let mut output = serde_json::Map::new();
+
+    // Add posts
+    let posts: Vec<String> = site_data
+        .generated_urls
+        .posts
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "posts".to_string(),
+        serde_json::Value::Array(
+            posts
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add pages
+    let pages: Vec<String> = site_data
+        .generated_urls
+        .pages
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "pages".to_string(),
+        serde_json::Value::Array(
+            pages
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add tags
+    let tags: Vec<String> = site_data
+        .generated_urls
+        .tags
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "tags".to_string(),
+        serde_json::Value::Array(
+            tags.iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add authors
+    let authors: Vec<String> = site_data
+        .generated_urls
+        .authors
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "authors".to_string(),
+        serde_json::Value::Array(
+            authors
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add series
+    let series: Vec<String> = site_data
+        .generated_urls
+        .series
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "series".to_string(),
+        serde_json::Value::Array(
+            series
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add streams
+    let streams: Vec<String> = site_data
+        .generated_urls
+        .streams
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "streams".to_string(),
+        serde_json::Value::Array(
+            streams
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add archives
+    let archives: Vec<String> = site_data
+        .generated_urls
+        .archives
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "archives".to_string(),
+        serde_json::Value::Array(
+            archives
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add feeds
+    let feeds: Vec<String> = site_data
+        .generated_urls
+        .feeds
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "feeds".to_string(),
+        serde_json::Value::Array(
+            feeds
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add pagination
+    let pagination: Vec<String> = site_data
+        .generated_urls
+        .pagination
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "pagination".to_string(),
+        serde_json::Value::Array(
+            pagination
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add file_mappings
+    let file_mappings: Vec<String> = site_data
+        .generated_urls
+        .file_mappings
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "file_mappings".to_string(),
+        serde_json::Value::Array(
+            file_mappings
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add misc (other)
+    let misc: Vec<String> = site_data
+        .generated_urls
+        .misc
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "misc".to_string(),
+        serde_json::Value::Array(
+            misc.iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
+    // Add summary
+    let mut summary = serde_json::Map::new();
+    summary.insert(
+        "posts".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(posts.len())),
+    );
+    summary.insert(
+        "pages".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(pages.len())),
+    );
+    summary.insert(
+        "tags".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(tags.len())),
+    );
+    summary.insert(
+        "authors".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(authors.len())),
+    );
+    summary.insert(
+        "series".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(series.len())),
+    );
+    summary.insert(
+        "streams".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(streams.len())),
+    );
+    summary.insert(
+        "archives".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(archives.len())),
+    );
+    summary.insert(
+        "feeds".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(feeds.len())),
+    );
+    summary.insert(
+        "pagination".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(pagination.len())),
+    );
+    summary.insert(
+        "file_mappings".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(file_mappings.len())),
+    );
+    summary.insert(
+        "misc".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(misc.len())),
+    );
+    summary.insert(
+        "total".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(
+            site_data.generated_urls.total_count(),
+        )),
+    );
+
+    // Add meta information
+    let mut meta = serde_json::Map::new();
+    meta.insert(
+        "url".to_string(),
+        serde_json::Value::String(site_data.site.url.clone()),
+    );
+    meta.insert(
+        "absolute_urls".to_string(),
+        serde_json::Value::Bool(use_abs),
+    );
+
+    summary.insert("meta".to_string(), serde_json::Value::Object(meta));
+    output.insert("summary".to_string(), serde_json::Value::Object(summary));
+
+    // Output JSON
+    match serde_json::to_string_pretty(&serde_json::Value::Object(output)) {
+        Ok(json) => println!("{json}"),
+        Err(e) => error!("Failed to serialize URLs to JSON: {e}"),
+    }
 }
 
 #[cfg(test)]
@@ -2675,173 +2995,3 @@ mod tests {
         assert!(copied_dir.join("file2.txt").exists());
     }
 }
-
-/// Show all site URLs in JSON format
-pub fn show_urls(
-    config_path: &Arc<std::path::PathBuf>,
-    input_folder: &Arc<std::path::PathBuf>,
-    args: &Arc<crate::cli::Cli>,
-) {
-    // Load site data from config
-    let mut site_data = Data::from_file(config_path.as_path());
-    let content_folder = get_content_folder(&site_data.site, input_folder.as_path());
-
-    // Override site config with CLI arguments
-    site_data.site.override_from_cli_args(args);
-
-    // Collect content fragments and process content
-    let fragments = collect_content_fragments(&content_folder);
-    collect_content(&content_folder, &mut site_data, &fragments);
-    site_data.sort_all();
-
-    // Collect all URLs including pagination, feeds, and file mappings
-    site_data.collect_all_urls();
-
-    // Create UrlFor function instance
-    let url_for = UrlFor {
-        base_url: site_data.site.url.clone(),
-    };
-    
-    // Determine if we should use absolute URLs
-    let use_abs = !site_data.site.url.is_empty();
-    
-    // Helper to generate URL using url_for
-    let generate_url = |path: &str| -> String {
-        let mut args = HashMap::new();
-        args.insert("path".to_string(), Value::String(path.to_string()));
-        
-        if use_abs {
-            args.insert("abs".to_string(), Value::Bool(true));
-        }
-        
-        match url_for.call(&args) {
-            Ok(Value::String(url)) => url,
-            _ => if use_abs {
-                format!("{}/{}", site_data.site.url.trim_end_matches('/'), path)
-            } else {
-                format!("/{}", path)
-            }
-        }
-    };
-
-    // Convert URL collection to full URLs with proper formatting
-    let mut output = serde_json::Map::new();
-    
-    // Add posts
-    let posts: Vec<String> = site_data.generated_urls.posts.iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert("posts".to_string(), serde_json::Value::Array(
-        posts.iter().map(|url| serde_json::Value::String(url.clone())).collect()
-    ));
-    
-    // Add pages  
-    let pages: Vec<String> = site_data.generated_urls.pages.iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert("pages".to_string(), serde_json::Value::Array(
-        pages.iter().map(|url| serde_json::Value::String(url.clone())).collect()
-    ));
-    
-    // Add tags
-    let tags: Vec<String> = site_data.generated_urls.tags.iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert("tags".to_string(), serde_json::Value::Array(
-        tags.iter().map(|url| serde_json::Value::String(url.clone())).collect()
-    ));
-    
-    // Add authors
-    let authors: Vec<String> = site_data.generated_urls.authors.iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert("authors".to_string(), serde_json::Value::Array(
-        authors.iter().map(|url| serde_json::Value::String(url.clone())).collect()
-    ));
-    
-    // Add series
-    let series: Vec<String> = site_data.generated_urls.series.iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert("series".to_string(), serde_json::Value::Array(
-        series.iter().map(|url| serde_json::Value::String(url.clone())).collect()
-    ));
-    
-    // Add streams
-    let streams: Vec<String> = site_data.generated_urls.streams.iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert("streams".to_string(), serde_json::Value::Array(
-        streams.iter().map(|url| serde_json::Value::String(url.clone())).collect()
-    ));
-    
-    // Add archives
-    let archives: Vec<String> = site_data.generated_urls.archives.iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert("archives".to_string(), serde_json::Value::Array(
-        archives.iter().map(|url| serde_json::Value::String(url.clone())).collect()
-    ));
-    
-    // Add feeds
-    let feeds: Vec<String> = site_data.generated_urls.feeds.iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert("feeds".to_string(), serde_json::Value::Array(
-        feeds.iter().map(|url| serde_json::Value::String(url.clone())).collect()
-    ));
-    
-    // Add pagination
-    let pagination: Vec<String> = site_data.generated_urls.pagination.iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert("pagination".to_string(), serde_json::Value::Array(
-        pagination.iter().map(|url| serde_json::Value::String(url.clone())).collect()
-    ));
-    
-    // Add file_mappings
-    let file_mappings: Vec<String> = site_data.generated_urls.file_mappings.iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert("file_mappings".to_string(), serde_json::Value::Array(
-        file_mappings.iter().map(|url| serde_json::Value::String(url.clone())).collect()
-    ));
-    
-    // Add misc (other)
-    let misc: Vec<String> = site_data.generated_urls.misc.iter()
-        .map(|url| generate_url(url.trim_start_matches('/')))
-        .collect();
-    output.insert("misc".to_string(), serde_json::Value::Array(
-        misc.iter().map(|url| serde_json::Value::String(url.clone())).collect()
-    ));
-    
-    // Add summary
-    let mut summary = serde_json::Map::new();
-    summary.insert("posts".to_string(), serde_json::Value::Number(serde_json::Number::from(posts.len())));
-    summary.insert("pages".to_string(), serde_json::Value::Number(serde_json::Number::from(pages.len())));
-    summary.insert("tags".to_string(), serde_json::Value::Number(serde_json::Number::from(tags.len())));
-    summary.insert("authors".to_string(), serde_json::Value::Number(serde_json::Number::from(authors.len())));
-    summary.insert("series".to_string(), serde_json::Value::Number(serde_json::Number::from(series.len())));
-    summary.insert("streams".to_string(), serde_json::Value::Number(serde_json::Number::from(streams.len())));
-    summary.insert("archives".to_string(), serde_json::Value::Number(serde_json::Number::from(archives.len())));
-    summary.insert("feeds".to_string(), serde_json::Value::Number(serde_json::Number::from(feeds.len())));
-    summary.insert("pagination".to_string(), serde_json::Value::Number(serde_json::Number::from(pagination.len())));
-    summary.insert("file_mappings".to_string(), serde_json::Value::Number(serde_json::Number::from(file_mappings.len())));
-    summary.insert("misc".to_string(), serde_json::Value::Number(serde_json::Number::from(misc.len())));
-    summary.insert("total".to_string(), serde_json::Value::Number(serde_json::Number::from(site_data.generated_urls.total_count())));
-    
-    // Add meta information
-    let mut meta = serde_json::Map::new();
-    meta.insert("url".to_string(), serde_json::Value::String(site_data.site.url.clone()));
-    meta.insert("absolute_urls".to_string(), serde_json::Value::Bool(use_abs));
-    
-    summary.insert("meta".to_string(), serde_json::Value::Object(meta));
-    output.insert("summary".to_string(), serde_json::Value::Object(summary));
-    
-    // Output JSON
-    match serde_json::to_string_pretty(&serde_json::Value::Object(output)) {
-        Ok(json) => println!("{}", json),
-        Err(e) => error!("Failed to serialize URLs to JSON: {}", e),
-    }
-}
-

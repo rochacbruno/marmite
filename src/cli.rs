@@ -166,7 +166,7 @@ pub struct Configuration {
     pub default_date_format: Option<String>,
 
     /// Name of the colorscheme to use [default: "default" or from config file]
-    /// see <https://rochacbruno.github.io/marmite/getting-started.html#colorschemes>
+    /// see <https://marmite.blog/getting-started.html#colorschemes>
     #[arg(long)]
     pub colorscheme: Option<String>,
 
