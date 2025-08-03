@@ -45,12 +45,12 @@ fn handle_request(
     };
 
     let mut file_path = output_folder.join(request_path);
-    
+
     // If the path is a directory, append index.html
     if file_path.is_dir() {
         file_path = file_path.join("index.html");
     }
-    
+
     // Check for subsite 404.html if main site 404.html doesn't exist
     let error_path = if request_path.contains('/') {
         let parts: Vec<&str> = request_path.split('/').collect();

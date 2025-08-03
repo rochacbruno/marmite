@@ -824,13 +824,11 @@ fn collect_content(
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| {
-            e.path().is_dir() 
-            && e.path() != content_dir 
-            && e.path().join("site.yaml").exists()
+            e.path().is_dir() && e.path() != content_dir && e.path().join("site.yaml").exists()
         })
         .map(|e| e.path().to_path_buf())
         .collect();
-    
+
     let contents = WalkDir::new(content_dir)
         .into_iter()
         .filter_map(Result::ok)
@@ -838,14 +836,14 @@ fn collect_content(
         .into_par_iter()
         .filter(|e| {
             // Skip files that are inside subsite directories
-            let is_in_subsite = subsite_dirs.iter().any(|subsite_dir| {
-                e.path().starts_with(subsite_dir) && e.path() != subsite_dir
-            });
-            
+            let is_in_subsite = subsite_dirs
+                .iter()
+                .any(|subsite_dir| e.path().starts_with(subsite_dir) && e.path() != subsite_dir);
+
             if is_in_subsite {
                 return false;
             }
-            
+
             let file_name = e
                 .path()
                 .file_name()
@@ -1743,11 +1741,7 @@ fn copy_markdown_sources(site_data: &Data, content_folder: &Path, output_path: &
         });
 }
 
-fn write_build_info(
-    output_path: &Path,
-    site_data: &Data,
-    end_time: f64,
-) {
+fn write_build_info(output_path: &Path, site_data: &Data, end_time: f64) {
     let build_info = BuildInfo {
         marmite_version: env!("CARGO_PKG_VERSION").to_string(),
         posts: site_data.posts.len(),
@@ -2858,7 +2852,7 @@ fn process_subsites(
                 };
 
                 info!("Processing subsite: {}", subsite_name);
-                
+
                 // Process the subsite and store the data
                 if let Some(subsite_data) = process_single_subsite(
                     subsite_name,
@@ -2870,7 +2864,9 @@ fn process_subsites(
                     cli_args,
                     latest_build_info,
                 ) {
-                    parent_site_data.subsites.insert(subsite_name.to_string(), subsite_data);
+                    parent_site_data
+                        .subsites
+                        .insert(subsite_name.to_string(), subsite_data);
                 }
             }
         }
@@ -2892,42 +2888,46 @@ fn process_single_subsite(
     let subsite_config_str = match fs::read_to_string(site_yaml_path) {
         Ok(content) => content,
         Err(e) => {
-            error!("Failed to read subsite config {}: {e}", site_yaml_path.display());
+            error!(
+                "Failed to read subsite config {}: {e}",
+                site_yaml_path.display()
+            );
             return None;
         }
     };
 
     // Parse subsite configuration, merging with parent site defaults
     let mut subsite_data = Data::new(&subsite_config_str, site_yaml_path);
-    
+
     // Merge parent site configuration as defaults (subsite config takes precedence)
     merge_site_configs(&mut subsite_data.site, &parent_site_data.site);
-    
+
     // Override with CLI args
     subsite_data.site.override_from_cli_args(cli_args);
-    
+
     // Set the site_path to include the subsite name
     if parent_site_data.site.site_path.is_empty() {
         subsite_data.site.site_path = subsite_name.to_string();
     } else {
-        subsite_data.site.site_path = format!("{}/{}", parent_site_data.site.site_path, subsite_name);
+        subsite_data.site.site_path =
+            format!("{}/{}", parent_site_data.site.site_path, subsite_name);
     }
-    
+
     // Update URL to include the subsite path
     if !subsite_data.site.url.is_empty() && !subsite_data.site.url.ends_with('/') {
         subsite_data.site.url.push('/');
     }
     subsite_data.site.url.push_str(&subsite_data.site.site_path);
-    
+
     // Set content_path to the actual subsite directory
     subsite_data.site.content_path = subsite_path.to_string_lossy().to_string();
-    
+
     // Collect fragments for the subsite
     let fragments = collect_content_fragments(subsite_path);
-    
+
     // Collect content for the subsite
     collect_content(&subsite_path.to_path_buf(), &mut subsite_data, &fragments);
-    
+
     // Process galleries for the subsite
     let media_path = subsite_path.join(&subsite_data.site.media_path);
     if media_path.exists() {
@@ -2938,28 +2938,25 @@ fn process_single_subsite(
             subsite_data.site.gallery_thumb_size,
         );
     }
-    
+
     // Sort and process the subsite data
     subsite_data.sort_all();
     detect_slug_collision(&subsite_data);
     collect_back_links(&mut subsite_data);
     set_next_and_previous_links(&mut subsite_data);
     subsite_data.collect_all_urls();
-    
+
     // Create output directory for the subsite
     let subsite_output_path = output_folder.join(&subsite_data.site.site_path);
     if let Err(e) = fs::create_dir_all(&subsite_output_path) {
         error!("Unable to create subsite output directory: {e:?}");
         return None;
     }
-    
+
     // Initialize Tera for the subsite with its own theme
-    let (tera, shortcode_processor) = initialize_tera_for_subsite(
-        input_folder,
-        &subsite_data,
-        &parent_site_data.site.theme,
-    );
-    
+    let (tera, shortcode_processor) =
+        initialize_tera_for_subsite(input_folder, &subsite_data, &parent_site_data.site.theme);
+
     // Render templates for the subsite
     if let Err(e) = render_templates(
         subsite_path,
@@ -2974,7 +2971,7 @@ fn process_single_subsite(
         error!("Failed to render subsite templates: {e:?}");
         return None;
     }
-    
+
     // Handle static artifacts for the subsite
     handle_static_artifacts_for_subsite(
         input_folder,
@@ -2983,17 +2980,17 @@ fn process_single_subsite(
         subsite_path,
         subsite_name,
     );
-    
+
     // Generate search index for the subsite
     if subsite_data.site.enable_search {
         generate_search_index_for_subsite(&subsite_data, output_folder, subsite_name);
     }
-    
+
     // Copy markdown sources if enabled
     if subsite_data.site.publish_md {
         copy_markdown_sources_for_subsite(&subsite_data, &subsite_output_path);
     }
-    
+
     // Generate feeds for the subsite
     if subsite_data.site.json_feed {
         if let Err(e) = crate::feed::generate_json(
@@ -3005,7 +3002,7 @@ fn process_single_subsite(
             error!("Failed to generate JSON feed for subsite: {e}");
         }
     }
-    
+
     if let Err(e) = crate::feed::generate_rss(
         &subsite_data.posts,
         &subsite_output_path,
@@ -3014,14 +3011,14 @@ fn process_single_subsite(
     ) {
         error!("Failed to generate RSS feed for subsite: {e}");
     }
-    
+
     // Generate sitemap and other files
     generate_sitemap(&subsite_data, &tera, &subsite_output_path);
-    
+
     if subsite_data.site.publish_urls_json {
         generate_urls_json(&subsite_data, &subsite_output_path);
     }
-    
+
     info!("Subsite '{}' generated successfully", subsite_name);
     Some(subsite_data)
 }
@@ -3031,18 +3028,18 @@ fn process_single_subsite(
 fn merge_site_configs(subsite_config: &mut Marmite, parent_config: &Marmite) {
     // Only merge fields that are not explicitly set in the subsite config
     // This is a simplified merge - you may need to add more fields based on your needs
-    
+
     // If subsite doesn't specify a theme, inherit from parent
     if subsite_config.theme.is_none() && parent_config.theme.is_some() {
         subsite_config.theme = parent_config.theme.clone();
     }
-    
+
     // Merge other configuration fields as needed
     // For example, if certain features should be inherited:
     if subsite_config.default_date_format.is_empty() {
         subsite_config.default_date_format = parent_config.default_date_format.clone();
     }
-    
+
     // You can add more field merging as needed
 }
 
@@ -3067,7 +3064,7 @@ fn handle_static_artifacts_for_subsite(
 ) {
     // Similar to handle_static_artifacts but with subsite paths
     let site_output_path = output_folder.join(&site_data.site.site_path);
-    
+
     // Copy media files from subsite
     let media_src = content_folder.join(&site_data.site.media_path);
     if media_src.exists() {
@@ -3079,7 +3076,7 @@ fn handle_static_artifacts_for_subsite(
             error!("Failed to copy subsite media: {e}");
         }
     }
-    
+
     // Copy static files if they exist for the subsite
     let static_src = input_folder.join("static");
     if static_src.exists() {
@@ -3091,7 +3088,7 @@ fn handle_static_artifacts_for_subsite(
             error!("Failed to copy subsite static files: {e}");
         }
     }
-    
+
     // Handle theme-specific static files for the subsite
     if let Some(theme) = &site_data.site.theme {
         let theme_static_src = input_folder.join(theme).join("static");
@@ -3109,22 +3106,15 @@ fn handle_static_artifacts_for_subsite(
 }
 
 /// Generate search index for a subsite
-fn generate_search_index_for_subsite(
-    site_data: &Data,
-    output_folder: &Path,
-    _subsite_name: &str,
-) {
+fn generate_search_index_for_subsite(site_data: &Data, output_folder: &Path, _subsite_name: &str) {
     let subsite_output_path = Arc::new(output_folder.join(&site_data.site.site_path));
-    
+
     // Generate search index specific to this subsite
     generate_search_index(site_data, &subsite_output_path);
 }
 
 /// Copy markdown sources for a subsite
-fn copy_markdown_sources_for_subsite(
-    site_data: &Data,
-    output_path: &Path,
-) {
+fn copy_markdown_sources_for_subsite(site_data: &Data, output_path: &Path) {
     // Copy markdown files for the subsite
     for content in site_data.posts.iter().chain(site_data.pages.iter()) {
         if let Some(source_path) = &content.source_path {
