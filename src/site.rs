@@ -56,6 +56,7 @@ pub struct Data {
     pub force_render: bool,
     pub generated_urls: UrlCollection,
     pub galleries: HashMap<String, Gallery>,
+    pub subsites: HashMap<String, Data>,
 }
 
 impl Data {
@@ -82,6 +83,7 @@ impl Data {
             force_render: false,
             generated_urls: UrlCollection::default(),
             galleries: HashMap::new(),
+            subsites: HashMap::new(),
         }
     }
 
@@ -514,7 +516,7 @@ pub fn generate(
                 &content_folder,
                 &moved_output_folder,
                 &moved_input_folder,
-                &site_data,
+                &mut site_data,
                 &moved_cli_args,
                 latest_build_info.as_ref(),
             );
@@ -2832,7 +2834,7 @@ fn process_subsites(
     content_folder: &Path,
     output_folder: &Path,
     input_folder: &Path,
-    parent_site_data: &Data,
+    parent_site_data: &mut Data,
     cli_args: &Arc<crate::cli::Cli>,
     latest_build_info: Option<&BuildInfo>,
 ) {
@@ -2857,8 +2859,8 @@ fn process_subsites(
 
                 info!("Processing subsite: {}", subsite_name);
                 
-                // Process the subsite
-                process_single_subsite(
+                // Process the subsite and store the data
+                if let Some(subsite_data) = process_single_subsite(
                     subsite_name,
                     &path,
                     &site_yaml_path,
@@ -2867,7 +2869,9 @@ fn process_subsites(
                     parent_site_data,
                     cli_args,
                     latest_build_info,
-                );
+                ) {
+                    parent_site_data.subsites.insert(subsite_name.to_string(), subsite_data);
+                }
             }
         }
     }
@@ -2883,13 +2887,13 @@ fn process_single_subsite(
     parent_site_data: &Data,
     cli_args: &Arc<crate::cli::Cli>,
     latest_build_info: Option<&BuildInfo>,
-) {
+) -> Option<Data> {
     // Read subsite configuration
     let subsite_config_str = match fs::read_to_string(site_yaml_path) {
         Ok(content) => content,
         Err(e) => {
             error!("Failed to read subsite config {}: {e}", site_yaml_path.display());
-            return;
+            return None;
         }
     };
 
@@ -2946,7 +2950,7 @@ fn process_single_subsite(
     let subsite_output_path = output_folder.join(&subsite_data.site.site_path);
     if let Err(e) = fs::create_dir_all(&subsite_output_path) {
         error!("Unable to create subsite output directory: {e:?}");
-        return;
+        return None;
     }
     
     // Initialize Tera for the subsite with its own theme
@@ -2968,7 +2972,7 @@ fn process_single_subsite(
         shortcode_processor.as_ref(),
     ) {
         error!("Failed to render subsite templates: {e:?}");
-        return;
+        return None;
     }
     
     // Handle static artifacts for the subsite
@@ -3019,6 +3023,7 @@ fn process_single_subsite(
     }
     
     info!("Subsite '{}' generated successfully", subsite_name);
+    Some(subsite_data)
 }
 
 /// Merge parent site configuration with subsite configuration
