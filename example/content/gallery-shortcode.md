@@ -40,6 +40,41 @@ You can create a `gallery.yaml` file in your gallery folder to customize the dis
 name: "Summer 2025 Vacation"  # Display name for the gallery
 ord: asc                      # Sort order: asc or desc
 cover: "sunset.jpg"          # Cover image (defaults to first image)
+
+# Optional: Image descriptions
+images:
+  # Exact match (case insensitive)
+  - filename: "sunset.jpg"
+    description: "Beautiful sunset at the beach"
+  
+  # Partial match - matches any file containing "palm"
+  - filename: "palm"
+    description: "Tropical palm trees"
+  
+  # Regex pattern - matches files starting with "DSC"
+  - filename: "^DSC.*"
+    description: "Photo from my camera"
+  
+  # Catch-all pattern - matches any remaining images
+  - filename: "*"
+    description: "Summer vacation memories"
+```
+
+#### Image Description Matching
+
+The description system supports multiple matching patterns:
+
+1. **Exact match**: The filename must match exactly (case insensitive)
+2. **Partial match**: The filename contains the pattern anywhere
+3. **Regex patterns**: Use regular expressions for complex matching (e.g., `^IMG_\d{4}\.jpg$`)
+4. **Catch-all**: Use `*` to provide a default description for all unmatched images
+
+Descriptions are matched in order - the first matching pattern wins. Descriptions support HTML, allowing you to include links, formatting, and line breaks:
+
+```yaml
+images:
+  - filename: "sunset.jpg"
+    description: "Sunset at the beach <br> <a href='https://example.com'>View location</a>"
 ```
 
 ### 4. Use the Gallery Shortcode
@@ -92,7 +127,18 @@ The gallery includes:
 - Click on thumbnails to change the main image
 - Click on the main image to view it full-screen
 - Navigation arrows to scroll through thumbnails
+- Keyboard navigation (arrow keys) in full-screen mode
+- Touch/swipe gestures for mobile devices
 - Responsive design that works on all devices
+
+### Image Descriptions
+
+When configured, image descriptions are displayed:
+- **In normal view**: As an overlay at the bottom of the main image panel
+- **In full-screen view**: Below the image on desktop/tablet devices
+- **On mobile**: Descriptions are hidden in full-screen to maximize image viewing area
+
+Descriptions support HTML content, allowing for rich formatting, links, and line breaks.
 
 ### Configuration Options
 
