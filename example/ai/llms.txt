@@ -63,6 +63,7 @@ $ marmite myblog --serve
 
 ### Features
 
+- [Image Gallery](https://marmite.blog/image-gallery.html): Create and display image galleries with automatic thumbnail generation
 - [Shortcodes Guide](https://marmite.blog/shortcodes-guide.html): Using shortcodes to add dynamic content to posts and pages
 - [Shortcodes Demo](https://marmite.blog/shortcodes-demo.html): Examples of all available shortcodes including YouTube, Spotify, cards, and content listings
 - [Show URLs Dry Run Command](https://marmite.blog/show-urls-dry-run-command.html): Preview all site URLs without building - perfect for verification and planning
