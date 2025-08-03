@@ -60,9 +60,9 @@ pub fn process_galleries(
 
     let entries: Vec<_> = match fs::read_dir(&gallery_dir) {
         Ok(entries) => entries.filter_map(Result::ok).collect(),
-        Err(_) => {
+        Err(e) => {
             panic!(
-                "Failed to read gallery directory: {}",
+                "Failed to read gallery directory: {}: {e}",
                 gallery_dir.display()
             );
         }
@@ -178,11 +178,18 @@ fn load_gallery_config(config_path: &Path) -> GalleryConfig {
                 cover: None,
             }
         }),
-        Err(_) => GalleryConfig {
-            name: None,
-            ord: None,
-            cover: None,
-        },
+        Err(e) => {
+            error!(
+                "Failed to read gallery config file {}: {}",
+                config_path.display(),
+                e
+            );
+            GalleryConfig {
+                name: None,
+                ord: None,
+                cover: None,
+            }
+        }
     }
 }
 
