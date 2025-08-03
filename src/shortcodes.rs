@@ -207,7 +207,7 @@ impl ShortcodeProcessor {
             let shortcode_name = &captures[1];
             let params = captures.get(2).map_or("", |m| m.as_str().trim());
 
-            debug!(
+            log::info!(
                 "Processing shortcode: name='{shortcode_name}', params='{params}', full_match='{full_match}'"
             );
 
@@ -609,8 +609,8 @@ mod tests {
         assert_eq!(
             names,
             vec![
-                "authors", "card", "pages", "posts", "series", "socials", "spotify", "streams",
-                "tags", "toc", "youtube"
+                "authors", "card", "gallery", "pages", "posts", "series", "socials", "spotify",
+                "streams", "tags", "toc", "youtube"
             ]
         );
 

@@ -516,6 +516,37 @@ impl Function for GetDataBySlug {
     }
 }
 
+/// Tera function to get gallery data by path
+/// Takes a gallery path and returns the Gallery struct if it exists
+pub struct GetGallery {
+    pub site_data: Data,
+}
+
+impl Function for GetGallery {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let path = args
+            .get("path")
+            .and_then(Value::as_str)
+            .ok_or_else(|| tera::Error::msg("Missing `path` argument"))?;
+
+        log::info!("GetGallery called with path: {path}");
+        log::info!(
+            "Available galleries: {:?}",
+            self.site_data.galleries.keys().collect::<Vec<_>>()
+        );
+
+        // Get the gallery from site_data
+        if let Some(gallery) = self.site_data.galleries.get(path) {
+            log::info!("Gallery found for path: {path}");
+            to_value(gallery).map_err(tera::Error::from)
+        } else {
+            log::info!("Gallery not found for path: {path}");
+            // Return null if gallery not found
+            Ok(Value::Null)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

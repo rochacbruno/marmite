@@ -15,7 +15,7 @@ cargo build --release
 > Build and serve the example site while watching for changes on the example dir
 
 ~~~bash
-rm -rf ./example/public && cargo run --quiet -- example ./example/public --serve --watch --force -vvvv
+rm -rf ./example/site && cargo run --quiet -- example --serve --watch --force -vvvv
 ~~~
 
 ## serve_site
@@ -86,7 +86,7 @@ cargo clippy --fix -- -W clippy::pedantic
 > Watch for changes on the whole source code  and rebuild the example site without serving it.
 
 ~~~bash
-cargo watch -c -q -x "run example ./example/public --force -vvvv"
+cargo watch -c -q -x "run example --force -vvvv"
 ~~~
 
 ## bumpversion (tag)
