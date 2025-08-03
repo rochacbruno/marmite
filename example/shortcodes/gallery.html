@@ -1,0 +1,205 @@
+{# Display a gallery of images #}
+{% macro gallery(path, ord="", width="100%", height="100%", name="", cover="") %}
+{% set gallery_data = get_gallery(path=path) %}
+
+{% if gallery_data %}
+    
+    {# Override values if provided #}
+    {% if name %}
+        {% set gallery_name = name %}
+    {% else %}
+        {% set gallery_name = gallery_data.name %}
+    {% endif %}
+    
+    {% if cover %}
+        {% set cover_image = cover %}
+    {% else %}
+        {% set cover_image = gallery_data.cover %}
+    {% endif %}
+    
+    {# Sort files based on ord parameter #}
+    {% if ord == "desc" %}
+        {% set sorted_files = gallery_data.files | reverse %}
+    {% else %}
+        {% set sorted_files = gallery_data.files %}
+    {% endif %}
+    
+    <div class="shortcode-gallery" id="gallery-{{ path }}" style="margin: 20px 0;">
+        <h3 class="gallery-title">{{ gallery_name }}</h3>
+        
+        {# Main image panel #}
+        <div class="gallery-main-panel" style="position: relative; width: {{ width }}; height: {{ height }}; margin: 0 auto; overflow: hidden; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+            <img id="gallery-{{ path }}-main-image" 
+                 src="{{ url_for(path=site_data.site.media_path ~ '/' ~ site_data.site.gallery_path ~ '/' ~ path ~ '/' ~ cover_image) }}" 
+                 alt="{{ gallery_name }}"
+                 style="max-width: 100%; max-height: 100%; object-fit: contain; cursor: pointer;"
+                 onclick="zoomImage('gallery-{{ path }}')"
+            />
+        </div>
+        
+        {# Thumbnail slider #}
+        <div class="gallery-thumbnail-container" style="position: relative; margin-top: 10px;">
+            <button class="gallery-nav-prev" onclick="scrollGallery('gallery-{{ path }}', -1)" style="position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 10; background: rgba(0,0,0,0.5); color: white; border: none; padding: 10px; cursor: pointer;">‹</button>
+            <div class="gallery-thumbnail-scroll" id="gallery-{{ path }}-scroll" style="overflow-x: hidden; white-space: nowrap; scroll-behavior: smooth; margin: 0 40px;">
+                <div class="gallery-thumbnail-wrapper" style="display: inline-flex; gap: 5px;">
+                    {% for item in sorted_files %}
+                    <img src="{{ url_for(path=site_data.site.media_path ~ '/' ~ site_data.site.gallery_path ~ '/' ~ path ~ '/' ~ item.thumb) }}" 
+                         data-full="{{ url_for(path=site_data.site.media_path ~ '/' ~ site_data.site.gallery_path ~ '/' ~ path ~ '/' ~ item.image) }}"
+                         alt="{{ item.image }}"
+                         style="width: 50px; height: 50px; object-fit: cover; cursor: pointer; border: 2px solid transparent;"
+                         onclick="selectImage('gallery-{{ path }}', this)"
+                         class="gallery-thumbnail {% if item.image == cover_image %}selected{% endif %}"
+                    />
+                    {% endfor %}
+                </div>
+            </div>
+            <button class="gallery-nav-next" onclick="scrollGallery('gallery-{{ path }}', 1)" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 10; background: rgba(0,0,0,0.5); color: white; border: none; padding: 10px; cursor: pointer;">›</button>
+        </div>
+    </div>
+    
+    {# Zoom overlay #}
+    <div id="gallery-{{ path }}-overlay" class="gallery-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; cursor: pointer;" onclick="closeZoom('gallery-{{ path }}')">
+        <img id="gallery-{{ path }}-zoom-image" src="" alt="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 90%; max-height: 90%; object-fit: contain;">
+        <div id="gallery-{{ path }}-counter" style="position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 20px; font-size: 16px; font-family: sans-serif; pointer-events: none;">
+            <span id="gallery-{{ path }}-current">1</span> / <span id="gallery-{{ path }}-total">{{ sorted_files | length }}</span>
+        </div>
+    </div>
+    
+    <style>
+        #gallery-{{ path }} .gallery-thumbnail.selected {
+            border-color: #007bff !important;
+        }
+        #gallery-{{ path }} .gallery-thumbnail:hover {
+            border-color: #ccc !important;
+        }
+    </style>
+    
+    <script>
+        // Store current image index for each gallery
+        window.galleryIndices = window.galleryIndices || {};
+        window.galleryIndices['{{ path }}'] = 0;
+        
+        function selectImage(galleryId, thumbElement, updateIndex = true) {
+            const mainImage = document.getElementById(galleryId + '-main-image');
+            const fullImageUrl = thumbElement.getAttribute('data-full');
+            mainImage.src = fullImageUrl;
+            
+            // Update selected thumbnail
+            const allThumbs = document.querySelectorAll('#' + galleryId + ' .gallery-thumbnail');
+            allThumbs.forEach(thumb => thumb.classList.remove('selected'));
+            thumbElement.classList.add('selected');
+            
+            // Update current index
+            if (updateIndex) {
+                const thumbs = Array.from(allThumbs);
+                window.galleryIndices[galleryId.replace('gallery-', '')] = thumbs.indexOf(thumbElement);
+            }
+        }
+        
+        function navigateGallery(galleryId, direction) {
+            const allThumbs = document.querySelectorAll('#' + galleryId + ' .gallery-thumbnail');
+            const galleryPath = galleryId.replace('gallery-', '');
+            let currentIndex = window.galleryIndices[galleryPath] || 0;
+            
+            // Calculate new index
+            currentIndex += direction;
+            if (currentIndex < 0) currentIndex = allThumbs.length - 1;
+            if (currentIndex >= allThumbs.length) currentIndex = 0;
+            
+            // Update current index
+            window.galleryIndices[galleryPath] = currentIndex;
+            
+            // Select the image
+            if (allThumbs[currentIndex]) {
+                selectImage(galleryId, allThumbs[currentIndex], false);
+                
+                // Ensure thumbnail is visible
+                const scrollContainer = document.getElementById(galleryId + '-scroll');
+                const thumb = allThumbs[currentIndex];
+                const thumbLeft = thumb.offsetLeft;
+                const thumbRight = thumbLeft + thumb.offsetWidth;
+                const scrollLeft = scrollContainer.scrollLeft;
+                const scrollRight = scrollLeft + scrollContainer.offsetWidth;
+                
+                if (thumbLeft < scrollLeft) {
+                    scrollContainer.scrollLeft = thumbLeft - 10;
+                } else if (thumbRight > scrollRight) {
+                    scrollContainer.scrollLeft = thumbRight - scrollContainer.offsetWidth + 10;
+                }
+                
+                // Update zoom image if overlay is open
+                const overlay = document.getElementById(galleryId + '-overlay');
+                if (overlay.style.display === 'block') {
+                    const zoomImage = document.getElementById(galleryId + '-zoom-image');
+                    zoomImage.src = allThumbs[currentIndex].getAttribute('data-full');
+                    
+                    // Update position counter
+                    const currentSpan = document.getElementById(galleryId + '-current');
+                    if (currentSpan) {
+                        currentSpan.textContent = currentIndex + 1;
+                    }
+                }
+            }
+        }
+        
+        function scrollGallery(galleryId, direction) {
+            // Navigate to next/previous image
+            navigateGallery(galleryId, direction);
+        }
+        
+        function zoomImage(galleryId) {
+            const mainImage = document.getElementById(galleryId + '-main-image');
+            const overlay = document.getElementById(galleryId + '-overlay');
+            const zoomImage = document.getElementById(galleryId + '-zoom-image');
+            
+            zoomImage.src = mainImage.src;
+            overlay.style.display = 'block';
+            
+            // Set up keyboard navigation for this gallery
+            overlay.dataset.galleryId = galleryId;
+            
+            // Update position counter with current index
+            const galleryPath = galleryId.replace('gallery-', '');
+            const currentIndex = window.galleryIndices[galleryPath] || 0;
+            const currentSpan = document.getElementById(galleryId + '-current');
+            if (currentSpan) {
+                currentSpan.textContent = currentIndex + 1;
+            }
+        }
+        
+        function closeZoom(galleryId) {
+            const overlay = document.getElementById(galleryId + '-overlay');
+            overlay.style.display = 'none';
+        }
+        
+        // Global keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            // Find visible overlay
+            const overlays = document.querySelectorAll('.gallery-overlay[style*="block"]');
+            if (overlays.length > 0) {
+                const overlay = overlays[0];
+                const galleryId = overlay.dataset.galleryId;
+                
+                switch(e.key) {
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        navigateGallery(galleryId, -1);
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        navigateGallery(galleryId, 1);
+                        break;
+                    case 'Escape':
+                        e.preventDefault();
+                        closeZoom(galleryId);
+                        break;
+                }
+            }
+        });
+    </script>
+{% else %}
+    <div class="gallery-error" style="border: 1px solid #f00; padding: 10px; margin: 20px 0; background: #fee;">
+        Gallery not found: {{ path }}
+    </div>
+{% endif %}
+{% endmacro gallery %}

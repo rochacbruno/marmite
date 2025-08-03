@@ -259,6 +259,15 @@ pub struct Marmite {
 
     #[serde(default = "default_true")]
     pub publish_urls_json: bool,
+
+    #[serde(default = "default_gallery_path")]
+    pub gallery_path: String,
+
+    #[serde(default = "default_true")]
+    pub gallery_create_thumbnails: bool,
+
+    #[serde(default = "default_gallery_thumb_size")]
+    pub gallery_thumb_size: u32,
 }
 
 fn default_true() -> bool {
@@ -288,6 +297,9 @@ impl Marmite {
             default_date_format: default_date_format(),
             menu: default_menu(),
             show_next_prev_links: default_true(),
+            gallery_path: default_gallery_path(),
+            gallery_create_thumbnails: default_true(),
+            gallery_thumb_size: default_gallery_thumb_size(),
             ..Default::default()
         }
     }
@@ -624,4 +636,12 @@ fn default_extension_wikilinks_title_after_pipe() -> bool {
 
 fn default_extension_alerts() -> bool {
     true
+}
+
+fn default_gallery_path() -> String {
+    "gallery".to_string()
+}
+
+fn default_gallery_thumb_size() -> u32 {
+    50
 }

@@ -22,141 +22,15 @@ Here's a video about static site generators:
 <!-- .youtube id=dQw4w9WgXcQ -->
 ```
 
-<!-- .youtube id=dQw4w9WgXcQ -->
+<!-- .youtube id=dQw4w9WgXcQ width=300 height=150 -->
 
 You can also specify custom dimensions:
 
 ```
-<!-- .youtube id=dQw4w9WgXcQ width=400 height=300 -->
+<!-- .youtube id=dQw4w9WgXcQ width=200 height=100 -->
 ```
 
-<!-- .youtube id=dQw4w9WgXcQ width=400 height=300 -->
-
-## Spotify Embed
-
-Embed Spotify albums, playlists, or tracks:
-
-```
-<!-- .spotify url="album/3aJozZhPbj8hKmJePJ2LtF" -->
-```
-
-<!-- .spotify url="album/3aJozZhPbj8hKmJePJ2LtF" -->
-
-You can also embed playlists with custom dimensions:
-
-```
-<!-- .spotify url="playlist/2GLlqaI9fD5bVwE7LIAQCh" width="100%" height="280" -->
-```
-
-Or a podcast episode:
-
-```
-<!-- .spotify url="episode/7ph7Vszk9Hld8y0MOEc0rl" -->
-```
-
-> [!NOTE]
-> Spotify does not allow multiple embeds on the same page.
-
-## Table of Contents
-
-This page's table of contents:
-
-```
-<!-- .toc -->
-```
-
-<!-- .toc -->
-
-## Authors List
-
-All authors on this site:
-
-```
-<!-- .authors -->
-```
-<!-- .authors -->
-
-## Streams List
-
-Available content streams:
-
-```
-<!-- .streams ord=desc items=5 -->
-```
-
-<!-- .streams ord=desc items=5 -->
-
-## Series List
-
-All content series:
-
-```
-<!-- .series -->
-```
-
-<!-- .series -->
-
-With parameters:
-
-```
-<!-- .series ord=desc items=3 -->
-```
-
-<!-- .series ord=desc items=3 -->
-
-## Posts List
-
-Recent posts:
-
-```
-<!-- .posts -->
-```
-<!-- .posts -->
-
-With custom parameters:
-
-```
-<!-- .posts ord=asc items=5 -->
-```
-<!-- .posts ord=asc items=5 -->
-
-
-## Pages List
-
-All pages:
-
-```
-<!-- .pages -->
-```
-
-<!-- .pages -->
-
-## Tags List
-
-All tags with post counts:
-
-```
-<!-- .tags -->
-```
-
-<!-- .tags -->
-
-Limited tags:
-
-```
-<!-- .tags ord=desc items=5 -->
-```
-
-<!-- .tags ord=desc items=5 -->
-
-
-## Social Networks
-
-```
-<!-- .socials -->
-```
-
-<!-- .socials -->
+<!-- .youtube id=dQw4w9WgXcQ width=200 height=100 -->
 
 ## Card Display
 
@@ -224,7 +98,161 @@ Card for page:
 
 <!-- .card slug=about -->
 
+## Image Gallery
 
+```
+<!-- .gallery path=summer2025 -->
+```
+
+<!-- .gallery path=summer2025 -->
+
+
+## Table of Contents
+
+This page's table of contents:
+
+```
+<!-- .toc -->
+```
+
+<details>
+<summary>Table of Contents</summary>
+
+<!-- .toc -->
+
+</details>
+
+
+## Authors List
+
+All authors on this site:
+
+```
+<!-- .authors -->
+```
+<!-- .authors -->
+
+## Streams List
+
+Available content streams:
+
+```
+<!-- .streams ord=desc items=5 -->
+```
+
+<!-- .streams ord=desc items=5 -->
+
+## Series List
+
+All content series:
+
+```
+<!-- .series -->
+```
+
+<!-- .series -->
+
+With parameters:
+
+```
+<!-- .series ord=desc items=3 -->
+```
+
+<!-- .series ord=desc items=3 -->
+
+## Posts List
+
+Recent posts:
+
+```
+<!-- .posts -->
+```
+
+<details>
+<summary>Recent posts</summary>
+
+<!-- .posts -->
+
+</details>
+
+
+With custom parameters:
+
+```
+<!-- .posts ord=asc items=5 -->
+```
+
+<!-- .posts ord=asc items=5 -->
+
+
+## Pages List
+
+All pages:
+
+```
+<!-- .pages -->
+```
+
+<!-- .pages -->
+
+## Tags List
+
+All tags with post counts:
+
+```
+<!-- .tags -->
+```
+
+<details>
+<summary>Tags</summary>
+
+<!-- .tags -->
+
+</details>
+
+
+Limited tags:
+
+```
+<!-- .tags ord=desc items=5 -->
+```
+
+<!-- .tags ord=desc items=5 -->
+
+
+## Social Networks
+
+```
+<!-- .socials -->
+```
+
+<!-- .socials -->
+
+
+## Spotify Embed
+
+Embed Spotify albums, playlists, or tracks:
+
+```
+<!-- .spotify url="album/3aJozZhPbj8hKmJePJ2LtF" -->
+```
+
+<!-- .spotify url="album/3aJozZhPbj8hKmJePJ2LtF" -->
+
+You can also embed playlists with custom dimensions:
+
+```
+<!-- .spotify url="playlist/2GLlqaI9fD5bVwE7LIAQCh" width="100%" height="280" -->
+```
+
+Or a podcast episode:
+
+```
+<!-- .spotify url="episode/7ph7Vszk9Hld8y0MOEc0rl" -->
+```
+
+> [!NOTE]
+> Spotify does not allow multiple embeds on the same page.
 
 ## Conclusion
 

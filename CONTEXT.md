@@ -52,4 +52,4 @@ The project uses `mask` as a command runner.
 - `mask pushtag (tag)`: Pushes a new tag to the repository.
 - `mask publish (tag)`: Publishes a new version by running `bumpversion` and `pushtag`.
 
-To work on the project, first run `mask watch` in a terminal. Then, you can modify the source code in `src/` or the example site in `example/`. The server will automatically rebuild and reload the site on changes, open the site on a browser from `example/public` or use any local webserver such as the Live Server on your IDE.
+To work on the project, first run `mask watch` in a terminal. Then, you can modify the source code in `src/` or the example site in `example/`. The server will automatically rebuild and reload the site on changes, open the site on a browser from `example/site` or use any local webserver such as the Live Server on your IDE.
