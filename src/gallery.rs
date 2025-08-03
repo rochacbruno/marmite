@@ -227,7 +227,7 @@ fn get_description(filename: &str, config: &GalleryConfig) -> Option<String> {
             };
 
             // Try regex match (always case insensitive)
-            let pattern = format!("(?i){}", pattern_str);
+            let pattern = format!("(?i){pattern_str}");
             if let Ok(re) = regex::Regex::new(&pattern) {
                 if re.is_match(filename) {
                     return Some(image_desc.description.clone());
