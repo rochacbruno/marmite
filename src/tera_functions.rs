@@ -562,6 +562,7 @@ mod tests {
     fn test_url_for_basic_path() {
         let url_for = UrlFor {
             base_url: String::new(),
+            site_path: String::new(),
         };
         let mut args = HashMap::new();
         args.insert("path".to_string(), Value::String("about.html".to_string()));
@@ -574,6 +575,7 @@ mod tests {
     fn test_url_for_absolute_path() {
         let url_for = UrlFor {
             base_url: "https://example.com".to_string(),
+            site_path: String::new(),
         };
         let mut args = HashMap::new();
         args.insert("path".to_string(), Value::String("about.html".to_string()));
@@ -590,6 +592,7 @@ mod tests {
     fn test_url_for_external_url() {
         let url_for = UrlFor {
             base_url: String::new(),
+            site_path: String::new(),
         };
         let mut args = HashMap::new();
         args.insert(
@@ -605,6 +608,7 @@ mod tests {
     fn test_url_for_missing_path() {
         let url_for = UrlFor {
             base_url: String::new(),
+            site_path: String::new(),
         };
         let args = HashMap::new();
 

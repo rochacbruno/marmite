@@ -2874,6 +2874,7 @@ fn process_subsites(
 }
 
 /// Process a single subsite
+#[allow(clippy::too_many_arguments)]
 fn process_single_subsite(
     subsite_name: &str,
     subsite_path: &Path,
