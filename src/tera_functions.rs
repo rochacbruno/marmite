@@ -19,6 +19,7 @@ pub struct SlugData {
 #[derive(Default)]
 pub struct UrlFor {
     pub base_url: String,
+    pub site_path: String,
 }
 
 impl Function for UrlFor {
@@ -67,6 +68,9 @@ impl Function for UrlFor {
         } else if !base_path.is_empty() {
             // Relative URL with base path from base_url
             format!("{base_path}{path}")
+        } else if !self.site_path.is_empty() {
+            // Add site_path prefix for subsites when not using absolute URLs
+            format!("/{}{}", self.site_path.trim_matches('/'), path)
         } else {
             // Just the path if no base_url or base_path
             path

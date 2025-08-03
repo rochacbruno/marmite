@@ -19,7 +19,7 @@ use rayon::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::vec;
 use std::{fs, process, sync::Arc, sync::Mutex};
 use tera::{Context, Tera};
@@ -816,12 +816,34 @@ fn collect_content(
     site_data: &mut Data,
     fragments: &HashMap<String, String>,
 ) {
+    // First, identify all subsite directories (those containing site.yaml)
+    // But exclude the current directory if it contains site.yaml (we're already processing it)
+    let subsite_dirs: Vec<PathBuf> = WalkDir::new(content_dir)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| {
+            e.path().is_dir() 
+            && e.path() != content_dir 
+            && e.path().join("site.yaml").exists()
+        })
+        .map(|e| e.path().to_path_buf())
+        .collect();
+    
     let contents = WalkDir::new(content_dir)
         .into_iter()
         .filter_map(Result::ok)
         .collect::<Vec<_>>()
         .into_par_iter()
         .filter(|e| {
+            // Skip files that are inside subsite directories
+            let is_in_subsite = subsite_dirs.iter().any(|subsite_dir| {
+                e.path().starts_with(subsite_dir) && e.path() != subsite_dir
+            });
+            
+            if is_in_subsite {
+                return false;
+            }
+            
             let file_name = e
                 .path()
                 .file_name()
@@ -893,6 +915,7 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
         "url_for",
         UrlFor {
             base_url: site_data.site.url.to_string(),
+            site_path: site_data.site.site_path.to_string(),
         },
     );
     tera.register_function(
@@ -1752,6 +1775,7 @@ fn generate_sitemap(site_data: &Data, tera: &Tera, output_path: &Path) {
     // Create UrlFor function instance
     let url_for = UrlFor {
         base_url: site_data.site.url.clone(),
+        site_path: site_data.site.site_path.clone(),
     };
 
     // Helper to generate URL using url_for
@@ -1810,6 +1834,7 @@ fn create_urls_json(site_data: &Data) -> serde_json::Value {
     // Create UrlFor function instance
     let url_for = UrlFor {
         base_url: site_data.site.url.clone(),
+        site_path: site_data.site.site_path.clone(),
     };
 
     // Determine if we should use absolute URLs
@@ -2889,6 +2914,9 @@ fn process_single_subsite(
         subsite_data.site.url.push('/');
     }
     subsite_data.site.url.push_str(&subsite_data.site.site_path);
+    
+    // Set content_path to the actual subsite directory
+    subsite_data.site.content_path = subsite_path.to_string_lossy().to_string();
     
     // Collect fragments for the subsite
     let fragments = collect_content_fragments(subsite_path);
