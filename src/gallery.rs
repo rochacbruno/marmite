@@ -1,5 +1,6 @@
 use image::{imageops::FilterType, ImageError};
 use log::{error, info};
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -46,9 +47,7 @@ pub fn process_galleries(
     create_thumbnails: bool,
     thumb_size: u32,
 ) -> HashMap<String, Gallery> {
-    let mut galleries = HashMap::new();
     let gallery_dir = media_path.join(gallery_path);
-
     info!("Processing galleries from: {}", gallery_dir.display());
 
     if !gallery_dir.exists() {
@@ -56,34 +55,37 @@ pub fn process_galleries(
             "Gallery directory does not exist: {}",
             gallery_dir.display()
         );
-        return galleries;
+        return HashMap::new();
     }
 
-    for entry in fs::read_dir(&gallery_dir).unwrap_or_else(|_| {
-        panic!(
-            "Failed to read gallery directory: {}",
-            gallery_dir.display()
-        )
-    }) {
-        let Ok(entry) = entry else { continue };
-        let path = entry.path();
-
-        if !path.is_dir() {
-            continue;
+    let entries: Vec<_> = match fs::read_dir(&gallery_dir) {
+        Ok(entries) => entries.filter_map(Result::ok).collect(),
+        Err(_) => {
+            panic!(
+                "Failed to read gallery directory: {}",
+                gallery_dir.display()
+            );
         }
+    };
 
-        let Some(folder_name) = path.file_name().and_then(|n| n.to_str()) else {
-            continue;
-        };
+    let galleries: HashMap<String, Gallery> = entries
+        .par_iter()
+        .filter_map(|entry| {
+            let path = entry.path();
+            if !path.is_dir() {
+                return None;
+            }
 
-        let gallery = process_single_gallery(&path, folder_name, create_thumbnails, thumb_size);
-        info!(
-            "Found gallery: {} with {} files",
-            folder_name,
-            gallery.files.len()
-        );
-        galleries.insert(folder_name.to_string(), gallery);
-    }
+            let folder_name = path.file_name().and_then(|n| n.to_str())?;
+            let gallery = process_single_gallery(&path, folder_name, create_thumbnails, thumb_size);
+            info!(
+                "Found gallery: {} with {} files",
+                folder_name,
+                gallery.files.len()
+            );
+            Some((folder_name.to_string(), gallery))
+        })
+        .collect();
 
     info!("Total galleries found: {}", galleries.len());
     galleries
@@ -98,8 +100,6 @@ fn process_single_gallery(
     let config_path = gallery_path.join("gallery.yaml");
     let config = load_gallery_config(&config_path);
 
-    let mut files = Vec::new();
-
     // Create thumbnails directory if creating thumbnails
     let thumbnails_dir = gallery_path.join("thumbnails");
     if create_thumbnails && !thumbnails_dir.exists() {
@@ -108,37 +108,37 @@ fn process_single_gallery(
         }
     }
 
-    for entry in WalkDir::new(gallery_path)
+    let image_entries: Vec<_> = WalkDir::new(gallery_path)
         .max_depth(1)
         .into_iter()
         .filter_map(Result::ok)
-    {
-        let path = entry.path();
-        if !is_image_file(path) {
-            continue;
-        }
+        .filter(|e| is_image_file(e.path()))
+        .collect();
 
-        let Some(filename) = path.file_name().and_then(|n| n.to_str()) else {
-            continue;
-        };
+    let mut files: Vec<GalleryItem> = image_entries
+        .par_iter()
+        .filter_map(|entry| {
+            let path = entry.path();
+            let filename = path.file_name().and_then(|n| n.to_str())?;
 
-        // Skip thumbnails directory
-        if path.parent() == Some(&thumbnails_dir) {
-            continue;
-        }
+            // Skip thumbnails directory
+            if path.parent()? == thumbnails_dir {
+                return None;
+            }
 
-        let thumb_name = if create_thumbnails {
-            generate_thumbnail(path, &thumbnails_dir, thumb_size)
-                .unwrap_or_else(|| filename.to_string())
-        } else {
-            filename.to_string()
-        };
+            let thumb_name = if create_thumbnails {
+                generate_thumbnail(path, &thumbnails_dir, thumb_size)
+                    .unwrap_or_else(|| filename.to_string())
+            } else {
+                filename.to_string()
+            };
 
-        files.push(GalleryItem {
-            thumb: format!("thumbnails/{thumb_name}"),
-            image: filename.to_string(),
-        });
-    }
+            Some(GalleryItem {
+                thumb: format!("thumbnails/{thumb_name}"),
+                image: filename.to_string(),
+            })
+        })
+        .collect();
 
     let ord = config.ord.unwrap_or_default();
 
