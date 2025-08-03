@@ -5,12 +5,14 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 use walkdir::WalkDir;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GalleryItem {
     pub thumb: String,
     pub image: String,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,7 +23,7 @@ pub struct Gallery {
     pub ord: GalleryOrder,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum GalleryOrder {
     Asc,
@@ -35,10 +37,17 @@ impl Default for GalleryOrder {
 }
 
 #[derive(Debug, Deserialize)]
+struct ImageDescription {
+    filename: String,
+    description: String,
+}
+
+#[derive(Debug, Deserialize)]
 struct GalleryConfig {
     name: Option<String>,
     ord: Option<GalleryOrder>,
     cover: Option<String>,
+    images: Option<Vec<ImageDescription>>,
 }
 
 pub fn process_galleries(
@@ -98,7 +107,7 @@ fn process_single_gallery(
     thumb_size: u32,
 ) -> Gallery {
     let config_path = gallery_path.join("gallery.yaml");
-    let config = load_gallery_config(&config_path);
+    let config = Arc::new(load_gallery_config(&config_path));
 
     // Create thumbnails directory if creating thumbnails
     let thumbnails_dir = gallery_path.join("thumbnails");
@@ -115,6 +124,7 @@ fn process_single_gallery(
         .filter(|e| is_image_file(e.path()))
         .collect();
 
+    let config_clone = Arc::clone(&config);
     let mut files: Vec<GalleryItem> = image_entries
         .par_iter()
         .filter_map(|entry| {
@@ -136,6 +146,7 @@ fn process_single_gallery(
             Some(GalleryItem {
                 thumb: format!("thumbnails/{thumb_name}"),
                 image: filename.to_string(),
+                description: get_description(filename, &config_clone),
             })
         })
         .collect();
@@ -149,11 +160,15 @@ fn process_single_gallery(
 
     let cover = config
         .cover
+        .clone()
         .or_else(|| files.first().map(|item| item.image.clone()))
         .unwrap_or_default();
 
     Gallery {
-        name: config.name.unwrap_or_else(|| folder_name.to_string()),
+        name: config
+            .name
+            .clone()
+            .unwrap_or_else(|| folder_name.to_string()),
         files,
         cover,
         ord,
@@ -166,6 +181,7 @@ fn load_gallery_config(config_path: &Path) -> GalleryConfig {
             name: None,
             ord: None,
             cover: None,
+            images: None,
         };
     }
 
@@ -176,6 +192,7 @@ fn load_gallery_config(config_path: &Path) -> GalleryConfig {
                 name: None,
                 ord: None,
                 cover: None,
+                images: None,
             }
         }),
         Err(e) => {
@@ -188,9 +205,37 @@ fn load_gallery_config(config_path: &Path) -> GalleryConfig {
                 name: None,
                 ord: None,
                 cover: None,
+                images: None,
             }
         }
     }
+}
+
+fn get_description(filename: &str, config: &GalleryConfig) -> Option<String> {
+    if let Some(images) = &config.images {
+        for image_desc in images {
+            // 1. Check for exact match first (case insensitive)
+            if image_desc.filename.to_lowercase() == filename.to_lowercase() {
+                return Some(image_desc.description.clone());
+            }
+
+            // 2. Convert "*" to ".*" for regex catch-all, then try regex match
+            let pattern_str = if image_desc.filename == "*" {
+                ".*"
+            } else {
+                &image_desc.filename
+            };
+
+            // Try regex match (always case insensitive)
+            let pattern = format!("(?i){pattern_str}");
+            if let Ok(re) = regex::Regex::new(&pattern) {
+                if re.is_match(filename) {
+                    return Some(image_desc.description.clone());
+                }
+            }
+        }
+    }
+    None
 }
 
 fn is_image_file(path: &Path) -> bool {
@@ -288,6 +333,7 @@ mod tests {
         assert!(config.name.is_none());
         assert!(config.ord.is_none());
         assert!(config.cover.is_none());
+        assert!(config.images.is_none());
     }
 
     #[test]

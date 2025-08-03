@@ -58,6 +58,7 @@ templates/
 {{ site_data.author.map }}         <!-- Posts grouped by author -->
 {{ site_data.stream.map }}         <!-- Posts grouped by stream -->
 {{ site_data.series.map }}         <!-- Posts grouped by series -->
+{{ site_data.galleries }}          <!-- Gallery collections -->
 ```
 
 #### Navigation
@@ -324,6 +325,83 @@ series:
 ```
 
 If no display name is configured, returns the series name itself.
+
+### get_gallery()
+Get gallery data by path:
+
+```html
+<!-- Get a specific gallery -->
+{% set gallery = get_gallery(path="summer-2024") %}
+{% if gallery %}
+  <div class="gallery-preview">
+    <h3>{{ gallery.name }}</h3>
+    <img src="{{ url_for(path=site.media_path ~ '/' ~ site.gallery_path ~ '/' ~ 'summer-2024' ~ '/' ~ gallery.cover) }}" alt="Gallery cover">
+    <p>{{ gallery.files | length }} photos</p>
+  </div>
+{% endif %}
+
+<!-- Loop through gallery images -->
+{% set gallery = get_gallery(path="vacation") %}
+{% if gallery %}
+  <div class="photo-grid">
+    {% for item in gallery.files %}
+      <div class="photo">
+        <img src="{{ url_for(path=site.media_path ~ '/' ~ site.gallery_path ~ '/' ~ 'vacation' ~ '/' ~ item.thumb) }}" 
+             data-full="{{ url_for(path=site.media_path ~ '/' ~ site.gallery_path ~ '/' ~ 'vacation' ~ '/' ~ item.image) }}"
+             alt="Gallery photo">
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<!-- Check gallery order -->
+{% set gallery = get_gallery(path="portfolio") %}
+{% if gallery %}
+  <!-- Gallery files are sorted according to gallery.ord (asc/desc) -->
+  <p>Gallery sorted: {{ gallery.ord }}</p>
+{% endif %}
+```
+
+**Gallery object properties:**
+- `name`: Display name of the gallery
+- `files`: Array of gallery items
+  - `thumb`: Thumbnail filename (in thumbnails/ subdirectory)
+  - `image`: Full size image filename
+- `cover`: Cover image filename
+- `ord`: Sort order ("asc" or "desc")
+
+**Gallery configuration:**
+Each gallery folder can have a `gallery.yaml` file:
+```yaml
+name: "Summer Vacation 2024"
+ord: desc
+cover: "sunset.jpg"
+```
+
+### get_posts()
+Get filtered and sorted posts:
+
+```html
+<!-- Get latest 5 posts -->
+{% for post in get_posts(items=5) %}
+  <article>
+    <h3><a href="{{ post.slug }}.html">{{ post.title }}</a></h3>
+    <time>{{ post.date | default_date_format }}</time>
+  </article>
+{% endfor %}
+
+<!-- Get all posts in ascending order (oldest first) -->
+{% for post in get_posts(ord="asc") %}
+  <li>{{ post.title }}</li>
+{% endfor %}
+
+<!-- Get latest 10 posts for RSS feed -->
+{% set recent_posts = get_posts(items=10) %}
+```
+
+**Parameters:**
+- `ord`: Optional. Sort order: "asc" or "desc" (default: "desc")
+- `items`: Optional. Maximum number of posts to return (default: all)
 
 ### source_link()
 Generate source file links:

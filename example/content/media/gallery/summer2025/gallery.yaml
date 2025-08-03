@@ -1,3 +1,20 @@
 name: "Summer 2025 Vacation"
 ord: asc
 cover: "sunset.jpg"
+# Gallery can optionally specify per image description
+images:
+  # exact match
+  - filename: "sunset.jpg"
+    description: "Sunset at the beach <br> <a href='https://marmite.blog'>Marmite</a>"
+  - filename: "palms.jpg"
+    description: "Palms at the beach"
+  # partial match  
+  - filename: "jump"
+    description: "Jump in the beach"
+  # wildcard match
+  # starting with b
+  - filename: "^b.*"
+    description: "Amazing photo starting with b"
+  # Catch all
+  - filename: "*"
+    description: "Amazing photo of my summer vacation"
