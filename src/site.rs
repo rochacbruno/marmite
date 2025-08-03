@@ -2851,7 +2851,7 @@ fn process_subsites(
                     None => continue,
                 };
 
-                info!("Processing subsite: {}", subsite_name);
+                info!("Processing subsite: {subsite_name}");
 
                 // Process the subsite and store the data
                 if let Some(subsite_data) = process_single_subsite(
@@ -3019,7 +3019,7 @@ fn process_single_subsite(
         generate_urls_json(&subsite_data, &subsite_output_path);
     }
 
-    info!("Subsite '{}' generated successfully", subsite_name);
+    info!("Subsite '{subsite_name}' generated successfully");
     Some(subsite_data)
 }
 
