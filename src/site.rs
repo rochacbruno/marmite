@@ -683,7 +683,7 @@ fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
 }
 
 /// Collect markdown fragments with optional fallback support for subsites
-/// If fragments_fallback is set and a fragment is not found locally, look in the fallback site
+/// If `fragments_fallback` is set and a fragment is not found locally, look in the fallback site
 fn collect_content_fragments_with_fallback(
     content_dir: &Path,
     fragments_fallback: Option<&String>,

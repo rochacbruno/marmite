@@ -592,7 +592,7 @@ impl Function for GroupFromSite {
     }
 }
 
-/// Cross-site aware version of get_posts function
+/// Cross-site aware version of `get_posts` function
 pub struct GetPostsFromSite {
     pub cross_site_data: CrossSiteData,
 }
@@ -625,7 +625,7 @@ impl Function for GetPostsFromSite {
     }
 }
 
-/// Cross-site aware version of get_data_by_slug function
+/// Cross-site aware version of `get_data_by_slug` function
 pub struct GetDataBySlugFromSite {
     pub cross_site_data: CrossSiteData,
 }
@@ -658,7 +658,7 @@ impl Function for GetDataBySlugFromSite {
     }
 }
 
-/// Cross-site aware version of get_gallery function
+/// Cross-site aware version of `get_gallery` function
 pub struct GetGalleryFromSite {
     pub cross_site_data: CrossSiteData,
 }
@@ -691,7 +691,7 @@ impl Function for GetGalleryFromSite {
     }
 }
 
-/// Cross-site aware version of url_for function
+/// Cross-site aware version of `url_for` function
 pub struct UrlForFromSite {
     pub cross_site_data: CrossSiteData,
 }
