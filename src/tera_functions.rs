@@ -1,4 +1,5 @@
 use indexmap::IndexMap;
+use log::error;
 use serde::Serialize;
 use std::collections::HashMap;
 use tera::{to_value, Function, Result as TeraResult, Value};
@@ -344,6 +345,7 @@ impl Function for GetDataBySlug {
                     content_type: "series".to_string(),
                 }
             } else {
+                error!("Series not found: {series_name}");
                 return Err(tera::Error::msg(format!("Series not found: {series_name}")));
             }
         } else if slug.starts_with("stream-") {
@@ -383,6 +385,7 @@ impl Function for GetDataBySlug {
                     content_type: "stream".to_string(),
                 }
             } else {
+                error!("Stream not found: {stream_name}");
                 return Err(tera::Error::msg(format!("Stream not found: {stream_name}")));
             }
         } else if slug.starts_with("tag-") {
@@ -403,6 +406,7 @@ impl Function for GetDataBySlug {
                     content_type: "tag".to_string(),
                 }
             } else {
+                error!("Tag not found: {tag_name}");
                 return Err(tera::Error::msg(format!("Tag not found: {tag_name}")));
             }
         } else if slug.starts_with("author-") {
@@ -416,8 +420,8 @@ impl Function for GetDataBySlug {
 
                 let image = author_info
                     .and_then(|a| a.avatar.as_ref())
-                    .unwrap_or(&self.site_data.site.banner_image)
-                    .clone();
+                    .map_or("static/avatar-placeholder.png", |s| s)
+                    .to_string();
 
                 SlugData {
                     image,
@@ -427,6 +431,7 @@ impl Function for GetDataBySlug {
                     content_type: "author".to_string(),
                 }
             } else {
+                error!("Author not found: {author_name}");
                 return Err(tera::Error::msg(format!("Author not found: {author_name}")));
             }
         } else if slug.starts_with("archive-") {
@@ -447,6 +452,7 @@ impl Function for GetDataBySlug {
                     content_type: "archive".to_string(),
                 }
             } else {
+                error!("Archive year not found: {year}");
                 return Err(tera::Error::msg(format!("Archive year not found: {year}")));
             }
         } else {
@@ -510,6 +516,7 @@ impl Function for GetDataBySlug {
                     content_type: "stream".to_string(),
                 }
             } else {
+                error!("Content not found for slug: {slug}");
                 return Err(tera::Error::msg(format!(
                     "Content not found for slug: {slug}"
                 )));

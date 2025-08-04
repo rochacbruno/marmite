@@ -45,7 +45,7 @@ This is a test to verify that shortcodes work correctly in subsites and only sho
 
 ## Card for author from main site
 
-<!-- .card slug=author-rochacbruno site="main" -->
+<!-- .card slug=author-marmite site="main" -->
 
 
 ## Card for tag in this subsite
