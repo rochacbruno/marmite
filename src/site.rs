@@ -430,12 +430,8 @@ impl Data {
     ) -> Self {
         // Create a default Data instance and set the subsite config
         let mut data = Self::default();
-        data.site = Marmite::from_subsite_config(
-            parent_config,
-            subsite_config_path,
-            subsite_name,
-            subsite_path,
-        );
+        data.site =
+            parent_config.with_subsite_config(subsite_config_path, subsite_name, subsite_path);
         data.config_path = subsite_config_path.to_string_lossy().to_string();
         data
     }

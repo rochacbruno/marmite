@@ -423,13 +423,13 @@ impl Marmite {
         }
     }
 
-    /// Create a fully configured subsite config by merging with parent config
-    pub fn from_subsite_config(
-        parent_config: &Marmite,
+    /// Create a fully configured subsite config by merging with this parent config
+    pub fn with_subsite_config(
+        &self,
         subsite_config_path: &Path,
         subsite_name: &str,
         subsite_path: &Path,
-    ) -> Marmite {
+    ) -> Self {
         // Read and parse subsite configuration
         let subsite_config_str = match fs::read_to_string(subsite_config_path) {
             Ok(content) => content,
@@ -438,34 +438,18 @@ impl Marmite {
                     "Failed to read subsite config {}: {e}",
                     subsite_config_path.display()
                 );
-                return parent_config.clone();
+                return self.clone();
             }
         };
 
-        // Parse the subsite config
-        let mut subsite_config: Marmite = match serde_yaml::from_str(&subsite_config_str) {
-            Ok(config) => config,
-            Err(e) => {
-                error!(
-                    "Failed to parse subsite config {}: {e}",
-                    subsite_config_path.display()
-                );
-                return parent_config.clone();
-            }
-        };
-
-        // Merge parent config with subsite config
-        merge_site_configs(
-            &mut subsite_config,
-            parent_config,
-            &subsite_config_path.to_string_lossy().to_string(),
-        );
+        // Read subsite config from file and merge with parent config (file takes precedence over parent config)
+        let mut subsite_config = self.merged_from_subsite_config_file(subsite_config_str);
 
         // Set the site_path to include the subsite name
-        if parent_config.site_path.is_empty() {
+        if self.site_path.is_empty() {
             subsite_config.site_path = subsite_name.to_string();
         } else {
-            subsite_config.site_path = format!("{}/{}", parent_config.site_path, subsite_name);
+            subsite_config.site_path = format!("{}/{}", self.site_path, subsite_name);
         }
 
         // Update URL to include the subsite path
@@ -479,41 +463,42 @@ impl Marmite {
 
         subsite_config
     }
-}
 
-/// Merge parent site configuration with subsite configuration
-/// Only merge fields that are not explicitly set in the subsite config
-fn merge_site_configs(
-    subsite_config: &mut Marmite,
-    parent_config: &Marmite,
-    subsite_config_path: &String,
-) {
-    // First find out which specific config are in the subsite config by inspecting keys on the file
-    let subsite_config_str = fs::read_to_string(subsite_config_path).unwrap();
-    let subsite_config_map_from_file: HashMap<String, Value> =
-        serde_yaml::from_str(&subsite_config_str).unwrap();
+    pub fn merged_from_subsite_config_file(&self, subsite_config_str: String) -> Self {
+        // First find out which specific config are in the subsite config by inspecting keys on the file
+        let subsite_config_map_from_file: HashMap<String, Value> =
+            serde_yaml::from_str(&subsite_config_str).unwrap();
 
-    // All the keys that are not in subsite_config_map_from_file
-    // must be taken from parent_config
-    // then subsite_config gets updated with the result
-    let mut temporary_subsite_config_as_json = serde_json::to_value(&mut *subsite_config).unwrap();
-    let iterable_parent_config = serde_json::to_value(parent_config).unwrap();
+        // All the keys that are not in subsite_config_map_from_file
+        // must be taken from parent_config
+        // then subsite_config gets updated with the result
+        let mut temporary_config: Marmite = match serde_yaml::from_str(&subsite_config_str) {
+            Ok(config) => config,
+            Err(e) => {
+                error!("Failed to parse subsite config: {e}");
+                return self.clone();
+            }
+        };
 
-    for (key, value) in iterable_parent_config.as_object().unwrap() {
-        if !subsite_config_map_from_file.contains_key(key) {
-            temporary_subsite_config_as_json
-                .as_object_mut()
-                .unwrap()
-                .insert(key.to_string(), value.clone());
+        let mut temporary_subsite_config_as_json =
+            serde_json::to_value(&mut temporary_config).unwrap();
+        let iterable_parent_config = serde_json::to_value(self).unwrap();
+
+        for (key, value) in iterable_parent_config.as_object().unwrap() {
+            if !subsite_config_map_from_file.contains_key(key) {
+                temporary_subsite_config_as_json
+                    .as_object_mut()
+                    .unwrap()
+                    .insert(key.to_string(), value.clone());
+            }
         }
+
+        // Convert the temporary_subsite_config_as_json back to a Marmite struct
+        let merged_subsite_config: Marmite =
+            serde_json::from_value(temporary_subsite_config_as_json).unwrap();
+
+        merged_subsite_config
     }
-
-    // Convert the temporary_subsite_config_as_json back to a Marmite struct
-    let merged_subsite_config: Marmite =
-        serde_json::from_value(temporary_subsite_config_as_json).unwrap();
-
-    // Update the subsite_config with the merged config
-    *subsite_config = merged_subsite_config;
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
