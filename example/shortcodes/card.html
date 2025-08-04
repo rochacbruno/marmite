@@ -1,5 +1,5 @@
 {# Display a card for content based on slug with optional parameter overrides #}
-{% macro card(slug, image="", title="", text="", content_type="") %}
+{% macro card(slug, image="", title="", text="", content_type="", site="") %}
 {% if slug is starting_with("http://") or slug is starting_with("https://") %}
     {# External URL - skip data lookup and use provided parameters #}
     {% if image %}
@@ -26,7 +26,7 @@
     {% set target_blank = true %}
 {% else %}
     {# Internal content - perform data lookup #}
-    {% set data = get_data_by_slug(slug=slug) %}
+    {% set data = get_data_by_slug_from_site(slug=slug, site=site) %}
     {% if image %}
         {% set final_image = image %}
     {% else %}

@@ -588,7 +588,8 @@ pub fn get_authors(frontmatter: &Frontmatter, default_author: Option<String>) ->
             }
         }
     }
-    authors
+    // Ensure each author is slugified
+    authors.iter().map(|a| slugify(a)).collect()
 }
 
 /// Tries to get `date` from the front-matter metadata, else from filename

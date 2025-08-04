@@ -1,4 +1,5 @@
 use indexmap::IndexMap;
+use log::error;
 use serde::Serialize;
 use std::collections::HashMap;
 use tera::{to_value, Function, Result as TeraResult, Value};
@@ -19,6 +20,7 @@ pub struct SlugData {
 #[derive(Default)]
 pub struct UrlFor {
     pub base_url: String,
+    pub site_path: String,
 }
 
 impl Function for UrlFor {
@@ -67,6 +69,9 @@ impl Function for UrlFor {
         } else if !base_path.is_empty() {
             // Relative URL with base path from base_url
             format!("{base_path}{path}")
+        } else if !self.site_path.is_empty() {
+            // Add site_path prefix for subsites when not using absolute URLs
+            format!("/{}{}", self.site_path.trim_matches('/'), path)
         } else {
             // Just the path if no base_url or base_path
             path
@@ -340,6 +345,7 @@ impl Function for GetDataBySlug {
                     content_type: "series".to_string(),
                 }
             } else {
+                error!("Series not found: {series_name}");
                 return Err(tera::Error::msg(format!("Series not found: {series_name}")));
             }
         } else if slug.starts_with("stream-") {
@@ -379,6 +385,7 @@ impl Function for GetDataBySlug {
                     content_type: "stream".to_string(),
                 }
             } else {
+                error!("Stream not found: {stream_name}");
                 return Err(tera::Error::msg(format!("Stream not found: {stream_name}")));
             }
         } else if slug.starts_with("tag-") {
@@ -399,6 +406,7 @@ impl Function for GetDataBySlug {
                     content_type: "tag".to_string(),
                 }
             } else {
+                error!("Tag not found: {tag_name}");
                 return Err(tera::Error::msg(format!("Tag not found: {tag_name}")));
             }
         } else if slug.starts_with("author-") {
@@ -412,8 +420,8 @@ impl Function for GetDataBySlug {
 
                 let image = author_info
                     .and_then(|a| a.avatar.as_ref())
-                    .unwrap_or(&self.site_data.site.banner_image)
-                    .clone();
+                    .map_or("static/avatar-placeholder.png", |s| s)
+                    .to_string();
 
                 SlugData {
                     image,
@@ -423,6 +431,7 @@ impl Function for GetDataBySlug {
                     content_type: "author".to_string(),
                 }
             } else {
+                error!("Author not found: {author_name}");
                 return Err(tera::Error::msg(format!("Author not found: {author_name}")));
             }
         } else if slug.starts_with("archive-") {
@@ -443,6 +452,7 @@ impl Function for GetDataBySlug {
                     content_type: "archive".to_string(),
                 }
             } else {
+                error!("Archive year not found: {year}");
                 return Err(tera::Error::msg(format!("Archive year not found: {year}")));
             }
         } else {
@@ -506,6 +516,7 @@ impl Function for GetDataBySlug {
                     content_type: "stream".to_string(),
                 }
             } else {
+                error!("Content not found for slug: {slug}");
                 return Err(tera::Error::msg(format!(
                     "Content not found for slug: {slug}"
                 )));
@@ -547,6 +558,180 @@ impl Function for GetGallery {
     }
 }
 
+/// Wrapper for cross-site data access
+#[derive(Clone)]
+pub struct CrossSiteData {
+    pub current_site: Data,
+    pub main_site: Option<Data>,
+    pub all_subsites: HashMap<String, Data>,
+}
+
+/// Cross-site aware version of group function
+pub struct GroupFromSite {
+    pub cross_site_data: CrossSiteData,
+}
+
+impl Function for GroupFromSite {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let site = args.get("site").and_then(Value::as_str).unwrap_or("");
+
+        // Determine which site data to use
+        let target_data = if site == "main" {
+            self.cross_site_data
+                .main_site
+                .as_ref()
+                .unwrap_or(&self.cross_site_data.current_site)
+        } else if !site.is_empty() {
+            self.cross_site_data
+                .all_subsites
+                .get(site)
+                .unwrap_or(&self.cross_site_data.current_site)
+        } else {
+            // Default: use current site (empty string means current site)
+            &self.cross_site_data.current_site
+        };
+
+        // Call the original Group function with the target data
+        let group_fn = Group {
+            site_data: target_data.clone(),
+        };
+        group_fn.call(args)
+    }
+}
+
+/// Cross-site aware version of `get_posts` function
+pub struct GetPostsFromSite {
+    pub cross_site_data: CrossSiteData,
+}
+
+impl Function for GetPostsFromSite {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let site = args.get("site").and_then(Value::as_str).unwrap_or("");
+
+        // Determine which site data to use
+        let target_data = if site == "main" {
+            self.cross_site_data
+                .main_site
+                .as_ref()
+                .unwrap_or(&self.cross_site_data.current_site)
+        } else if !site.is_empty() {
+            self.cross_site_data
+                .all_subsites
+                .get(site)
+                .unwrap_or(&self.cross_site_data.current_site)
+        } else {
+            // Default: use current site (empty string means current site)
+            &self.cross_site_data.current_site
+        };
+
+        // Call the original GetPosts function with the target data
+        let get_posts_fn = GetPosts {
+            site_data: target_data.clone(),
+        };
+        get_posts_fn.call(args)
+    }
+}
+
+/// Cross-site aware version of `get_data_by_slug` function
+pub struct GetDataBySlugFromSite {
+    pub cross_site_data: CrossSiteData,
+}
+
+impl Function for GetDataBySlugFromSite {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let site = args.get("site").and_then(Value::as_str).unwrap_or("");
+
+        // Determine which site data to use
+        let target_data = if site == "main" {
+            self.cross_site_data
+                .main_site
+                .as_ref()
+                .unwrap_or(&self.cross_site_data.current_site)
+        } else if !site.is_empty() {
+            self.cross_site_data
+                .all_subsites
+                .get(site)
+                .unwrap_or(&self.cross_site_data.current_site)
+        } else {
+            // Default: use current site (empty string means current site)
+            &self.cross_site_data.current_site
+        };
+
+        // Call the original GetDataBySlug function with the target data
+        let get_data_fn = GetDataBySlug {
+            site_data: target_data.clone(),
+        };
+        get_data_fn.call(args)
+    }
+}
+
+/// Cross-site aware version of `get_gallery` function
+pub struct GetGalleryFromSite {
+    pub cross_site_data: CrossSiteData,
+}
+
+impl Function for GetGalleryFromSite {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let site = args.get("site").and_then(Value::as_str).unwrap_or("");
+
+        // Determine which site data to use
+        let target_data = if site == "main" {
+            self.cross_site_data
+                .main_site
+                .as_ref()
+                .unwrap_or(&self.cross_site_data.current_site)
+        } else if !site.is_empty() {
+            self.cross_site_data
+                .all_subsites
+                .get(site)
+                .unwrap_or(&self.cross_site_data.current_site)
+        } else {
+            // Default: use current site (empty string means current site)
+            &self.cross_site_data.current_site
+        };
+
+        // Call the original GetGallery function with the target data
+        let get_gallery_fn = GetGallery {
+            site_data: target_data.clone(),
+        };
+        get_gallery_fn.call(args)
+    }
+}
+
+/// Cross-site aware version of `url_for` function
+pub struct UrlForFromSite {
+    pub cross_site_data: CrossSiteData,
+}
+
+impl Function for UrlForFromSite {
+    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
+        let site = args.get("site").and_then(Value::as_str).unwrap_or("");
+
+        // Determine which site data to use
+        let target_data = if site == "main" {
+            self.cross_site_data
+                .main_site
+                .as_ref()
+                .unwrap_or(&self.cross_site_data.current_site)
+        } else if !site.is_empty() {
+            self.cross_site_data
+                .all_subsites
+                .get(site)
+                .unwrap_or(&self.cross_site_data.current_site)
+        } else {
+            // Default: use current site (empty string means current site)
+            &self.cross_site_data.current_site
+        };
+
+        // Create url_for function with the target site data
+        let url_for_fn = UrlFor {
+            base_url: target_data.site.url.clone(),
+            site_path: target_data.site.site_path.clone(),
+        };
+        url_for_fn.call(args)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -558,6 +743,7 @@ mod tests {
     fn test_url_for_basic_path() {
         let url_for = UrlFor {
             base_url: String::new(),
+            site_path: String::new(),
         };
         let mut args = HashMap::new();
         args.insert("path".to_string(), Value::String("about.html".to_string()));
@@ -570,6 +756,7 @@ mod tests {
     fn test_url_for_absolute_path() {
         let url_for = UrlFor {
             base_url: "https://example.com".to_string(),
+            site_path: String::new(),
         };
         let mut args = HashMap::new();
         args.insert("path".to_string(), Value::String("about.html".to_string()));
@@ -586,6 +773,7 @@ mod tests {
     fn test_url_for_external_url() {
         let url_for = UrlFor {
             base_url: String::new(),
+            site_path: String::new(),
         };
         let mut args = HashMap::new();
         args.insert(
@@ -601,6 +789,7 @@ mod tests {
     fn test_url_for_missing_path() {
         let url_for = UrlFor {
             base_url: String::new(),
+            site_path: String::new(),
         };
         let args = HashMap::new();
 

@@ -1,6 +1,6 @@
 {# Display a gallery of images #}
-{% macro gallery(path, ord="", width="100%", height="100%", name="", cover="") %}
-{% set gallery_data = get_gallery(path=path) %}
+{% macro gallery(path, ord="", width="100%", height="100%", name="", cover="", site="") %}
+{% set gallery_data = get_gallery_from_site(path=path, site=site) %}
 
 {% if gallery_data %}
     
@@ -30,7 +30,7 @@
         {# Main image panel #}
         <div class="gallery-main-panel" style="position: relative; width: {{ width }}; height: {{ height }}; margin: 0 auto; overflow: hidden; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
             <img id="gallery-{{ path }}-main-image" 
-                 src="{{ url_for(path=site_data.site.media_path ~ '/' ~ site_data.site.gallery_path ~ '/' ~ path ~ '/' ~ cover_image) }}" 
+                 src="{{ url_for_from_site(site=site, path=site_data.site.media_path ~ '/' ~ site_data.site.gallery_path ~ '/' ~ path ~ '/' ~ cover_image) }}" 
                  alt="{{ gallery_name }}"
                  style="max-width: 100%; max-height: 100%; object-fit: contain; cursor: pointer;"
                  onclick="zoomImage('gallery-{{ path }}')"
@@ -47,8 +47,8 @@
             <div class="gallery-thumbnail-scroll" id="gallery-{{ path }}-scroll" style="overflow-x: hidden; white-space: nowrap; scroll-behavior: smooth; margin: 0 40px;">
                 <div class="gallery-thumbnail-wrapper" style="display: inline-flex; gap: 5px;">
                     {% for item in sorted_files %}
-                    <img src="{{ url_for(path=site_data.site.media_path ~ '/' ~ site_data.site.gallery_path ~ '/' ~ path ~ '/' ~ item.thumb) }}" 
-                         data-full="{{ url_for(path=site_data.site.media_path ~ '/' ~ site_data.site.gallery_path ~ '/' ~ path ~ '/' ~ item.image) }}"
+                    <img src="{{ url_for_from_site(site=site, path=site_data.site.media_path ~ '/' ~ site_data.site.gallery_path ~ '/' ~ path ~ '/' ~ item.thumb) }}" 
+                         data-full="{{ url_for_from_site(site=site, path=site_data.site.media_path ~ '/' ~ site_data.site.gallery_path ~ '/' ~ path ~ '/' ~ item.image) }}"
                          data-description="{{ item.description | default(value='') }}"
                          alt="{{ item.image }}"
                          style="width: 50px; height: 50px; object-fit: cover; cursor: pointer; border: 2px solid transparent;"

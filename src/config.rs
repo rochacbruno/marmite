@@ -1,7 +1,7 @@
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::{collections::HashMap, path::Path, process, sync::Arc};
+use std::{collections::HashMap, fs, path::Path, process, sync::Arc};
 
 use crate::cli::Cli;
 
@@ -268,6 +268,9 @@ pub struct Marmite {
 
     #[serde(default = "default_gallery_thumb_size")]
     pub gallery_thumb_size: u32,
+
+    #[serde(default)]
+    pub fragments_fallback: Option<String>,
 }
 
 fn default_true() -> bool {
@@ -417,6 +420,88 @@ impl Marmite {
         }
         if let Some(publish_urls_json) = cli_args.configuration.publish_urls_json {
             self.publish_urls_json = publish_urls_json;
+        }
+    }
+
+    /// Create a fully configured subsite config by merging with this parent config
+    pub fn with_subsite_config(
+        &self,
+        subsite_config_path: &Path,
+        subsite_name: &str,
+        subsite_path: &Path,
+    ) -> Self {
+        // Read and parse subsite configuration
+        let subsite_config_str = match fs::read_to_string(subsite_config_path) {
+            Ok(content) => content,
+            Err(e) => {
+                error!(
+                    "Failed to read subsite config {}: {e}",
+                    subsite_config_path.display()
+                );
+                return self.clone();
+            }
+        };
+
+        // Read subsite config from file and merge with parent config (file takes precedence over parent config)
+        let mut subsite_config = self.merged_from_subsite_config_file(&subsite_config_str);
+
+        // Set the site_path to include the subsite name
+        if self.site_path.is_empty() {
+            subsite_config.site_path = subsite_name.to_string();
+        } else {
+            subsite_config.site_path = format!("{}/{}", self.site_path, subsite_name);
+        }
+
+        // Update URL to include the subsite path
+        if !subsite_config.url.is_empty() && !subsite_config.url.ends_with('/') {
+            subsite_config.url.push('/');
+        }
+        subsite_config.url.push_str(&subsite_config.site_path);
+
+        // Set content_path to the actual subsite directory
+        subsite_config.content_path = subsite_path.to_string_lossy().to_string();
+
+        subsite_config
+    }
+
+    pub fn merged_from_subsite_config_file(&self, subsite_config_str: &str) -> Self {
+        // Try to parse once into a generic Value
+        let parsed_value: Value = match serde_yaml::from_str(subsite_config_str) {
+            Ok(val) => val,
+            Err(e) => {
+                error!("Failed to parse subsite config: {e}");
+                return self.clone();
+            }
+        };
+        let mut merged_yaml = parsed_value.clone();
+
+        let subsite_keys = parsed_value
+            .as_mapping()
+            .map(|m| {
+                m.keys()
+                    .filter_map(|k| k.as_str().map(std::string::ToString::to_string))
+                    .collect::<std::collections::HashSet<String>>()
+            })
+            .unwrap_or_default();
+
+        let parent_yaml = serde_yaml::to_value(self).unwrap();
+
+        if let (Some(merged_obj), Some(parent_obj)) =
+            (merged_yaml.as_mapping_mut(), parent_yaml.as_mapping())
+        {
+            for (key, value) in parent_obj {
+                if !subsite_keys.contains(key.as_str().unwrap_or_default()) {
+                    merged_obj.insert(key.clone(), value.clone());
+                }
+            }
+        }
+
+        match serde_yaml::from_value(merged_yaml) {
+            Ok(merged) => merged,
+            Err(e) => {
+                error!("Failed to deserialize merged config: {e}");
+                self.clone()
+            }
         }
     }
 }

@@ -44,8 +44,29 @@ fn handle_request(
         url => &url[1..], // Remove the leading '/'
     };
 
-    let file_path = output_folder.join(request_path);
-    let error_path = output_folder.join("404.html");
+    let mut file_path = output_folder.join(request_path);
+
+    // If the path is a directory, append index.html
+    if file_path.is_dir() {
+        file_path = file_path.join("index.html");
+    }
+
+    // Check for subsite 404.html if main site 404.html doesn't exist
+    let error_path = if request_path.contains('/') {
+        let parts: Vec<&str> = request_path.split('/').collect();
+        if parts.len() > 1 && !parts[0].is_empty() {
+            let subsite_error = output_folder.join(parts[0]).join("404.html");
+            if subsite_error.exists() {
+                subsite_error
+            } else {
+                output_folder.join("404.html")
+            }
+        } else {
+            output_folder.join("404.html")
+        }
+    } else {
+        output_folder.join("404.html")
+    };
 
     if file_path.is_file() {
         match File::open(&file_path) {
