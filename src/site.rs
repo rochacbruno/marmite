@@ -70,22 +70,10 @@ impl Data {
             }
         };
 
-        Data {
-            site,
-            posts: Vec::new(),
-            pages: Vec::new(),
-            tag: GroupedContent::new(Kind::Tag),
-            archive: GroupedContent::new(Kind::Archive),
-            author: GroupedContent::new(Kind::Author),
-            stream: GroupedContent::new(Kind::Stream),
-            series: GroupedContent::new(Kind::Series),
-            latest_timestamp: None,
-            config_path: config_path.to_string_lossy().to_string(),
-            force_render: false,
-            generated_urls: UrlCollection::default(),
-            galleries: HashMap::new(),
-            subsites: HashMap::new(),
-        }
+        let mut data = Self::default();
+        data.site = site;
+        data.config_path = config_path.to_string_lossy().to_string();
+        data
     }
 
     pub fn from_file(config_path: &Path) -> Self {
@@ -431,6 +419,49 @@ impl Data {
             self.generated_urls.add_url("file_mappings", destination);
         }
     }
+
+    /// Create a new Data instance for a subsite
+    pub fn new_for_subsite(
+        parent_config: &Marmite,
+        subsite_config_path: &Path,
+        subsite_name: &str,
+        subsite_path: &Path,
+    ) -> Self {
+        // Get the subsite config
+        let subsite_config = from_subsite_config(
+            parent_config,
+            subsite_config_path,
+            subsite_name,
+            subsite_path,
+        );
+
+        // Create a default Data instance and set the subsite config
+        let mut data = Self::default();
+        data.site = subsite_config;
+        data.config_path = subsite_config_path.to_string_lossy().to_string();
+        data
+    }
+}
+
+impl Default for Data {
+    fn default() -> Self {
+        Self {
+            site: Marmite::default(),
+            posts: Vec::new(),
+            pages: Vec::new(),
+            tag: GroupedContent::new(Kind::Tag),
+            archive: GroupedContent::new(Kind::Archive),
+            author: GroupedContent::new(Kind::Author),
+            stream: GroupedContent::new(Kind::Stream),
+            series: GroupedContent::new(Kind::Series),
+            latest_timestamp: None,
+            config_path: String::new(),
+            force_render: false,
+            generated_urls: UrlCollection::default(),
+            galleries: HashMap::new(),
+            subsites: HashMap::new(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -518,7 +549,6 @@ pub fn generate(
                 &moved_output_folder,
                 &moved_input_folder,
                 &mut site_data,
-                &moved_cli_args,
                 latest_build_info.as_ref(),
             );
 
@@ -2921,7 +2951,7 @@ pub fn show_urls(
     let mut json = create_urls_json(&site_data);
 
     // Process subsites and add their URLs
-    let subsites_urls = collect_subsites_urls(&content_folder, input_folder.as_path(), &site_data, args);
+    let subsites_urls = collect_subsites_urls(&content_folder, input_folder.as_path(), &site_data);
     if !subsites_urls.is_empty() {
         json.as_object_mut().unwrap().insert(
             "subsites".to_string(),
@@ -2941,7 +2971,6 @@ fn collect_subsites_urls(
     content_folder: &Path,
     input_folder: &Path,
     parent_site_data: &Data,
-    cli_args: &Arc<crate::cli::Cli>,
 ) -> serde_json::Map<String, serde_json::Value> {
     let mut subsites_urls = serde_json::Map::new();
 
@@ -2972,7 +3001,6 @@ fn collect_subsites_urls(
                     &site_yaml_path,
                     input_folder,
                     parent_site_data,
-                    cli_args,
                 ) {
                     subsites_urls.insert(subsite_name, subsite_urls);
                 }
@@ -2990,34 +3018,14 @@ fn collect_single_subsite_urls(
     site_yaml_path: &Path,
     input_folder: &Path,
     parent_site_data: &Data,
-    cli_args: &Arc<crate::cli::Cli>,
 ) -> Option<serde_json::Value> {
-    // Get fully configured subsite config
-    let subsite_config = get_subsite_config(
+    // Create subsite data with the configured site config
+    let mut subsite_data = Data::new_for_subsite(
         &parent_site_data.site,
         site_yaml_path,
         subsite_name,
         subsite_path,
-        cli_args,
     );
-
-    // Create subsite data with the configured site config
-    let mut subsite_data = Data {
-        site: subsite_config,
-        posts: Vec::new(),
-        pages: Vec::new(),
-        tag: GroupedContent::new(Kind::Tag),
-        archive: GroupedContent::new(Kind::Archive),
-        author: GroupedContent::new(Kind::Author),
-        stream: GroupedContent::new(Kind::Stream),
-        series: GroupedContent::new(Kind::Series),
-        latest_timestamp: None,
-        config_path: site_yaml_path.to_string_lossy().to_string(),
-        force_render: false,
-        generated_urls: UrlCollection::default(),
-        subsites: HashMap::new(),
-        galleries: HashMap::new(),
-    };
 
     // Collect fragments for the subsite with fallback support
     let parent_content_dir = input_folder.join(&parent_site_data.site.content_path);
@@ -3044,7 +3052,6 @@ fn process_subsites(
     output_folder: &Path,
     input_folder: &Path,
     parent_site_data: &mut Data,
-    cli_args: &Arc<crate::cli::Cli>,
     latest_build_info: Option<&BuildInfo>,
 ) {
     // Look for directories in content folder that contain a site.yaml file
@@ -3076,7 +3083,6 @@ fn process_subsites(
                     output_folder,
                     input_folder,
                     parent_site_data,
-                    cli_args,
                     latest_build_info,
                 ) {
                     parent_site_data
@@ -3097,35 +3103,15 @@ fn process_single_subsite(
     output_folder: &Path,
     input_folder: &Path,
     parent_site_data: &Data,
-    cli_args: &Arc<crate::cli::Cli>,
     latest_build_info: Option<&BuildInfo>,
 ) -> Option<Data> {
-    // Get fully configured subsite config
-    let subsite_config = get_subsite_config(
+    // Create subsite data with the configured site config
+    let mut subsite_data = Data::new_for_subsite(
         &parent_site_data.site,
         site_yaml_path,
         subsite_name,
         subsite_path,
-        cli_args,
     );
-
-    // Create subsite data with the configured site config
-    let mut subsite_data = Data {
-        site: subsite_config,
-        posts: Vec::new(),
-        pages: Vec::new(),
-        tag: GroupedContent::new(Kind::Tag),
-        archive: GroupedContent::new(Kind::Archive),
-        author: GroupedContent::new(Kind::Author),
-        stream: GroupedContent::new(Kind::Stream),
-        series: GroupedContent::new(Kind::Series),
-        latest_timestamp: None,
-        config_path: site_yaml_path.to_string_lossy().to_string(),
-        force_render: false,
-        generated_urls: UrlCollection::default(),
-        subsites: HashMap::new(),
-        galleries: HashMap::new(),
-    };
 
     // Collect fragments for the subsite with fallback support
     let parent_content_dir = input_folder.join(&parent_site_data.site.content_path);
@@ -3237,12 +3223,11 @@ fn process_single_subsite(
 /// Merge parent site configuration with subsite configuration
 /// Subsite configuration takes precedence
 /// Get a fully configured subsite config by merging with parent config
-fn get_subsite_config(
+fn from_subsite_config(
     parent_config: &Marmite,
     subsite_config_path: &Path,
     subsite_name: &str,
     subsite_path: &Path,
-    cli_args: &Arc<crate::cli::Cli>,
 ) -> Marmite {
     // Read and parse subsite configuration
     let subsite_config_str = match fs::read_to_string(subsite_config_path) {
