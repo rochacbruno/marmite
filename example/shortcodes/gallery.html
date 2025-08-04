@@ -1,6 +1,6 @@
 {# Display a gallery of images #}
-{% macro gallery(path, ord="", width="100%", height="100%", name="", cover="") %}
-{% set gallery_data = get_gallery(path=path) %}
+{% macro gallery(path, ord="", width="100%", height="100%", name="", cover="", site="") %}
+{% set gallery_data = get_gallery_from_site(path=path, site=site) %}
 
 {% if gallery_data %}
     

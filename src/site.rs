@@ -6,7 +6,8 @@ use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
 use crate::gallery::Gallery;
 use crate::shortcodes::ShortcodeProcessor;
 use crate::tera_functions::{
-    DisplayName, GetDataBySlug, GetGallery, GetPosts, Group, SourceLink, UrlFor,
+    CrossSiteData, DisplayName, GetDataBySlug, GetDataBySlugFromSite, GetGallery,
+    GetGalleryFromSite, GetPosts, GetPostsFromSite, Group, GroupFromSite, SourceLink, UrlFor, UrlForFromSite,
 };
 use crate::{server, tera_filter};
 use chrono::Datelike;
@@ -541,6 +542,7 @@ pub fn generate(
                         &fragments,
                         latest_build_info.as_ref(),
                         shortcode_processor.as_ref(),
+                        None, // No parent data for main site
                     ) {
                         error!("Failed to render templates: {e:?}");
                         process::exit(1);
@@ -653,6 +655,47 @@ fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
                 ((*fragment).to_string(), fragment_content)
             })
             .collect();
+    markdown_fragments
+}
+
+/// Collect markdown fragments with optional fallback support for subsites
+/// If fragments_fallback is set and a fragment is not found locally, look in the fallback site
+fn collect_content_fragments_with_fallback(
+    content_dir: &Path,
+    fragments_fallback: Option<&String>,
+    parent_content_dir: &Path,
+) -> HashMap<String, String> {
+    let fragment_names = ["markdown_header", "markdown_footer", "references"];
+    let mut markdown_fragments = HashMap::new();
+
+    for fragment in fragment_names {
+        let fragment_path = content_dir.join(format!("_{fragment}.md"));
+        let fragment_content = if fragment_path.exists() {
+            // Fragment exists locally, use it
+            fs::read_to_string(fragment_path).unwrap()
+        } else if let Some(fallback_site) = fragments_fallback {
+            // Fragment doesn't exist locally, check fallback site
+            let fallback_path = if fallback_site == "main" {
+                // Fallback to main site (parent content directory)
+                parent_content_dir.join(format!("_{fragment}.md"))
+            } else {
+                // Fallback to another subsite
+                parent_content_dir.join(fallback_site).join(format!("_{fragment}.md"))
+            };
+            
+            if fallback_path.exists() {
+                fs::read_to_string(fallback_path).unwrap()
+            } else {
+                String::new()
+            }
+        } else {
+            // No fallback configured, use empty string
+            String::new()
+        };
+        
+        markdown_fragments.insert(fragment.to_string(), fragment_content);
+    }
+    
     markdown_fragments
 }
 
@@ -1048,6 +1091,7 @@ fn render_templates(
     fragments: &HashMap<String, String>,
     latest_build_info: Option<&BuildInfo>,
     shortcode_processor: Option<&ShortcodeProcessor>,
+    parent_data: Option<&Data>,
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
@@ -1058,19 +1102,79 @@ fn render_templates(
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
     global_context.insert("language", &site_data.site.language);
+    
+    // Always register cross-site functions
+    let mut tera_clone = tera.clone();
+    
+    let cross_site_data = if let Some(parent) = parent_data {
+        // For subsites: parent is the main site data
+        global_context.insert("main_site_data", parent);
+        global_context.insert("all_subsites", &parent.subsites);
+        
+        CrossSiteData {
+            current_site: site_data.clone(),
+            main_site: Some(parent.clone()),
+            all_subsites: parent.subsites.clone(),
+        }
+    } else {
+        // For main site: it is both current and main site
+        global_context.insert("main_site_data", &site_data);
+        global_context.insert("all_subsites", &site_data.subsites);
+        
+        CrossSiteData {
+            current_site: site_data.clone(),
+            main_site: Some(site_data.clone()),
+            all_subsites: site_data.subsites.clone(),
+        }
+    };
+    
+    // Register cross-site aware functions
+    tera_clone.register_function(
+        "group_from_site",
+        GroupFromSite {
+            cross_site_data: cross_site_data.clone(),
+        },
+    );
+    tera_clone.register_function(
+        "get_posts_from_site",
+        GetPostsFromSite {
+            cross_site_data: cross_site_data.clone(),
+        },
+    );
+    tera_clone.register_function(
+        "get_data_by_slug_from_site",
+        GetDataBySlugFromSite {
+            cross_site_data: cross_site_data.clone(),
+        },
+    );
+    tera_clone.register_function(
+        "get_gallery_from_site",
+        GetGalleryFromSite {
+            cross_site_data: cross_site_data.clone(),
+        },
+    );
+    tera_clone.register_function(
+        "url_for_from_site",
+        UrlForFromSite {
+            cross_site_data,
+        },
+    );
+    
+    let tera_to_use = &tera_clone;
+    
     debug!("Global Context site: {:?}", &site_data.site);
     debug!("Site data galleries count: {}", site_data.galleries.len());
-    collect_global_fragments(content_dir, &mut global_context, tera, &site_data.site);
+    collect_global_fragments(content_dir, &mut global_context, tera_to_use, &site_data.site);
 
-    handle_stream_pages(&site_data, &global_context, tera, output_dir)?;
-    handle_series_pages(&site_data, &global_context, tera, output_dir)?;
+    handle_stream_pages(&site_data, &global_context, tera_to_use, output_dir)?;
+    handle_series_pages(&site_data, &global_context, tera_to_use, output_dir)?;
     // If site_data.stream.map does not contain the index stream
     // we will render empty index.html from list.html template
     if !site_data.stream.map.contains_key("index") {
-        handle_default_empty_site(&global_context, tera, output_dir)?;
+        handle_default_empty_site(&global_context, tera_to_use, output_dir)?;
     }
 
-    handle_group_pages(&global_context, &site_data, tera, output_dir)?;
+    handle_group_pages(&global_context, &site_data, tera_to_use, output_dir)?;
 
     // Pages are treated as a list of content, no stream separation is needed
     // pages are usually just static pages that user will link in the menu.
@@ -1079,13 +1183,13 @@ fn render_templates(
         &site_data.site.pages_title,
         &site_data.pages,
         &site_data,
-        tera,
+        tera_to_use,
         output_dir,
         "pages",
     )?;
 
     // Check and guarantees that page 404 was generated even if _404.md is removed
-    handle_404(content_dir, &global_context, tera, output_dir)?;
+    handle_404(content_dir, &global_context, tera_to_use, output_dir)?;
 
     // Render individual content-slug.html from content.html template
     // content is rendered as last step so it gives the user the ability to
@@ -1093,7 +1197,7 @@ fn render_templates(
     handle_content_pages(
         &site_data,
         &global_context,
-        tera,
+        tera_to_use,
         output_dir,
         content_dir,
         input_folder,
@@ -2813,14 +2917,136 @@ pub fn show_urls(
     // Collect all URLs including pagination, feeds, and file mappings
     site_data.collect_all_urls();
 
-    // Generate JSON using the shared function
-    let json = create_urls_json(&site_data);
+    // Generate JSON for main site
+    let mut json = create_urls_json(&site_data);
+
+    // Process subsites and add their URLs
+    let subsites_urls = collect_subsites_urls(&content_folder, input_folder.as_path(), &site_data, args);
+    if !subsites_urls.is_empty() {
+        json.as_object_mut().unwrap().insert(
+            "subsites".to_string(),
+            serde_json::Value::Object(subsites_urls),
+        );
+    }
 
     // Output JSON
     match serde_json::to_string_pretty(&json) {
         Ok(json_string) => println!("{json_string}"),
         Err(e) => error!("Failed to serialize URLs to JSON: {e}"),
     }
+}
+
+/// Collect URLs from all subsites for the --show-urls command
+fn collect_subsites_urls(
+    content_folder: &Path,
+    input_folder: &Path,
+    parent_site_data: &Data,
+    cli_args: &Arc<crate::cli::Cli>,
+) -> serde_json::Map<String, serde_json::Value> {
+    let mut subsites_urls = serde_json::Map::new();
+
+    // Look for directories in content folder that contain a site.yaml file
+    let entries = match fs::read_dir(content_folder) {
+        Ok(entries) => entries,
+        Err(e) => {
+            error!("Failed to read content directory for subsites: {e}");
+            return subsites_urls;
+        }
+    };
+
+    for entry in entries.flatten() {
+        let entry_path = entry.path();
+        if entry_path.is_dir() {
+            let site_yaml_path = entry_path.join("site.yaml");
+            if site_yaml_path.exists() {
+                let subsite_name = entry_path
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("unknown")
+                    .to_string();
+
+                // Process this subsite for URL collection
+                if let Some(subsite_urls) = collect_single_subsite_urls(
+                    &subsite_name,
+                    &entry_path,
+                    &site_yaml_path,
+                    input_folder,
+                    parent_site_data,
+                    cli_args,
+                ) {
+                    subsites_urls.insert(subsite_name, subsite_urls);
+                }
+            }
+        }
+    }
+
+    subsites_urls
+}
+
+/// Collect URLs from a single subsite
+fn collect_single_subsite_urls(
+    subsite_name: &str,
+    subsite_path: &Path,
+    site_yaml_path: &Path,
+    input_folder: &Path,
+    parent_site_data: &Data,
+    cli_args: &Arc<crate::cli::Cli>,
+) -> Option<serde_json::Value> {
+    // Read subsite configuration
+    let subsite_config_str = match fs::read_to_string(site_yaml_path) {
+        Ok(content) => content,
+        Err(e) => {
+            error!(
+                "Failed to read subsite config {}: {e}",
+                site_yaml_path.display()
+            );
+            return None;
+        }
+    };
+
+    // Parse subsite configuration, merging with parent site defaults
+    let mut subsite_data = Data::new(&subsite_config_str, site_yaml_path);
+
+    // Merge parent site configuration as defaults (subsite config takes precedence)
+    merge_site_configs(&mut subsite_data.site, &parent_site_data.site);
+
+    // Override with CLI args
+    subsite_data.site.override_from_cli_args(cli_args);
+
+    // Set the site_path to include the subsite name
+    if parent_site_data.site.site_path.is_empty() {
+        subsite_data.site.site_path = subsite_name.to_string();
+    } else {
+        subsite_data.site.site_path =
+            format!("{}/{}", parent_site_data.site.site_path, subsite_name);
+    }
+
+    // Update URL to include the subsite path
+    if !subsite_data.site.url.is_empty() && !subsite_data.site.url.ends_with('/') {
+        subsite_data.site.url.push('/');
+    }
+    subsite_data.site.url.push_str(&subsite_data.site.site_path);
+
+    // Set content_path to the actual subsite directory
+    subsite_data.site.content_path = subsite_path.to_string_lossy().to_string();
+
+    // Collect fragments for the subsite with fallback support
+    let parent_content_dir = input_folder.join(&parent_site_data.site.content_path);
+    let fragments = collect_content_fragments_with_fallback(
+        subsite_path,
+        subsite_data.site.fragments_fallback.as_ref(),
+        &parent_content_dir,
+    );
+
+    // Collect content for the subsite
+    collect_content(&subsite_path.to_path_buf(), &mut subsite_data, &fragments);
+    subsite_data.sort_all();
+
+    // Collect all URLs including pagination, feeds, and file mappings
+    subsite_data.collect_all_urls();
+
+    // Generate JSON using the shared function
+    Some(create_urls_json(&subsite_data))
 }
 
 /// Process subsites found in the content directory
@@ -2923,8 +3149,13 @@ fn process_single_subsite(
     // Set content_path to the actual subsite directory
     subsite_data.site.content_path = subsite_path.to_string_lossy().to_string();
 
-    // Collect fragments for the subsite
-    let fragments = collect_content_fragments(subsite_path);
+    // Collect fragments for the subsite with fallback support
+    let parent_content_dir = input_folder.join(&parent_site_data.site.content_path);
+    let fragments = collect_content_fragments_with_fallback(
+        subsite_path,
+        subsite_data.site.fragments_fallback.as_ref(),
+        &parent_content_dir,
+    );
 
     // Collect content for the subsite
     collect_content(&subsite_path.to_path_buf(), &mut subsite_data, &fragments);
@@ -2968,6 +3199,7 @@ fn process_single_subsite(
         &fragments,
         latest_build_info,
         shortcode_processor.as_ref(),
+        Some(parent_site_data), // Pass parent data for cross-site references
     ) {
         error!("Failed to render subsite templates: {e:?}");
         return None;
@@ -3041,6 +3273,11 @@ fn merge_site_configs(subsite_config: &mut Marmite, parent_config: &Marmite) {
         subsite_config.default_date_format = parent_config.default_date_format.clone();
     }
 
+    // If subsite doesn't specify a menu, inherit from parent
+    if subsite_config.menu.is_none() && parent_config.menu.is_some() {
+        subsite_config.menu = parent_config.menu.clone();
+    }
+
     // You can add more field merging as needed
 }
 
@@ -3095,10 +3332,18 @@ fn handle_static_artifacts_for_subsite(
         let theme_static_src = input_folder.join(theme).join("static");
         if theme_static_src.exists() {
             let static_dst = site_output_path.join("static");
+            // Create the static directory first
+            if let Err(e) = std::fs::create_dir_all(&static_dst) {
+                error!("Failed to create static directory: {e}");
+            }
+            // Copy only the contents of the theme static directory
+            let mut options = CopyOptions::new();
+            options.overwrite = true;
+            options.content_only = true;
             if let Err(e) = dircopy(
                 &theme_static_src,
                 &static_dst,
-                &CopyOptions::new().overwrite(true),
+                &options,
             ) {
                 error!("Failed to copy subsite theme static files: {e}");
             }

@@ -1,6 +1,6 @@
-{# Display a list of all authors with post counts. Params: ord=desc, items=0 #}
-{% macro authors(ord="desc", items=0) %}
-{% set author_map = group(kind="author", ord=ord, items=items) %}
+{# Display a list of all authors with post counts. Params: ord=desc, items=0, site=current #}
+{% macro authors(ord="desc", items=0, site="") %}
+{% set author_map = group_from_site(kind="author", ord=ord, items=items, site=site) %}
 <ul class="authors-list">
 {% for author_name, posts in author_map %}
 {% set author_slug = author_name | slugify %}

@@ -1,6 +1,6 @@
-{# Display a list of all tags with post counts. Params: ord=desc, items=0 #}
-{% macro tags(ord="desc", items=0) %}
-{% set tag_map = group(kind="tag", ord=ord, items=items) %}
+{# Display a list of all tags with post counts. Params: ord=desc, items=0, site=current #}
+{% macro tags(ord="desc", items=0, site="") %}
+{% set tag_map = group_from_site(kind="tag", ord=ord, items=items, site=site) %}
 <ul class="tags-list">
 {% for tag_name, posts in tag_map %}
 {% set tag_slug = tag_name | slugify %}

@@ -1,6 +1,6 @@
-{# Display a list of recent posts. Params: ord=desc, items=10 #}
-{% macro posts(ord="desc", items=10) %}
-{% set post_list = get_posts(ord=ord, items=items) %}
+{# Display a list of recent posts. Params: ord=desc, items=10, site=current #}
+{% macro posts(ord="desc", items=10, site="") %}
+{% set post_list = get_posts_from_site(ord=ord, items=items, site=site) %}
 <ul class="posts-list">
 {% for post in post_list %}
 <li><a href="{{ url_for(path=post.slug ~ '.html') }}">{{ post.title }}</a> - {{ post.date | date(format="%Y-%m-%d") }}</li>

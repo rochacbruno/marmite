@@ -268,6 +268,9 @@ pub struct Marmite {
 
     #[serde(default = "default_gallery_thumb_size")]
     pub gallery_thumb_size: u32,
+
+    #[serde(default)]
+    pub fragments_fallback: Option<String>,
 }
 
 fn default_true() -> bool {

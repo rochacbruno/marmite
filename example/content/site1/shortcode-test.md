@@ -58,6 +58,10 @@ This is a test to verify that shortcodes work correctly in subsites and only sho
 <!-- .card slug=tag-markdown site="main" -->
 
 
+## Gallery in this subsite
+
+<!-- .gallery path=site1photos -->
+
 ## Gallery from main site
 
 <!-- .gallery path=summer2025 site="main" -->
