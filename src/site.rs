@@ -518,6 +518,7 @@ pub fn generate(
                 &moved_output_folder,
                 &moved_input_folder,
                 &mut site_data,
+                &moved_cli_args,
                 latest_build_info.as_ref(),
             );
 
@@ -2920,7 +2921,7 @@ pub fn show_urls(
     let mut json = create_urls_json(&site_data);
 
     // Process subsites and add their URLs
-    let subsites_urls = collect_subsites_urls(&content_folder, input_folder.as_path(), &site_data);
+    let subsites_urls = collect_subsites_urls(&content_folder, input_folder.as_path(), &site_data, args);
     if !subsites_urls.is_empty() {
         json.as_object_mut().unwrap().insert(
             "subsites".to_string(),
@@ -2940,6 +2941,7 @@ fn collect_subsites_urls(
     content_folder: &Path,
     input_folder: &Path,
     parent_site_data: &Data,
+    cli_args: &Arc<crate::cli::Cli>,
 ) -> serde_json::Map<String, serde_json::Value> {
     let mut subsites_urls = serde_json::Map::new();
 
@@ -2970,6 +2972,7 @@ fn collect_subsites_urls(
                     &site_yaml_path,
                     input_folder,
                     parent_site_data,
+                    cli_args,
                 ) {
                     subsites_urls.insert(subsite_name, subsite_urls);
                 }
@@ -2987,44 +2990,34 @@ fn collect_single_subsite_urls(
     site_yaml_path: &Path,
     input_folder: &Path,
     parent_site_data: &Data,
+    cli_args: &Arc<crate::cli::Cli>,
 ) -> Option<serde_json::Value> {
-    // Read subsite configuration
-    let subsite_config_str = match fs::read_to_string(site_yaml_path) {
-        Ok(content) => content,
-        Err(e) => {
-            error!(
-                "Failed to read subsite config {}: {e}",
-                site_yaml_path.display()
-            );
-            return None;
-        }
+    // Get fully configured subsite config
+    let subsite_config = get_subsite_config(
+        &parent_site_data.site,
+        site_yaml_path,
+        subsite_name,
+        subsite_path,
+        cli_args,
+    );
+
+    // Create subsite data with the configured site config
+    let mut subsite_data = Data {
+        site: subsite_config,
+        posts: Vec::new(),
+        pages: Vec::new(),
+        tag: GroupedContent::new(Kind::Tag),
+        archive: GroupedContent::new(Kind::Archive),
+        author: GroupedContent::new(Kind::Author),
+        stream: GroupedContent::new(Kind::Stream),
+        series: GroupedContent::new(Kind::Series),
+        latest_timestamp: None,
+        config_path: site_yaml_path.to_string_lossy().to_string(),
+        force_render: false,
+        generated_urls: UrlCollection::default(),
+        subsites: HashMap::new(),
+        galleries: HashMap::new(),
     };
-
-    // Parse subsite configuration, merging with parent site defaults
-    let mut subsite_data = Data::new(&subsite_config_str, site_yaml_path);
-
-    // Merge parent site configuration as defaults (subsite config takes precedence)
-    merge_site_configs(&mut subsite_data.site, &parent_site_data.site, &subsite_data.config_path);
-
-    // Override with CLI args (not needed for subsites as they are already overridden by the parent site)
-    // subsite_data.site.override_from_cli_args(cli_args);
-
-    // Set the site_path to include the subsite name
-    if parent_site_data.site.site_path.is_empty() {
-        subsite_data.site.site_path = subsite_name.to_string();
-    } else {
-        subsite_data.site.site_path =
-            format!("{}/{}", parent_site_data.site.site_path, subsite_name);
-    }
-
-    // Update URL to include the subsite path
-    if !subsite_data.site.url.is_empty() && !subsite_data.site.url.ends_with('/') {
-        subsite_data.site.url.push('/');
-    }
-    subsite_data.site.url.push_str(&subsite_data.site.site_path);
-
-    // Set content_path to the actual subsite directory
-    subsite_data.site.content_path = subsite_path.to_string_lossy().to_string();
 
     // Collect fragments for the subsite with fallback support
     let parent_content_dir = input_folder.join(&parent_site_data.site.content_path);
@@ -3051,6 +3044,7 @@ fn process_subsites(
     output_folder: &Path,
     input_folder: &Path,
     parent_site_data: &mut Data,
+    cli_args: &Arc<crate::cli::Cli>,
     latest_build_info: Option<&BuildInfo>,
 ) {
     // Look for directories in content folder that contain a site.yaml file
@@ -3082,6 +3076,7 @@ fn process_subsites(
                     output_folder,
                     input_folder,
                     parent_site_data,
+                    cli_args,
                     latest_build_info,
                 ) {
                     parent_site_data
@@ -3102,45 +3097,35 @@ fn process_single_subsite(
     output_folder: &Path,
     input_folder: &Path,
     parent_site_data: &Data,
+    cli_args: &Arc<crate::cli::Cli>,
     latest_build_info: Option<&BuildInfo>,
 ) -> Option<Data> {
-    // Read subsite configuration
-    let subsite_config_str = match fs::read_to_string(site_yaml_path) {
-        Ok(content) => content,
-        Err(e) => {
-            error!(
-                "Failed to read subsite config {}: {e}",
-                site_yaml_path.display()
-            );
-            return None;
-        }
+    // Get fully configured subsite config
+    let subsite_config = get_subsite_config(
+        &parent_site_data.site,
+        site_yaml_path,
+        subsite_name,
+        subsite_path,
+        cli_args,
+    );
+
+    // Create subsite data with the configured site config
+    let mut subsite_data = Data {
+        site: subsite_config,
+        posts: Vec::new(),
+        pages: Vec::new(),
+        tag: GroupedContent::new(Kind::Tag),
+        archive: GroupedContent::new(Kind::Archive),
+        author: GroupedContent::new(Kind::Author),
+        stream: GroupedContent::new(Kind::Stream),
+        series: GroupedContent::new(Kind::Series),
+        latest_timestamp: None,
+        config_path: site_yaml_path.to_string_lossy().to_string(),
+        force_render: false,
+        generated_urls: UrlCollection::default(),
+        subsites: HashMap::new(),
+        galleries: HashMap::new(),
     };
-
-    // Parse subsite configuration, merging with parent site defaults
-    let mut subsite_data = Data::new(&subsite_config_str, site_yaml_path);
-
-    // Merge parent site configuration as defaults (subsite config takes precedence)
-    merge_site_configs(&mut subsite_data.site, &parent_site_data.site, &subsite_data.config_path);
-
-    // Override with CLI args (not needed for subsites as they are already overridden by the parent site)
-    // subsite_data.site.override_from_cli_args(cli_args);
-
-    // Set the site_path to include the subsite name
-    if parent_site_data.site.site_path.is_empty() {
-        subsite_data.site.site_path = subsite_name.to_string();
-    } else {
-        subsite_data.site.site_path =
-            format!("{}/{}", parent_site_data.site.site_path, subsite_name);
-    }
-
-    // Update URL to include the subsite path
-    if !subsite_data.site.url.is_empty() && !subsite_data.site.url.ends_with('/') {
-        subsite_data.site.url.push('/');
-    }
-    subsite_data.site.url.push_str(&subsite_data.site.site_path);
-
-    // Set content_path to the actual subsite directory
-    subsite_data.site.content_path = subsite_path.to_string_lossy().to_string();
 
     // Collect fragments for the subsite with fallback support
     let parent_content_dir = input_folder.join(&parent_site_data.site.content_path);
@@ -3251,6 +3236,55 @@ fn process_single_subsite(
 
 /// Merge parent site configuration with subsite configuration
 /// Subsite configuration takes precedence
+/// Get a fully configured subsite config by merging with parent config
+fn get_subsite_config(
+    parent_config: &Marmite,
+    subsite_config_path: &Path,
+    subsite_name: &str,
+    subsite_path: &Path,
+    cli_args: &Arc<crate::cli::Cli>,
+) -> Marmite {
+    // Read and parse subsite configuration
+    let subsite_config_str = match fs::read_to_string(subsite_config_path) {
+        Ok(content) => content,
+        Err(e) => {
+            error!("Failed to read subsite config {}: {e}", subsite_config_path.display());
+            // Return a default config based on parent if we can't read the subsite config
+            return parent_config.clone();
+        }
+    };
+
+    // Parse the subsite config
+    let mut subsite_config: Marmite = match serde_yaml::from_str(&subsite_config_str) {
+        Ok(config) => config,
+        Err(e) => {
+            error!("Failed to parse subsite config {}: {e}", subsite_config_path.display());
+            return parent_config.clone();
+        }
+    };
+
+    // Merge parent config with subsite config
+    merge_site_configs(&mut subsite_config, parent_config, &subsite_config_path.to_string_lossy().to_string());
+
+    // Set the site_path to include the subsite name
+    if parent_config.site_path.is_empty() {
+        subsite_config.site_path = subsite_name.to_string();
+    } else {
+        subsite_config.site_path = format!("{}/{}", parent_config.site_path, subsite_name);
+    }
+
+    // Update URL to include the subsite path
+    if !subsite_config.url.is_empty() && !subsite_config.url.ends_with('/') {
+        subsite_config.url.push('/');
+    }
+    subsite_config.url.push_str(&subsite_config.site_path);
+
+    // Set content_path to the actual subsite directory
+    subsite_config.content_path = subsite_path.to_string_lossy().to_string();
+
+    subsite_config
+}
+
 fn merge_site_configs(subsite_config: &mut Marmite, parent_config: &Marmite, subsite_config_path: &String) {
     // Only merge fields that are not explicitly set in the subsite config
     // First find out which specific config are in the subsite config by inspecting keys on the file 
@@ -3275,24 +3309,6 @@ fn merge_site_configs(subsite_config: &mut Marmite, parent_config: &Marmite, sub
     // Update the subsite_config with the merged config
     *subsite_config = merged_subsite_config;
 
-
-    // // If subsite doesn't specify a theme, inherit from parent
-    // if subsite_config.theme.is_none() && parent_config.theme.is_some() {
-    //     subsite_config.theme = parent_config.theme.clone();
-    // }
-
-    // // Merge other configuration fields as needed
-    // // For example, if certain features should be inherited:
-    // if subsite_config.default_date_format.is_empty() {
-    //     subsite_config.default_date_format = parent_config.default_date_format.clone();
-    // }
-
-    // // If subsite doesn't specify a menu, inherit from parent
-    // if subsite_config.menu.is_none() && parent_config.menu.is_some() {
-    //     subsite_config.menu = parent_config.menu.clone();
-    // }
-
-    // You can add more field merging as needed
 }
 
 /// Initialize Tera for a subsite with its own theme
