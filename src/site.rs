@@ -432,7 +432,11 @@ impl Data {
     ) -> Self {
         // Create a default Data instance and set the subsite config
         let data = Self {
-            site: parent_config.with_subsite_config(subsite_config_path, subsite_name, subsite_path),
+            site: parent_config.with_subsite_config(
+                subsite_config_path,
+                subsite_name,
+                subsite_path,
+            ),
             config_path: subsite_config_path.to_string_lossy().to_string(),
             ..Default::default()
         };
@@ -3066,7 +3070,9 @@ fn process_subsites(
         if path.is_dir() {
             let site_yaml_path = path.join("site.yaml");
             if site_yaml_path.exists() {
-                let Some(subsite_name) = path.file_name().and_then(|n| n.to_str()) else { continue };
+                let Some(subsite_name) = path.file_name().and_then(|n| n.to_str()) else {
+                    continue;
+                };
 
                 info!("Processing subsite: {subsite_name}");
 
@@ -3145,8 +3151,11 @@ fn process_single_subsite(
     }
 
     // Initialize Tera for the subsite with its own theme
-    let (tera, shortcode_processor) =
-        initialize_tera_for_subsite(input_folder, &subsite_data, parent_site_data.site.theme.as_ref());
+    let (tera, shortcode_processor) = initialize_tera_for_subsite(
+        input_folder,
+        &subsite_data,
+        parent_site_data.site.theme.as_ref(),
+    );
 
     // Render templates for the subsite
     if let Err(e) = render_templates(

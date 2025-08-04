@@ -465,39 +465,44 @@ impl Marmite {
     }
 
     pub fn merged_from_subsite_config_file(&self, subsite_config_str: &str) -> Self {
-        // First find out which specific config are in the subsite config by inspecting keys on the file
-        let subsite_config_map_from_file: HashMap<String, Value> =
-            serde_yaml::from_str(subsite_config_str).unwrap();
-
-        // All the keys that are not in subsite_config_map_from_file
-        // must be taken from parent_config
-        // then subsite_config gets updated with the result
-        let mut temporary_config: Marmite = match serde_yaml::from_str(subsite_config_str) {
-            Ok(config) => config,
+        // Try to parse once into a generic Value
+        let parsed_value: Value = match serde_yaml::from_str(subsite_config_str) {
+            Ok(val) => val,
             Err(e) => {
                 error!("Failed to parse subsite config: {e}");
                 return self.clone();
             }
         };
+        let mut merged_yaml = parsed_value.clone();
 
-        let mut temporary_subsite_config_as_json =
-            serde_json::to_value(&mut temporary_config).unwrap();
-        let iterable_parent_config = serde_json::to_value(self).unwrap();
+        let subsite_keys = parsed_value
+            .as_mapping()
+            .map(|m| {
+                m.keys()
+                    .filter_map(|k| k.as_str().map(std::string::ToString::to_string))
+                    .collect::<std::collections::HashSet<String>>()
+            })
+            .unwrap_or_default();
 
-        for (key, value) in iterable_parent_config.as_object().unwrap() {
-            if !subsite_config_map_from_file.contains_key(key) {
-                temporary_subsite_config_as_json
-                    .as_object_mut()
-                    .unwrap()
-                    .insert(key.to_string(), value.clone());
+        let parent_yaml = serde_yaml::to_value(self).unwrap();
+
+        if let (Some(merged_obj), Some(parent_obj)) =
+            (merged_yaml.as_mapping_mut(), parent_yaml.as_mapping())
+        {
+            for (key, value) in parent_obj {
+                if !subsite_keys.contains(key.as_str().unwrap_or_default()) {
+                    merged_obj.insert(key.clone(), value.clone());
+                }
             }
         }
 
-        // Convert the temporary_subsite_config_as_json back to a Marmite struct
-        let merged_subsite_config: Marmite =
-            serde_json::from_value(temporary_subsite_config_as_json).unwrap();
-
-        merged_subsite_config
+        match serde_yaml::from_value(merged_yaml) {
+            Ok(merged) => merged,
+            Err(e) => {
+                error!("Failed to deserialize merged config: {e}");
+                self.clone()
+            }
+        }
     }
 }
 
