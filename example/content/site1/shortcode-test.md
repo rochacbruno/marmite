@@ -13,33 +13,56 @@ This is a test to verify that shortcodes work correctly in subsites and only sho
 
 <!-- .tags -->
 
+## Tags in main site
+
+<!-- .tags site="main" -->
+
 ## Authors in this subsite
 
 <!-- .authors -->
+
+
+## Authors in main site
+
+<!-- .authors site="main" -->
 
 ## Recent posts in this subsite
 
 <!-- .posts items=2 -->
 
-These shortcodes should only show content from this subsite (site1), not from the main site.
+## Recent posts in main site
 
-## Card 
+<!-- .posts items=2 site="main" -->
+
+
+## Card in this subsite
 
 <!-- .card slug=welcome-to-site1 -->
 
-## Card for author
+## Card for author in this subsite
 
 <!-- .card slug=author-site1-admin -->
 
-## Card for tag
+## Card for author from main site
+
+<!-- .card slug=author-rochacbruno site="main" -->
+
+
+## Card for tag in this subsite
 
 <!-- .card slug=tag-subsite -->
 
-## Gallery
 
-<!-- .gallery path=summer2025 -->
+## Card for tag from main site
 
-## Table of Contents
+<!-- .card slug=tag-markdown site="main" -->
+
+
+## Gallery from main site
+
+<!-- .gallery path=summer2025 site="main" -->
+
+## Table of Contents in this subsite
 
 <!-- .toc -->
 
