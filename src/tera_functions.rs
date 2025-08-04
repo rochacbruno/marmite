@@ -567,17 +567,23 @@ pub struct GroupFromSite {
 impl Function for GroupFromSite {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let site = args.get("site").and_then(Value::as_str).unwrap_or("");
-        
+
         // Determine which site data to use
         let target_data = if site == "main" {
-            self.cross_site_data.main_site.as_ref().unwrap_or(&self.cross_site_data.current_site)
+            self.cross_site_data
+                .main_site
+                .as_ref()
+                .unwrap_or(&self.cross_site_data.current_site)
         } else if !site.is_empty() {
-            self.cross_site_data.all_subsites.get(site).unwrap_or(&self.cross_site_data.current_site)
+            self.cross_site_data
+                .all_subsites
+                .get(site)
+                .unwrap_or(&self.cross_site_data.current_site)
         } else {
             // Default: use current site (empty string means current site)
             &self.cross_site_data.current_site
         };
-        
+
         // Call the original Group function with the target data
         let group_fn = Group {
             site_data: target_data.clone(),
@@ -594,17 +600,23 @@ pub struct GetPostsFromSite {
 impl Function for GetPostsFromSite {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let site = args.get("site").and_then(Value::as_str).unwrap_or("");
-        
+
         // Determine which site data to use
         let target_data = if site == "main" {
-            self.cross_site_data.main_site.as_ref().unwrap_or(&self.cross_site_data.current_site)
+            self.cross_site_data
+                .main_site
+                .as_ref()
+                .unwrap_or(&self.cross_site_data.current_site)
         } else if !site.is_empty() {
-            self.cross_site_data.all_subsites.get(site).unwrap_or(&self.cross_site_data.current_site)
+            self.cross_site_data
+                .all_subsites
+                .get(site)
+                .unwrap_or(&self.cross_site_data.current_site)
         } else {
             // Default: use current site (empty string means current site)
             &self.cross_site_data.current_site
         };
-        
+
         // Call the original GetPosts function with the target data
         let get_posts_fn = GetPosts {
             site_data: target_data.clone(),
@@ -621,17 +633,23 @@ pub struct GetDataBySlugFromSite {
 impl Function for GetDataBySlugFromSite {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let site = args.get("site").and_then(Value::as_str).unwrap_or("");
-        
+
         // Determine which site data to use
         let target_data = if site == "main" {
-            self.cross_site_data.main_site.as_ref().unwrap_or(&self.cross_site_data.current_site)
+            self.cross_site_data
+                .main_site
+                .as_ref()
+                .unwrap_or(&self.cross_site_data.current_site)
         } else if !site.is_empty() {
-            self.cross_site_data.all_subsites.get(site).unwrap_or(&self.cross_site_data.current_site)
+            self.cross_site_data
+                .all_subsites
+                .get(site)
+                .unwrap_or(&self.cross_site_data.current_site)
         } else {
             // Default: use current site (empty string means current site)
             &self.cross_site_data.current_site
         };
-        
+
         // Call the original GetDataBySlug function with the target data
         let get_data_fn = GetDataBySlug {
             site_data: target_data.clone(),
@@ -648,17 +666,23 @@ pub struct GetGalleryFromSite {
 impl Function for GetGalleryFromSite {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let site = args.get("site").and_then(Value::as_str).unwrap_or("");
-        
+
         // Determine which site data to use
         let target_data = if site == "main" {
-            self.cross_site_data.main_site.as_ref().unwrap_or(&self.cross_site_data.current_site)
+            self.cross_site_data
+                .main_site
+                .as_ref()
+                .unwrap_or(&self.cross_site_data.current_site)
         } else if !site.is_empty() {
-            self.cross_site_data.all_subsites.get(site).unwrap_or(&self.cross_site_data.current_site)
+            self.cross_site_data
+                .all_subsites
+                .get(site)
+                .unwrap_or(&self.cross_site_data.current_site)
         } else {
             // Default: use current site (empty string means current site)
             &self.cross_site_data.current_site
         };
-        
+
         // Call the original GetGallery function with the target data
         let get_gallery_fn = GetGallery {
             site_data: target_data.clone(),
@@ -675,17 +699,23 @@ pub struct UrlForFromSite {
 impl Function for UrlForFromSite {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let site = args.get("site").and_then(Value::as_str).unwrap_or("");
-        
+
         // Determine which site data to use
         let target_data = if site == "main" {
-            self.cross_site_data.main_site.as_ref().unwrap_or(&self.cross_site_data.current_site)
+            self.cross_site_data
+                .main_site
+                .as_ref()
+                .unwrap_or(&self.cross_site_data.current_site)
         } else if !site.is_empty() {
-            self.cross_site_data.all_subsites.get(site).unwrap_or(&self.cross_site_data.current_site)
+            self.cross_site_data
+                .all_subsites
+                .get(site)
+                .unwrap_or(&self.cross_site_data.current_site)
         } else {
             // Default: use current site (empty string means current site)
             &self.cross_site_data.current_site
         };
-        
+
         // Create url_for function with the target site data
         let url_for_fn = UrlFor {
             base_url: target_data.site.url.clone(),

@@ -7,7 +7,8 @@ use crate::gallery::Gallery;
 use crate::shortcodes::ShortcodeProcessor;
 use crate::tera_functions::{
     CrossSiteData, DisplayName, GetDataBySlug, GetDataBySlugFromSite, GetGallery,
-    GetGalleryFromSite, GetPosts, GetPostsFromSite, Group, GroupFromSite, SourceLink, UrlFor, UrlForFromSite,
+    GetGalleryFromSite, GetPosts, GetPostsFromSite, Group, GroupFromSite, SourceLink, UrlFor,
+    UrlForFromSite,
 };
 use crate::{server, tera_filter};
 use chrono::Datelike;
@@ -427,17 +428,14 @@ impl Data {
         subsite_name: &str,
         subsite_path: &Path,
     ) -> Self {
-        // Get the subsite config
-        let subsite_config = from_subsite_config(
+        // Create a default Data instance and set the subsite config
+        let mut data = Self::default();
+        data.site = Marmite::from_subsite_config(
             parent_config,
             subsite_config_path,
             subsite_name,
             subsite_path,
         );
-
-        // Create a default Data instance and set the subsite config
-        let mut data = Self::default();
-        data.site = subsite_config;
         data.config_path = subsite_config_path.to_string_lossy().to_string();
         data
     }
@@ -710,9 +708,11 @@ fn collect_content_fragments_with_fallback(
                 parent_content_dir.join(format!("_{fragment}.md"))
             } else {
                 // Fallback to another subsite
-                parent_content_dir.join(fallback_site).join(format!("_{fragment}.md"))
+                parent_content_dir
+                    .join(fallback_site)
+                    .join(format!("_{fragment}.md"))
             };
-            
+
             if fallback_path.exists() {
                 fs::read_to_string(fallback_path).unwrap()
             } else {
@@ -722,10 +722,10 @@ fn collect_content_fragments_with_fallback(
             // No fallback configured, use empty string
             String::new()
         };
-        
+
         markdown_fragments.insert(fragment.to_string(), fragment_content);
     }
-    
+
     markdown_fragments
 }
 
@@ -1132,15 +1132,15 @@ fn render_templates(
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
     global_context.insert("language", &site_data.site.language);
-    
+
     // Always register cross-site functions
     let mut tera_clone = tera.clone();
-    
+
     let cross_site_data = if let Some(parent) = parent_data {
         // For subsites: parent is the main site data
         global_context.insert("main_site_data", parent);
         global_context.insert("all_subsites", &parent.subsites);
-        
+
         CrossSiteData {
             current_site: site_data.clone(),
             main_site: Some(parent.clone()),
@@ -1150,14 +1150,14 @@ fn render_templates(
         // For main site: it is both current and main site
         global_context.insert("main_site_data", &site_data);
         global_context.insert("all_subsites", &site_data.subsites);
-        
+
         CrossSiteData {
             current_site: site_data.clone(),
             main_site: Some(site_data.clone()),
             all_subsites: site_data.subsites.clone(),
         }
     };
-    
+
     // Register cross-site aware functions
     tera_clone.register_function(
         "group_from_site",
@@ -1183,18 +1183,18 @@ fn render_templates(
             cross_site_data: cross_site_data.clone(),
         },
     );
-    tera_clone.register_function(
-        "url_for_from_site",
-        UrlForFromSite {
-            cross_site_data,
-        },
-    );
-    
+    tera_clone.register_function("url_for_from_site", UrlForFromSite { cross_site_data });
+
     let tera_to_use = &tera_clone;
-    
+
     debug!("Global Context site: {:?}", &site_data.site);
     debug!("Site data galleries count: {}", site_data.galleries.len());
-    collect_global_fragments(content_dir, &mut global_context, tera_to_use, &site_data.site);
+    collect_global_fragments(
+        content_dir,
+        &mut global_context,
+        tera_to_use,
+        &site_data.site,
+    );
 
     handle_stream_pages(&site_data, &global_context, tera_to_use, output_dir)?;
     handle_series_pages(&site_data, &global_context, tera_to_use, output_dir)?;
@@ -3220,82 +3220,6 @@ fn process_single_subsite(
     Some(subsite_data)
 }
 
-/// Merge parent site configuration with subsite configuration
-/// Subsite configuration takes precedence
-/// Get a fully configured subsite config by merging with parent config
-fn from_subsite_config(
-    parent_config: &Marmite,
-    subsite_config_path: &Path,
-    subsite_name: &str,
-    subsite_path: &Path,
-) -> Marmite {
-    // Read and parse subsite configuration
-    let subsite_config_str = match fs::read_to_string(subsite_config_path) {
-        Ok(content) => content,
-        Err(e) => {
-            error!("Failed to read subsite config {}: {e}", subsite_config_path.display());
-            // Return a default config based on parent if we can't read the subsite config
-            return parent_config.clone();
-        }
-    };
-
-    // Parse the subsite config
-    let mut subsite_config: Marmite = match serde_yaml::from_str(&subsite_config_str) {
-        Ok(config) => config,
-        Err(e) => {
-            error!("Failed to parse subsite config {}: {e}", subsite_config_path.display());
-            return parent_config.clone();
-        }
-    };
-
-    // Merge parent config with subsite config
-    merge_site_configs(&mut subsite_config, parent_config, &subsite_config_path.to_string_lossy().to_string());
-
-    // Set the site_path to include the subsite name
-    if parent_config.site_path.is_empty() {
-        subsite_config.site_path = subsite_name.to_string();
-    } else {
-        subsite_config.site_path = format!("{}/{}", parent_config.site_path, subsite_name);
-    }
-
-    // Update URL to include the subsite path
-    if !subsite_config.url.is_empty() && !subsite_config.url.ends_with('/') {
-        subsite_config.url.push('/');
-    }
-    subsite_config.url.push_str(&subsite_config.site_path);
-
-    // Set content_path to the actual subsite directory
-    subsite_config.content_path = subsite_path.to_string_lossy().to_string();
-
-    subsite_config
-}
-
-fn merge_site_configs(subsite_config: &mut Marmite, parent_config: &Marmite, subsite_config_path: &String) {
-    // Only merge fields that are not explicitly set in the subsite config
-    // First find out which specific config are in the subsite config by inspecting keys on the file 
-    let subsite_config_str = fs::read_to_string(subsite_config_path).unwrap();
-    let subsite_config_map_from_file: HashMap<String, Value> = serde_yaml::from_str(&subsite_config_str).unwrap();
-
-    // All the keys that are not in subsite_config_map_from_file
-    // must be taken from parent_config
-    // then subsite_config gets updated with the result
-    let mut temporary_subsite_config_as_json = serde_json::to_value(&mut *subsite_config).unwrap();
-    let iterable_parent_config= serde_json::to_value(parent_config).unwrap();
-
-    for (key, value) in iterable_parent_config.as_object().unwrap() {
-        if !subsite_config_map_from_file.contains_key(key) {
-            temporary_subsite_config_as_json.as_object_mut().unwrap().insert(key.to_string(), value.clone());
-        }
-    }
-
-    // Convert the temporary_subsite_config_as_json back to a Marmite struct
-    let merged_subsite_config: Marmite = serde_json::from_value(temporary_subsite_config_as_json).unwrap();
-
-    // Update the subsite_config with the merged config
-    *subsite_config = merged_subsite_config;
-
-}
-
 /// Initialize Tera for a subsite with its own theme
 fn initialize_tera_for_subsite(
     input_folder: &Path,
@@ -3355,11 +3279,7 @@ fn handle_static_artifacts_for_subsite(
             let mut options = CopyOptions::new();
             options.overwrite = true;
             options.content_only = true;
-            if let Err(e) = dircopy(
-                &theme_static_src,
-                &static_dst,
-                &options,
-            ) {
+            if let Err(e) = dircopy(&theme_static_src, &static_dst, &options) {
                 error!("Failed to copy subsite theme static files: {e}");
             }
         }

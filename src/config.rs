@@ -1,7 +1,7 @@
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use serde_yaml::Value;
-use std::{collections::HashMap, path::Path, process, sync::Arc};
+use std::{collections::HashMap, fs, path::Path, process, sync::Arc};
 
 use crate::cli::Cli;
 
@@ -422,6 +422,98 @@ impl Marmite {
             self.publish_urls_json = publish_urls_json;
         }
     }
+
+    /// Create a fully configured subsite config by merging with parent config
+    pub fn from_subsite_config(
+        parent_config: &Marmite,
+        subsite_config_path: &Path,
+        subsite_name: &str,
+        subsite_path: &Path,
+    ) -> Marmite {
+        // Read and parse subsite configuration
+        let subsite_config_str = match fs::read_to_string(subsite_config_path) {
+            Ok(content) => content,
+            Err(e) => {
+                error!(
+                    "Failed to read subsite config {}: {e}",
+                    subsite_config_path.display()
+                );
+                return parent_config.clone();
+            }
+        };
+
+        // Parse the subsite config
+        let mut subsite_config: Marmite = match serde_yaml::from_str(&subsite_config_str) {
+            Ok(config) => config,
+            Err(e) => {
+                error!(
+                    "Failed to parse subsite config {}: {e}",
+                    subsite_config_path.display()
+                );
+                return parent_config.clone();
+            }
+        };
+
+        // Merge parent config with subsite config
+        merge_site_configs(
+            &mut subsite_config,
+            parent_config,
+            &subsite_config_path.to_string_lossy().to_string(),
+        );
+
+        // Set the site_path to include the subsite name
+        if parent_config.site_path.is_empty() {
+            subsite_config.site_path = subsite_name.to_string();
+        } else {
+            subsite_config.site_path = format!("{}/{}", parent_config.site_path, subsite_name);
+        }
+
+        // Update URL to include the subsite path
+        if !subsite_config.url.is_empty() && !subsite_config.url.ends_with('/') {
+            subsite_config.url.push('/');
+        }
+        subsite_config.url.push_str(&subsite_config.site_path);
+
+        // Set content_path to the actual subsite directory
+        subsite_config.content_path = subsite_path.to_string_lossy().to_string();
+
+        subsite_config
+    }
+}
+
+/// Merge parent site configuration with subsite configuration
+/// Only merge fields that are not explicitly set in the subsite config
+fn merge_site_configs(
+    subsite_config: &mut Marmite,
+    parent_config: &Marmite,
+    subsite_config_path: &String,
+) {
+    // First find out which specific config are in the subsite config by inspecting keys on the file
+    let subsite_config_str = fs::read_to_string(subsite_config_path).unwrap();
+    let subsite_config_map_from_file: HashMap<String, Value> =
+        serde_yaml::from_str(&subsite_config_str).unwrap();
+
+    // All the keys that are not in subsite_config_map_from_file
+    // must be taken from parent_config
+    // then subsite_config gets updated with the result
+    let mut temporary_subsite_config_as_json = serde_json::to_value(&mut *subsite_config).unwrap();
+    let iterable_parent_config = serde_json::to_value(parent_config).unwrap();
+
+    for (key, value) in iterable_parent_config.as_object().unwrap() {
+        if !subsite_config_map_from_file.contains_key(key) {
+            temporary_subsite_config_as_json
+                .as_object_mut()
+                .unwrap()
+                .insert(key.to_string(), value.clone());
+        }
+    }
+
+    // Convert the temporary_subsite_config_as_json back to a Marmite struct
+    let merged_subsite_config: Marmite =
+        serde_json::from_value(temporary_subsite_config_as_json).unwrap();
+
+    // Update the subsite_config with the merged config
+    *subsite_config = merged_subsite_config;
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
