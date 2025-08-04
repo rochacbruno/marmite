@@ -518,7 +518,6 @@ pub fn generate(
                 &moved_output_folder,
                 &moved_input_folder,
                 &mut site_data,
-                &moved_cli_args,
                 latest_build_info.as_ref(),
             );
 
@@ -2921,7 +2920,7 @@ pub fn show_urls(
     let mut json = create_urls_json(&site_data);
 
     // Process subsites and add their URLs
-    let subsites_urls = collect_subsites_urls(&content_folder, input_folder.as_path(), &site_data, args);
+    let subsites_urls = collect_subsites_urls(&content_folder, input_folder.as_path(), &site_data);
     if !subsites_urls.is_empty() {
         json.as_object_mut().unwrap().insert(
             "subsites".to_string(),
@@ -2941,7 +2940,6 @@ fn collect_subsites_urls(
     content_folder: &Path,
     input_folder: &Path,
     parent_site_data: &Data,
-    cli_args: &Arc<crate::cli::Cli>,
 ) -> serde_json::Map<String, serde_json::Value> {
     let mut subsites_urls = serde_json::Map::new();
 
@@ -2972,7 +2970,6 @@ fn collect_subsites_urls(
                     &site_yaml_path,
                     input_folder,
                     parent_site_data,
-                    cli_args,
                 ) {
                     subsites_urls.insert(subsite_name, subsite_urls);
                 }
@@ -2990,7 +2987,6 @@ fn collect_single_subsite_urls(
     site_yaml_path: &Path,
     input_folder: &Path,
     parent_site_data: &Data,
-    cli_args: &Arc<crate::cli::Cli>,
 ) -> Option<serde_json::Value> {
     // Read subsite configuration
     let subsite_config_str = match fs::read_to_string(site_yaml_path) {
@@ -3008,10 +3004,10 @@ fn collect_single_subsite_urls(
     let mut subsite_data = Data::new(&subsite_config_str, site_yaml_path);
 
     // Merge parent site configuration as defaults (subsite config takes precedence)
-    merge_site_configs(&mut subsite_data.site, &parent_site_data.site);
+    merge_site_configs(&mut subsite_data.site, &parent_site_data.site, &subsite_data.config_path);
 
-    // Override with CLI args
-    subsite_data.site.override_from_cli_args(cli_args);
+    // Override with CLI args (not needed for subsites as they are already overridden by the parent site)
+    // subsite_data.site.override_from_cli_args(cli_args);
 
     // Set the site_path to include the subsite name
     if parent_site_data.site.site_path.is_empty() {
@@ -3055,7 +3051,6 @@ fn process_subsites(
     output_folder: &Path,
     input_folder: &Path,
     parent_site_data: &mut Data,
-    cli_args: &Arc<crate::cli::Cli>,
     latest_build_info: Option<&BuildInfo>,
 ) {
     // Look for directories in content folder that contain a site.yaml file
@@ -3087,7 +3082,6 @@ fn process_subsites(
                     output_folder,
                     input_folder,
                     parent_site_data,
-                    cli_args,
                     latest_build_info,
                 ) {
                     parent_site_data
@@ -3108,7 +3102,6 @@ fn process_single_subsite(
     output_folder: &Path,
     input_folder: &Path,
     parent_site_data: &Data,
-    cli_args: &Arc<crate::cli::Cli>,
     latest_build_info: Option<&BuildInfo>,
 ) -> Option<Data> {
     // Read subsite configuration
@@ -3127,10 +3120,10 @@ fn process_single_subsite(
     let mut subsite_data = Data::new(&subsite_config_str, site_yaml_path);
 
     // Merge parent site configuration as defaults (subsite config takes precedence)
-    merge_site_configs(&mut subsite_data.site, &parent_site_data.site);
+    merge_site_configs(&mut subsite_data.site, &parent_site_data.site, &subsite_data.config_path);
 
-    // Override with CLI args
-    subsite_data.site.override_from_cli_args(cli_args);
+    // Override with CLI args (not needed for subsites as they are already overridden by the parent site)
+    // subsite_data.site.override_from_cli_args(cli_args);
 
     // Set the site_path to include the subsite name
     if parent_site_data.site.site_path.is_empty() {
@@ -3258,25 +3251,46 @@ fn process_single_subsite(
 
 /// Merge parent site configuration with subsite configuration
 /// Subsite configuration takes precedence
-fn merge_site_configs(subsite_config: &mut Marmite, parent_config: &Marmite) {
+fn merge_site_configs(subsite_config: &mut Marmite, parent_config: &Marmite, subsite_config_path: &String) {
     // Only merge fields that are not explicitly set in the subsite config
-    // This is a simplified merge - you may need to add more fields based on your needs
+    // First find out which specific config are in the subsite config by inspecting keys on the file 
+    let subsite_config_str = fs::read_to_string(subsite_config_path).unwrap();
+    let subsite_config_map_from_file: HashMap<String, Value> = serde_yaml::from_str(&subsite_config_str).unwrap();
 
-    // If subsite doesn't specify a theme, inherit from parent
-    if subsite_config.theme.is_none() && parent_config.theme.is_some() {
-        subsite_config.theme = parent_config.theme.clone();
+    // All the keys that are not in subsite_config_map_from_file
+    // must be taken from parent_config
+    // then subsite_config gets updated with the result
+    let mut temporary_subsite_config_as_json = serde_json::to_value(&mut *subsite_config).unwrap();
+    let iterable_parent_config= serde_json::to_value(parent_config).unwrap();
+
+    for (key, value) in iterable_parent_config.as_object().unwrap() {
+        if !subsite_config_map_from_file.contains_key(key) {
+            temporary_subsite_config_as_json.as_object_mut().unwrap().insert(key.to_string(), value.clone());
+        }
     }
 
-    // Merge other configuration fields as needed
-    // For example, if certain features should be inherited:
-    if subsite_config.default_date_format.is_empty() {
-        subsite_config.default_date_format = parent_config.default_date_format.clone();
-    }
+    // Convert the temporary_subsite_config_as_json back to a Marmite struct
+    let merged_subsite_config: Marmite = serde_json::from_value(temporary_subsite_config_as_json).unwrap();
 
-    // If subsite doesn't specify a menu, inherit from parent
-    if subsite_config.menu.is_none() && parent_config.menu.is_some() {
-        subsite_config.menu = parent_config.menu.clone();
-    }
+    // Update the subsite_config with the merged config
+    *subsite_config = merged_subsite_config;
+
+
+    // // If subsite doesn't specify a theme, inherit from parent
+    // if subsite_config.theme.is_none() && parent_config.theme.is_some() {
+    //     subsite_config.theme = parent_config.theme.clone();
+    // }
+
+    // // Merge other configuration fields as needed
+    // // For example, if certain features should be inherited:
+    // if subsite_config.default_date_format.is_empty() {
+    //     subsite_config.default_date_format = parent_config.default_date_format.clone();
+    // }
+
+    // // If subsite doesn't specify a menu, inherit from parent
+    // if subsite_config.menu.is_none() && parent_config.menu.is_some() {
+    //     subsite_config.menu = parent_config.menu.clone();
+    // }
 
     // You can add more field merging as needed
 }
