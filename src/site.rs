@@ -71,9 +71,11 @@ impl Data {
             }
         };
 
-        let mut data = Self::default();
-        data.site = site;
-        data.config_path = config_path.to_string_lossy().to_string();
+        let data = Self {
+            site,
+            config_path: config_path.to_string_lossy().to_string(),
+            ..Default::default()
+        };
         data
     }
 
@@ -429,10 +431,11 @@ impl Data {
         subsite_path: &Path,
     ) -> Self {
         // Create a default Data instance and set the subsite config
-        let mut data = Self::default();
-        data.site =
-            parent_config.with_subsite_config(subsite_config_path, subsite_name, subsite_path);
-        data.config_path = subsite_config_path.to_string_lossy().to_string();
+        let data = Self {
+            site: parent_config.with_subsite_config(subsite_config_path, subsite_name, subsite_path),
+            config_path: subsite_config_path.to_string_lossy().to_string(),
+            ..Default::default()
+        };
         data
     }
 }
@@ -2991,15 +2994,14 @@ fn collect_subsites_urls(
                     .to_string();
 
                 // Process this subsite for URL collection
-                if let Some(subsite_urls) = collect_single_subsite_urls(
+                let single_subsite_urls = collect_single_subsite_urls(
                     &subsite_name,
                     &entry_path,
                     &site_yaml_path,
                     input_folder,
                     parent_site_data,
-                ) {
-                    subsites_urls.insert(subsite_name, subsite_urls);
-                }
+                );
+                subsites_urls.insert(subsite_name, single_subsite_urls);
             }
         }
     }
@@ -3014,7 +3016,7 @@ fn collect_single_subsite_urls(
     site_yaml_path: &Path,
     input_folder: &Path,
     parent_site_data: &Data,
-) -> Option<serde_json::Value> {
+) -> serde_json::Value {
     // Create subsite data with the configured site config
     let mut subsite_data = Data::new_for_subsite(
         &parent_site_data.site,
@@ -3039,7 +3041,7 @@ fn collect_single_subsite_urls(
     subsite_data.collect_all_urls();
 
     // Generate JSON using the shared function
-    Some(create_urls_json(&subsite_data))
+    create_urls_json(&subsite_data)
 }
 
 /// Process subsites found in the content directory
@@ -3064,10 +3066,7 @@ fn process_subsites(
         if path.is_dir() {
             let site_yaml_path = path.join("site.yaml");
             if site_yaml_path.exists() {
-                let subsite_name = match path.file_name().and_then(|n| n.to_str()) {
-                    Some(name) => name,
-                    None => continue,
-                };
+                let Some(subsite_name) = path.file_name().and_then(|n| n.to_str()) else { continue };
 
                 info!("Processing subsite: {subsite_name}");
 
@@ -3147,7 +3146,7 @@ fn process_single_subsite(
 
     // Initialize Tera for the subsite with its own theme
     let (tera, shortcode_processor) =
-        initialize_tera_for_subsite(input_folder, &subsite_data, &parent_site_data.site.theme);
+        initialize_tera_for_subsite(input_folder, &subsite_data, parent_site_data.site.theme.as_ref());
 
     // Render templates for the subsite
     if let Err(e) = render_templates(
@@ -3220,7 +3219,7 @@ fn process_single_subsite(
 fn initialize_tera_for_subsite(
     input_folder: &Path,
     site_data: &Data,
-    _parent_theme: &Option<String>,
+    _parent_theme: Option<&String>,
 ) -> (Tera, Option<ShortcodeProcessor>) {
     // Initialize Tera with the appropriate theme
     // This reuses the existing initialize_tera function

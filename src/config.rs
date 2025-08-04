@@ -443,7 +443,7 @@ impl Marmite {
         };
 
         // Read subsite config from file and merge with parent config (file takes precedence over parent config)
-        let mut subsite_config = self.merged_from_subsite_config_file(subsite_config_str);
+        let mut subsite_config = self.merged_from_subsite_config_file(&subsite_config_str);
 
         // Set the site_path to include the subsite name
         if self.site_path.is_empty() {
@@ -464,15 +464,15 @@ impl Marmite {
         subsite_config
     }
 
-    pub fn merged_from_subsite_config_file(&self, subsite_config_str: String) -> Self {
+    pub fn merged_from_subsite_config_file(&self, subsite_config_str: &str) -> Self {
         // First find out which specific config are in the subsite config by inspecting keys on the file
         let subsite_config_map_from_file: HashMap<String, Value> =
-            serde_yaml::from_str(&subsite_config_str).unwrap();
+            serde_yaml::from_str(subsite_config_str).unwrap();
 
         // All the keys that are not in subsite_config_map_from_file
         // must be taken from parent_config
         // then subsite_config gets updated with the result
-        let mut temporary_config: Marmite = match serde_yaml::from_str(&subsite_config_str) {
+        let mut temporary_config: Marmite = match serde_yaml::from_str(subsite_config_str) {
             Ok(config) => config,
             Err(e) => {
                 error!("Failed to parse subsite config: {e}");
