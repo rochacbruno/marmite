@@ -141,3 +141,43 @@ git push origin $tag
 ~~~bash
 cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
 ~~~
+
+## build_python
+
+> Build Python wheel with maturin
+
+~~~bash
+uv run --with "pip,maturin[zig],cffi" maturin build --release
+~~~
+
+## build_wheel
+
+> Build Python wheel with specific interpreter
+
+~~~bash
+uv run --with "pip,maturin[zig],cffi" maturin build --release --strip --interpreter python3
+~~~
+
+## python_dev_install
+
+> Install Python package in development mode
+
+~~~bash
+uv run --with "pip,maturin[zig],cffi" maturin develop --release
+~~~
+
+## maturin_build
+
+> Build Python wheel with uv and maturin
+
+~~~bash
+uv run --with pip,maturin[zig],cffi maturin build --release
+~~~
+
+## maturin_sdist
+
+> Build source distribution with maturin
+
+~~~bash
+uv run --with pip,maturin[zig],cffi maturin sdist
+~~~

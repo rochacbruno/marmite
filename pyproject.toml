@@ -1,0 +1,61 @@
+[build-system]
+requires = ["maturin>=1.0,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "marmite"
+authors = [
+    {name = "Bruno Rocha", email = "rochacbruno@gmail.com"},
+]
+description = "Marmite is the easiest static site generator."
+readme = "README.md"
+license = {text = "AGPL-3.0-or-later"}
+keywords = ["web", "blog", "static", "site", "html", "generator", "markdown"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Internet :: WWW/HTTP :: Site Management",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Text Processing :: Markup :: HTML",
+    "Topic :: Text Processing :: Markup :: Markdown",
+]
+requires-python = ">=3.8"
+dependencies = []
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://marmite.blog"
+Documentation = "https://marmite.blog"
+Repository = "https://github.com/rochacbruno/marmite"
+"Bug Tracker" = "https://github.com/rochacbruno/marmite/issues"
+
+# [tool.maturin]
+# python-source = "python"
+# module-name = "marmite._marmite"
+# bindings = "bin"
+
+[tool.maturin]
+bindings = "bin"
+manifest-path = "Cargo.toml"
+python-packages = ["python/marmite"]
+strip = true
+
+# [tool.maturin.target.x86_64-unknown-linux-gnu]
+# features = ["pyo3/extension-module"]
+
+# [tool.maturin.target.x86_64-apple-darwin]
+# features = ["pyo3/extension-module"]
+
+# [tool.maturin.target.x86_64-pc-windows-msvc]
+# features = ["pyo3/extension-module"]
