@@ -1,0 +1,297 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'py*'
+  # Manual trigger for testing and recovery scenarios
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run mode (skip actual publishing)'
+        required: false
+        default: true
+        type: boolean
+      skip_crates_io:
+        description: 'Skip publishing to crates.io (if already published)'
+        required: false
+        default: false
+        type: boolean
+      skip_pypi:
+        description: 'Skip publishing to PyPI (if already published)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Toolchain setup
+      - uses: jdx/mise-action@v2
+        with:
+          experimental: true
+          install: true
+
+      - name: Install mise tools
+        run: mise install --yes
+
+      # Ensure Rust components are installed from rust-toolchain.toml
+      - name: Install Rust components
+        run: |
+          rustup component add rustfmt clippy
+
+      - name: Run linting
+        run: mask check
+
+      - name: Run tests
+        run: cargo test
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # Toolchain setup (mise installs rust, python, maturin, etc.)
+      - uses: jdx/mise-action@v2
+        with:
+          experimental: true
+          install: true
+
+      # Ensure all mise tools are installed (including zig for Linux)
+      - name: Install mise tools
+        run: mise install --yes
+
+      # Verify zig installation on Linux only
+      - name: Verify zig installation
+        if: matrix.os == 'ubuntu-latest'
+        run: mise exec zig -- zig version || echo "Zig verification failed"
+
+      # Install rust target for cross-compilation
+      - name: Install Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      # Build wheel
+      - name: Build wheel
+        run: |
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            # Use zig for cross-compilation to Linux ARM64
+            mise exec -- maturin build --release --target ${{ matrix.target }} --compatibility manylinux2014 --zig
+          elif [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            # Use manylinux2014 with zig for better compatibility on x86_64 Linux
+            mise exec -- maturin build --release --target ${{ matrix.target }} --compatibility manylinux2014 --zig
+          else
+            # Native compilation or standard cross-compilation
+            mise exec -- maturin build --release --target ${{ matrix.target }}
+          fi
+        shell: bash
+
+      # Build binary
+      - name: Build binary
+        run: |
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            # Use cargo-zigbuild for cross-compilation to Linux ARM64
+            cargo install cargo-zigbuild --locked
+            mise exec -- cargo zigbuild --release --target ${{ matrix.target }}
+          else
+            # Native compilation or standard cross-compilation
+            cargo build --release --target ${{ matrix.target }}
+          fi
+        shell: bash
+
+      # Rename binary
+      - name: Prepare artifacts
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            mv target/${{ matrix.target }}/release/marmite.exe marmite-${{ matrix.target }}.exe
+          else
+            mv target/${{ matrix.target }}/release/marmite marmite-${{ matrix.target }}
+          fi
+        shell: bash
+
+      # Create Homebrew archives for macOS builds
+      - name: Create Homebrew archives
+        if: runner.os == 'macOS'
+        run: |
+          # Extract version from ref (e.g., refs/tags/v0.0.97 -> v0.0.97)
+          VERSION=${GITHUB_REF#refs/tags/}
+
+          # Create directory structure for archive
+          mkdir -p homebrew-package
+          cp marmite-${{ matrix.target }} homebrew-package/marmite
+
+          # Create tar.gz archive
+          tar -czf marmite-${VERSION}-${{ matrix.target }}.tar.gz -C homebrew-package marmite
+
+          # Calculate SHA256
+          shasum -a 256 marmite-${VERSION}-${{ matrix.target }}.tar.gz > marmite-${VERSION}-${{ matrix.target }}.tar.gz.sha256
+
+          # Clean up
+          rm -rf homebrew-package
+        shell: bash
+
+      # Upload Homebrew archives
+      - name: Upload Homebrew archives
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          path: |
+            marmite-*-${{ matrix.target }}.tar.gz
+            marmite-*-${{ matrix.target }}.tar.gz.sha256
+          name: homebrew-${{ matrix.target }}
+
+      # Upload artifacts
+      - name: Upload wheel
+        uses: actions/upload-artifact@v4
+        with:
+          path: target/wheels/*
+          name: wheel-${{ matrix.target }}
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          path: marmite-${{ matrix.target }}*
+          name: marmite-${{ matrix.target }}
+
+  sdist:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+        with:
+          experimental: true
+          install: true
+      - name: Install mise tools
+        run: mise install --yes
+      - name: Build source distribution
+        run: mise exec -- maturin sdist
+      - uses: actions/upload-artifact@v4
+        with:
+          path: target/wheels/*.tar.gz
+          name: sdist
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build, sdist]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+        with:
+          experimental: true
+
+    # For now the other workflow handles Rust release this one is for Python only   
+    #   - name: Publish to crates.io
+    #     if: ${{ inputs.dry_run != true && inputs.skip_crates_io != true }}
+    #     env:
+    #       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    #     run: cargo publish --locked
+
+    #   - name: Test crates.io publish (dry run)
+    #     if: ${{ inputs.dry_run == true && inputs.skip_crates_io != true }}
+    #     run: |
+    #       echo "DRY RUN: Would publish to crates.io"
+    #       cargo publish --dry-run --locked
+
+      - name: Skip crates.io publishing
+        if: ${{ inputs.skip_crates_io == true }}
+        run: echo "⏭️ Skipping crates.io publishing as requested"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish to PyPI
+        if: ${{ inputs.dry_run != true && inputs.skip_pypi != true }}
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          # Upload only Python packages (wheels and sdist), not Homebrew archives
+          uv tool run twine upload artifacts/wheel-*/*.whl artifacts/sdist/*.tar.gz
+
+      - name: Test PyPI upload (dry run)
+        if: ${{ inputs.dry_run == true && inputs.skip_pypi != true }}
+        run: |
+          echo "DRY RUN: Would upload to PyPI:"
+          find artifacts/wheel-* -name "*.whl" -type f | sort
+          find artifacts/sdist -name "*.tar.gz" -type f | sort
+          echo ""
+          echo "Checking packages:"
+          uv tool run twine check artifacts/wheel-*/*.whl artifacts/sdist/*.tar.gz
+
+      - name: Skip PyPI publishing
+        if: ${{ inputs.skip_pypi == true }}
+        run: echo "⏭️ Skipping PyPI publishing as requested"
+
+    #   - name: Extract release notes
+    #     run: |
+    #       TAG_NAME=${GITHUB_REF#refs/tags/}
+    #       VERSION=${TAG_NAME#v}
+    #       if [ -f scripts/extract-changelog.sh ] && [ -f CHANGELOG.md ]; then
+    #         chmod +x scripts/extract-changelog.sh
+    #         ./scripts/extract-changelog.sh "$VERSION" > release-notes.md || echo "No changelog entry found for $VERSION" > release-notes.md
+    #       else
+    #         echo "No changelog found" > release-notes.md
+    #       fi
+
+    #   - name: Create Release
+    #     if: ${{ inputs.dry_run != true }}
+    #     uses: softprops/action-gh-release@v1
+    #     with:
+    #       body_path: release-notes.md
+    #       files: |
+    #         artifacts/marmite-*/marmite-*
+    #         artifacts/homebrew-*/marmite-*.tar.gz
+    #         artifacts/homebrew-*/marmite-*.tar.gz.sha256
+    #     env:
+    #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    #   - name: Test Release Creation (dry run)
+    #     if: ${{ inputs.dry_run == true }}
+    #     run: |
+    #       echo "DRY RUN: Would create release with:"
+    #       echo "- Release notes from: release-notes.md"
+    #       echo "- Artifacts:"
+    #       find artifacts -name "marmite-*" -type f | sort
+    #       echo ""
+    #       echo "- Homebrew archives:"
+    #       find artifacts/homebrew-* -name "*.tar.gz*" -type f 2>/dev/null | sort || echo "  (none for non-macOS builds)"
+
+
+      - name: Dry Run Summary
+        if: ${{ inputs.dry_run == true }}
+        run: |
+          echo "## 🧪 Dry Run Complete!"
+          echo ""
+          echo "The release pipeline executed successfully in dry-run mode."
+          echo "All artifacts were built but nothing was published."
+          echo ""
+          echo "To do an actual release:"
+          echo "1. Uncheck 'Dry run mode' when running manually, OR"
+          echo "2. Create and push a version tag (e.g., v0.0.85)"

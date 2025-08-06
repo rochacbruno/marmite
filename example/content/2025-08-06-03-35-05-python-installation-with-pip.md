@@ -64,10 +64,7 @@ marmite . --serve --watch
 
 ## Alternative Installation Methods
 
-If you prefer other installation methods, marmite is also available via:
-- Direct binary downloads from [GitHub Releases](https://github.com/rochacbruno/marmite/releases)
-- Building from source with Cargo: `cargo install marmite`
-- Package managers (coming soon)
+Check [[Installation]] Guide
 
 The pip installation method is perfect for:
 - Python developers who want to include marmite in their development workflow

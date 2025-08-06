@@ -40,19 +40,22 @@ Documentation = "https://marmite.blog"
 Repository = "https://github.com/rochacbruno/marmite"
 "Bug Tracker" = "https://github.com/rochacbruno/marmite/issues"
 
-[project.scripts]
-marmite = "marmite:main"
+# [tool.maturin]
+# python-source = "python"
+# module-name = "marmite._marmite"
+# bindings = "bin"
 
 [tool.maturin]
-python-source = "python"
-module-name = "marmite._marmite"
 bindings = "bin"
+manifest-path = "Cargo.toml"
+python-packages = ["python/marmite"]
+strip = true
 
-[tool.maturin.target.x86_64-unknown-linux-gnu]
-features = ["pyo3/extension-module"]
+# [tool.maturin.target.x86_64-unknown-linux-gnu]
+# features = ["pyo3/extension-module"]
 
-[tool.maturin.target.x86_64-apple-darwin]
-features = ["pyo3/extension-module"]
+# [tool.maturin.target.x86_64-apple-darwin]
+# features = ["pyo3/extension-module"]
 
-[tool.maturin.target.x86_64-pc-windows-msvc]
-features = ["pyo3/extension-module"]
+# [tool.maturin.target.x86_64-pc-windows-msvc]
+# features = ["pyo3/extension-module"]
