@@ -1,4 +1,4 @@
-name: Release
+name: Release Python
 
 on:
   push:
@@ -51,7 +51,10 @@ jobs:
           rustup component add rustfmt clippy
 
       - name: Run linting
-        run: mask check
+        run: |
+          cargo fmt -- --check
+          cargo clippy
+
 
       - name: Run tests
         run: cargo test
@@ -133,36 +136,36 @@ jobs:
           fi
         shell: bash
 
-      # Create Homebrew archives for macOS builds
-      - name: Create Homebrew archives
-        if: runner.os == 'macOS'
-        run: |
-          # Extract version from ref (e.g., refs/tags/v0.0.97 -> v0.0.97)
-          VERSION=${GITHUB_REF#refs/tags/}
+    #   # Create Homebrew archives for macOS builds
+    #   - name: Create Homebrew archives
+    #     if: runner.os == 'macOS'
+    #     run: |
+    #       # Extract version from ref (e.g., refs/tags/v0.0.97 -> v0.0.97)
+    #       VERSION=${GITHUB_REF#refs/tags/}
 
-          # Create directory structure for archive
-          mkdir -p homebrew-package
-          cp marmite-${{ matrix.target }} homebrew-package/marmite
+    #       # Create directory structure for archive
+    #       mkdir -p homebrew-package
+    #       cp marmite-${{ matrix.target }} homebrew-package/marmite
 
-          # Create tar.gz archive
-          tar -czf marmite-${VERSION}-${{ matrix.target }}.tar.gz -C homebrew-package marmite
+    #       # Create tar.gz archive
+    #       tar -czf marmite-${VERSION}-${{ matrix.target }}.tar.gz -C homebrew-package marmite
 
-          # Calculate SHA256
-          shasum -a 256 marmite-${VERSION}-${{ matrix.target }}.tar.gz > marmite-${VERSION}-${{ matrix.target }}.tar.gz.sha256
+    #       # Calculate SHA256
+    #       shasum -a 256 marmite-${VERSION}-${{ matrix.target }}.tar.gz > marmite-${VERSION}-${{ matrix.target }}.tar.gz.sha256
 
-          # Clean up
-          rm -rf homebrew-package
-        shell: bash
+    #       # Clean up
+    #       rm -rf homebrew-package
+    #     shell: bash
 
-      # Upload Homebrew archives
-      - name: Upload Homebrew archives
-        if: runner.os == 'macOS'
-        uses: actions/upload-artifact@v4
-        with:
-          path: |
-            marmite-*-${{ matrix.target }}.tar.gz
-            marmite-*-${{ matrix.target }}.tar.gz.sha256
-          name: homebrew-${{ matrix.target }}
+    #   # Upload Homebrew archives
+    #   - name: Upload Homebrew archives
+    #     if: runner.os == 'macOS'
+    #     uses: actions/upload-artifact@v4
+    #     with:
+    #       path: |
+    #         marmite-*-${{ matrix.target }}.tar.gz
+    #         marmite-*-${{ matrix.target }}.tar.gz.sha256
+    #       name: homebrew-${{ matrix.target }}
 
       # Upload artifacts
       - name: Upload wheel
