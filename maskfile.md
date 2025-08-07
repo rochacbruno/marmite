@@ -81,6 +81,30 @@ cargo clippy --fix
 cargo clippy --fix -- -W clippy::pedantic
 ~~~
 
+## test
+
+> Run all tests (unit and integration)
+
+~~~bash
+cargo test
+~~~
+
+## test_unit
+
+> Run unit tests only
+
+~~~bash
+cargo test --bin marmite
+~~~
+
+## test_integration
+
+> Run integration tests only
+
+~~~bash
+cargo test --test '*'
+~~~
+
 ## watch
 
 > Watch for changes on the whole source code  and rebuild the example site without serving it.

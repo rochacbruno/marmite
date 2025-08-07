@@ -16,16 +16,19 @@ This document outlines the plan for improving the Marmite codebase based on the 
 
 ### 1.2. Testing Strategy
 
-- [ ] Separate unit tests from source files, create a tests module with test files martching each of the source files
-- [ ] Increase unit test coverage for core logic.
-  - [ ] `content.rs`: Test content parsing, frontmatter extraction, and content classification.
-  - [ ] `parser.rs`: Test Markdown parsing and HTML generation.
-  - [ ] `config.rs`: Test configuration loading and default values.
-- [ ] Implement integration tests for site generation.
-  - [ ] Create a minimal test site fixture.
-  - [ ] Write a test that generates the site and verifies the output structure and content.
-  - [ ] Use `tempfile` for filesystem isolation in tests.
-- [ ] Add a `mask test` command to `maskfile.md` for a consistent testing interface.
+- [x] Separate unit tests from source files, create a src/tests module with test files martching each of the source files
+- [x] Increase unit test coverage for core logic.
+  - [x] `content.rs`: Test content parsing, frontmatter extraction, and content classification.
+  - [x] `parser.rs`: Test Markdown parsing and HTML generation.
+  - [x] `config.rs`: Test configuration loading and default values.
+- [x] Implement integration tests on tests/ for site generation.
+  - [x] Create a minimal test site fixture.
+  - [x] Write a test that generates the site and verifies the output structure and content.
+  - [x] Use `tempfile` for filesystem isolation in tests.
+- [x] Add a `mask test` command to `maskfile.md` for a consistent testing interface.
+- [ ] Adapt the commented out integration tests on tests/site_generation.rs to use the subprocess approach
+- [ ] Ensure `mask test` runs all tests, `mask test_unit` runs only unit, `mask test_integration` runs only integration
+- [ ] ENsure `mask coverage` is calculating coverage correctly based on the tests
 
 ## Phase 2: Refactoring and Performance
 
