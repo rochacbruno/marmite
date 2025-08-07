@@ -7,7 +7,13 @@ use tiny_http::{Header, Response, Server};
 use urlencoding::decode;
 
 pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>) {
-    let server = Server::http(bind_address).unwrap();
+    let server = match Server::http(bind_address) {
+        Ok(server) => server,
+        Err(e) => {
+            error!("Failed to start server on {}: {}", bind_address, e);
+            return;
+        }
+    };
 
     info!("Server started at http://{bind_address}/ - Type ^C to stop.",);
 
@@ -59,7 +65,13 @@ fn handle_request(
                     request.http_version()
                 );
                 let mut resp = Response::from_data(buffer);
-                let js_header = Header::from_bytes("Content-Type", "text/javascript").unwrap();
+                let js_header = match Header::from_bytes("Content-Type", "text/javascript") {
+                    Ok(header) => header,
+                    Err(e) => {
+                        error!("Failed to create JS header: {:?}", e);
+                        return Ok(resp);
+                    }
+                };
                 if request_path.ends_with(".js") {
                     resp.add_header(js_header);
                 }

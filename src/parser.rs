@@ -25,7 +25,7 @@ pub fn append_references(content: &str, references_path: &Path) -> String {
 /// and return them as a vector of strings
 pub fn get_links_to(html: &str) -> Option<Vec<String>> {
     let mut result = Vec::new();
-    let re = Regex::new(r#"href="([^"]+)\.html(#[^"]+)?""#).unwrap();
+    let re = Regex::new(r#"href="([^"]+)\.html(#[^"]+)?""#).expect("Links regex should compile");
     for cap in re.captures_iter(html) {
         if let Some(m) = cap.get(1) {
             let href = m.as_str();
@@ -51,7 +51,7 @@ fn warn_broken_link(link_ref: BrokenLinkReference) -> Option<ResolvedReference> 
         || original.starts_with('#') // anchors
         ||original.starts_with('^') // footnotes
         || original.starts_with('/') // absolute links
-        || (original.len() == 1 && !original.chars().next().unwrap().is_ascii_digit()) // task checkboxes
+        || (original.len() == 1 && original.chars().next().map_or(false, |c| !c.is_ascii_digit())) // task checkboxes
         || original.is_empty(); // empty links
     if !is_allowed {
         warn!("Reference missing: [{original}] - add '[{original}]: url' to the end of your content file or to the '_references.md' file.");
@@ -60,13 +60,13 @@ fn warn_broken_link(link_ref: BrokenLinkReference) -> Option<ResolvedReference> 
 }
 
 pub fn get_table_of_contents_from_html(html: &str) -> String {
-    let re =
-        Regex::new(r#"<h([1-6])[^>]*>(?:<a[^>]*href="([^"]+)"[^>]*></a>)?(.*?)</h[1-6]>"#).unwrap();
+    let re = Regex::new(r#"<h([1-6])[^>]*>(?:<a[^>]*href="([^"]+)"[^>]*></a>)?(.*?)</h[1-6]>"#)
+        .expect("Table of contents regex should compile");
     let mut toc = String::new();
     let mut last_level = 0;
 
     for cap in re.captures_iter(html) {
-        let level = cap.get(1).map_or(0, |m| m.as_str().parse().unwrap());
+        let level = cap.get(1).map_or(0, |m| m.as_str().parse().unwrap_or(0));
         let title = cap.get(3).map_or("", |m| m.as_str());
         let slug = cap.get(2).map_or_else(
             || format!("#{}", slugify(title)),
@@ -87,7 +87,7 @@ pub fn get_table_of_contents_from_html(html: &str) -> String {
             std::cmp::Ordering::Equal => {}
         }
 
-        writeln!(toc, "<li><a href=\"{slug}\">{title}</a></li>").unwrap();
+        let _ = writeln!(toc, "<li><a href=\"{slug}\">{title}</a></li>");
         last_level = level;
     }
 
@@ -145,7 +145,8 @@ pub fn get_html_with_options(markdown: &str, parser_options: &ParserOptions) -> 
 /// fixes them to point to the correct html file
 /// Also removes the .md|.html extension from the text of the link
 pub fn fix_internal_links(html: &str) -> String {
-    let re = Regex::new(r#"<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>"#).unwrap();
+    let re = Regex::new(r#"<a[^>]*href="([^"]+)"[^>]*>(.*?)</a>"#)
+        .expect("Fix internal links regex should compile");
     re.replace_all(html, |caps: &regex::Captures| {
         let link = caps.get(0).map_or("", |m| m.as_str());
         let href = caps.get(1).map_or("", |m| m.as_str());
@@ -192,10 +193,10 @@ pub fn fix_internal_links(html: &str) -> String {
 
             let mut new_href = String::new();
             if !path.is_empty() {
-                write!(new_href, "{path}.html").unwrap();
+                let _ = write!(new_href, "{path}.html");
             }
             if !fragment.is_empty() {
-                write!(new_href, "#{fragment}").unwrap();
+                let _ = write!(new_href, "#{fragment}");
             }
             new_href
         } else {

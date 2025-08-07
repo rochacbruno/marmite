@@ -470,10 +470,19 @@ pub fn generate(
                 moved_config_path.clone().as_path(),
             )));
             let content_folder = get_content_folder(
-                &site_data.lock().unwrap().site,
+                &site_data
+                    .lock()
+                    .unwrap_or_else(|e| {
+                        error!("Failed to lock site data: {}", e);
+                        panic!("Cannot proceed without site data lock")
+                    })
+                    .site,
                 moved_input_folder.clone().as_path(),
             );
-            let mut site_data = site_data.lock().unwrap();
+            let mut site_data = site_data.lock().unwrap_or_else(|e| {
+                error!("Failed to lock site data: {}", e);
+                panic!("Cannot proceed without site data lock")
+            });
             let build_info_path = moved_output_folder.join("marmite.json");
             let latest_build_info = get_latest_build_info(&build_info_path)?;
             if let Some(build_info) = &latest_build_info {
@@ -576,25 +585,35 @@ pub fn generate(
     rebuild()?;
 
     if watch {
-        let mut hotwatch = Hotwatch::new().expect("Failed to initialize hotwatch!");
+        let mut hotwatch = match Hotwatch::new() {
+            Ok(hw) => hw,
+            Err(e) => {
+                error!("Failed to initialize hotwatch: {}", e);
+                return Ok(());
+            }
+        };
         let watch_folder = Arc::clone(input_folder).as_path().to_path_buf();
         let out_folder = Arc::clone(output_folder).as_path().to_path_buf();
         // Watch the input folder for changes
-        hotwatch
-            .watch(watch_folder, move |event: Event| match event.kind {
-                EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
-                    for ev in &event.paths {
-                        if !ev.starts_with(fs::canonicalize(out_folder.clone()).unwrap()) {
-                            info!("Change detected. Rebuilding site...");
-                            if let Err(e) = rebuild() {
-                                error!("Failed to rebuild site: {e}");
-                            }
+        let watch_result = hotwatch.watch(watch_folder, move |event: Event| match event.kind {
+            EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
+                for ev in &event.paths {
+                    if !ev.starts_with(
+                        fs::canonicalize(out_folder.clone()).unwrap_or_else(|_| out_folder.clone()),
+                    ) {
+                        info!("Change detected. Rebuilding site...");
+                        if let Err(e) = rebuild() {
+                            error!("Failed to rebuild site: {e}");
                         }
                     }
                 }
-                _ => {}
-            })
-            .expect("Failed to watch the input folder!");
+            }
+            _ => {}
+        });
+        if let Err(e) = watch_result {
+            error!("Failed to watch the input folder: {}", e);
+            return Ok(());
+        }
 
         info!("Watching for changes in folder: {}", input_folder.display());
 
@@ -639,7 +658,10 @@ fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
             .map(|fragment| {
                 let fragment_path = content_dir.join(format!("_{fragment}.md"));
                 let fragment_content = if fragment_path.exists() {
-                    fs::read_to_string(fragment_path).unwrap()
+                    fs::read_to_string(fragment_path).unwrap_or_else(|e| {
+                        error!("Failed to read fragment {}: {}", fragment, e);
+                        String::new()
+                    })
                 } else {
                     String::new()
                 };
@@ -667,7 +689,10 @@ fn collect_global_fragments(
     })
     .map(|fragment| {
         let fragment_path = content_dir.join(format!("_{fragment}.md"));
-        let fragment_content = fs::read_to_string(fragment_path).unwrap();
+        let fragment_content = fs::read_to_string(&fragment_path).unwrap_or_else(|e| {
+            error!("Failed to read fragment {}: {}", fragment, e);
+            String::new()
+        });
         // append references
         let references_path = content_dir.join("_references.md");
         let fragment_content =
@@ -675,7 +700,10 @@ fn collect_global_fragments(
         let rendered_fragment = tera
             .clone()
             .render_str(&fragment_content, global_context)
-            .unwrap();
+            .unwrap_or_else(|e| {
+                error!("Failed to render fragment {}: {}", fragment, e);
+                fragment_content.clone()
+            });
         let default_parser_options = crate::config::ParserOptions::default();
         let parser_options = site_config
             .markdown_parser
@@ -831,13 +859,22 @@ fn collect_content(
         })
         .map(|entry| {
             // let modified_time = entry.metadata().unwrap().modified().unwrap();
-            let file_metadata = entry.metadata().expect("Failed to get file metadata");
+            let file_metadata = match entry.metadata() {
+                Ok(metadata) => metadata,
+                Err(e) => {
+                    error!("Failed to get file metadata for {:?}: {}", entry.path(), e);
+                    return Err(format!("Failed to get file metadata: {}", e));
+                }
+            };
             let modified_time = if let Ok(modified_time) = file_metadata.modified() {
                 // get the timestamp for modified time
                 Some(
                     modified_time
                         .duration_since(std::time::SystemTime::UNIX_EPOCH)
-                        .unwrap()
+                        .unwrap_or_else(|e| {
+                            error!("Failed to get duration since UNIX_EPOCH: {}", e);
+                            std::time::Duration::ZERO
+                        })
                         .as_secs() as i64,
                 )
             } else {
@@ -948,9 +985,13 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
     for template_name in &mandatory_templates {
         let template_path = templates_path.join(template_name);
         if template_path.exists() {
-            let template_content = fs::read_to_string(template_path).unwrap();
-            tera.add_raw_template(template_name, &template_content)
-                .expect("Failed to load template");
+            let template_content = fs::read_to_string(&template_path).unwrap_or_else(|e| {
+                error!("Failed to read template {}: {}", template_name, e);
+                String::new()
+            });
+            if let Err(e) = tera.add_raw_template(template_name, &template_content) {
+                error!("Failed to load template {}: {}", template_name, e);
+            }
         } else {
             Templates::get(template_name).map_or_else(
                 || {
@@ -958,9 +999,14 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
                     process::exit(1);
                 },
                 |template| {
-                    let template_str = std::str::from_utf8(template.data.as_ref()).unwrap();
-                    tera.add_raw_template(template_name, template_str)
-                        .expect("Failed to load template");
+                    let template_str =
+                        std::str::from_utf8(template.data.as_ref()).unwrap_or_else(|e| {
+                            error!("Failed to parse template {}: {}", template_name, e);
+                            ""
+                        });
+                    if let Err(e) = tera.add_raw_template(template_name, template_str) {
+                        error!("Failed to load template {}: {}", template_name, e);
+                    }
                 },
             );
         }
@@ -976,20 +1022,26 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
         let template_path = entry.path();
         let template_name = template_path
             .strip_prefix(&templates_path)
-            .unwrap()
+            .unwrap_or(template_path)
             .to_str()
-            .unwrap()
+            .unwrap_or("")
             .to_string();
         // windows compatibility
         let template_name = template_name.replace('\\', "/");
         let template_name = template_name.trim_start_matches('/');
-        let template_content = fs::read_to_string(template_path).unwrap();
-        tera.add_raw_template(template_name, &template_content)
-            .expect("Failed to load template");
+        let template_content = fs::read_to_string(template_path).unwrap_or_else(|e| {
+            error!("Failed to read template {}: {}", template_name, e);
+            String::new()
+        });
+        if let Err(e) = tera.add_raw_template(template_name, &template_content) {
+            error!("Failed to load template {}: {}", template_name, e);
+        }
     }
 
     // Now extend the remaining templates from the embedded::Templates struct
-    tera.extend(&EMBEDDED_TERA).unwrap();
+    if let Err(e) = tera.extend(&EMBEDDED_TERA) {
+        error!("Failed to extend with embedded templates: {}", e);
+    }
 
     // Initialize shortcode processor if enabled
     let shortcode_processor = if site_data.site.enable_shortcodes {
@@ -1623,7 +1675,13 @@ fn handle_static_artifacts(
 fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBuf>) {
     let remove_html_tags = |html: &str| -> String {
         // Remove HTML tags, Liquid tags, and Jinja tags
-        let re = Regex::new(r"<[^>]*>|(\{\{[^>]*\}\})|(\{%[^>]*%\})").unwrap();
+        let re = Regex::new(r"<[^>]*>|(\{\{[^>]*\}\})|(\{%[^>]*%\})")
+            .map_err(|e| format!("Failed to create regex: {}", e))
+            .unwrap_or_else(|e| {
+                error!("Regex compilation failed: {}", e);
+                // Return a simple regex that won't crash but may not work perfectly
+                Regex::new(r"<[^>]*>").expect("Basic regex should compile")
+            });
         re.replace_all(html, "")
             .replace('\n', " ")
             .split_whitespace()
@@ -1674,7 +1732,10 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
         .join("search_index.json");
     if let Err(e) = fs::write(
         search_json_path,
-        serde_json::to_string(&all_content_json).unwrap(),
+        serde_json::to_string(&all_content_json).unwrap_or_else(|e| {
+            error!("Failed to serialize search index: {}", e);
+            "[]".to_string()
+        }),
     ) {
         error!("Failed to write search_index.json: {e:?}");
     } else {
@@ -1731,7 +1792,10 @@ fn write_build_info(
     let build_info_path = output_path.join("marmite.json");
     if let Err(e) = fs::write(
         &build_info_path,
-        serde_json::to_string_pretty(&build_info).unwrap(),
+        serde_json::to_string_pretty(&build_info).unwrap_or_else(|e| {
+            error!("Failed to serialize build info: {}", e);
+            "{}".to_string()
+        }),
     ) {
         error!("Failed to write marmite.json: {e:?}");
     } else {
@@ -2318,7 +2382,10 @@ fn should_force_render(
                 if let Ok(modified_time) = metadata.modified() {
                     return modified_time
                         .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
+                        .unwrap_or_else(|e| {
+                            error!("Failed to get duration since UNIX_EPOCH: {}", e);
+                            std::time::Duration::ZERO
+                        })
                         .as_secs() as i64
                         > last_build;
                 }
@@ -2347,7 +2414,10 @@ fn should_force_render(
                 if let Ok(modified_time) = metadata.modified() {
                     return modified_time
                         .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap()
+                        .unwrap_or_else(|e| {
+                            error!("Failed to get duration since UNIX_EPOCH: {}", e);
+                            std::time::Duration::ZERO
+                        })
                         .as_secs() as i64
                         > last_build;
                 }
@@ -2617,7 +2687,16 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         error!("Failed to create input folder: {e:?}");
         process::exit(1);
     }
-    if input_folder.read_dir().unwrap().next().is_some() {
+    if input_folder
+        .read_dir()
+        .map_err(|e| {
+            error!("Failed to read input folder: {}", e);
+            process::exit(1);
+        })
+        .unwrap_or_else(|_| std::process::exit(1))
+        .next()
+        .is_some()
+    {
         error!("Input folder is not empty: {}", input_folder.display());
         process::exit(1);
     }

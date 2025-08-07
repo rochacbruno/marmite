@@ -127,7 +127,11 @@ impl Content {
         let (frontmatter, raw_markdown) = parse_front_matter(&file_content)?;
         let (title, markdown_without_title) = get_title(&frontmatter, raw_markdown);
 
-        let is_fragment = path.file_name().unwrap().to_str().unwrap().starts_with('_');
+        let is_fragment = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .map(|s| s.starts_with('_'))
+            .unwrap_or(false);
         let default_parser_options = crate::config::ParserOptions::default();
         let parser_options = site
             .markdown_parser
@@ -426,7 +430,7 @@ pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
         final_slug = path
             .file_stem()
             .and_then(|stem| stem.to_str())
-            .unwrap()
+            .unwrap_or("untitled")
             .to_string();
         final_slug = remove_stream_and_date_from_filename(&final_slug);
     }
@@ -442,7 +446,11 @@ pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
 fn determine_stream(frontmatter: &Frontmatter, path: &Path) -> String {
     // First try frontmatter
     if let Some(stream) = frontmatter.get("stream") {
-        return stream.as_str().unwrap().trim_matches('"').to_string();
+        return stream
+            .as_str()
+            .unwrap_or("index")
+            .trim_matches('"')
+            .to_string();
     }
 
     // Then try filename patterns
@@ -464,8 +472,8 @@ fn determine_series(frontmatter: &Frontmatter) -> Option<String> {
 // Remove date prefix from filename `2024-01-01-myfile.md` -> `myfile.md`
 // Return filename if no date prefix is found
 fn remove_date_from_filename(filename: &str) -> String {
-    let date_prefix_re =
-        Regex::new(r"^\d{4}-\d{2}-\d{2}([-T]\d{2}([:-]\d{2})?([:-]\d{2})?)?-").unwrap();
+    let date_prefix_re = Regex::new(r"^\d{4}-\d{2}-\d{2}([-T]\d{2}([:-]\d{2})?([:-]\d{2})?)?-")
+        .expect("Date prefix regex should compile");
     date_prefix_re.replace(filename, "").to_string()
 }
 
@@ -476,7 +484,7 @@ fn remove_stream_and_date_from_filename(filename: &str) -> String {
     let stream_date_pattern = Regex::new(
         r"^[a-zA-Z0-9]+-\d{4}-\d{2}-\d{2}(?:[-T]\d{2}(?:[:-]\d{2})?(?:[:-]\d{2})?)?-(.+)$",
     )
-    .unwrap();
+    .expect("Stream date pattern regex should compile");
     if let Some(captures) = stream_date_pattern.captures(filename) {
         if let Some(slug_match) = captures.get(1) {
             return slug_match.as_str().to_string();
@@ -484,7 +492,8 @@ fn remove_stream_and_date_from_filename(filename: &str) -> String {
     }
 
     // Pattern 2: stream-S-slug -> slug
-    let stream_s_pattern = Regex::new(r"^[a-zA-Z0-9]+-S-(.+)$").unwrap();
+    let stream_s_pattern =
+        Regex::new(r"^[a-zA-Z0-9]+-S-(.+)$").expect("Stream S pattern regex should compile");
     if let Some(captures) = stream_s_pattern.captures(filename) {
         if let Some(slug_match) = captures.get(1) {
             return slug_match.as_str().to_string();
@@ -515,7 +524,8 @@ pub fn get_stream_from_filename(path: &Path) -> Option<String> {
 /// Extract stream from filename pattern: {stream}-{date}-{slug}
 /// Only accepts single word before date (no hyphens allowed in stream name)
 fn extract_stream_from_date_pattern(filename: &str) -> Option<String> {
-    let date_pattern = Regex::new(r"^([a-zA-Z0-9]+)-(\d{4}-\d{2}-\d{2})").unwrap();
+    let date_pattern = Regex::new(r"^([a-zA-Z0-9]+)-(\d{4}-\d{2}-\d{2})")
+        .expect("Date pattern regex should compile");
     if let Some(captures) = date_pattern.captures(filename) {
         if let Some(stream_match) = captures.get(1) {
             return Some(stream_match.as_str().to_string());
@@ -527,7 +537,7 @@ fn extract_stream_from_date_pattern(filename: &str) -> Option<String> {
 /// Extract stream from filename pattern: {stream}-S-{slug}
 /// Only accepts single word before 'S' marker
 fn extract_stream_from_s_pattern(filename: &str) -> Option<String> {
-    let s_pattern = Regex::new(r"^([a-zA-Z0-9]+)-S-").unwrap();
+    let s_pattern = Regex::new(r"^([a-zA-Z0-9]+)-S-").expect("S pattern regex should compile");
     if let Some(captures) = s_pattern.captures(filename) {
         if let Some(stream_match) = captures.get(1) {
             return Some(stream_match.as_str().to_string());
@@ -618,7 +628,8 @@ pub fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime>
 fn try_to_parse_date(input: &str) -> Result<NaiveDateTime, chrono::ParseError> {
     // Fix input to match the format "2023-02-08 19:03:32" or "2023-02-08 19:03" or "2023-02-08"
     // even if the input is on format 2020-01-19T21:05:12.984Z or 2020-01-19T21:05:12+0000
-    let re = Regex::new(r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?").unwrap();
+    let re = Regex::new(r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?")
+        .expect("Date extraction regex should compile");
     let input = re.find(input).map_or("", |m| m.as_str());
 
     input
@@ -643,7 +654,7 @@ fn extract_date_from_filename(path: &Path) -> Option<NaiveDateTime> {
         let stream_date_pattern = Regex::new(
             r"^[a-zA-Z0-9]+-(\d{4}-\d{2}-\d{2}(?:[-T]\d{2}(?:[:-]\d{2})?(?:[:-]\d{2})?)?)",
         )
-        .unwrap();
+        .expect("Stream date extraction regex should compile");
         if let Some(captures) = stream_date_pattern.captures(filename) {
             if let Some(date_match) = captures.get(1) {
                 if let Ok(date) = try_to_parse_date(date_match.as_str()) {
@@ -670,7 +681,7 @@ pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String>
 pub fn slugify(text: &str) -> String {
     let text = text.replace("%20", "-");
     let normalized = text.nfd().collect::<String>().to_lowercase();
-    let re = Regex::new(r"[^a-z0-9]+").unwrap();
+    let re = Regex::new(r"[^a-z0-9]+").expect("Slugify regex should compile");
     let slug = re.replace_all(&normalized, "-");
     slug.trim_matches('-').to_string()
 }
@@ -757,7 +768,8 @@ pub fn get_card_image(
     }
 
     // first <img> src attribute
-    let img_regex = Regex::new(r#"<img[^>]*src="([^"]+)""#).unwrap();
+    let img_regex =
+        Regex::new(r#"<img[^>]*src="([^"]+)""#).expect("Image src regex should compile");
     img_regex
         .captures(html)
         .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
@@ -780,7 +792,13 @@ fn find_matching_file(slug: &str, path: &Path, kind: &str, exts: &[&str]) -> Opt
 
 fn get_banner_image(frontmatter: &Frontmatter, path: &Path, slug: &str) -> Option<String> {
     if let Some(banner_image) = frontmatter.get("banner_image") {
-        return Some(banner_image.as_str().unwrap().trim_matches('"').to_string());
+        return Some(
+            banner_image
+                .as_str()
+                .unwrap_or("")
+                .trim_matches('"')
+                .to_string(),
+        );
     }
 
     // Try to find image matching the slug
