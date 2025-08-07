@@ -457,14 +457,14 @@ pub fn generate(
     serve: bool,
     bind_address: &str,
     cli_args: &Arc<crate::cli::Cli>,
-) {
+) -> Result<(), Box<dyn std::error::Error>> {
     let moved_input_folder = Arc::clone(input_folder);
     let moved_output_folder = Arc::clone(output_folder);
     let moved_config_path = Arc::clone(config_path);
     let moved_cli_args = Arc::clone(cli_args);
 
     let rebuild = {
-        move || {
+        move || -> Result<(), Box<dyn std::error::Error>> {
             let start_time = std::time::Instant::now();
             let site_data = Arc::new(Mutex::new(Data::from_file(
                 moved_config_path.clone().as_path(),
@@ -475,7 +475,7 @@ pub fn generate(
             );
             let mut site_data = site_data.lock().unwrap();
             let build_info_path = moved_output_folder.join("marmite.json");
-            let latest_build_info = get_latest_build_info(&build_info_path);
+            let latest_build_info = get_latest_build_info(&build_info_path)?;
             if let Some(build_info) = &latest_build_info {
                 site_data.latest_timestamp = Some(build_info.timestamp);
             }
@@ -568,11 +568,12 @@ pub fn generate(
             write_build_info(&output_path, &site_data, end_time);
             debug!("Site generated in {end_time:.2}s");
             info!("Site generated at: {}/", moved_output_folder.display());
+            Ok(())
         }
     };
 
     // Initial site generation
-    rebuild();
+    rebuild()?;
 
     if watch {
         let mut hotwatch = Hotwatch::new().expect("Failed to initialize hotwatch!");
@@ -585,7 +586,9 @@ pub fn generate(
                     for ev in &event.paths {
                         if !ev.starts_with(fs::canonicalize(out_folder.clone()).unwrap()) {
                             info!("Change detected. Rebuilding site...");
-                            rebuild();
+                            if let Err(e) = rebuild() {
+                                error!("Failed to rebuild site: {e}");
+                            }
                         }
                     }
                 }
@@ -605,17 +608,19 @@ pub fn generate(
             }
         }
     }
+    Ok(())
 }
 
-fn get_latest_build_info(build_info_path: &std::path::PathBuf) -> Option<BuildInfo> {
-    let mut latest_build_info: Option<BuildInfo> = None;
+fn get_latest_build_info(
+    build_info_path: &std::path::PathBuf,
+) -> Result<Option<BuildInfo>, std::io::Error> {
     if build_info_path.exists() {
-        let build_info_json = fs::read_to_string(build_info_path).unwrap();
+        let build_info_json = fs::read_to_string(build_info_path)?;
         if let Ok(build_info) = BuildInfo::from_json(&build_info_json) {
-            latest_build_info = Some(build_info);
+            return Ok(Some(build_info));
         }
     }
-    latest_build_info
+    Ok(None)
 }
 
 /// Get the content folder from the config or default to the input folder

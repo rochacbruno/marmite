@@ -153,7 +153,7 @@ fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let output_folder = Arc::new(args.output_folder.unwrap_or(input_folder.join("site")));
-    site::generate(
+    if let Err(e) = site::generate(
         &config_path,
         &input_folder,
         &output_folder,
@@ -161,7 +161,10 @@ fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
         serve,
         bind_address,
         &cloned_args,
-    );
+    ) {
+        error!("Failed to generate site: {e}");
+        std::process::exit(1);
+    }
 
     if serve && !watch {
         info!("Starting built-in HTTP server...");
