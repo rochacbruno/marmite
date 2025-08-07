@@ -459,8 +459,17 @@ pub fn generate(input_folder: &Path, cli_args: &Arc<Cli>) {
     }
     let mut config = Marmite::new();
     config.override_from_cli_args(cli_args);
-    let config_str = serde_yaml::to_string(&config).unwrap();
-    std::fs::write(&config_path, config_str).unwrap();
+    let config_str = match serde_yaml::to_string(&config) {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Failed to serialize config: {e}");
+            return;
+        }
+    };
+    if let Err(e) = std::fs::write(&config_path, config_str) {
+        error!("Failed to write config file: {e}");
+        return;
+    }
     info!("Config file generated: {}", config_path.display());
 }
 
