@@ -16,6 +16,7 @@ This document outlines the plan for improving the Marmite codebase based on the 
 
 ### 1.2. Testing Strategy
 
+- [ ] Separate unit tests from source files, create a tests module with test files martching each of the source files
 - [ ] Increase unit test coverage for core logic.
   - [ ] `content.rs`: Test content parsing, frontmatter extraction, and content classification.
   - [ ] `parser.rs`: Test Markdown parsing and HTML generation.
