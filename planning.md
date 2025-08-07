@@ -6,12 +6,13 @@ This document outlines the plan for improving the Marmite codebase based on the 
 
 ### 1.1. Error Handling
 
-- [ ] Replace all `.unwrap()` and `.expect()` calls with robust error handling (`?` operator or `match` statements).
-  - [ ] `site.rs`
-  - [ ] `main.rs`
-  - [ ] `content.rs`
-  - [ ] `parser.rs`
-  - [ ] Other modules as needed.
+- [x] Replace all `.unwrap()` and `.expect()` calls with robust error handling (`?` operator or `match` statements).
+  - [x] `site.rs`
+  - [x] `main.rs`
+  - [x] `content.rs`
+  - [x] `parser.rs`
+  - [x] Other modules as needed (server.rs, config.rs).
+  - [x] Applied clippy pedantic fixes for better code quality.
 
 ### 1.2. Testing Strategy
 

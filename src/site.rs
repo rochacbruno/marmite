@@ -473,14 +473,14 @@ pub fn generate(
                 &site_data
                     .lock()
                     .unwrap_or_else(|e| {
-                        error!("Failed to lock site data: {}", e);
+                        error!("Failed to lock site data: {e}");
                         panic!("Cannot proceed without site data lock")
                     })
                     .site,
                 moved_input_folder.clone().as_path(),
             );
             let mut site_data = site_data.lock().unwrap_or_else(|e| {
-                error!("Failed to lock site data: {}", e);
+                error!("Failed to lock site data: {e}");
                 panic!("Cannot proceed without site data lock")
             });
             let build_info_path = moved_output_folder.join("marmite.json");
@@ -588,7 +588,7 @@ pub fn generate(
         let mut hotwatch = match Hotwatch::new() {
             Ok(hw) => hw,
             Err(e) => {
-                error!("Failed to initialize hotwatch: {}", e);
+                error!("Failed to initialize hotwatch: {e}");
                 return Ok(());
             }
         };
@@ -611,7 +611,7 @@ pub fn generate(
             _ => {}
         });
         if let Err(e) = watch_result {
-            error!("Failed to watch the input folder: {}", e);
+            error!("Failed to watch the input folder: {e}");
             return Ok(());
         }
 
@@ -659,7 +659,7 @@ fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
                 let fragment_path = content_dir.join(format!("_{fragment}.md"));
                 let fragment_content = if fragment_path.exists() {
                     fs::read_to_string(fragment_path).unwrap_or_else(|e| {
-                        error!("Failed to read fragment {}: {}", fragment, e);
+                        error!("Failed to read fragment {fragment}: {e}");
                         String::new()
                     })
                 } else {
@@ -690,7 +690,7 @@ fn collect_global_fragments(
     .map(|fragment| {
         let fragment_path = content_dir.join(format!("_{fragment}.md"));
         let fragment_content = fs::read_to_string(&fragment_path).unwrap_or_else(|e| {
-            error!("Failed to read fragment {}: {}", fragment, e);
+            error!("Failed to read fragment {fragment}: {e}");
             String::new()
         });
         // append references
@@ -701,7 +701,7 @@ fn collect_global_fragments(
             .clone()
             .render_str(&fragment_content, global_context)
             .unwrap_or_else(|e| {
-                error!("Failed to render fragment {}: {}", fragment, e);
+                error!("Failed to render fragment {fragment}: {e}");
                 fragment_content.clone()
             });
         let default_parser_options = crate::config::ParserOptions::default();
@@ -862,8 +862,12 @@ fn collect_content(
             let file_metadata = match entry.metadata() {
                 Ok(metadata) => metadata,
                 Err(e) => {
-                    error!("Failed to get file metadata for {:?}: {}", entry.path(), e);
-                    return Err(format!("Failed to get file metadata: {}", e));
+                    error!(
+                        "Failed to get file metadata for {}: {}",
+                        entry.path().display(),
+                        e
+                    );
+                    return Err(format!("Failed to get file metadata: {e}"));
                 }
             };
             let modified_time = if let Ok(modified_time) = file_metadata.modified() {
@@ -872,7 +876,7 @@ fn collect_content(
                     modified_time
                         .duration_since(std::time::SystemTime::UNIX_EPOCH)
                         .unwrap_or_else(|e| {
-                            error!("Failed to get duration since UNIX_EPOCH: {}", e);
+                            error!("Failed to get duration since UNIX_EPOCH: {e}");
                             std::time::Duration::ZERO
                         })
                         .as_secs() as i64,
@@ -986,11 +990,11 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
         let template_path = templates_path.join(template_name);
         if template_path.exists() {
             let template_content = fs::read_to_string(&template_path).unwrap_or_else(|e| {
-                error!("Failed to read template {}: {}", template_name, e);
+                error!("Failed to read template {template_name}: {e}");
                 String::new()
             });
             if let Err(e) = tera.add_raw_template(template_name, &template_content) {
-                error!("Failed to load template {}: {}", template_name, e);
+                error!("Failed to load template {template_name}: {e}");
             }
         } else {
             Templates::get(template_name).map_or_else(
@@ -1001,11 +1005,11 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
                 |template| {
                     let template_str =
                         std::str::from_utf8(template.data.as_ref()).unwrap_or_else(|e| {
-                            error!("Failed to parse template {}: {}", template_name, e);
+                            error!("Failed to parse template {template_name}: {e}");
                             ""
                         });
                     if let Err(e) = tera.add_raw_template(template_name, template_str) {
-                        error!("Failed to load template {}: {}", template_name, e);
+                        error!("Failed to load template {template_name}: {e}");
                     }
                 },
             );
@@ -1030,17 +1034,17 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
         let template_name = template_name.replace('\\', "/");
         let template_name = template_name.trim_start_matches('/');
         let template_content = fs::read_to_string(template_path).unwrap_or_else(|e| {
-            error!("Failed to read template {}: {}", template_name, e);
+            error!("Failed to read template {template_name}: {e}");
             String::new()
         });
         if let Err(e) = tera.add_raw_template(template_name, &template_content) {
-            error!("Failed to load template {}: {}", template_name, e);
+            error!("Failed to load template {template_name}: {e}");
         }
     }
 
     // Now extend the remaining templates from the embedded::Templates struct
     if let Err(e) = tera.extend(&EMBEDDED_TERA) {
-        error!("Failed to extend with embedded templates: {}", e);
+        error!("Failed to extend with embedded templates: {e}");
     }
 
     // Initialize shortcode processor if enabled
@@ -1676,9 +1680,9 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
     let remove_html_tags = |html: &str| -> String {
         // Remove HTML tags, Liquid tags, and Jinja tags
         let re = Regex::new(r"<[^>]*>|(\{\{[^>]*\}\})|(\{%[^>]*%\})")
-            .map_err(|e| format!("Failed to create regex: {}", e))
+            .map_err(|e| format!("Failed to create regex: {e}"))
             .unwrap_or_else(|e| {
-                error!("Regex compilation failed: {}", e);
+                error!("Regex compilation failed: {e}");
                 // Return a simple regex that won't crash but may not work perfectly
                 Regex::new(r"<[^>]*>").expect("Basic regex should compile")
             });
@@ -1733,7 +1737,7 @@ fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBu
     if let Err(e) = fs::write(
         search_json_path,
         serde_json::to_string(&all_content_json).unwrap_or_else(|e| {
-            error!("Failed to serialize search index: {}", e);
+            error!("Failed to serialize search index: {e}");
             "[]".to_string()
         }),
     ) {
@@ -1793,7 +1797,7 @@ fn write_build_info(
     if let Err(e) = fs::write(
         &build_info_path,
         serde_json::to_string_pretty(&build_info).unwrap_or_else(|e| {
-            error!("Failed to serialize build info: {}", e);
+            error!("Failed to serialize build info: {e}");
             "{}".to_string()
         }),
     ) {
@@ -2383,7 +2387,7 @@ fn should_force_render(
                     return modified_time
                         .duration_since(std::time::UNIX_EPOCH)
                         .unwrap_or_else(|e| {
-                            error!("Failed to get duration since UNIX_EPOCH: {}", e);
+                            error!("Failed to get duration since UNIX_EPOCH: {e}");
                             std::time::Duration::ZERO
                         })
                         .as_secs() as i64
@@ -2415,7 +2419,7 @@ fn should_force_render(
                     return modified_time
                         .duration_since(std::time::UNIX_EPOCH)
                         .unwrap_or_else(|e| {
-                            error!("Failed to get duration since UNIX_EPOCH: {}", e);
+                            error!("Failed to get duration since UNIX_EPOCH: {e}");
                             std::time::Duration::ZERO
                         })
                         .as_secs() as i64
@@ -2690,10 +2694,10 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     if input_folder
         .read_dir()
         .map_err(|e| {
-            error!("Failed to read input folder: {}", e);
+            error!("Failed to read input folder: {e}");
             process::exit(1);
         })
-        .unwrap_or_else(|_| std::process::exit(1))
+        .unwrap_or_else(|()| std::process::exit(1))
         .next()
         .is_some()
     {

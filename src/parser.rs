@@ -51,7 +51,7 @@ fn warn_broken_link(link_ref: BrokenLinkReference) -> Option<ResolvedReference> 
         || original.starts_with('#') // anchors
         ||original.starts_with('^') // footnotes
         || original.starts_with('/') // absolute links
-        || (original.len() == 1 && original.chars().next().map_or(false, |c| !c.is_ascii_digit())) // task checkboxes
+        || (original.len() == 1 && original.chars().next().is_some_and(|c| !c.is_ascii_digit())) // task checkboxes
         || original.is_empty(); // empty links
     if !is_allowed {
         warn!("Reference missing: [{original}] - add '[{original}]: url' to the end of your content file or to the '_references.md' file.");

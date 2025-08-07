@@ -130,8 +130,7 @@ impl Content {
         let is_fragment = path
             .file_name()
             .and_then(|name| name.to_str())
-            .map(|s| s.starts_with('_'))
-            .unwrap_or(false);
+            .is_some_and(|s| s.starts_with('_'));
         let default_parser_options = crate::config::ParserOptions::default();
         let parser_options = site
             .markdown_parser

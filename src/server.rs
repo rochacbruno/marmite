@@ -10,7 +10,7 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>) {
     let server = match Server::http(bind_address) {
         Ok(server) => server,
         Err(e) => {
-            error!("Failed to start server on {}: {}", bind_address, e);
+            error!("Failed to start server on {bind_address}: {e}");
             return;
         }
     };
@@ -68,7 +68,7 @@ fn handle_request(
                 let js_header = match Header::from_bytes("Content-Type", "text/javascript") {
                     Ok(header) => header,
                     Err(e) => {
-                        error!("Failed to create JS header: {:?}", e);
+                        error!("Failed to create JS header: {e:?}");
                         return Ok(resp);
                     }
                 };

@@ -462,12 +462,12 @@ pub fn generate(input_folder: &Path, cli_args: &Arc<Cli>) {
     let config_str = match serde_yaml::to_string(&config) {
         Ok(s) => s,
         Err(e) => {
-            error!("Failed to serialize config: {}", e);
+            error!("Failed to serialize config: {e}");
             return;
         }
     };
     if let Err(e) = std::fs::write(&config_path, config_str) {
-        error!("Failed to write config file: {}", e);
+        error!("Failed to write config file: {e}");
         return;
     }
     info!("Config file generated: {}", config_path.display());
