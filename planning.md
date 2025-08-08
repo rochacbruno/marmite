@@ -26,11 +26,11 @@ This document outlines the plan for improving the Marmite codebase based on the 
   - [x] Write a test that generates the site and verifies the output structure and content.
   - [x] Use `tempfile` for filesystem isolation in tests.
 - [x] Add a `mask test` command to `maskfile.md` for a consistent testing interface.
-- [ ] Adapt the commented out integration tests on tests/site_generation.rs to use the subprocess approach
+- [x] Adapt the commented out integration tests on tests/site_generation.rs to use the subprocess approach
 
 ### 1.2.1 More integration tests
 
-- [ ] Write more integration tests based on features you discover reading the documentation on example/content/*.md
+- [x] Write more integration tests based on features you discover reading the documentation on example/content/*.md
 
 
 ## Phase 2: Refactoring and Performance
