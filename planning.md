@@ -46,13 +46,6 @@ This document outlines the plan for improving the Marmite codebase based on the 
 - [ ] Optimize the `_collect_back_links` function in `site.rs`.
   - [ ] Replace the O(n^2) nested loop with a more efficient `HashMap`-based approach.
 
-## Phase 3: Build and Automation
-
-### 3.1. Build System Enhancements
-
-- [ ] Enhance the `mask coverage` command in `maskfile.md`.
-  - [ ] Add an option to fail the build if test coverage drops below a defined threshold.
-
 ---
 
 This plan will be executed incrementally. Progress will be tracked by checking off the items in this document.
