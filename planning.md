@@ -16,16 +16,22 @@ This document outlines the plan for improving the Marmite codebase based on the 
 
 ### 1.2. Testing Strategy
 
-- [ ] Separate unit tests from source files, create a tests module with test files martching each of the source files
-- [ ] Increase unit test coverage for core logic.
-  - [ ] `content.rs`: Test content parsing, frontmatter extraction, and content classification.
-  - [ ] `parser.rs`: Test Markdown parsing and HTML generation.
-  - [ ] `config.rs`: Test configuration loading and default values.
-- [ ] Implement integration tests for site generation.
-  - [ ] Create a minimal test site fixture.
-  - [ ] Write a test that generates the site and verifies the output structure and content.
-  - [ ] Use `tempfile` for filesystem isolation in tests.
-- [ ] Add a `mask test` command to `maskfile.md` for a consistent testing interface.
+- [x] Separate unit tests from source files, create a src/tests module with test files martching each of the source files
+- [x] Increase unit test coverage for core logic.
+  - [x] `content.rs`: Test content parsing, frontmatter extraction, and content classification.
+  - [x] `parser.rs`: Test Markdown parsing and HTML generation.
+  - [x] `config.rs`: Test configuration loading and default values.
+- [x] Implement integration tests on tests/ for site generation.
+  - [x] Create a minimal test site fixture.
+  - [x] Write a test that generates the site and verifies the output structure and content.
+  - [x] Use `tempfile` for filesystem isolation in tests.
+- [x] Add a `mask test` command to `maskfile.md` for a consistent testing interface.
+- [x] Adapt the commented out integration tests on tests/site_generation.rs to use the subprocess approach
+
+### 1.2.1 More integration tests
+
+- [x] Write more integration tests based on features you discover reading the documentation on example/content/*.md
+
 
 ## Phase 2: Refactoring and Performance
 
@@ -39,13 +45,6 @@ This document outlines the plan for improving the Marmite codebase based on the 
 
 - [ ] Optimize the `_collect_back_links` function in `site.rs`.
   - [ ] Replace the O(n^2) nested loop with a more efficient `HashMap`-based approach.
-
-## Phase 3: Build and Automation
-
-### 3.1. Build System Enhancements
-
-- [ ] Enhance the `mask coverage` command in `maskfile.md`.
-  - [ ] Add an option to fail the build if test coverage drops below a defined threshold.
 
 ---
 

@@ -81,6 +81,30 @@ cargo clippy --fix
 cargo clippy --fix -- -W clippy::pedantic
 ~~~
 
+## test
+
+> Run all tests (unit and integration)
+
+~~~bash
+cargo test
+~~~
+
+## test_unit
+
+> Run unit tests only
+
+~~~bash
+cargo test --bin marmite
+~~~
+
+## test_integration
+
+> Run integration tests only
+
+~~~bash
+cargo test --test '*'
+~~~
+
 ## watch
 
 > Watch for changes on the whole source code  and rebuild the example site without serving it.
@@ -141,6 +165,24 @@ git push origin $tag
 ~~~bash
 cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
 ~~~
+
+## coverage_llvm
+
+> Calculate coverage using llvm
+
+~~~bash
+cargo llvm-cov clean --workspace # remove artifacts that may affect the coverage results
+cargo llvm-cov --no-report
+rm -rf /tmp/test_blog
+rm -rf /tmp/test_site
+cargo llvm-cov --no-report run -- example /tmp/test_site
+cargo llvm-cov --no-report run -- /tmp/test_blog --init-site
+cargo llvm-cov --no-report run -- /tmp/test_blog --start-theme fluffy
+cargo llvm-cov --no-report run -- /tmp/test_blog --theme fluffy
+cargo llvm-cov --no-report run -- /tmp/test_blog --name foo --tagline bar --toc true --enable-search true --colorscheme gruvbox
+cargo llvm-cov report --html # generate report without tests (replace with --lcov for file report)
+~~~
+
 
 ## build_python
 
