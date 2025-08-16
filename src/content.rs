@@ -176,8 +176,8 @@ impl Content {
             }
         }
 
-        let card_image = get_card_image(&frontmatter, &html, path, &slug);
-        let banner_image = get_banner_image(&frontmatter, path, &slug);
+        let card_image = get_card_image(&frontmatter, &html, path, &slug, &site.media_path);
+        let banner_image = get_banner_image(&frontmatter, path, &slug, &site.media_path);
         let authors = get_authors(&frontmatter, Some(site.default_author.clone()));
         let pinned = frontmatter
             .get("pinned")
@@ -749,18 +749,20 @@ pub fn get_card_image(
     html: &str,
     path: &Path,
     slug: &str,
+    media_path: &str,
 ) -> Option<String> {
     if let Some(card_image) = frontmatter.get("card_image") {
         return Some(card_image.to_string());
     }
 
     // Try to find image matching the slug
-    if let Some(value) = find_matching_file(slug, path, "card", &["png", "jpg", "jpeg"]) {
+    if let Some(value) = find_matching_file(slug, path, "card", &["png", "jpg", "jpeg"], media_path)
+    {
         return Some(value);
     }
 
     // try banner_image
-    if let Some(banner_image) = get_banner_image(frontmatter, path, slug) {
+    if let Some(banner_image) = get_banner_image(frontmatter, path, slug, media_path) {
         return Some(banner_image);
     }
 
@@ -777,8 +779,13 @@ pub fn get_card_image(
 /// if the file exists, return the path to the file
 /// if not found in media folder, try to find in the same directory
 /// if the file does not exist, return None
-fn find_matching_file(slug: &str, path: &Path, kind: &str, exts: &[&str]) -> Option<String> {
-    let media_folder_name = "media";
+fn find_matching_file(
+    slug: &str,
+    path: &Path,
+    kind: &str,
+    exts: &[&str],
+    media_folder_name: &str,
+) -> Option<String> {
     let parent_path = path.parent().unwrap_or(path);
     let media_path = parent_path.join(media_folder_name);
     for ext in exts {
@@ -796,7 +803,12 @@ fn find_matching_file(slug: &str, path: &Path, kind: &str, exts: &[&str]) -> Opt
     None
 }
 
-fn get_banner_image(frontmatter: &Frontmatter, path: &Path, slug: &str) -> Option<String> {
+fn get_banner_image(
+    frontmatter: &Frontmatter,
+    path: &Path,
+    slug: &str,
+    media_path: &str,
+) -> Option<String> {
     if let Some(banner_image) = frontmatter.get("banner_image") {
         return Some(
             banner_image
@@ -808,7 +820,9 @@ fn get_banner_image(frontmatter: &Frontmatter, path: &Path, slug: &str) -> Optio
     }
 
     // Try to find image matching the slug
-    if let Some(value) = find_matching_file(slug, path, "banner", &["png", "jpg", "jpeg"]) {
+    if let Some(value) =
+        find_matching_file(slug, path, "banner", &["png", "jpg", "jpeg"], media_path)
+    {
         return Some(value);
     }
 
