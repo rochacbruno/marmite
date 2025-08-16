@@ -47,6 +47,9 @@ impl ShortcodeProcessor {
     pub fn collect_shortcodes(&mut self, input_dir: &Path) -> Result<(), String> {
         let shortcodes_dir = input_dir.join("shortcodes");
 
+        // Add builtin shortcodes first (always load them)
+        self.add_builtin_shortcodes();
+
         if !shortcodes_dir.exists() {
             debug!(
                 "No shortcodes directory found at {}",
@@ -54,9 +57,6 @@ impl ShortcodeProcessor {
             );
             return Ok(());
         }
-
-        // Add builtin shortcodes first
-        self.add_builtin_shortcodes();
 
         // Then add user shortcodes (which can override builtins)
         let entries = fs::read_dir(&shortcodes_dir)
@@ -202,6 +202,11 @@ impl ShortcodeProcessor {
     pub fn process_shortcodes(&self, html: &str, context: &Context, tera: &Tera) -> String {
         let mut result = html.to_string();
 
+        debug!(
+            "Searching for shortcode pattern in HTML (first 1500 chars): {}",
+            &html[..html.len().min(1500)]
+        );
+
         for captures in self.pattern.captures_iter(html) {
             let full_match = &captures[0];
             let shortcode_name = &captures[1];
@@ -218,6 +223,18 @@ impl ShortcodeProcessor {
                 }
                 Err(e) => {
                     warn!("Shortcode '{shortcode_name}' failed to render: {e}");
+                    // Render an error message in the HTML output
+                    let escaped_error = e
+                        .replace('&', "&amp;")
+                        .replace('<', "&lt;")
+                        .replace('>', "&gt;")
+                        .replace('"', "&quot;")
+                        .replace('\'', "&#39;");
+                    let error_msg = format!(
+                        r#"<div class="shortcode-error" style="border: 2px solid red; padding: 10px; margin: 10px 0; background-color: #ffeeee; color: #cc0000;">
+                        <strong>Shortcode Error:</strong> {escaped_error}</div>"#
+                    );
+                    result = result.replace(full_match, &error_msg);
                 }
             }
         }

@@ -297,6 +297,9 @@ impl Marmite {
             default_date_format: default_date_format(),
             menu: default_menu(),
             show_next_prev_links: default_true(),
+            enable_shortcodes: default_true(),
+            build_sitemap: default_true(),
+            publish_urls_json: default_true(),
             gallery_path: default_gallery_path(),
             gallery_create_thumbnails: default_true(),
             gallery_thumb_size: default_gallery_thumb_size(),
@@ -417,6 +420,12 @@ impl Marmite {
         }
         if let Some(publish_urls_json) = cli_args.configuration.publish_urls_json {
             self.publish_urls_json = publish_urls_json;
+        }
+        if let Some(enable_shortcodes) = cli_args.configuration.enable_shortcodes {
+            self.enable_shortcodes = enable_shortcodes;
+        }
+        if let Some(shortcode_pattern) = &cli_args.configuration.shortcode_pattern {
+            self.shortcode_pattern = Some(shortcode_pattern.clone());
         }
     }
 }

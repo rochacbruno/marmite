@@ -5,7 +5,7 @@ use tempfile::TempDir;
 #[test]
 fn test_marmite_binary_help() {
     let output = Command::new("cargo")
-        .args(&["run", "--quiet", "--", "--help"])
+        .args(["run", "--quiet", "--", "--help"])
         .output()
         .expect("Failed to execute marmite");
 
@@ -18,7 +18,7 @@ fn test_marmite_binary_help() {
 #[test]
 fn test_marmite_version() {
     let output = Command::new("cargo")
-        .args(&["run", "--quiet", "--", "--version"])
+        .args(["run", "--quiet", "--", "--version"])
         .output()
         .expect("Failed to execute marmite");
 
@@ -47,7 +47,7 @@ fn test_minimal_site_generation() {
 
     // Generate site using marmite binary
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -75,7 +75,7 @@ fn test_site_initialization() {
 
     // Initialize new site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -119,7 +119,7 @@ fn test_show_urls_command() {
 
     // Run show-urls command
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",

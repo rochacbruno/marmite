@@ -17,27 +17,27 @@ fn test_streams_feature() {
     fs::write(&config_path, "name: Blog").unwrap();
 
     // Create posts in different streams using frontmatter
-    let tutorial_post = r#"---
+    let tutorial_post = r"---
 date: 2024-01-01
 stream: tutorial
 ---
-# Tutorial Post"#;
+# Tutorial Post";
     fs::write(
         input_dir.join("content").join("getting-started.md"),
         tutorial_post,
     )
     .unwrap();
 
-    let news_post = r#"---
+    let news_post = r"---
 date: 2024-01-02
 stream: news
 ---
-# News Post"#;
+# News Post";
     fs::write(input_dir.join("content").join("update.md"), news_post).unwrap();
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -95,7 +95,7 @@ fn test_stream_date_prefixed_filename() {
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -137,11 +137,11 @@ fn test_stream_s_prefixed_filename() {
 
     // Create posts with stream-S-prefixed filenames (stream without date in filename, but needs date in frontmatter)
     // Format: stream-S-slug.md -> stream-slug.html
-    let guide_post = r#"---
+    let guide_post = r"---
 date: 2024-03-01
 ---
 # Complete Guide
-A comprehensive guide"#;
+A comprehensive guide";
     fs::write(
         input_dir
             .join("content")
@@ -150,11 +150,11 @@ A comprehensive guide"#;
     )
     .unwrap();
 
-    let howto_post = r#"---
+    let howto_post = r"---
 date: 2024-03-02
 ---
 # How To
-Step by step instructions"#;
+Step by step instructions";
     fs::write(
         input_dir.join("content").join("howto-S-install-rust.md"),
         howto_post,
@@ -163,7 +163,7 @@ Step by step instructions"#;
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",

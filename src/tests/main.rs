@@ -49,6 +49,8 @@ fn create_test_cli(overrides: impl FnOnce(&mut cli::Cli)) -> cli::Cli {
             theme: None,
             build_sitemap: None,
             publish_urls_json: None,
+            enable_shortcodes: None,
+            shortcode_pattern: None,
         },
     };
     overrides(&mut args);

@@ -32,7 +32,7 @@ The shortcode will be replaced with the rendered output when your site is genera
 
 ## Built-in Shortcodes
 
-Marmite comes with several built-in shortcodes:
+Marmite comes with several built-in shortcodes that are always available, even if you don't have a `shortcodes` directory in your site:
 
 ### Table of Contents (`toc`)
 
@@ -129,7 +129,7 @@ Parameters:
 
 ## Creating Custom Shortcodes
 
-You can create your own shortcodes by adding files to the `shortcodes` directory in your input folder.
+You can create your own shortcodes by adding files to the `shortcodes` directory in your input folder. Custom shortcodes will override built-in shortcodes with the same name.
 
 > [!IMPORTANT]
 > For HTML shortcodes, the macro name MUST match the filename. For example, a file named `alert.html` must contain `{% macro alert(...) %}`. This is the macro that will be called when the shortcode is used.
@@ -197,7 +197,68 @@ enable_shortcodes: true
 
 # Custom shortcode pattern (regex)
 # Default: <!-- \.(\w+)(\s+[^>]+)?\s*-->
+shortcode_pattern: null  # Uses default HTML comment pattern
+```
+
+### Custom Shortcode Patterns
+
+You can customize the shortcode pattern to match your preferred syntax. Here are some popular alternatives:
+
+#### Hugo-style Shortcodes
+
+If you're migrating from Hugo or prefer its syntax:
+
+```yaml
+# Hugo-style: {{< shortcode param="value" >}}
+shortcode_pattern: "\\{\\{<\\s*(\\w+)([^>]*)\\s*>\\}\\}"
+```
+
+With this pattern, you would use:
+```
+{{< youtube id="dQw4w9WgXcQ" >}}
+{{< toc >}}
+```
+
+#### Jekyll/Liquid-style Shortcodes
+
+For Jekyll or Liquid-style syntax:
+
+```yaml
+# Jekyll-style: {% shortcode param="value" %}
+shortcode_pattern: "\\{%\\s*(\\w+)([^%]*)\\s*%\\}"
+```
+
+With this pattern, you would use:
+```
+{% youtube id="dQw4w9WgXcQ" %}
+{% toc %}
+```
+
+#### Double-bracket Style
+
+For a wiki-like syntax:
+
+```yaml
+# Wiki-style: [[shortcode param="value"]]
 shortcode_pattern: "\\[\\[(\\w+)\\s*([^\\]]+)?\\]\\]"
+```
+
+With this pattern, you would use:
+```
+[[youtube id="dQw4w9WgXcQ"]]
+[[toc]]
+```
+
+### CLI Override
+
+You can also override the shortcode settings via command-line flags:
+
+```bash
+# Disable shortcodes for a single build
+marmite myblog output/ --enable-shortcodes false
+
+# Use a custom pattern for a single build
+marmite myblog output/ --shortcode-pattern '\\{\\{<\\s*(\\w+)([^>]*)\\s*>\\}\\}'
 ```
 
 ## Listing Available Shortcodes
@@ -208,7 +269,46 @@ To see all available shortcodes in your project:
 marmite --shortcodes
 ```
 
-This will list both built-in and custom shortcodes.
+This command will display:
+- Whether shortcodes are enabled or disabled
+- The current shortcode pattern being used
+- Examples based on your configuration
+- A list of all available shortcodes (both built-in and custom)
+
+You can combine this with CLI overrides to test different patterns:
+
+```bash
+# See how shortcodes would work with Hugo-style pattern
+marmite --shortcodes --shortcode-pattern '\\{\\{<\\s*(\\w+)([^>]*)\\s*>\\}\\}'
+```
+
+## Migration from Other Static Site Generators
+
+If you're migrating from another static site generator, you can configure Marmite to use familiar shortcode syntax:
+
+### From Hugo
+
+Set your `marmite.yaml`:
+```yaml
+shortcode_pattern: "\\{\\{<\\s*(\\w+)([^>]*)\\s*>\\}\\}"
+```
+
+Then your existing Hugo shortcodes like `{{< figure src="image.jpg" >}}` will work (though you'll need to reimplement the shortcode logic in Tera templates).
+
+### From Jekyll
+
+Set your `marmite.yaml`:
+```yaml
+shortcode_pattern: "\\{%\\s*(\\w+)([^%]*)\\s*%\\}"
+```
+
+Your Jekyll-style tags like `{% include figure.html %}` syntax will be recognized (you'll need to create corresponding Tera macros).
+
+### Important Notes for Migration
+
+1. **Syntax only**: The pattern changes only the syntax recognition. You still need to implement the shortcode logic using Tera templates.
+2. **Parameter parsing**: Marmite expects `key=value` pairs for parameters, which may differ from your previous generator.
+3. **Test thoroughly**: Always test your migrated shortcodes with `marmite --shortcodes` to ensure they're recognized correctly.
 
 ## Best Practices
 
@@ -217,6 +317,7 @@ This will list both built-in and custom shortcodes.
 3. **Use defaults**: Provide sensible default values for optional parameters
 4. **Keep it simple**: Shortcodes should do one thing well
 5. **Test thoroughly**: Check that your shortcodes work correctly with different parameters
+6. **Choose patterns wisely**: Stick with the default pattern unless you have a specific need (like migration) to change it
 
 ## Examples
 
