@@ -2671,7 +2671,10 @@ fn render_html_with_shortcodes(
 
     // Process shortcodes if processor is available
     if let Some(processor) = shortcode_processor {
+        debug!("Processing shortcodes for {filename}");
         rendered = processor.process_shortcodes(&rendered, context, tera);
+    } else {
+        debug!("No shortcode processor available for {filename}");
     }
 
     let output_file = output_dir.join(filename);

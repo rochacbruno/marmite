@@ -34,7 +34,7 @@ fn test_site_generation_with_static_files() {
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -78,13 +78,13 @@ fn test_site_generation_with_media() {
     .unwrap();
 
     // Create content referencing media
-    let content = r#"# Post with Image
-![Test Image](media/image.jpg)"#;
+    let content = r"# Post with Image
+![Test Image](media/image.jpg)";
     fs::write(input_dir.join("content").join("post.md"), content).unwrap();
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -128,7 +128,7 @@ fn test_site_generation_with_sitemap() {
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -169,23 +169,23 @@ fn test_series_feature() {
     fs::write(&config_path, "name: Blog").unwrap();
 
     // Create posts in a series
-    let part1 = r#"---
+    let part1 = r"---
 date: 2024-01-01
 series: python-tutorial
 ---
-# Python Tutorial Part 1"#;
+# Python Tutorial Part 1";
     fs::write(input_dir.join("content").join("python-part1.md"), part1).unwrap();
 
-    let part2 = r#"---
+    let part2 = r"---
 date: 2024-01-02
 series: python-tutorial
 ---
-# Python Tutorial Part 2"#;
+# Python Tutorial Part 2";
     fs::write(input_dir.join("content").join("python-part2.md"), part2).unwrap();
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -229,7 +229,7 @@ fn test_fragments_feature() {
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -264,7 +264,7 @@ fn test_authors_feature() {
     fs::create_dir_all(input_dir.join("content")).unwrap();
 
     // Create config with authors
-    let config = r#"name: Blog
+    let config = r"name: Blog
 authors:
   alice:
     name: Alice Smith
@@ -274,27 +274,27 @@ authors:
     name: Bob Jones
     bio: Designer
     avatar: bob.jpg
-"#;
+";
     fs::write(input_dir.join("marmite.yaml"), config).unwrap();
 
     // Create posts with different authors
-    let post1 = r#"---
+    let post1 = r"---
 date: 2024-01-01
 author: alice
 ---
-# Alice's Post"#;
+# Alice's Post";
     fs::write(input_dir.join("content").join("alice-post.md"), post1).unwrap();
 
-    let post2 = r#"---
+    let post2 = r"---
 date: 2024-01-02
 authors: [alice, bob]
 ---
-# Collaborative Post"#;
+# Collaborative Post";
     fs::write(input_dir.join("content").join("collab-post.md"), post2).unwrap();
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -327,11 +327,11 @@ fn test_file_mapping_feature() {
     fs::create_dir_all(input_dir.join("content")).unwrap();
 
     // Create config with file mapping
-    let config = r#"name: Site
+    let config = r"name: Site
 file_mapping:
   - source: README.md
     dest: about.html
-"#;
+";
     fs::write(input_dir.join("marmite.yaml"), config).unwrap();
 
     // Create README.md
@@ -346,7 +346,7 @@ file_mapping:
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",

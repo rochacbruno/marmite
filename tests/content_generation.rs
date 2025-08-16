@@ -17,30 +17,30 @@ fn test_site_generation_with_posts() {
     fs::write(&config_path, "name: Blog\npagination: 2").unwrap();
 
     // Create multiple posts with dates
-    let post1 = r#"---
+    let post1 = r"---
 date: 2024-01-01
 ---
 # First Post
-Content 1"#;
+Content 1";
     fs::write(input_dir.join("content").join("2024-01-01-post1.md"), post1).unwrap();
 
-    let post2 = r#"---
+    let post2 = r"---
 date: 2024-01-02
 ---
 # Second Post
-Content 2"#;
+Content 2";
     fs::write(input_dir.join("content").join("2024-01-02-post2.md"), post2).unwrap();
 
-    let post3 = r#"---
+    let post3 = r"---
 date: 2024-01-03
 ---
 # Third Post
-Content 3"#;
+Content 3";
     fs::write(input_dir.join("content").join("2024-01-03-post3.md"), post3).unwrap();
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -81,23 +81,23 @@ fn test_site_generation_with_tags() {
     fs::write(&config_path, "name: Blog").unwrap();
 
     // Create posts with tags
-    let post1 = r#"---
+    let post1 = r"---
 date: 2024-01-01
 tags: [rust, programming]
 ---
-# Rust Post"#;
+# Rust Post";
     fs::write(input_dir.join("content").join("rust-post.md"), post1).unwrap();
 
-    let post2 = r#"---
+    let post2 = r"---
 date: 2024-01-02
 tags: [rust, testing]
 ---
-# Testing Post"#;
+# Testing Post";
     fs::write(input_dir.join("content").join("test-post.md"), post2).unwrap();
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -135,17 +135,17 @@ fn test_draft_posts_excluded() {
     fs::write(&config_path, "name: Blog").unwrap();
 
     // Create a normal post
-    let post = r#"---
+    let post = r"---
 date: 2024-01-01
 ---
-# Published Post"#;
+# Published Post";
     fs::write(input_dir.join("content").join("post.md"), post).unwrap();
 
     // Create a draft post with draft- prefix
-    let draft = r#"---
+    let draft = r"---
 date: 2024-01-02
 ---
-# Draft Post"#;
+# Draft Post";
     fs::write(
         input_dir.join("content").join("draft-2024-01-02-draft.md"),
         draft,
@@ -154,7 +154,7 @@ date: 2024-01-02
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -211,7 +211,7 @@ fn test_date_prefixed_filename_to_slug() {
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -271,7 +271,7 @@ fn test_datetime_prefixed_filename_to_slug() {
 
     // Generate site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",

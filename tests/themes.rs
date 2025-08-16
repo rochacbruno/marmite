@@ -3,6 +3,7 @@ use std::process::Command;
 use tempfile::TempDir;
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn test_theme_workflow() {
     let temp_dir = TempDir::new().unwrap();
     let site_dir = temp_dir.path().join("test_site");
@@ -10,7 +11,7 @@ fn test_theme_workflow() {
 
     // Step 1: Initialize a new site
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -30,7 +31,7 @@ fn test_theme_workflow() {
 
     // Step 2: Start a new theme
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -89,7 +90,7 @@ fn test_theme_workflow() {
 
     // Step 4: Add custom CSS to the site root (not theme)
     // This gets copied to output/static/custom.css
-    let custom_css = r#"
+    let custom_css = r"
 /* Custom theme styles */
 .custom-theme-class {
     color: #ff6600;
@@ -99,20 +100,20 @@ fn test_theme_workflow() {
 body {
     background-color: #f5f5f5;
 }
-"#;
+";
     fs::write(site_dir.join("custom.css"), custom_css).unwrap();
 
     // Also add a theme-specific CSS file in the theme's static directory
-    let theme_css = r#"
+    let theme_css = r"
 /* Theme specific styles */
 .theme-specific {
     color: #0066cc;
 }
-"#;
+";
     fs::write(theme_dir.join("static").join("theme.css"), theme_css).unwrap();
 
     // Step 5: Create some content to test with
-    let post_content = r#"---
+    let post_content = r"---
 date: 2024-01-15
 title: Test Post with Theme
 tags: [test, theme]
@@ -127,23 +128,23 @@ This is a test post to verify the custom theme is working correctly.
 - Custom templates
 - Custom CSS
 - Theme configuration
-"#;
+";
     fs::write(site_dir.join("content").join("test-post.md"), post_content).unwrap();
 
     // Create a page without date
-    let page_content = r#"---
+    let page_content = r"---
 title: About Page
 ---
 
 # About
 
 This is an about page using the custom theme.
-"#;
+";
     fs::write(site_dir.join("content").join("about.md"), page_content).unwrap();
 
     // Step 6: Set the theme in configuration
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -163,14 +164,14 @@ This is an about page using the custom theme.
     // Verify theme was added to config
     let config_content = fs::read_to_string(site_dir.join("marmite.yaml")).unwrap();
     assert!(
-        config_content.contains(&format!("theme: {}", theme_name)),
+        config_content.contains(&format!("theme: {theme_name}")),
         "Theme not set in config"
     );
 
     // Step 7: Generate the site with the custom theme
     let output_dir = site_dir.join("site");
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",
@@ -256,7 +257,7 @@ This is an about page using the custom theme.
     // Step 9: Test generating with theme specified via CLI (override config)
     let output_dir2 = site_dir.join("site2");
     let output = Command::new("cargo")
-        .args(&[
+        .args([
             "run",
             "--quiet",
             "--",

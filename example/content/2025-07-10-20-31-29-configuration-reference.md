@@ -116,6 +116,17 @@ show_next_prev_links: true        # Show next/previous navigation (default: true
 ```yaml
 toc: true                          # Show table of contents (default: false)
 json_feed: true                    # Generate JSON feeds (default: false)
+enable_shortcodes: true            # Enable shortcodes processing (default: true)
+shortcode_pattern: null            # Custom regex pattern for shortcodes (default: <!-- \.(\w+)(\s+[^>]+)?\s*-->)
+```
+
+**CLI Override for Shortcodes**:
+```bash
+# Disable shortcodes for a single build
+marmite myblog output/ --enable-shortcodes false
+
+# Use custom shortcode pattern
+marmite myblog output/ --shortcode-pattern '\{\{< (\w+)([^>]*) >\}\}'
 ```
 
 ### Source Publishing

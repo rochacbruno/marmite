@@ -121,30 +121,7 @@ fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if args.shortcodes {
-        let mut processor = shortcodes::ShortcodeProcessor::new(None);
-        if let Err(e) = processor.collect_shortcodes(&input_folder) {
-            return Err(format!("Failed to collect shortcodes: {e}").into());
-        }
-        println!("Shortcodes:");
-        println!("Reusable blocks of content that can be used in your markdown files.");
-        println!("They are defined in the shortcodes/ directory and are rendered using the Tera template engine.");
-        println!("Check the documentation for details on how to use and create shortcodes.");
-        println!("================");
-        println!("Examples:");
-        println!("<!-- .youtube id=dQw4w9WgXcQ -->");
-        println!("<!-- .youtube id=dQw4w9WgXcQ width=800 height=600 -->");
-        println!("<!-- .toc -->");
-        println!("<!-- .authors -->");
-        println!("<!-- .streams ord=desc items=5 -->");
-        println!("--------------------------------");
-        println!("Available shortcodes:");
-        for (name, description) in processor.list_shortcodes_with_descriptions() {
-            match description {
-                Some(desc) => println!("  - {name}: {desc}"),
-                None => println!("  - {name}"),
-            }
-        }
-        return Ok(());
+        return handle_shortcodes_command(&input_folder, &cloned_args);
     }
 
     if args.show_urls {
@@ -180,6 +157,119 @@ fn main() {
         error!("{e}");
         std::process::exit(1);
     }
+}
+
+/// Handle the --shortcodes command to display available shortcodes
+fn handle_shortcodes_command(
+    input_folder: &Path,
+    cli_args: &Arc<cli::Cli>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Load configuration to check if shortcodes are enabled
+    let config_path = input_folder.join(cli_args.config.as_str());
+    let mut site_data = site::Data::from_file(&config_path);
+    site_data.site.override_from_cli_args(cli_args);
+
+    let mut processor =
+        shortcodes::ShortcodeProcessor::new(site_data.site.shortcode_pattern.as_deref());
+    if let Err(e) = processor.collect_shortcodes(input_folder) {
+        return Err(format!("Failed to collect shortcodes: {e}").into());
+    }
+
+    println!("Shortcodes:");
+    println!("Enabled: {}", site_data.site.enable_shortcodes);
+
+    // Display the actual pattern being used
+    let pattern = site_data
+        .site
+        .shortcode_pattern
+        .as_deref()
+        .unwrap_or(r"<!-- \.(\w+)(\s+[^>]+)?\s*-->");
+    println!("Pattern: {pattern}");
+
+    println!("\nReusable blocks of content that can be used in your markdown files.");
+    println!("They are defined in the shortcodes/ directory and are rendered using the Tera template engine.");
+    println!("Check the documentation for details on how to use and create shortcodes.");
+    println!("================");
+
+    // Generate examples based on available shortcodes and the actual pattern
+    if processor.shortcodes.is_empty() {
+        println!("No shortcodes available.");
+    } else {
+        println!("Examples based on your configuration:");
+
+        // Get a few shortcode names for examples
+        let shortcode_names: Vec<&str> = processor
+            .shortcodes
+            .keys()
+            .take(3)
+            .map(std::string::String::as_str)
+            .collect();
+
+        // Try to generate pattern-based examples
+        for name in shortcode_names {
+            // Build example based on the pattern
+            let example = if pattern.contains(r"<!--") {
+                // Default HTML comment pattern
+                format!("  <!-- .{name} -->")
+            } else if pattern.contains(r"\{\{<") || pattern.contains("{{<") {
+                // Hugo-style shortcode
+                format!("  {{{{< {name} >}}}}")
+            } else if pattern.contains(r"\{\{%") || pattern.contains("{%") {
+                // Liquid/Jekyll style
+                format!("  {{{{% {name} %}}}}")
+            } else if pattern.contains(r"\[") || pattern.contains('[') {
+                // Markdown-style shortcode
+                format!("  [{name}]")
+            } else {
+                // Unknown pattern, show generic
+                format!("  [Use '{name}' with your pattern]")
+            };
+            println!("{example}");
+
+            // Add parameter example for known shortcodes
+            if matches!(
+                name,
+                "youtube"
+                    | "spotify"
+                    | "posts"
+                    | "pages"
+                    | "tags"
+                    | "streams"
+                    | "authors"
+                    | "series"
+                    | "card"
+            ) {
+                let param_example = if pattern.contains(r"<!--") {
+                    format!("  <!-- .{name} param=value -->")
+                } else if pattern.contains(r"\{\{<") || pattern.contains("{{<") {
+                    format!("  {{{{< {name} param=\"value\" >}}}}")
+                } else if pattern.contains(r"\{\{%") || pattern.contains("{%") {
+                    format!("  {{{{% {name} param=\"value\" %}}}}")
+                } else {
+                    String::new()
+                };
+                if !param_example.is_empty() {
+                    println!("{param_example}");
+                }
+            }
+        }
+
+        println!("\nNote: Replace 'param' and 'value' with actual parameter names and values.");
+        if !pattern.contains(r"<!--") {
+            println!("Custom pattern in use: {pattern}");
+        }
+    }
+
+    println!("--------------------------------");
+    println!("Available shortcodes:");
+    for (name, description) in processor.list_shortcodes_with_descriptions() {
+        match description {
+            Some(desc) => println!("  - {name}: {desc}"),
+            None => println!("  - {name}"),
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

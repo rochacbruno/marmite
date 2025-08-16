@@ -207,4 +207,12 @@ pub struct Configuration {
     /// Generate urls.json file [default: true or from config file]
     #[arg(long)]
     pub publish_urls_json: Option<bool>,
+
+    /// Enable shortcodes processing [default: true or from config file]
+    #[arg(long)]
+    pub enable_shortcodes: Option<bool>,
+
+    /// Custom shortcode pattern (regex) [default: <!-- \.(\w+)(\s+[^>]+)?\s*--> or from config file]
+    #[arg(long)]
+    pub shortcode_pattern: Option<String>,
 }
