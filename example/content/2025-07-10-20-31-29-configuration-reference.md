@@ -117,7 +117,7 @@ show_next_prev_links: true        # Show next/previous navigation (default: true
 toc: true                          # Show table of contents (default: false)
 json_feed: true                    # Generate JSON feeds (default: false)
 enable_shortcodes: true            # Enable shortcodes processing (default: true)
-shortcode_pattern: null            # Custom regex pattern for shortcodes (default: <!-- \.(\w+)(\s+[^>]+)?\s*-->)
+shortcode_pattern: null            # Custom regex pattern for shortcodes (default: <!-- \.(\w+)(?:\s+([^-][\s\S]*?))?\s*-->)
 ```
 
 **CLI Override for Shortcodes**:

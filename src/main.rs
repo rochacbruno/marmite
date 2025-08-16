@@ -14,6 +14,7 @@ mod feed;
 mod gallery;
 mod image_provider;
 mod parser;
+mod re;
 mod server;
 mod shortcodes;
 mod site;
@@ -183,7 +184,7 @@ fn handle_shortcodes_command(
         .site
         .shortcode_pattern
         .as_deref()
-        .unwrap_or(r"<!-- \.(\w+)(\s+[^>]+)?\s*-->");
+        .unwrap_or(re::SHORTCODE_HTML_COMMENT);
     println!("Pattern: {pattern}");
 
     println!("\nReusable blocks of content that can be used in your markdown files.");
@@ -238,6 +239,7 @@ fn handle_shortcodes_command(
                     | "authors"
                     | "series"
                     | "card"
+                    | "gallery"
             ) {
                 let param_example = if pattern.contains(r"<!--") {
                     format!("  <!-- .{name} param=value -->")

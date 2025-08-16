@@ -20,14 +20,15 @@ fn test_shortcode_pattern() {
 #[test]
 fn test_shortcode_pattern_with_params() {
     let processor = ShortcodeProcessor::new(None);
-    let html = r"<p>Some text</p>
+    let html = r#"<p>Some text</p>
 <!-- .posts -->
 <!-- .posts ord=asc items=5 -->
 <!-- .youtube id=abc123 width=400 height=300 -->
-";
+<!-- .test foo=noquote bar='single' zaz="double" -->
+"#;
 
     let matches: Vec<_> = processor.pattern.captures_iter(html).collect();
-    assert_eq!(matches.len(), 3);
+    assert_eq!(matches.len(), 4);
 
     // First match: .posts with no params
     assert_eq!(&matches[0][1], "posts");
@@ -42,6 +43,11 @@ fn test_shortcode_pattern_with_params() {
     assert_eq!(&matches[2][1], "youtube");
     let params = matches[2].get(2).unwrap().as_str().trim();
     assert_eq!(params, "id=abc123 width=400 height=300");
+
+    // Fourth match: .test with params
+    assert_eq!(&matches[3][1], "test");
+    let params = matches[3].get(2).unwrap().as_str().trim();
+    assert_eq!(params, "foo=noquote bar='single' zaz=\"double\"");
 }
 
 #[test]

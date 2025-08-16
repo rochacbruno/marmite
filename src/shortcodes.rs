@@ -1,4 +1,5 @@
 use crate::embedded::EMBEDDED_SHORTCODES;
+use crate::re;
 use log::{debug, warn};
 use regex::Regex;
 use serde::Serialize;
@@ -22,9 +23,8 @@ pub struct ShortcodeProcessor {
 
 impl ShortcodeProcessor {
     pub fn new(pattern: Option<&str>) -> Self {
-        let default_pattern = r"<!-- \.(\w+)(\s+[^>]+)?\s*-->";
-        let pattern =
-            Regex::new(pattern.unwrap_or(default_pattern)).expect("Invalid shortcode pattern");
+        let pattern = Regex::new(pattern.unwrap_or(re::SHORTCODE_HTML_COMMENT))
+            .expect("Invalid shortcode pattern");
 
         Self {
             shortcodes: HashMap::new(),
@@ -106,7 +106,7 @@ impl ShortcodeProcessor {
 
             // Validate that the file contains a macro with the same name as the filename
             let macro_pattern =
-                Regex::new(r"\{%\s*macro\s+(\w+)\s*\(").expect("Invalid macro pattern");
+                Regex::new(re::CAPTURE_TERA_MACRO_CALL).expect("Invalid macro pattern");
             let macro_names: Vec<String> = macro_pattern
                 .captures_iter(&content)
                 .map(|cap| cap[1].to_string())
