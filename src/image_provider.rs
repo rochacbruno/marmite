@@ -59,6 +59,7 @@ fn download_picsum_image(
     info!("Downloading banner image from: {url}");
 
     // Download the image
+    // Note: ureq 3.0 doesn't support per-request timeout, but has default timeouts
     let response = ureq::get(&url).call()?;
 
     if response.status() == 200 {

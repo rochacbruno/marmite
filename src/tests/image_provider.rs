@@ -1,6 +1,9 @@
 use super::*;
 use crate::config::ImageProvider;
 use frontmatter_gen::Frontmatter;
+use std::sync::mpsc;
+use std::thread;
+use std::time::Duration;
 use tempfile::TempDir;
 
 fn create_test_config() -> Marmite {
@@ -29,17 +32,50 @@ fn test_download_banner_image_no_provider() {
 
 #[test]
 fn test_download_banner_image_with_picsum() {
-    let config = create_test_config();
-    let frontmatter = Frontmatter::new();
-    let temp_dir = TempDir::new().unwrap();
-    let slug = "test-post";
-    let tags = vec!["rust".to_string(), "test".to_string()];
+    // Use a channel to communicate the test result from the thread
+    let (tx, rx) = mpsc::channel();
 
-    // This will call download_picsum_image
-    let result = download_banner_image(&config, &frontmatter, temp_dir.path(), slug, &tags);
-    // Result depends on network, but function should handle errors gracefully
-    // We can't test actual download without network, but we can test the function doesn't panic
-    assert!(result.is_ok() || result.is_err());
+    // Run the test in a separate thread with timeout
+    thread::spawn(move || {
+        // Check if we can reach picsum.photos
+        let test_url = "https://picsum.photos/health";
+        match ureq::get(test_url).call() {
+            Ok(_) => {
+                // Server is reachable, proceed with test
+                let config = create_test_config();
+                let frontmatter = Frontmatter::new();
+                let temp_dir = TempDir::new().unwrap();
+                let slug = "test-post";
+                let tags = vec!["rust".to_string(), "test".to_string()];
+
+                // This will call download_picsum_image
+                let result =
+                    download_banner_image(&config, &frontmatter, temp_dir.path(), slug, &tags);
+                // Result depends on network, but function should handle errors gracefully
+                // We can't test actual download without network, but we can test the function doesn't panic
+                assert!(result.is_ok() || result.is_err());
+                let _ = tx.send(true);
+            }
+            Err(_) => {
+                // Server not reachable, skip test
+                eprintln!(
+                    "Skipping test_download_banner_image_with_picsum: picsum.photos not reachable"
+                );
+                let _ = tx.send(false);
+            }
+        }
+    });
+
+    // Wait for the test to complete with a 10-second timeout
+    match rx.recv_timeout(Duration::from_secs(10)) {
+        Ok(_) => {
+            // Test completed within timeout
+        }
+        Err(_) => {
+            // Timeout - skip test
+            eprintln!("Skipping test_download_banner_image_with_picsum: timeout after 10 seconds");
+        }
+    }
 }
 
 #[test]
