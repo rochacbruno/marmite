@@ -167,7 +167,7 @@ pub struct SourceLink {
 impl Function for SourceLink {
     fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
         let content = args
-            .get("content")
+            .get(crate::constants::VAR_CONTENT)
             .ok_or_else(|| tera::Error::msg("Missing `content` argument"))?;
 
         // Extract the source_path from the content

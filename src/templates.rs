@@ -6,7 +6,7 @@ use std::path::Path;
 
 /// Creates the `templates/` folder and writes embedded templates to it.
 pub fn initialize_templates(input_folder: &Path) {
-    let templates_path = input_folder.join("templates");
+    let templates_path = input_folder.join(crate::constants::TEMPLATES_DIR);
     if let Err(e) = fs::create_dir(&templates_path) {
         error!("Failed to create templates directory: {e:?}");
         return;
@@ -36,7 +36,7 @@ pub fn initialize_templates(input_folder: &Path) {
 /// Uses `generate_static` to populate the `static/` folder with embedded content.
 #[allow(dead_code)]
 pub fn initialize_theme_assets(input_folder: &Path) {
-    let static_path = input_folder.join("static");
+    let static_path = input_folder.join(crate::constants::STATIC_DIR);
 
     if let Err(e) = fs::create_dir(&static_path) {
         error!("Failed to create static directory: {e:?}");
@@ -62,8 +62,8 @@ pub fn initialize_theme(input_folder: &Path, theme_name: &str) {
     }
 
     // Create theme directory structure
-    let templates_path = theme_path.join("templates");
-    let static_path = theme_path.join("static");
+    let templates_path = theme_path.join(crate::constants::TEMPLATES_DIR);
+    let static_path = theme_path.join(crate::constants::STATIC_DIR);
 
     if let Err(e) = fs::create_dir_all(&templates_path) {
         error!("Failed to create theme templates directory: {e:?}");

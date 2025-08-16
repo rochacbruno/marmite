@@ -8,6 +8,7 @@ use std::{
 
 mod cli;
 mod config;
+mod constants;
 mod content;
 mod embedded;
 mod feed;
@@ -24,11 +25,11 @@ mod theme_manager;
 
 fn setup_logging(verbose: u8, debug: bool) -> Result<(), SetLoggerError> {
     let env = Env::default().default_filter_or(match verbose {
-        0 => "marmite=warn",
-        1 => "marmite=info",
-        2 => "marmite=debug",
-        3 => "marmite=trace",
-        4..=u8::MAX => "trace",
+        0 => constants::LOG_LEVEL_WARN,
+        1 => constants::LOG_LEVEL_INFO,
+        2 => constants::LOG_LEVEL_DEBUG,
+        3 => constants::LOG_LEVEL_TRACE,
+        4..=u8::MAX => constants::LOG_LEVEL_ALL_TRACE,
     });
     Builder::from_env(env).try_init()?;
 
@@ -129,7 +130,10 @@ fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let output_folder = Arc::new(args.output_folder.unwrap_or(input_folder.join("site")));
+    let output_folder = Arc::new(
+        args.output_folder
+            .unwrap_or(input_folder.join(constants::DEFAULT_OUTPUT_DIR)),
+    );
     if let Err(e) = site::generate(
         &config_path,
         &input_folder,

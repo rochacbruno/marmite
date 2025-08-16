@@ -292,7 +292,7 @@ fn update_config_theme(
     theme_name: &str,
     _config_theme: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let config_path = input_folder.join("marmite.yaml");
+    let config_path = input_folder.join(crate::constants::CONFIG_FILE);
 
     if config_path.exists() {
         // Update existing config

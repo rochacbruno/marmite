@@ -523,7 +523,7 @@ pub fn get_stream_from_filename(path: &Path) -> Option<String> {
 /// Extract stream from filename pattern: {stream}-{date}-{slug}
 /// Only accepts single word before date (no hyphens allowed in stream name)
 fn extract_stream_from_date_pattern(filename: &str) -> Option<String> {
-    let date_pattern = Regex::new(r"^([a-zA-Z0-9]+)-(\d{4}-\d{2}-\d{2})")
+    let date_pattern = Regex::new(crate::constants::STREAM_NAME_DATE_PATTERN)
         .expect("Date pattern regex should compile");
     if let Some(captures) = date_pattern.captures(filename) {
         if let Some(stream_match) = captures.get(1) {
@@ -536,7 +536,8 @@ fn extract_stream_from_date_pattern(filename: &str) -> Option<String> {
 /// Extract stream from filename pattern: {stream}-S-{slug}
 /// Only accepts single word before 'S' marker
 fn extract_stream_from_s_pattern(filename: &str) -> Option<String> {
-    let s_pattern = Regex::new(r"^([a-zA-Z0-9]+)-S-").expect("S pattern regex should compile");
+    let s_pattern = Regex::new(crate::constants::STREAM_PREFIX_PATTERN)
+        .expect("S pattern regex should compile");
     if let Some(captures) = s_pattern.captures(filename) {
         if let Some(stream_match) = captures.get(1) {
             return Some(stream_match.as_str().to_string());
@@ -627,8 +628,8 @@ pub fn get_date(frontmatter: &Frontmatter, path: &Path) -> Option<NaiveDateTime>
 fn try_to_parse_date(input: &str) -> Result<NaiveDateTime, chrono::ParseError> {
     // Fix input to match the format "2023-02-08 19:03:32" or "2023-02-08 19:03" or "2023-02-08"
     // even if the input is on format 2020-01-19T21:05:12.984Z or 2020-01-19T21:05:12+0000
-    let re = Regex::new(r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?")
-        .expect("Date extraction regex should compile");
+    let re =
+        Regex::new(crate::constants::DATE_PATTERN).expect("Date extraction regex should compile");
     let input = re.find(input).map_or("", |m| m.as_str());
 
     input
@@ -680,7 +681,7 @@ pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String>
 pub fn slugify(text: &str) -> String {
     let text = text.replace("%20", "-");
     let normalized = text.nfd().collect::<String>().to_lowercase();
-    let re = Regex::new(r"[^a-z0-9]+").expect("Slugify regex should compile");
+    let re = Regex::new(crate::constants::SLUGIFY_PATTERN).expect("Slugify regex should compile");
     let slug = re.replace_all(&normalized, "-");
     slug.trim_matches('-').to_string()
 }
@@ -768,7 +769,7 @@ pub fn get_card_image(
 
     // first <img> src attribute
     let img_regex =
-        Regex::new(r#"<img[^>]*src="([^"]+)""#).expect("Image src regex should compile");
+        Regex::new(crate::constants::IMAGE_SRC_PATTERN).expect("Image src regex should compile");
     img_regex
         .captures(html)
         .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
@@ -780,7 +781,7 @@ fn find_matching_file(slug: &str, path: &Path, kind: &str, exts: &[&str]) -> Opt
         let image_filename = format!("{slug}.{kind}.{ext}");
         let mut path = path.to_path_buf();
         path.pop();
-        path.push("media");
+        path.push(crate::constants::MEDIA_DIR);
         path.push(&image_filename);
         if path.exists() {
             return Some(format!("media/{image_filename}"));

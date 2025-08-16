@@ -68,7 +68,9 @@ impl ShortcodeProcessor {
 
             if path.is_file() {
                 if let Some(extension) = path.extension() {
-                    if extension == "html" || extension == "md" {
+                    if extension == crate::constants::HTML_EXTENSION
+                        || extension == crate::constants::MARKDOWN_EXTENSION
+                    {
                         self.load_shortcode(&path)?;
                     }
                 }
@@ -105,8 +107,8 @@ impl ShortcodeProcessor {
             }
 
             // Validate that the file contains a macro with the same name as the filename
-            let macro_pattern =
-                Regex::new(r"\{%\s*macro\s+(\w+)\s*\(").expect("Invalid macro pattern");
+            let macro_pattern = Regex::new(crate::constants::SHORTCODE_MACRO_PATTERN)
+                .expect("Invalid macro pattern");
             let macro_names: Vec<String> = macro_pattern
                 .captures_iter(&content)
                 .map(|cap| cap[1].to_string())

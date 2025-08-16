@@ -161,7 +161,7 @@ impl Data {
 
         // Add homepage
         self.generated_urls
-            .add_url("misc", "index.html".to_string());
+            .add_url("misc", crate::constants::INDEX_FILE.to_string());
 
         // Add all posts
         for post in &self.posts {
@@ -855,7 +855,9 @@ fn collect_content(
                         .unwrap_or_else(|| panic!("Could not get file name {e:?}")),
                 );
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
-            e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
+            e.path().is_file()
+                && file_extension == Some(crate::constants::MARKDOWN_EXTENSION)
+                && !file_name.starts_with('_')
         })
         .map(|entry| {
             // let modified_time = entry.metadata().unwrap().modified().unwrap();
@@ -984,9 +986,9 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
     tera.register_filter("remove_draft", tera_filter::RemoveDraft);
 
     let templates_path = site_data.site.get_templates_path(input_folder);
-    let mandatory_templates = ["base.html", "list.html", "group.html", "content.html"];
+    let mandatory_templates = crate::constants::MANDATORY_TEMPLATES;
     // Required because Tera needs base templates to be loaded before extending them
-    for template_name in &mandatory_templates {
+    for template_name in mandatory_templates {
         let template_path = templates_path.join(template_name);
         if template_path.exists() {
             let template_content = fs::read_to_string(&template_path).unwrap_or_else(|e| {
@@ -1083,7 +1085,7 @@ fn render_templates(
     let site_data = site_data.clone();
 
     global_context.insert("site_data", &site_data);
-    global_context.insert("site", &site_data.site);
+    global_context.insert(crate::constants::VAR_SITE, &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
     global_context.insert("language", &site_data.site.language);
     debug!("Global Context site: {:?}", &site_data.site);
@@ -1303,11 +1305,11 @@ fn handle_default_empty_site(
     index_context.insert("total_pages", &1);
     index_context.insert("per_page", &1);
     index_context.insert("total_content", &1);
-    index_context.insert("current_page", "index.html");
+    index_context.insert("current_page", crate::constants::INDEX_FILE);
     index_context.insert("current_page_number", &1);
     render_html(
         "custom_index.html,list.html",
-        "index.html",
+        crate::constants::INDEX_FILE,
         tera,
         &index_context,
         output_dir,
@@ -1645,7 +1647,7 @@ fn handle_static_artifacts(
         ("custom.css", site_data.site.static_path.clone()),
         ("custom.js", site_data.site.static_path.clone()),
         ("favicon.ico", site_data.site.static_path.clone()),
-        ("robots.txt", String::new()),
+        (crate::constants::ROBOTS_FILE, String::new()),
     ];
     let output_static_destiny = output_folder.join(site_data.site.static_path.clone());
     let possible_sources = [input_folder, content_dir, output_static_destiny.as_path()];
@@ -1679,7 +1681,7 @@ fn handle_static_artifacts(
 fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBuf>) {
     let remove_html_tags = |html: &str| -> String {
         // Remove HTML tags, Liquid tags, and Jinja tags
-        let re = Regex::new(r"<[^>]*>|(\{\{[^>]*\}\})|(\{%[^>]*%\})")
+        let re = Regex::new(crate::constants::HTML_TAG_STRIP_PATTERN)
             .map_err(|e| format!("Failed to create regex: {e}"))
             .unwrap_or_else(|e| {
                 error!("Regex compilation failed: {e}");
@@ -2337,7 +2339,7 @@ fn handle_content_pages(
         .map(|content| -> Result<(), String> {
             let mut content_context = global_context.clone();
             content_context.insert("title", &content.title);
-            content_context.insert("content", &content);
+            content_context.insert(crate::constants::VAR_CONTENT, &content);
             content_context.insert("current_page", &format!("{}.html", &content.slug));
             debug!(
                 "{} context: {:?}",
@@ -2411,7 +2413,9 @@ fn should_force_render(
                         .unwrap_or_else(|| panic!("Could not get file name {e:?}")),
                 );
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
-            e.path().is_file() && file_extension == Some("md") && file_name.starts_with('_')
+            e.path().is_file()
+                && file_extension == Some(crate::constants::MARKDOWN_EXTENSION)
+                && file_name.starts_with('_')
         })
         .any(|entry| {
             if let Ok(metadata) = entry.metadata() {
@@ -2457,7 +2461,7 @@ fn handle_404(
         content.title.clone_from(&custom_content.title);
     }
     context.insert("title", &content.title);
-    context.insert("content", &content);
+    context.insert(crate::constants::VAR_CONTENT, &content);
     context.insert("current_page", "404.html");
     render_html("content.html", "404.html", tera, &context, output_dir)?;
     Ok(())
@@ -2687,8 +2691,8 @@ fn render_html_with_shortcodes(
 #[allow(clippy::too_many_lines)]
 pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::cli::Cli>) {
     let input_folder = input_folder.as_path();
-    let content_folder = input_folder.join("content");
-    let media_folder = content_folder.join("media");
+    let content_folder = input_folder.join(crate::constants::CONTENT_DIR);
+    let media_folder = content_folder.join(crate::constants::MEDIA_DIR);
 
     if let Err(e) = fs::create_dir_all(input_folder) {
         error!("Failed to create input folder: {e:?}");

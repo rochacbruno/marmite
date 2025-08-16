@@ -46,7 +46,7 @@ fn handle_request(
     };
 
     let request_path = match decoded_url.as_str() {
-        "/" => "index.html",
+        "/" => crate::constants::INDEX_FILE,
         url => &url[1..], // Remove the leading '/'
     };
 

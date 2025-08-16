@@ -537,19 +537,19 @@ fn default_archives_content_title() -> String {
 }
 
 fn default_content_path() -> String {
-    "content".to_string()
+    crate::constants::CONTENT_DIR.to_string()
 }
 
 fn default_templates_path() -> String {
-    "templates".to_string()
+    crate::constants::TEMPLATES_DIR.to_string()
 }
 
 fn default_static_path() -> String {
-    "static".to_string()
+    crate::constants::STATIC_DIR.to_string()
 }
 
 fn default_media_path() -> String {
-    "media".to_string()
+    crate::constants::MEDIA_DIR.to_string()
 }
 
 fn default_date_format() -> String {
