@@ -8,7 +8,7 @@ use crate::shortcodes::ShortcodeProcessor;
 use crate::tera_functions::{
     DisplayName, GetDataBySlug, GetGallery, GetPosts, Group, SourceLink, UrlFor,
 };
-use crate::{server, tera_filter};
+use crate::{re, server, tera_filter};
 use chrono::Datelike;
 use core::str;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
@@ -1679,12 +1679,12 @@ fn handle_static_artifacts(
 fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBuf>) {
     let remove_html_tags = |html: &str| -> String {
         // Remove HTML tags, Liquid tags, and Jinja tags
-        let re = Regex::new(r"<[^>]*>|(\{\{[^>]*\}\})|(\{%[^>]*%\})")
+        let re = Regex::new(re::MATCH_HTML_OR_TEMPLATE_TAGS)
             .map_err(|e| format!("Failed to create regex: {e}"))
             .unwrap_or_else(|e| {
                 error!("Regex compilation failed: {e}");
                 // Return a simple regex that won't crash but may not work perfectly
-                Regex::new(r"<[^>]*>").expect("Basic regex should compile")
+                Regex::new(re::MATCH_HTML_TAGS).expect("Basic regex should compile")
             });
         re.replace_all(html, "")
             .replace('\n', " ")

@@ -196,7 +196,7 @@ Shortcodes are enabled by default. You can disable them or customize the pattern
 enable_shortcodes: true
 
 # Custom shortcode pattern (regex)
-# Default: <!-- \.(\w+)(\s+[^>]+)?\s*-->
+# Default: <!-- \.(\w+)(?:\s+([^-][\s\S]*?))?\s*-->
 shortcode_pattern: null  # Uses default HTML comment pattern
 ```
 

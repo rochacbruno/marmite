@@ -212,7 +212,7 @@ pub struct Configuration {
     #[arg(long)]
     pub enable_shortcodes: Option<bool>,
 
-    /// Custom shortcode pattern (regex) [default: <!-- \.(\w+)(\s+[^>]+)?\s*--> or from config file]
+    /// Custom shortcode pattern (regex) [default: <!-- \.(\w+)(?:\s+([^-][\s\S]*?))?\s*--> or from config file]
     #[arg(long)]
     pub shortcode_pattern: Option<String>,
 }
