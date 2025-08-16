@@ -39,30 +39,27 @@ fn test_download_banner_image_with_picsum() {
     thread::spawn(move || {
         // Check if we can reach picsum.photos
         let test_url = "https://picsum.photos/health";
-        match ureq::get(test_url).call() {
-            Ok(_) => {
-                // Server is reachable, proceed with test
-                let config = create_test_config();
-                let frontmatter = Frontmatter::new();
-                let temp_dir = TempDir::new().unwrap();
-                let slug = "test-post";
-                let tags = vec!["rust".to_string(), "test".to_string()];
+        if let Ok(_) = ureq::get(test_url).call() {
+            // Server is reachable, proceed with test
+            let config = create_test_config();
+            let frontmatter = Frontmatter::new();
+            let temp_dir = TempDir::new().unwrap();
+            let slug = "test-post";
+            let tags = vec!["rust".to_string(), "test".to_string()];
 
-                // This will call download_picsum_image
-                let result =
-                    download_banner_image(&config, &frontmatter, temp_dir.path(), slug, &tags);
-                // Result depends on network, but function should handle errors gracefully
-                // We can't test actual download without network, but we can test the function doesn't panic
-                assert!(result.is_ok() || result.is_err());
-                let _ = tx.send(true);
-            }
-            Err(_) => {
-                // Server not reachable, skip test
-                eprintln!(
-                    "Skipping test_download_banner_image_with_picsum: picsum.photos not reachable"
-                );
-                let _ = tx.send(false);
-            }
+            // This will call download_picsum_image
+            let result =
+                download_banner_image(&config, &frontmatter, temp_dir.path(), slug, &tags);
+            // Result depends on network, but function should handle errors gracefully
+            // We can't test actual download without network, but we can test the function doesn't panic
+            assert!(result.is_ok() || result.is_err());
+            let _ = tx.send(true);
+        } else {
+            // Server not reachable, skip test
+            eprintln!(
+                "Skipping test_download_banner_image_with_picsum: picsum.photos not reachable"
+            );
+            let _ = tx.send(false);
         }
     });
 
