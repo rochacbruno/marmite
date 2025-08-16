@@ -506,7 +506,7 @@ fn test_get_card_image_from_frontmatter() {
     let expected = Some("\"media/image.jpg\"".to_string());
     // assert_eq!(get_card_image(&frontmatter, html, ), expected);
     assert_eq!(
-        get_card_image(&frontmatter, html, Path::new("test"), "test"),
+        get_card_image(&frontmatter, html, Path::new("test"), "test", "media"),
         expected
     );
 }
@@ -517,7 +517,7 @@ fn test_get_card_image_from_html() {
     let html = r#"<p>Some content</p><img src="media/image.jpg" />"#;
     let expected = Some("media/image.jpg".to_string());
     assert_eq!(
-        get_card_image(&frontmatter, html, Path::new("test"), "test"),
+        get_card_image(&frontmatter, html, Path::new("test"), "test", "media"),
         expected
     );
 }
@@ -528,7 +528,7 @@ fn test_get_card_image_no_image() {
     let html = "<p>Some content</p>";
     let expected: Option<String> = None;
     assert_eq!(
-        get_card_image(&frontmatter, html, Path::new("test"), "test"),
+        get_card_image(&frontmatter, html, Path::new("test"), "test", "media"),
         expected
     );
 }
@@ -539,7 +539,7 @@ fn test_get_card_image_with_multiple_images() {
     let html = r#"<p>Some content</p><img src="image1.jpg" /><img src="image2.jpg" />"#;
     let expected = Some("image1.jpg".to_string());
     assert_eq!(
-        get_card_image(&frontmatter, html, Path::new("test"), "test"),
+        get_card_image(&frontmatter, html, Path::new("test"), "test", "media"),
         expected
     );
 }
@@ -550,7 +550,7 @@ fn test_get_card_image_with_invalid_html() {
     let html = r#"<p>Some content</p><img src="image.jpg"#;
     let expected: Option<String> = None;
     assert_eq!(
-        get_card_image(&frontmatter, html, Path::new("test"), "test"),
+        get_card_image(&frontmatter, html, Path::new("test"), "test", "media"),
         expected
     );
 }

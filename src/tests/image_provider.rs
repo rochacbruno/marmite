@@ -39,7 +39,7 @@ fn test_download_banner_image_with_picsum() {
     thread::spawn(move || {
         // Check if we can reach picsum.photos
         let test_url = "https://picsum.photos/health";
-        if let Ok(_) = ureq::get(test_url).call() {
+        if ureq::get(test_url).call().is_ok() {
             // Server is reachable, proceed with test
             let config = create_test_config();
             let frontmatter = Frontmatter::new();
