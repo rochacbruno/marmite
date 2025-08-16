@@ -14,6 +14,7 @@ mod feed;
 mod gallery;
 mod image_provider;
 mod parser;
+mod re;
 mod server;
 mod shortcodes;
 mod site;
