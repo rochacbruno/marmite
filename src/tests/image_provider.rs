@@ -48,8 +48,7 @@ fn test_download_banner_image_with_picsum() {
             let tags = vec!["rust".to_string(), "test".to_string()];
 
             // This will call download_picsum_image
-            let result =
-                download_banner_image(&config, &frontmatter, temp_dir.path(), slug, &tags);
+            let result = download_banner_image(&config, &frontmatter, temp_dir.path(), slug, &tags);
             // Result depends on network, but function should handle errors gracefully
             // We can't test actual download without network, but we can test the function doesn't panic
             assert!(result.is_ok() || result.is_err());

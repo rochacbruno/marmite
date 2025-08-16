@@ -778,23 +778,21 @@ pub fn get_card_image(
 /// if not found in media folder, try to find in the same directory
 /// if the file does not exist, return None
 fn find_matching_file(slug: &str, path: &Path, kind: &str, exts: &[&str]) -> Option<String> {
+    let media_folder_name = "media";
     let parent_path = path.parent().unwrap_or(path);
-    let media_path = parent_path.join("media");
+    let media_path = parent_path.join(media_folder_name);
     for ext in exts {
-        let image_filename = format!("{slug}.{kind}.{ext}");
-        let file_path = media_path.join(&image_filename);
-
-        if file_path.exists() {
-            return Some(format!("media/{image_filename}"));
-        }
-
-        let file_path = parent_path.join(&image_filename);
-
-        if file_path.exists() {
-            return Some(image_filename.to_string());
+        for image_filename in [format!("{slug}.{kind}.{ext}"), format!("{slug}.{ext}")] {
+            let file_path = media_path.join(&image_filename);
+            if file_path.exists() {
+                return Some(format!("{media_folder_name}/{image_filename}"));
+            }
+            let file_path = parent_path.join(&image_filename);
+            if file_path.exists() {
+                return Some(image_filename.to_string());
+            }
         }
     }
-
     None
 }
 
