@@ -15,7 +15,7 @@ const themeSwitcher = {
     
     // Get color scheme from local storage
     get schemeFromLocalStorage() {
-        return window.localStorage?.getItem(this.localStorageKey) ?? this._scheme;
+        return window.localStorage?.getItem(this.localStorageKey);
     },
     
     // Preferred color scheme
