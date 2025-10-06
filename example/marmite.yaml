@@ -85,6 +85,9 @@ publish_urls_json: true
 # extra data for template customization
 extra:
   colorscheme_toggle: true
+  #colorscheme: dracula
+  colormode: dark
+  colormodetoggle: false
   # colorscheme: minimal_wb
   static_folders:
     - extrastatic

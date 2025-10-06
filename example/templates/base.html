@@ -79,7 +79,9 @@
                         {% endif %}
                     </li>
                     {% endfor %}
-                    <li><span class="theme-toggle secondary" title="dark mode">&#9789;</span></li>
+                    {% if site.extra.colormodetoggle %}
+                        <li><span class="theme-toggle secondary" title="dark mode">&#9789;</span></li>
+                    {% endif %}
                     {% if site.enable_search %}
                     <li><a href="#" id="search-toggle" class="secondary" title="Search (Ctrl + Shift + F)"> <span class="search-txt">Search</span><span class="search-magnifier"></span></a></li>
                     {% endif %}
@@ -122,10 +124,19 @@
     {% if site.enable_search %}
     <script type="module" src="{{url_for(path='static/search.js')}}"></script>
     {% endif %}
-    {% if site.extra.colorscheme_toggle %}
+    {% if site.extra.colorscheme_toggle %}    
     <script type="application/javascript" >
         colorschemeSwitcher();
     </script>
+    {% endif %}
+    {% if site.extra.colormode %}
+        <script type="application/javascript">
+            // If there is already a scheme saved in localstorage, load that, else load config
+            if (themeSwitcher.scheme == "auto") {
+                themeSwitcher.scheme = "{{ site.extra.colormode }}";
+                themeSwitcher.updateIcon();
+            }
+        </script>
     {% endif %}
     {% endblock -%}
     {% if htmltail is defined %}
