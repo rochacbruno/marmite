@@ -32,7 +32,7 @@ glob = "0.3"
 lazy_static = "1.5.0"
 indexmap = { version = "2.10.0", features = ["serde"] }
 rss = "2.0.12"
-rayon = "1.10.0"
+rayon = "1.11.0"
 ureq = "3.0.12"
 zip = "4.3.0"
 urlencoding = "2.1.3"
