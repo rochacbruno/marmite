@@ -30,6 +30,7 @@ const LIVE_RELOAD_SCRIPT: &str = r#"(() => {
             try {
                 const payload = JSON.parse(event.data);
                 if (payload.event === "reload") {
+                    console.log("Live reload triggered, reloading page...");
                     window.location.reload();
                 }
             } catch (err) {
