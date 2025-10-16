@@ -463,6 +463,12 @@ pub fn generate(
     let moved_config_path = Arc::clone(config_path);
     let moved_cli_args = Arc::clone(cli_args);
 
+    let live_reload = if watch && serve {
+        Some(server::LiveReload::new())
+    } else {
+        None
+    };
+
     let rebuild = {
         move || -> Result<(), Box<dyn std::error::Error>> {
             let start_time = std::time::Instant::now();
@@ -595,6 +601,7 @@ pub fn generate(
         let watch_folder = Arc::clone(input_folder).as_path().to_path_buf();
         let out_folder = Arc::clone(output_folder).as_path().to_path_buf();
         // Watch the input folder for changes
+        let live_reload_watch = live_reload.clone();
         let watch_result = hotwatch.watch(watch_folder, move |event: Event| match event.kind {
             EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {
                 for ev in &event.paths {
@@ -604,6 +611,8 @@ pub fn generate(
                         info!("Change detected. Rebuilding site...");
                         if let Err(e) = rebuild() {
                             error!("Failed to rebuild site: {e}");
+                        } else if let Some(live_reload) = &live_reload_watch {
+                            live_reload.notify_reload();
                         }
                     }
                 }
@@ -620,7 +629,11 @@ pub fn generate(
         // Keep the thread alive for watching
         if serve {
             info!("Starting built-in HTTP server...");
-            server::start(bind_address, &Arc::clone(output_folder));
+            server::start(
+                bind_address,
+                &Arc::clone(output_folder),
+                live_reload.clone(),
+            );
         } else {
             loop {
                 std::thread::sleep(std::time::Duration::from_secs(1));

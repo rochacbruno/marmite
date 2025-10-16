@@ -20,6 +20,7 @@ walkdir = "2.5"
 chrono = { version = "0.4", features = ["serde"] }
 frontmatter-gen = { version = "0.0.5", features=["default"] }
 tiny_http = "0.12"
+tungstenite = "0.21"
 clap = { version = "4.5.48", features = ["derive"] }
 fs_extra = "1.3"
 regex = "1"

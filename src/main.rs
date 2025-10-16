@@ -146,7 +146,7 @@ fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
 
     if serve && !watch {
         info!("Starting built-in HTTP server...");
-        server::start(bind_address, &Arc::clone(&output_folder));
+        server::start(bind_address, &Arc::clone(&output_folder), None);
     }
 
     Ok(())
