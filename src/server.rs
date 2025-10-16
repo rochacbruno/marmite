@@ -103,7 +103,7 @@ fn handle_request(
         }
     };
 
-    if live_reload_enabled && decoded_url == format!("/{}", LIVE_RELOAD_SCRIPT_PATH) {
+    if live_reload_enabled && decoded_url == format!("/{LIVE_RELOAD_SCRIPT_PATH}") {
         let mut response = Response::from_string(LIVE_RELOAD_SCRIPT);
         let js_header = Header::from_bytes("Content-Type", "application/javascript")
             .map_err(|_| "invalid live reload header".to_string())?;
