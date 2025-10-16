@@ -172,6 +172,14 @@ Options:
 
 ```
 
+### Live reload in development
+
+When running with `--serve --watch`, Marmite exposes a WebSocket-based live reload helper. Add this snippet to your base template so the browser refreshes after each rebuild:
+
+```html
+<script src="/__marmite__/livereload.js"></script>
+```
+
 ## Getting started
 
 Read a tutorial on how to get started https://marmite.blog/getting-started.html and create your blog in minutes.
