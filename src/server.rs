@@ -48,7 +48,7 @@ const LIVE_RELOAD_SCRIPT: &str = r#"(() => {
     connect();
 })();"#;
 
-pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Option<LiveReload>) {
+pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Option<&LiveReload>) {
     let server = match Server::http(bind_address) {
         Ok(server) => server,
         Err(e) => {
@@ -58,16 +58,13 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Opti
     };
 
     if live_reload.is_some() {
-        info!(
-            "Live reload WebSocket available at ws://{}{}",
-            bind_address, LIVE_RELOAD_WS_PATH
-        );
+        info!("Live reload WebSocket available at ws://{bind_address}{LIVE_RELOAD_WS_PATH}");
     }
 
     info!("Server started at http://{bind_address}/ - Type ^C to stop.",);
 
     for request in server.incoming_requests() {
-        if let Some(live_reload_handler) = live_reload.clone() {
+        if let Some(live_reload_handler) = live_reload {
             if is_live_reload_ws_request(&request) {
                 live_reload_handler.accept(request);
                 continue;
@@ -106,7 +103,7 @@ fn handle_request(
     if live_reload_enabled && decoded_url == format!("/{LIVE_RELOAD_SCRIPT_PATH}") {
         let mut response = Response::from_string(LIVE_RELOAD_SCRIPT);
         let js_header = Header::from_bytes("Content-Type", "application/javascript")
-            .map_err(|_| "invalid live reload header".to_string())?;
+            .map_err(|()| "invalid live reload header".to_string())?;
         response.add_header(js_header);
         if let Ok(cache_header) = Header::from_bytes("Cache-Control", "no-store") {
             response.add_header(cache_header);
@@ -131,10 +128,8 @@ fn handle_request(
                     let original_buffer = buffer.clone();
                     if let Ok(mut html) = String::from_utf8(buffer) {
                         if !html.contains(LIVE_RELOAD_SCRIPT_PATH) {
-                            let snippet = format!(
-                                "\n<script src=\"/{}\"></script>\n",
-                                LIVE_RELOAD_SCRIPT_PATH
-                            );
+                            let snippet =
+                                format!("\n<script src=\"/{LIVE_RELOAD_SCRIPT_PATH}\"></script>\n");
                             if let Some(pos) = html.rfind("</body>") {
                                 html.insert_str(pos, &snippet);
                             } else {
@@ -261,7 +256,7 @@ impl LiveReload {
             "timestamp": Utc::now().timestamp_millis(),
         })
         .to_string();
-        self.broadcast(payload);
+        self.broadcast(&payload);
     }
 
     fn accept_internal(&self, request: Request) -> Result<(), String> {
@@ -280,11 +275,11 @@ impl LiveReload {
 
         let accept_key = derive_accept_key(key_value.as_bytes());
         let upgrade_header = Header::from_bytes("Upgrade", "websocket")
-            .map_err(|_| "Failed to build Upgrade header".to_string())?;
+            .map_err(|()| "Failed to build Upgrade header".to_string())?;
         let connection_header = Header::from_bytes("Connection", "Upgrade")
-            .map_err(|_| "Failed to build Connection header".to_string())?;
+            .map_err(|()| "Failed to build Connection header".to_string())?;
         let accept_header = Header::from_bytes("Sec-WebSocket-Accept", accept_key.as_str())
-            .map_err(|_| "Failed to build Sec-WebSocket-Accept header".to_string())?;
+            .map_err(|()| "Failed to build Sec-WebSocket-Accept header".to_string())?;
 
         let response = Response::empty(101)
             .with_header(upgrade_header)
@@ -300,8 +295,8 @@ impl LiveReload {
             let mut websocket = tungstenite::WebSocket::from_raw_socket(stream, Role::Server, None);
             while let Ok(message) = rx.recv() {
                 match websocket.send(Message::Text(message)) {
-                    Ok(_) => {}
-                    Err(WsError::ConnectionClosed) | Err(WsError::AlreadyClosed) => break,
+                    Ok(()) => {}
+                    Err(WsError::ConnectionClosed | WsError::AlreadyClosed) => break,
                     Err(WsError::Io(err))
                         if matches!(
                             err.kind(),
@@ -346,9 +341,9 @@ impl LiveReload {
         }
     }
 
-    fn broadcast(&self, message: String) {
+    fn broadcast(&self, message: &str) {
         if let Ok(mut clients) = self.clients.lock() {
-            clients.retain(|client| client.sender.send(message.clone()).is_ok());
+            clients.retain(|client| client.sender.send(message.to_string()).is_ok());
         }
     }
 }
