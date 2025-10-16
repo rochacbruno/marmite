@@ -48,7 +48,7 @@ const LIVE_RELOAD_SCRIPT: &str = r#"(() => {
     connect();
 })();"#;
 
-pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Option<LiveReload>) {
+pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Option<&LiveReload>) {
     let server = match Server::http(bind_address) {
         Ok(server) => server,
         Err(e) => {
@@ -64,7 +64,7 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Opti
     info!("Server started at http://{bind_address}/ - Type ^C to stop.",);
 
     for request in server.incoming_requests() {
-        if let Some(live_reload_handler) = live_reload.clone() {
+        if let Some(live_reload_handler) = live_reload {
             if is_live_reload_ws_request(&request) {
                 live_reload_handler.accept(request);
                 continue;
@@ -256,7 +256,7 @@ impl LiveReload {
             "timestamp": Utc::now().timestamp_millis(),
         })
         .to_string();
-        self.broadcast(payload);
+        self.broadcast(&payload);
     }
 
     fn accept_internal(&self, request: Request) -> Result<(), String> {
@@ -341,9 +341,9 @@ impl LiveReload {
         }
     }
 
-    fn broadcast(&self, message: String) {
+    fn broadcast(&self, message: &str) {
         if let Ok(mut clients) = self.clients.lock() {
-            clients.retain(|client| client.sender.send(message.clone()).is_ok());
+            clients.retain(|client| client.sender.send(message.to_string()).is_ok());
         }
     }
 }

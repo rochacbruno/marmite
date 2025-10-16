@@ -632,7 +632,7 @@ pub fn generate(
             server::start(
                 bind_address,
                 &Arc::clone(output_folder),
-                live_reload.clone(),
+                live_reload.as_ref(),
             );
         } else {
             loop {
