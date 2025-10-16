@@ -59,8 +59,7 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Opti
 
     if live_reload.is_some() {
         info!(
-            "Live reload WebSocket available at ws://{}{}",
-            bind_address, LIVE_RELOAD_WS_PATH
+            "Live reload WebSocket available at ws://{bind_address}{LIVE_RELOAD_WS_PATH}"
         );
     }
 
@@ -132,8 +131,7 @@ fn handle_request(
                     if let Ok(mut html) = String::from_utf8(buffer) {
                         if !html.contains(LIVE_RELOAD_SCRIPT_PATH) {
                             let snippet = format!(
-                                "\n<script src=\"/{}\"></script>\n",
-                                LIVE_RELOAD_SCRIPT_PATH
+                                "\n<script src=\"/{LIVE_RELOAD_SCRIPT_PATH}\"></script>\n"
                             );
                             if let Some(pos) = html.rfind("</body>") {
                                 html.insert_str(pos, &snippet);
