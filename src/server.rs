@@ -153,14 +153,14 @@ fn handle_request(
                     request.http_version()
                 );
                 let mut resp = Response::from_data(buffer);
-                let js_header = match Header::from_bytes("Content-Type", "text/javascript") {
-                    Ok(header) => header,
-                    Err(e) => {
-                        error!("Failed to create JS header: {e:?}");
-                        return Ok(resp);
-                    }
-                };
                 if request_path.ends_with(".js") {
+                    let js_header = match Header::from_bytes("Content-Type", "text/javascript") {
+                        Ok(header) => header,
+                        Err(e) => {
+                            error!("Failed to create JS header: {e:?}");
+                            return Ok(resp);
+                        }
+                    };
                     resp.add_header(js_header);
                 }
                 Ok(resp)
