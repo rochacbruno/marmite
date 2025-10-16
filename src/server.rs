@@ -103,7 +103,7 @@ fn handle_request(
     if live_reload_enabled && decoded_url == format!("/{LIVE_RELOAD_SCRIPT_PATH}") {
         let mut response = Response::from_string(LIVE_RELOAD_SCRIPT);
         let js_header = Header::from_bytes("Content-Type", "application/javascript")
-            .map_err(|_| "invalid live reload header".to_string())?;
+            .map_err(|()| "invalid live reload header".to_string())?;
         response.add_header(js_header);
         if let Ok(cache_header) = Header::from_bytes("Cache-Control", "no-store") {
             response.add_header(cache_header);
@@ -275,11 +275,11 @@ impl LiveReload {
 
         let accept_key = derive_accept_key(key_value.as_bytes());
         let upgrade_header = Header::from_bytes("Upgrade", "websocket")
-            .map_err(|_| "Failed to build Upgrade header".to_string())?;
+            .map_err(|()| "Failed to build Upgrade header".to_string())?;
         let connection_header = Header::from_bytes("Connection", "Upgrade")
-            .map_err(|_| "Failed to build Connection header".to_string())?;
+            .map_err(|()| "Failed to build Connection header".to_string())?;
         let accept_header = Header::from_bytes("Sec-WebSocket-Accept", accept_key.as_str())
-            .map_err(|_| "Failed to build Sec-WebSocket-Accept header".to_string())?;
+            .map_err(|()| "Failed to build Sec-WebSocket-Accept header".to_string())?;
 
         let response = Response::empty(101)
             .with_header(upgrade_header)
@@ -295,8 +295,8 @@ impl LiveReload {
             let mut websocket = tungstenite::WebSocket::from_raw_socket(stream, Role::Server, None);
             while let Ok(message) = rx.recv() {
                 match websocket.send(Message::Text(message)) {
-                    Ok(_) => {}
-                    Err(WsError::ConnectionClosed) | Err(WsError::AlreadyClosed) => break,
+                    Ok(()) => {}
+                    Err(WsError::ConnectionClosed | WsError::AlreadyClosed) => break,
                     Err(WsError::Io(err))
                         if matches!(
                             err.kind(),
