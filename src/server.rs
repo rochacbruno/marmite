@@ -14,6 +14,7 @@ use tungstenite::Error as WsError;
 use tungstenite::Message;
 use urlencoding::decode;
 
+const FALLBACK_BIND_ADDRESS: &str = "0.0.0.0:0";
 const LIVE_RELOAD_SCRIPT_PATH: &str = "__marmite__/livereload.js";
 const LIVE_RELOAD_WS_PATH: &str = "/__marmite__/livereload";
 const LIVE_RELOAD_SCRIPT: &str = r#"(() => {
@@ -52,16 +53,28 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Opti
     let server = match Server::http(bind_address) {
         Ok(server) => server,
         Err(e) => {
-            error!("Failed to start server on {bind_address}: {e}");
-            return;
+            warn!(
+                "Failed to start server on address {bind_address}: {e:?}. Falling back to OS-assigned port."
+            );
+            match Server::http(FALLBACK_BIND_ADDRESS) {
+                Ok(server) => server,
+                Err(e) => {
+                    error!("Failed to start server on fallback address: {e:?}");
+                    return;
+                }
+            }
         }
     };
 
+    let server_addr = server.server_addr().to_ip().unwrap();
+    let server_port = server_addr.port();
+    let server_bind_address = format!("{}:{}", server_addr.ip(), server_port);
+
     if live_reload.is_some() {
-        info!("Live reload WebSocket available at ws://{bind_address}{LIVE_RELOAD_WS_PATH}");
+        info!("Live reload WebSocket available at ws://{server_bind_address}{LIVE_RELOAD_WS_PATH}");
     }
 
-    info!("Server started at http://{bind_address}/ - Type ^C to stop.",);
+    info!("Server started at http://{server_bind_address}/ - Type ^C to stop.",);
 
     for request in server.incoming_requests() {
         if let Some(live_reload_handler) = live_reload {
