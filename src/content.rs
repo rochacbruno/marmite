@@ -45,7 +45,7 @@ impl GroupedContent {
         }
     }
 
-    pub fn entry(&mut self, key: String) -> Entry<String, Vec<Content>> {
+    pub fn entry(&mut self, key: String) -> Entry<'_, String, Vec<Content>> {
         self.map.entry(key)
     }
 

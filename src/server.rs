@@ -272,6 +272,7 @@ impl LiveReload {
         self.broadcast(&payload);
     }
 
+    #[allow(clippy::useless_conversion)]
     fn accept_internal(&self, request: Request) -> Result<(), String> {
         let key_value = request.headers().iter().find_map(|header| {
             if header.field.equiv("Sec-WebSocket-Key") {
@@ -307,7 +308,7 @@ impl LiveReload {
         thread::spawn(move || {
             let mut websocket = tungstenite::WebSocket::from_raw_socket(stream, Role::Server, None);
             while let Ok(message) = rx.recv() {
-                match websocket.send(Message::Text(message)) {
+                match websocket.send(Message::Text(message.into())) {
                     Ok(()) => {}
                     Err(WsError::ConnectionClosed | WsError::AlreadyClosed) => break,
                     Err(WsError::Io(err))
