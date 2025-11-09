@@ -51,7 +51,7 @@ Visit the rust page for more information [https://www.rust-lang.org/tools/instal
 
 Things to know prior to submitting code:
 
-- All code submissions are done through pull requests against the `develop` branch.
+- All code submissions are done through pull requests against the `main` branch.
 - Take care to make sure no merge commits are in the submission, and use git rebase vs git merge for this reason.
 
 There are several ways to contribute to this project:
@@ -105,7 +105,8 @@ cargo clippy --fix
 
 #### Mask
 
-There is a `maskfile.md` in the root of repo, you can use it for checkings.
+There is a `maskfile.md` in the root of repo.
+You can use it for running checks with [mask](https://crates.io/crates/mask).
 
 ```bash
 cargo install mask
