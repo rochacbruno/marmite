@@ -71,7 +71,7 @@
         {% if content.date %}<time class="dt-published" datetime="{{ content.date | date(format='%+') }}" style="display: none;">{{ content.date | default_date_format }}</time>{% endif %}
         
         <div class="content-title-wrapper">
-            <h2 class="content-title"><a href="{{url_for(path=content.slug ~ '.html')}}">{{ content.title | capitalize }}</a></h2>
+            <h2 class="content-title"><a href="{{url_for(path=content.slug ~ '.html')}}">{{ content.title }}</a></h2>
             {%if content.pinned %}<span class="content-pin">&star;</span>{%endif%} 
         </div>
         <p class="content-excerpt p-summary">
