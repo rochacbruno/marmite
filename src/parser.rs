@@ -1,7 +1,7 @@
 use crate::config::ParserOptions;
 use crate::content::slugify;
 use crate::re;
-use comrak::{markdown_to_html, BrokenLinkReference, ComrakOptions, ResolvedReference};
+use comrak::{markdown_to_html, options::BrokenLinkReference, Options, ResolvedReference};
 use frontmatter_gen::{detect_format, extract_raw_frontmatter, parse, Frontmatter};
 use log::warn;
 use regex::Regex;
@@ -107,12 +107,12 @@ pub fn get_html(markdown: &str) -> String {
 
 /// Convert markdown to html using comrak with configurable options
 pub fn get_html_with_options(markdown: &str, parser_options: &ParserOptions) -> String {
-    let mut options = ComrakOptions::default();
+    let mut options = Options::default();
 
     // Apply configurable render options
     options.render.figure_with_caption = parser_options.render.figure_with_caption;
     options.render.ignore_empty_links = parser_options.render.ignore_empty_links;
-    options.render.unsafe_ = parser_options.render.unsafe_;
+    options.render.r#unsafe = parser_options.render.unsafe_;
 
     // Apply configurable parse options
     options.parse.broken_link_callback = Some(Arc::new(warn_broken_link)); // Not configurable
