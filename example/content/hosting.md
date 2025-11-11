@@ -102,7 +102,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install marmite 🫙
-        run: cargo install marmite
+        run: curl -sS https://marmite.blog/install.sh | sh
 
       - name: Build site 🏗️
         run: marmite . site --debug
