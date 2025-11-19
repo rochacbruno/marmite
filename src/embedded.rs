@@ -27,7 +27,8 @@ pub static EMBEDDED_SHORTCODES: LazyLock<Vec<(String, Vec<u8>)>> = LazyLock::new
     let mut files: Vec<(String, Vec<u8>)> = Vec::new();
 
     for name in Shortcodes::iter() {
-        let shortcode = Shortcodes::get(name.as_ref()).unwrap();
+        let shortcode = Shortcodes::get(name.as_ref())
+            .expect("Failed to get embedded shortcode - this is a build-time error");
         let file_data = shortcode.data;
         files.push((name.clone().to_string(), file_data.clone().to_vec()));
     }
@@ -39,9 +40,12 @@ pub static EMBEDDED_TERA: LazyLock<Tera> = LazyLock::new(|| {
     let mut tera = Tera::default();
     tera.autoescape_on(vec![]);
     for name in Templates::iter() {
-        let template = Templates::get(name.as_ref()).unwrap();
-        let template_str = std::str::from_utf8(template.data.as_ref()).unwrap();
-        tera.add_raw_template(&name, template_str).unwrap();
+        let template = Templates::get(name.as_ref())
+            .expect("Failed to get embedded template - this is a build-time error");
+        let template_str = std::str::from_utf8(template.data.as_ref())
+            .expect("Embedded template contains invalid UTF-8 - this is a build-time error");
+        tera.add_raw_template(&name, template_str)
+            .expect("Failed to add embedded template to Tera - this is a build-time error");
     }
     tera
 });
@@ -50,7 +54,8 @@ pub static EMBEDDED_STATIC: LazyLock<Vec<(String, Vec<u8>)>> = LazyLock::new(|| 
     let mut files: Vec<(String, Vec<u8>)> = Vec::new();
 
     for name in Static::iter() {
-        let static_file = Static::get(name.as_ref()).unwrap();
+        let static_file = Static::get(name.as_ref())
+            .expect("Failed to get embedded static file - this is a build-time error");
         let file_data = static_file.data;
         files.push((name.clone().to_string(), file_data.clone().to_vec()));
     }

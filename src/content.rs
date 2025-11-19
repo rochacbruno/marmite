@@ -636,7 +636,16 @@ fn try_to_parse_date(input: &str) -> Result<NaiveDateTime, chrono::ParseError> {
         .or_else(|_| NaiveDateTime::parse_from_str(input, "%Y-%m-%d %H:%M:%S"))
         .or_else(|_| NaiveDateTime::parse_from_str(input, "%Y-%m-%d %H:%M"))
         .or_else(|_| {
-            NaiveDate::parse_from_str(input, "%Y-%m-%d").map(|d| d.and_hms_opt(0, 0, 0).unwrap())
+            NaiveDate::parse_from_str(input, "%Y-%m-%d").map(|d| {
+                // and_hms_opt should always succeed with valid time values, but provide fallback
+                d.and_hms_opt(0, 0, 0).unwrap_or_else(|| {
+                    // This should never happen with valid inputs, but provide safe fallback
+                    NaiveDate::from_ymd_opt(1970, 1, 1)
+                        .unwrap_or_default()
+                        .and_hms_opt(0, 0, 0)
+                        .unwrap_or_default()
+                })
+            })
         })
 }
 

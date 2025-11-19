@@ -406,7 +406,12 @@ impl ShortcodeProcessor {
                         if next_ch.is_whitespace() {
                             break;
                         }
-                        value.push(chars.next().unwrap());
+                        if let Some(ch) = chars.next() {
+                            value.push(ch);
+                        } else {
+                            // This should not happen since we peeked successfully, but be safe
+                            break;
+                        }
                     }
                 }
             }
