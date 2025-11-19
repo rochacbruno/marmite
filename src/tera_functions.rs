@@ -299,7 +299,9 @@ impl Function for GetDataBySlug {
         // Check what kind of content this slug refers to
         let slug_data = if slug.starts_with("series-") {
             // Series slug: series-{name}
-            let series_name = slug.strip_prefix("series-").unwrap();
+            let series_name = slug
+                .strip_prefix("series-")
+                .ok_or_else(|| tera::Error::msg("Invalid series slug format"))?;
             if let Some(series_contents) = self.site_data.series.map.get(series_name) {
                 let display_name_fn = DisplayName {
                     site_data: self.site_data.clone(),
@@ -345,7 +347,9 @@ impl Function for GetDataBySlug {
         } else if slug.starts_with("stream-") {
             // Stream slug: stream-{name}
             // This is a special case, because streams are not prefixed with stream-
-            let stream_name = slug.strip_prefix("stream-").unwrap();
+            let stream_name = slug
+                .strip_prefix("stream-")
+                .ok_or_else(|| tera::Error::msg("Invalid stream slug format"))?;
             if let Some(stream_contents) = self.site_data.stream.map.get(stream_name) {
                 let display_name_fn = DisplayName {
                     site_data: self.site_data.clone(),
@@ -383,7 +387,9 @@ impl Function for GetDataBySlug {
             }
         } else if slug.starts_with("tag-") {
             // Tag slug: tag-{name}
-            let tag_name = slug.strip_prefix("tag-").unwrap();
+            let tag_name = slug
+                .strip_prefix("tag-")
+                .ok_or_else(|| tera::Error::msg("Invalid tag slug format"))?;
             if let Some(tag_contents) = self.site_data.tag.map.get(tag_name) {
                 let image = tag_contents
                     .first()
@@ -403,7 +409,9 @@ impl Function for GetDataBySlug {
             }
         } else if slug.starts_with("author-") {
             // Author slug: author-{name}
-            let author_name = slug.strip_prefix("author-").unwrap();
+            let author_name = slug
+                .strip_prefix("author-")
+                .ok_or_else(|| tera::Error::msg("Invalid author slug format"))?;
             if let Some(author_contents) = self.site_data.author.map.get(author_name) {
                 let author_info = self.site_data.site.authors.get(author_name);
                 let title = author_info
@@ -427,7 +435,9 @@ impl Function for GetDataBySlug {
             }
         } else if slug.starts_with("archive-") {
             // Archive slug: archive-{year}
-            let year = slug.strip_prefix("archive-").unwrap();
+            let year = slug
+                .strip_prefix("archive-")
+                .ok_or_else(|| tera::Error::msg("Invalid archive slug format"))?;
             if let Some(archive_contents) = self.site_data.archive.map.get(year) {
                 let image = archive_contents
                     .first()
@@ -478,7 +488,10 @@ impl Function for GetDataBySlug {
                 // Check if it's a Stream (streams does not start with stream-, those are just bare slugs)
                 // to identify we must look to the site data streams map
                 let stream_name = slug;
-                let stream_contents = self.site_data.stream.map.get(stream_name).unwrap();
+                let stream_contents =
+                    self.site_data.stream.map.get(stream_name).ok_or_else(|| {
+                        tera::Error::msg(format!("Stream not found: {stream_name}"))
+                    })?;
                 let display_name_fn = DisplayName {
                     site_data: self.site_data.clone(),
                     kind: "stream".to_string(),

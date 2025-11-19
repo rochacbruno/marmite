@@ -66,7 +66,39 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Opti
         }
     };
 
-    let server_addr = server.server_addr().to_ip().unwrap();
+    let Some(server_addr) = server.server_addr().to_ip() else {
+        warn!("Failed to get server IP address, using fallback display");
+        // Use a fallback approach for display purposes
+        let raw_addr = server.server_addr();
+        let server_bind_address = format!("{raw_addr}");
+        info!("Server started at http://{server_bind_address}/ - Type ^C to stop.");
+        if live_reload.is_some() {
+            info!("Live reload WebSocket available at ws://{server_bind_address}{LIVE_RELOAD_WS_PATH}");
+        }
+        // Continue with request handling
+        for request in server.incoming_requests() {
+            if let Some(live_reload_handler) = live_reload {
+                if is_live_reload_ws_request(&request) {
+                    live_reload_handler.accept(request);
+                    continue;
+                }
+            }
+
+            let response =
+                match handle_request(&request, output_folder.as_path(), live_reload.is_some()) {
+                    Ok(response) => response,
+                    Err(err) => {
+                        error!("Error handling request: {err:?}");
+                        Response::from_string("Internal Server Error").with_status_code(500)
+                    }
+                };
+
+            if let Err(err) = request.respond(response) {
+                error!("Error sending response: {err:?}");
+            }
+        }
+        return;
+    };
     let server_port = server_addr.port();
     let server_bind_address = format!("{}:{}", server_addr.ip(), server_port);
 

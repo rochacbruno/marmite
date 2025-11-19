@@ -34,7 +34,7 @@ pub fn generate_rss(
         .generator("marmite".to_string())
         .build();
 
-    // Filter out content with stream "draft"
+    // Filter out content with stream "draft" and content without dates
     let filtered_contents: Vec<&Content> = contents
         .iter()
         .filter(|content| {
@@ -42,10 +42,15 @@ pub fn generate_rss(
                 .stream
                 .as_ref()
                 .is_none_or(|stream| stream != "draft")
+                && content.date.is_some() // Only include content with dates in RSS feed
         })
         .collect();
 
     for content in filtered_contents.iter().take(15) {
+        // Safe to unwrap here because we filtered for content with dates
+        let content_date = content
+            .date
+            .expect("Content should have date - filtered above");
         let mut item = ItemBuilder::default()
             .title(content.title.clone())
             .link(format!("{}/{}.html", &feed_url, &content.slug))
@@ -55,7 +60,7 @@ pub fn generate_rss(
                     .value(format!("{}/{}.html", &feed_url, &content.slug))
                     .build(),
             )
-            .pub_date(content.date.unwrap().format(date_format).to_string())
+            .pub_date(content_date.format(date_format).to_string())
             .content(content.html.clone())
             .source(
                 rss::SourceBuilder::default()
@@ -148,7 +153,7 @@ pub fn generate_json(
     let date_format = "%Y-%m-%dT%H:%M:%S-00:00"; // Loose RFC3339 format
     let mut items = Vec::new();
 
-    // Filter out content with stream "draft"
+    // Filter out content with stream "draft" and content without dates
     let filtered_contents: Vec<&Content> = contents
         .iter()
         .filter(|content| {
@@ -156,10 +161,15 @@ pub fn generate_json(
                 .stream
                 .as_ref()
                 .is_none_or(|stream| stream != "draft")
+                && content.date.is_some() // Only include content with dates in JSON feed
         })
         .collect();
 
     for content in filtered_contents.iter().take(15) {
+        // Safe to unwrap here because we filtered for content with dates
+        let content_date = content
+            .date
+            .expect("Content should have date - filtered above");
         let item = JsonFeedItem {
             id: format!("{}/{}.html", &config.url, &content.slug),
             url: format!("{}/{}.html", &config.url, &content.slug),
@@ -169,7 +179,7 @@ pub fn generate_json(
             summary: content.description.clone().unwrap_or(String::new()),
             // date_published: content.date.unwrap().to_string(),
             // date published should be in RFC-822 format
-            date_published: content.date.unwrap().format(date_format).to_string(),
+            date_published: content_date.format(date_format).to_string(),
             image: content.card_image.clone().unwrap_or(String::new()),
             authors: content
                 .authors
@@ -180,7 +190,10 @@ pub fn generate_json(
                             name: config_author.name.clone(),
                             url: {
                                 if let Some(author_links) = &config_author.links {
-                                    author_links.iter().next().unwrap().1.clone()
+                                    author_links
+                                        .iter()
+                                        .next()
+                                        .map_or_else(String::new, |(_, url)| url.clone())
                                 } else {
                                     String::new()
                                 }
