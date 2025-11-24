@@ -31,7 +31,7 @@ markdown_parser:
     multiline_block_quotes: true   # Enable/disable multiline block quotes (default: true)
     underline: true                # Enable/disable __underline__ syntax (default: true)
     spoiler: true                  # Enable/disable spoiler text (default: true)
-    greentext: true                # Enable/disable greentext (default: true)
+    greentext: false               # Enable/disable greentext (default: false)
     shortcodes: true               # Enable/disable shortcodes (default: true)
     wikilinks_title_before_pipe: true # Wiki-style links with title before pipe (default: true)
     wikilinks_title_after_pipe: false # Wiki-style links with title after pipe (default: false)

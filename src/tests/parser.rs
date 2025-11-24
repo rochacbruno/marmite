@@ -121,6 +121,34 @@ fn test_get_html_with_images() {
 }
 
 #[test]
+fn test_blockquotes_without_space() {
+    let markdown = ">testing blockquote";
+    let expected = "<blockquote>\n<p>testing blockquote</p>\n</blockquote>\n";
+    assert_eq!(get_html(markdown), expected);
+}
+
+#[test]
+fn test_blockquotes_with_space() {
+    let markdown = "> testing blockquote";
+    let expected = "<blockquote>\n<p>testing blockquote</p>\n</blockquote>\n";
+    assert_eq!(get_html(markdown), expected);
+}
+
+#[test]
+fn test_blockquotes_with_multiline() {
+    let markdown = "> testing blockquote\n> line 2";
+    let expected = "<blockquote>\n<p>testing blockquote\nline 2</p>\n</blockquote>\n";
+    assert_eq!(get_html(markdown), expected);
+}
+
+#[test]
+fn test_blockquotes_with_triple() {
+    let markdown = ">>>\ntesting blockquote\n line 2\n>>>";
+    let expected = "<blockquote>\n<p>testing blockquote\nline 2</p>\n</blockquote>\n";
+    assert_eq!(get_html(markdown), expected);
+}
+
+#[test]
 fn test_fix_internal_links_with_media_files() {
     let html = r#"<a href="media/image.jpg">View Image</a>"#;
     let expected = r#"<a href="media/image.jpg">View Image</a>"#;
