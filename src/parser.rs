@@ -1,6 +1,7 @@
 use crate::config::ParserOptions;
 use crate::content::slugify;
 use crate::re;
+use crate::site::Data;
 use comrak::{markdown_to_html, options::BrokenLinkReference, Options, ResolvedReference};
 use frontmatter_gen::{detect_format, extract_raw_frontmatter, parse, Frontmatter};
 use log::warn;
@@ -212,6 +213,69 @@ pub fn fix_internal_links(html: &str) -> String {
 
         link.replace(&format!("href=\"{href}\""), &format!("href=\"{new_href}\""))
             .replace(&format!(">{text}</a>"), &format!(">{new_text}</a>"))
+    })
+    .to_string()
+}
+
+/// Decode common HTML entities in text
+/// Handles &amp;, &lt;, &gt;, &quot;, &#39; and numeric entities
+fn decode_html_entities(text: &str) -> String {
+    text.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&#x27;", "'")
+}
+
+/// Find content by title in site data (case-insensitive)
+/// Returns the slug of the matching content if found
+fn find_content_by_title(title: &str, site_data: &Data) -> Option<String> {
+    let title_lower = title.to_lowercase();
+
+    // Search in posts first
+    for content in &site_data.posts {
+        if content.title.to_lowercase() == title_lower {
+            return Some(format!("{}.html", content.slug));
+        }
+    }
+
+    // Search in pages
+    for content in &site_data.pages {
+        if content.title.to_lowercase() == title_lower {
+            return Some(format!("{}.html", content.slug));
+        }
+    }
+
+    None
+}
+
+/// Fix wikilinks in HTML by replacing filename-based hrefs with slug-based hrefs
+/// This function processes HTML that contains wikilinks with data-wikilink="true"
+/// and attempts to match the link titles with actual content titles to use proper slugs
+pub fn fix_wikilinks(html: &str, site_data: &Data) -> String {
+    let re =
+        Regex::new(re::CAPTURE_WIKILINK_HREF_AND_TITLE).expect("Wikilink regex should compile");
+
+    re.replace_all(html, |caps: &regex::Captures| {
+        let original_link = caps.get(0).map_or("", |m| m.as_str());
+        let original_href = caps.get(1).map_or("", |m| m.as_str());
+        let link_title = caps.get(2).map_or("", |m| m.as_str());
+
+        // Decode HTML entities from the link title
+        let decoded_title = decode_html_entities(link_title);
+
+        // Try to find matching content by title
+        if let Some(proper_href) = find_content_by_title(&decoded_title, site_data) {
+            // Replace the href with the proper slug-based href
+            original_link.replace(
+                &format!("href=\"{original_href}\""),
+                &format!("href=\"{proper_href}\""),
+            )
+        } else {
+            // No match found, keep original
+            original_link.to_string()
+        }
     })
     .to_string()
 }
