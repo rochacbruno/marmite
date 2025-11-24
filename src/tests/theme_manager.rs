@@ -115,7 +115,7 @@ fn test_read_theme_metadata() {
         "author": "Test Author",
         "description": "A test theme",
         "repository": "https://github.com/test/theme",
-        "license": "MIT",
+        "license": "AGPL",
         "tags": ["minimal", "clean"],
         "features": ["responsive", "dark-mode"]
     });
@@ -135,7 +135,7 @@ fn test_read_theme_metadata() {
         result.repository,
         Some("https://github.com/test/theme".to_string())
     );
-    assert_eq!(result.license, Some("MIT".to_string()));
+    assert_eq!(result.license, Some("AGPL".to_string()));
 }
 
 #[test]

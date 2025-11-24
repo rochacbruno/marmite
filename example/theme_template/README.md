@@ -233,4 +233,4 @@ As of Marmite 0.2.6+, this theme template is **embedded directly in the Marmite 
 
 ## License
 
-This theme is released under the MIT License, same as Marmite.
+This theme is released under the AGPL License, same as Marmite.
