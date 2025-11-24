@@ -637,7 +637,7 @@ fn default_extension_spoiler() -> bool {
 }
 
 fn default_extension_greentext() -> bool {
-    true
+    false
 }
 
 fn default_extension_shortcodes() -> bool {
