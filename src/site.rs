@@ -4,6 +4,7 @@ use crate::content::{
 };
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
 use crate::gallery::Gallery;
+use crate::parser::fix_wikilinks;
 use crate::shortcodes::ShortcodeProcessor;
 use crate::tera_functions::{
     DisplayName, GetDataBySlug, GetGallery, GetPosts, Group, SourceLink, UrlFor,
@@ -2372,6 +2373,7 @@ fn handle_content_pages(
                 &content_context,
                 output_dir,
                 shortcode_processor,
+                Some(site_data),
             )
         })
         .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
@@ -2661,7 +2663,7 @@ fn render_html(
     context: &Context,
     output_dir: &Path,
 ) -> Result<(), String> {
-    render_html_with_shortcodes(template, filename, tera, context, output_dir, None)
+    render_html_with_shortcodes(template, filename, tera, context, output_dir, None, None)
 }
 
 fn render_html_with_shortcodes(
@@ -2671,6 +2673,7 @@ fn render_html_with_shortcodes(
     context: &Context,
     output_dir: &Path,
     shortcode_processor: Option<&ShortcodeProcessor>,
+    site_data: Option<&Data>,
 ) -> Result<(), String> {
     let templates = template.split(',').collect::<Vec<_>>();
     let template = templates
@@ -2688,6 +2691,12 @@ fn render_html_with_shortcodes(
         rendered = processor.process_shortcodes(&rendered, context, tera);
     } else {
         debug!("No shortcode processor available for {filename}");
+    }
+
+    // Process wikilinks if site data is available
+    if let Some(data) = site_data {
+        debug!("Processing wikilinks for {filename}");
+        rendered = fix_wikilinks(&rendered, data);
     }
 
     let output_file = output_dir.join(filename);

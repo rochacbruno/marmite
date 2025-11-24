@@ -32,6 +32,12 @@ pub const CAPTURE_LINK_AND_TEXT_FROM_A_TAG: &str =
 /// Used for extracting image URLs from HTML content
 pub const CAPTURE_SRC_FROM_IMG_HTMLTAG: &str = r#"<img[^>]*src=['\"]([^'\"]+)['\"]"#;
 
+/// Matches wikilink anchor tags with data-wikilink attribute
+/// Captures: 1) href attribute value, 2) link text content
+/// Used for fixing Obsidian wikilinks to use proper slugs instead of filename-based hrefs
+pub const CAPTURE_WIKILINK_HREF_AND_TITLE: &str =
+    r#"<a[^>]*href=['\"]([^'\"]+)['\"][^>]*data-wikilink=['\"]true['\"][^>]*>(.*?)</a>"#;
+
 // === Shortcode Patterns ===
 
 /// Default pattern for HTML comment-style shortcodes

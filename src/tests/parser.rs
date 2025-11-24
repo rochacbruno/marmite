@@ -1,4 +1,8 @@
 use super::*;
+use crate::config::Marmite;
+use crate::content::{Content, GroupedContent, Kind};
+use crate::site::Data;
+use std::collections::HashMap;
 
 #[test]
 fn test_fix_internal_links_with_md_extension() {
@@ -251,4 +255,117 @@ fn test_get_table_of_contents_from_html_with_mixed_content() {
     "##;
     let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header2\">Header 2</a></li>\n</ul>\n</ul>\n";
     assert_eq!(get_table_of_contents_from_html(html), expected);
+}
+
+// Helper function to create test site data
+fn create_test_site_data() -> Data {
+    let mut posts = Vec::new();
+    posts.push(Content {
+        title: "TWSBI Eco Indigo Blue & de Atramentis Document Brown".to_string(),
+        slug: "twsbi-eco-indigo-blue-de-atramentis-document-brown".to_string(),
+        ..Default::default()
+    });
+    posts.push(Content {
+        title: "Another Post".to_string(),
+        slug: "another-post".to_string(),
+        ..Default::default()
+    });
+
+    let mut pages = Vec::new();
+    pages.push(Content {
+        title: "About Page".to_string(),
+        slug: "about".to_string(),
+        ..Default::default()
+    });
+
+    Data {
+        site: Marmite::default(),
+        posts,
+        pages,
+        tag: GroupedContent::new(Kind::Tag),
+        archive: GroupedContent::new(Kind::Archive),
+        author: GroupedContent::new(Kind::Author),
+        stream: GroupedContent::new(Kind::Stream),
+        series: GroupedContent::new(Kind::Series),
+        latest_timestamp: None,
+        config_path: "".to_string(),
+        force_render: false,
+        generated_urls: crate::site::UrlCollection::default(),
+        galleries: HashMap::new(),
+    }
+}
+
+#[test]
+fn test_fix_wikilinks_exact_title_match() {
+    let site_data = create_test_site_data();
+    let html = r#"<a href="twsbi-eco-indigo-blue-amp-de-atramentis-document-brown.html" data-wikilink="true">TWSBI Eco Indigo Blue &amp; de Atramentis Document Brown</a>"#;
+    let expected = r#"<a href="twsbi-eco-indigo-blue-de-atramentis-document-brown.html" data-wikilink="true">TWSBI Eco Indigo Blue &amp; de Atramentis Document Brown</a>"#;
+
+    assert_eq!(fix_wikilinks(html, &site_data), expected);
+}
+
+#[test]
+fn test_fix_wikilinks_case_insensitive() {
+    let site_data = create_test_site_data();
+    let html = r#"<a href="another-post-wrong.html" data-wikilink="true">another post</a>"#;
+    let expected = r#"<a href="another-post.html" data-wikilink="true">another post</a>"#;
+
+    assert_eq!(fix_wikilinks(html, &site_data), expected);
+}
+
+#[test]
+fn test_fix_wikilinks_no_match_unchanged() {
+    let site_data = create_test_site_data();
+    let html = r#"<a href="nonexistent-post.html" data-wikilink="true">Nonexistent Post</a>"#;
+    let expected = r#"<a href="nonexistent-post.html" data-wikilink="true">Nonexistent Post</a>"#;
+
+    assert_eq!(fix_wikilinks(html, &site_data), expected);
+}
+
+#[test]
+fn test_fix_wikilinks_multiple_links() {
+    let site_data = create_test_site_data();
+    let html = r#"<p>Check out <a href="another-post-wrong.html" data-wikilink="true">Another Post</a> and <a href="about-wrong.html" data-wikilink="true">About Page</a>.</p>"#;
+    let expected = r#"<p>Check out <a href="another-post.html" data-wikilink="true">Another Post</a> and <a href="about.html" data-wikilink="true">About Page</a>.</p>"#;
+
+    assert_eq!(fix_wikilinks(html, &site_data), expected);
+}
+
+#[test]
+fn test_fix_wikilinks_html_entities() {
+    let site_data = create_test_site_data();
+    let html = r#"<a href="twsbi-wrong.html" data-wikilink="true">TWSBI Eco Indigo Blue &amp; de Atramentis Document Brown</a>"#;
+    let expected = r#"<a href="twsbi-eco-indigo-blue-de-atramentis-document-brown.html" data-wikilink="true">TWSBI Eco Indigo Blue &amp; de Atramentis Document Brown</a>"#;
+
+    assert_eq!(fix_wikilinks(html, &site_data), expected);
+}
+
+#[test]
+fn test_fix_wikilinks_ignores_regular_links() {
+    let site_data = create_test_site_data();
+    let html = r#"<a href="another-post-wrong.html">Another Post</a> and <a href="external.com">External</a>"#;
+    let expected = r#"<a href="another-post-wrong.html">Another Post</a> and <a href="external.com">External</a>"#;
+
+    assert_eq!(fix_wikilinks(html, &site_data), expected);
+}
+
+#[test]
+fn test_fix_wikilinks_mixed_content() {
+    let site_data = create_test_site_data();
+    let html = r#"<p>Regular <a href="external.com">external link</a> and <a href="wrong.html" data-wikilink="true">About Page</a> wikilink.</p>"#;
+    let expected = r#"<p>Regular <a href="external.com">external link</a> and <a href="about.html" data-wikilink="true">About Page</a> wikilink.</p>"#;
+
+    assert_eq!(fix_wikilinks(html, &site_data), expected);
+}
+
+#[test]
+fn test_decode_html_entities() {
+    assert_eq!(decode_html_entities("Test &amp; Example"), "Test & Example");
+    assert_eq!(decode_html_entities("&lt;tag&gt;"), "<tag>");
+    assert_eq!(decode_html_entities("&quot;quoted&quot;"), "\"quoted\"");
+    assert_eq!(decode_html_entities("It&#39;s working"), "It's working");
+    assert_eq!(
+        decode_html_entities("Mixed &amp; &#39;entities&#39; &lt;here&gt;"),
+        "Mixed & 'entities' <here>"
+    );
 }
