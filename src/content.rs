@@ -422,9 +422,9 @@ pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
     let mut final_slug: String;
 
     if let Some(slug) = frontmatter.get("slug") {
-        final_slug = slug::slugify(&slug.to_string());
+        final_slug = slug::slugify(slug.to_string());
     } else if let Some(title) = frontmatter.get("title") {
-        final_slug = slug::slugify(&title.to_string());
+        final_slug = slug::slugify(title.to_string());
     } else {
         final_slug = path
             .file_stem()
@@ -558,7 +558,7 @@ pub fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
     // Remove empty tags and slugify them
     tags.iter()
         .filter(|tag| !tag.is_empty())
-        .map(|tag| slug::slugify(tag))
+        .map(slug::slugify)
         .collect()
 }
 
