@@ -555,10 +555,10 @@ pub fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
         _ => Vec::new(),
     };
 
-    // Remove empty tags and slugify them
+    // Remove empty tags but keep original names
     tags.iter()
         .filter(|tag| !tag.is_empty())
-        .map(slug::slugify)
+        .map(|t| t.trim().to_string())
         .collect()
 }
 

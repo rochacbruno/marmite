@@ -160,7 +160,8 @@
     {# Related content by tags #}
     {% if content.tags %}
     {% set tag = content.tags[0] %}
-    {% set related_content = site_data.tag.map[tag] %}
+    {% set tag_slug = tag | slugify %}
+    {% set related_content = site_data.tag.map[tag_slug] %}
     {% if related_content | length > 1 %}
     <section class="related-content">
         <h3>Related "{{ tag }}" content:</h3>

@@ -125,7 +125,8 @@
 {% if content.tags %}
   {# Only the first tag for now #}
   {% set tag = content.tags[0] %}
-  {% set related_content = site_data.tag.map[tag] %}
+  {% set tag_slug = tag | slugify %}
+  {% set related_content = site_data.tag.map[tag_slug] %}
   {% if related_content | length > 1 %}
   <article>
     Related {{tag}} content

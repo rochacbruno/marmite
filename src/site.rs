@@ -121,7 +121,15 @@ impl Data {
             // tags
             for tag in content.tags.clone() {
                 let tag_slug = slug::slugify(&tag);
-                self.tag.entry(tag_slug).or_default().push(content.clone());
+                // Store under slugified key (primary, used for URLs and new templates)
+                self.tag.entry(tag_slug.clone()).or_default().push(content.clone());
+
+                // BACKWARD COMPATIBILITY: Also store under original tag name
+                // This allows old templates using site_data.tag.map[tag] to keep working
+                // even when tag contains special characters like "Comunicação"
+                if tag != tag_slug {
+                    self.tag.entry(tag.clone()).or_default().push(content.clone());
+                }
             }
             // authors
             for username in content.authors.clone() {
@@ -197,7 +205,8 @@ impl Data {
         }
 
         // Add tag pages and pagination
-        for tag in self.tag.iter() {
+        // Filter to only process slugified keys (avoid duplicates from backward compatibility layer)
+        for tag in self.tag.iter().filter(|(key, _)| slug::slugify(key) == key.as_str()) {
             let tag_slug = format!("tag-{}.html", slug::slugify(tag.0));
             self.generated_urls.add_url("tags", tag_slug);
 
@@ -368,7 +377,8 @@ impl Data {
             }
 
             // Tag feeds
-            for tag in self.tag.iter() {
+            // Filter to only process slugified keys (avoid duplicates from backward compatibility layer)
+            for tag in self.tag.iter().filter(|(key, _)| slug::slugify(key) == key.as_str()) {
                 let feed_slug = format!("tag-{}.rss", slug::slugify(tag.0));
                 self.generated_urls.add_url("feeds", feed_slug);
             }
@@ -401,7 +411,8 @@ impl Data {
             }
 
             // Tag feeds
-            for tag in self.tag.iter() {
+            // Filter to only process slugified keys (avoid duplicates from backward compatibility layer)
+            for tag in self.tag.iter().filter(|(key, _)| slug::slugify(key) == key.as_str()) {
                 let feed_slug = format!("tag-{}.json", slug::slugify(tag.0));
                 self.generated_urls.add_url("feeds", feed_slug);
             }
@@ -2487,11 +2498,25 @@ fn handle_tag_pages(
     site_data
         .tag
         .iter()
+        // IMPORTANT: Filter to only process slugified keys (for backward compatibility,
+        // we store under both original and slugified keys, but only generate pages for slugified ones)
+        .filter(|(key, _)| slug::slugify(key) == **key)
         .collect::<Vec<_>>()
         .par_iter()
-        .map(|(tag, tagged_contents)| -> Result<(), String> {
-            let tag_slug = slug::slugify(tag);
-            let filename = format!("tag-{}", &tag_slug);
+        .map(|(tag_slug, tagged_contents)| -> Result<(), String> {
+            // tag_slug is the slugified version from the HashMap key
+            // we need to find the original tag name from the content
+            // We look in the unfiltered content first to ensure we find the original tag
+            let original_tag = tagged_contents
+                .iter()
+                .find_map(|content| {
+                    content.tags.iter().find(|t| slug::slugify(t) == tag_slug.as_str()).cloned()
+                })
+                .unwrap_or_else(|| tag_slug.to_string());
+
+            debug!("Tag slug: '{}' -> Original tag: '{}'", tag_slug, original_tag);
+
+            let filename = format!("tag-{}", tag_slug);
             // Filter out draft content
             let filtered_contents: Vec<Content> = tagged_contents
                 .iter()
@@ -2500,7 +2525,7 @@ fn handle_tag_pages(
                 .collect();
             handle_list_page(
                 global_context,
-                &site_data.site.tags_content_title.replace("$tag", tag),
+                &site_data.site.tags_content_title.replace("$tag", &original_tag),
                 &filtered_contents,
                 site_data,
                 tera,
