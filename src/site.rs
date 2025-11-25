@@ -996,6 +996,7 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
         },
     );
     tera.register_filter("remove_draft", tera_filter::RemoveDraft);
+    tera.register_filter("slugify", tera_filter::Slugify);
 
     let templates_path = site_data.site.get_templates_path(input_folder);
     let mandatory_templates = ["base.html", "list.html", "group.html", "content.html"];

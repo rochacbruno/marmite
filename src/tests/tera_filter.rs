@@ -93,3 +93,77 @@ fn test_remove_draft_filter_empty_array() {
 
     assert_eq!(filtered_array.len(), 0);
 }
+
+#[test]
+fn test_slugify_filter_basic() {
+    let filter = Slugify;
+    let value = Value::String("Hello World".to_string());
+    let args = HashMap::new();
+
+    let result = filter.filter(&value, &args).unwrap();
+    assert_eq!(result, Value::String("hello-world".to_string()));
+}
+
+#[test]
+fn test_slugify_filter_unicode() {
+    let filter = Slugify;
+    let value = Value::String("Comunicação".to_string());
+    let args = HashMap::new();
+
+    let result = filter.filter(&value, &args).unwrap();
+    assert_eq!(result, Value::String("comunicac-a-o".to_string()));
+}
+
+#[test]
+fn test_slugify_filter_special_chars() {
+    let filter = Slugify;
+    let value = Value::String("Testing-Special_Chars!@#$".to_string());
+    let args = HashMap::new();
+
+    let result = filter.filter(&value, &args).unwrap();
+    assert_eq!(result, Value::String("testing-special-chars".to_string()));
+}
+
+#[test]
+fn test_slugify_filter_trim_hyphens() {
+    let filter = Slugify;
+    let value = Value::String("-Hello world! ".to_string());
+    let args = HashMap::new();
+
+    let result = filter.filter(&value, &args).unwrap();
+    assert_eq!(result, Value::String("hello-world".to_string()));
+}
+
+#[test]
+fn test_slugify_filter_url_encoding() {
+    let filter = Slugify;
+    let value = Value::String("space%20encoded".to_string());
+    let args = HashMap::new();
+
+    let result = filter.filter(&value, &args).unwrap();
+    assert_eq!(result, Value::String("space-encoded".to_string()));
+}
+
+#[test]
+fn test_slugify_filter_non_string_value() {
+    let filter = Slugify;
+    let value = Value::Number(123.into());
+    let args = HashMap::new();
+
+    let result = filter.filter(&value, &args);
+    assert!(result.is_err());
+    assert!(result
+        .unwrap_err()
+        .to_string()
+        .contains("Expected a string"));
+}
+
+#[test]
+fn test_slugify_filter_empty_string() {
+    let filter = Slugify;
+    let value = Value::String("".to_string());
+    let args = HashMap::new();
+
+    let result = filter.filter(&value, &args).unwrap();
+    assert_eq!(result, Value::String("".to_string()));
+}

@@ -2,6 +2,8 @@ use std::str::FromStr;
 
 use tera::{to_value, Filter, Value};
 
+use crate::content;
+
 pub struct DefaultDateFormat {
     pub date_format: String,
 }
@@ -51,6 +53,23 @@ impl Filter for RemoveDraft {
             .collect();
 
         to_value(filtered).map_err(tera::Error::from)
+    }
+}
+
+pub struct Slugify;
+
+impl Filter for Slugify {
+    fn filter(
+        &self,
+        value: &Value,
+        _: &std::collections::HashMap<String, Value>,
+    ) -> tera::Result<Value> {
+        let text = value
+            .as_str()
+            .ok_or_else(|| tera::Error::msg("Expected a string for slugify filter"))?;
+
+        let slugified = content::slugify(text);
+        to_value(slugified).map_err(tera::Error::from)
     }
 }
 
