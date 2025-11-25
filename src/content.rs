@@ -19,7 +19,6 @@ use std::io::Write;
 use std::path::Path;
 use std::process;
 use std::sync::Arc;
-use unicode_normalization::UnicodeNormalization;
 
 #[derive(Debug, Clone, Serialize)]
 pub enum Kind {
@@ -423,9 +422,9 @@ pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
     let mut final_slug: String;
 
     if let Some(slug) = frontmatter.get("slug") {
-        final_slug = slugify(&slug.to_string());
+        final_slug = slug::slugify(slug.to_string());
     } else if let Some(title) = frontmatter.get("title") {
-        final_slug = slugify(&title.to_string());
+        final_slug = slug::slugify(title.to_string());
     } else {
         final_slug = path
             .file_stem()
@@ -556,8 +555,11 @@ pub fn get_tags(frontmatter: &Frontmatter) -> Vec<String> {
         _ => Vec::new(),
     };
 
-    // Remove empty tags
-    tags.iter().filter(|tag| !tag.is_empty()).cloned().collect()
+    // Remove empty tags but keep original names
+    tags.iter()
+        .filter(|tag| !tag.is_empty())
+        .map(|t| t.trim().to_string())
+        .collect()
 }
 
 pub fn get_authors(frontmatter: &Frontmatter, default_author: Option<String>) -> Vec<String> {
@@ -684,19 +686,11 @@ pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String>
     Ok(())
 }
 
-pub fn slugify(text: &str) -> String {
-    let text = text.replace("%20", "-");
-    let normalized = text.nfd().collect::<String>().to_lowercase();
-    let re = Regex::new(re::SLUGIFY_CHARS).expect("Slugify regex should compile");
-    let slug = re.replace_all(&normalized, "-");
-    slug.trim_matches('-').to_string()
-}
-
 /// Create a new file with the given text as title and slug
 pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &Path) {
     let content_folder = get_content_folder(&Data::from_file(config_path).site, input_folder);
     let mut path = content_folder.clone();
-    let slug = slugify(text);
+    let slug = slug::slugify(text);
     if cli_args.create.page {
         path.push(format!("{slug}.md"));
     } else {

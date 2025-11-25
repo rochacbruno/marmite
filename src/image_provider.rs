@@ -3,7 +3,6 @@ use log::{info, warn};
 use std::{fs, path::Path};
 
 use crate::config::{ImageProvider, Marmite};
-use crate::content::slugify;
 
 pub fn download_banner_image(
     config: &Marmite,
@@ -46,12 +45,12 @@ fn download_picsum_image(
     }
 
     // Build URL: https://picsum.photos/seed/{slugified-site-name-post-slug-tags}/1200/300
-    let slugified_site_name = slugify(&config.name);
+    let slugified_site_name = slug::slugify(&config.name);
     let tags_string = tags.join("-");
     let slugified_tags = if tags_string.is_empty() {
         String::new()
     } else {
-        format!("-{}", slugify(&tags_string))
+        format!("-{}", slug::slugify(&tags_string))
     };
     let seed = format!("{slugified_site_name}-{slug}{slugified_tags}");
     let url = format!("https://picsum.photos/seed/{seed}/1200/300");

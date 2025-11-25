@@ -77,14 +77,12 @@ url: https://test.blog
         html_content.contains(
             r#"<a href="amazing-post-custom-slug.html" data-wikilink="true">My Amazing Post</a>"#
         ),
-        "Wikilink was not properly resolved to custom slug. HTML content: {}",
-        html_content
+        "Wikilink was not properly resolved to custom slug. HTML content: {html_content}"
     );
 
     // Check that the nonexistent wikilink remained unchanged
     assert!(
         html_content.contains(r#"data-wikilink="true">Nonexistent Post</a>"#),
-        "Nonexistent wikilink should retain data-wikilink attribute. HTML content: {}",
-        html_content
+        "Nonexistent wikilink should retain data-wikilink attribute. HTML content: {html_content}"
     );
 }

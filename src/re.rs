@@ -101,7 +101,3 @@ pub const CAPTURE_STREAM_FROM_S_FILENAME: &str = r"^([a-zA-Z0-9]+)-S-";
 pub const CAPTURE_DATE_PREFIX_FROM_TEXT: &str = r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?";
 
 // === Text Processing Patterns ===
-
-/// Matches non-alphanumeric characters (excluding hyphens between words)
-/// Used for slugifying text (converting to URL-friendly format)
-pub const SLUGIFY_CHARS: &str = r"[^a-z0-9]+";
