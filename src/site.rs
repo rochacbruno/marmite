@@ -2514,9 +2514,9 @@ fn handle_tag_pages(
                 })
                 .unwrap_or_else(|| tag_slug.to_string());
 
-            debug!("Tag slug: '{}' -> Original tag: '{}'", tag_slug, original_tag);
+            debug!("Tag slug: '{tag_slug}' -> Original tag: '{original_tag}'");
 
-            let filename = format!("tag-{}", tag_slug);
+            let filename = format!("tag-{tag_slug}");
             // Filter out draft content
             let filtered_contents: Vec<Content> = tagged_contents
                 .iter()
