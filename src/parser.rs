@@ -1,5 +1,4 @@
 use crate::config::ParserOptions;
-use crate::content::slugify;
 use crate::re;
 use crate::site::Data;
 use comrak::{markdown_to_html, options::BrokenLinkReference, Options, ResolvedReference};
@@ -71,7 +70,7 @@ pub fn get_table_of_contents_from_html(html: &str) -> String {
         let level = cap.get(1).map_or(0, |m| m.as_str().parse().unwrap_or(0));
         let title = cap.get(3).map_or("", |m| m.as_str());
         let slug = cap.get(2).map_or_else(
-            || format!("#{}", slugify(title)),
+            || format!("#{}", slug::slugify(title)),
             |m| m.as_str().to_string(),
         );
 
@@ -181,7 +180,7 @@ pub fn fix_internal_links(html: &str) -> String {
         }
 
         let new_href = if let Ok(parsed) = Url::parse(&format!("m://m/{href}")) {
-            let path = slugify(
+            let path = slug::slugify(
                 parsed
                     .path()
                     .trim_start_matches('/')
@@ -189,7 +188,7 @@ pub fn fix_internal_links(html: &str) -> String {
                     .trim_end_matches(".html"),
             );
             let fragment = match parsed.fragment() {
-                Some(f) => slugify(f),
+                Some(f) => slug::slugify(f),
                 None => String::new(),
             };
 

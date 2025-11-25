@@ -1,7 +1,5 @@
 use crate::config::{Author, Marmite};
-use crate::content::{
-    check_for_duplicate_slugs, slugify, Content, ContentBuilder, GroupedContent, Kind,
-};
+use crate::content::{check_for_duplicate_slugs, Content, ContentBuilder, GroupedContent, Kind};
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
 use crate::gallery::Gallery;
 use crate::parser::fix_wikilinks;
@@ -122,7 +120,8 @@ impl Data {
             self.posts.push(content.clone());
             // tags
             for tag in content.tags.clone() {
-                self.tag.entry(tag).or_default().push(content.clone());
+                let tag_slug = slug::slugify(&tag);
+                self.tag.entry(tag_slug).or_default().push(content.clone());
             }
             // authors
             for username in content.authors.clone() {
@@ -199,21 +198,22 @@ impl Data {
 
         // Add tag pages and pagination
         for tag in self.tag.iter() {
-            let tag_slug = format!("tag-{}.html", slugify(tag.0));
+            let tag_slug = format!("tag-{}.html", slug::slugify(tag.0));
             self.generated_urls.add_url("tags", tag_slug);
 
             // Add pagination for tags
             let content_count = tag.1.len();
             if content_count > 0 {
                 // Always add -1 page (same as base page but with consistent naming)
-                let pagination_slug_1 = format!("tag-{}-1.html", slugify(tag.0));
+                let pagination_slug_1 = format!("tag-{}-1.html", slug::slugify(tag.0));
                 self.generated_urls.add_url("pagination", pagination_slug_1);
 
                 // Add additional pagination pages if content exceeds pagination limit
                 if content_count > self.site.pagination {
                     let total_pages = content_count.div_ceil(self.site.pagination);
                     for page_num in 2..=total_pages {
-                        let pagination_slug = format!("tag-{}-{}.html", slugify(tag.0), page_num);
+                        let pagination_slug =
+                            format!("tag-{}-{}.html", slug::slugify(tag.0), page_num);
                         self.generated_urls.add_url("pagination", pagination_slug);
                     }
                 }
@@ -225,14 +225,14 @@ impl Data {
 
         // Add author pages and pagination
         for author in self.author.iter() {
-            let author_slug = format!("author-{}.html", slugify(author.0));
+            let author_slug = format!("author-{}.html", slug::slugify(author.0));
             self.generated_urls.add_url("authors", author_slug);
 
             // Add pagination for authors
             let content_count = author.1.len();
             if content_count > 0 {
                 // Always add -1 page (same as base page but with consistent naming)
-                let pagination_slug_1 = format!("author-{}-1.html", slugify(author.0));
+                let pagination_slug_1 = format!("author-{}-1.html", slug::slugify(author.0));
                 self.generated_urls.add_url("pagination", pagination_slug_1);
 
                 // Add additional pagination pages if content exceeds pagination limit
@@ -240,7 +240,7 @@ impl Data {
                     let total_pages = content_count.div_ceil(self.site.pagination);
                     for page_num in 2..=total_pages {
                         let pagination_slug =
-                            format!("author-{}-{}.html", slugify(author.0), page_num);
+                            format!("author-{}-{}.html", slug::slugify(author.0), page_num);
                         self.generated_urls.add_url("pagination", pagination_slug);
                     }
                 }
@@ -253,14 +253,14 @@ impl Data {
 
         // Add series pages and pagination
         for series in self.series.iter() {
-            let series_slug = format!("series-{}.html", slugify(series.0));
+            let series_slug = format!("series-{}.html", slug::slugify(series.0));
             self.generated_urls.add_url("series", series_slug);
 
             // Add pagination for series
             let content_count = series.1.len();
             if content_count > 0 {
                 // Always add -1 page (same as base page but with consistent naming)
-                let pagination_slug_1 = format!("series-{}-1.html", slugify(series.0));
+                let pagination_slug_1 = format!("series-{}-1.html", slug::slugify(series.0));
                 self.generated_urls.add_url("pagination", pagination_slug_1);
 
                 // Add additional pagination pages if content exceeds pagination limit
@@ -268,7 +268,7 @@ impl Data {
                     let total_pages = content_count.div_ceil(self.site.pagination);
                     for page_num in 2..=total_pages {
                         let pagination_slug =
-                            format!("series-{}-{}.html", slugify(series.0), page_num);
+                            format!("series-{}-{}.html", slug::slugify(series.0), page_num);
                         self.generated_urls.add_url("pagination", pagination_slug);
                     }
                 }
@@ -283,7 +283,7 @@ impl Data {
         for stream in self.stream.iter() {
             // Skip "index" stream as it's handled separately as the main index
             if stream.0 != "index" {
-                let stream_slug = format!("{}.html", slugify(stream.0));
+                let stream_slug = format!("{}.html", slug::slugify(stream.0));
                 self.generated_urls.add_url("streams", stream_slug);
             }
 
@@ -292,7 +292,7 @@ impl Data {
                 let content_count = stream.1.len();
                 if content_count > 0 {
                     // Always add -1 page (same as base page but with consistent naming)
-                    let pagination_slug_1 = format!("{}-1.html", slugify(stream.0));
+                    let pagination_slug_1 = format!("{}-1.html", slug::slugify(stream.0));
                     self.generated_urls.add_url("pagination", pagination_slug_1);
 
                     // Add additional pagination pages if content exceeds pagination limit
@@ -300,7 +300,7 @@ impl Data {
                         let total_pages = content_count.div_ceil(self.site.pagination);
                         for page_num in 2..=total_pages {
                             let pagination_slug =
-                                format!("{}-{}.html", slugify(stream.0), page_num);
+                                format!("{}-{}.html", slug::slugify(stream.0), page_num);
                             self.generated_urls.add_url("pagination", pagination_slug);
                         }
                     }
@@ -357,25 +357,25 @@ impl Data {
         {
             // Stream feeds (includes index stream which covers main index feed)
             for stream in self.stream.iter() {
-                let feed_slug = format!("{}.rss", slugify(stream.0));
+                let feed_slug = format!("{}.rss", slug::slugify(stream.0));
                 self.generated_urls.add_url("feeds", feed_slug);
             }
 
             // Series feeds
             for series in self.series.iter() {
-                let feed_slug = format!("series-{}.rss", slugify(series.0));
+                let feed_slug = format!("series-{}.rss", slug::slugify(series.0));
                 self.generated_urls.add_url("feeds", feed_slug);
             }
 
             // Tag feeds
             for tag in self.tag.iter() {
-                let feed_slug = format!("tag-{}.rss", slugify(tag.0));
+                let feed_slug = format!("tag-{}.rss", slug::slugify(tag.0));
                 self.generated_urls.add_url("feeds", feed_slug);
             }
 
             // Author feeds
             for author in self.author.iter() {
-                let feed_slug = format!("author-{}.rss", slugify(author.0));
+                let feed_slug = format!("author-{}.rss", slug::slugify(author.0));
                 self.generated_urls.add_url("feeds", feed_slug);
             }
 
@@ -390,25 +390,25 @@ impl Data {
         if self.site.json_feed {
             // Stream feeds (includes index stream which covers main index feed)
             for stream in self.stream.iter() {
-                let feed_slug = format!("{}.json", slugify(stream.0));
+                let feed_slug = format!("{}.json", slug::slugify(stream.0));
                 self.generated_urls.add_url("feeds", feed_slug);
             }
 
             // Series feeds
             for series in self.series.iter() {
-                let feed_slug = format!("series-{}.json", slugify(series.0));
+                let feed_slug = format!("series-{}.json", slug::slugify(series.0));
                 self.generated_urls.add_url("feeds", feed_slug);
             }
 
             // Tag feeds
             for tag in self.tag.iter() {
-                let feed_slug = format!("tag-{}.json", slugify(tag.0));
+                let feed_slug = format!("tag-{}.json", slug::slugify(tag.0));
                 self.generated_urls.add_url("feeds", feed_slug);
             }
 
             // Author feeds
             for author in self.author.iter() {
-                let feed_slug = format!("author-{}.json", slugify(author.0));
+                let feed_slug = format!("author-{}.json", slug::slugify(author.0));
                 self.generated_urls.add_url("feeds", feed_slug);
             }
 
@@ -1195,7 +1195,7 @@ fn handle_stream_pages(
         .collect::<Vec<_>>()
         .par_iter()
         .map(|(stream, stream_contents)| -> Result<(), String> {
-            let stream_slug = slugify(stream);
+            let stream_slug = slug::slugify(stream);
             let title = if *stream == "index" {
                 String::new()
             } else {
@@ -1268,7 +1268,7 @@ fn handle_series_pages(
         .collect::<Vec<_>>()
         .par_iter()
         .map(|(series, series_contents)| -> Result<(), String> {
-            let series_slug = format!("series-{}", slugify(series));
+            let series_slug = format!("series-{}", slug::slugify(series));
             let title = site_data
                 .site
                 .series_content_title
@@ -1395,7 +1395,7 @@ fn handle_author_pages(
             };
             author_context.insert("author", &author);
 
-            let author_slug = slugify(username);
+            let author_slug = slug::slugify(username);
             let mut author_posts = site_data
                 .posts
                 .iter()
@@ -2490,7 +2490,7 @@ fn handle_tag_pages(
         .collect::<Vec<_>>()
         .par_iter()
         .map(|(tag, tagged_contents)| -> Result<(), String> {
-            let tag_slug = slugify(tag);
+            let tag_slug = slug::slugify(tag);
             let filename = format!("tag-{}", &tag_slug);
             // Filter out draft content
             let filtered_contents: Vec<Content> = tagged_contents

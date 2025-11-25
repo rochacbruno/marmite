@@ -1606,6 +1606,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
+ "slug",
  "tempfile",
  "tera",
  "tiny_http",

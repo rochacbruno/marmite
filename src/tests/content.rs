@@ -291,50 +291,64 @@ fn test_get_date_no_date() {
 #[test]
 fn test_slugify_simple_text() {
     let text = "Simple Text";
-    let slug = slugify(text);
+    let slug = slug::slugify(text);
     assert_eq!(slug, "simple-text");
 }
 
 #[test]
 fn test_slugify_with_special_characters() {
     let text = "Text with Special Characters!@#";
-    let slug = slugify(text);
+    let slug = slug::slugify(text);
     assert_eq!(slug, "text-with-special-characters");
 }
 
 #[test]
 fn test_slugify_with_accents() {
     let text = "Téxt wíth Áccénts";
-    let slug = slugify(text);
-    assert_eq!(slug, "te-xt-wi-th-a-cce-nts");
+    let slug = slug::slugify(text);
+    assert_eq!(slug, "text-with-accents");
 }
 
 #[test]
 fn test_slugify_with_multiple_spaces() {
     let text = "Text    with    multiple    spaces";
-    let slug = slugify(text);
+    let slug = slug::slugify(text);
     assert_eq!(slug, "text-with-multiple-spaces");
 }
 
 #[test]
 fn test_slugify_with_underscores() {
     let text = "Text_with_underscores";
-    let slug = slugify(text);
+    let slug = slug::slugify(text);
     assert_eq!(slug, "text-with-underscores");
 }
 
 #[test]
 fn test_slugify_with_numbers() {
     let text = "Text with numbers 123";
-    let slug = slugify(text);
+    let slug = slug::slugify(text);
     assert_eq!(slug, "text-with-numbers-123");
 }
 
 #[test]
 fn test_slugify_empty_string() {
     let text = "";
-    let slug = slugify(text);
+    let slug = slug::slugify(text);
     assert_eq!(slug, "");
+}
+
+#[test]
+fn test_slugify_comunicacao() {
+    let text = "Comunicação";
+    let slug = slug::slugify(text);
+    assert_eq!(slug, "comunicacao");
+}
+
+#[test]
+fn test_slugify_programacao() {
+    let text = "Programação";
+    let slug = slug::slugify(text);
+    assert_eq!(slug, "programacao");
 }
 
 #[test]
