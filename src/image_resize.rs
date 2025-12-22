@@ -58,7 +58,10 @@ fn resize_image(input_path: &Path, output_path: &Path, max_width: u32) -> Result
         // Copy original file without modification
         if input_path != output_path {
             fs::copy(input_path, output_path).map_err(|e| {
-                ImageError::IoError(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+                ImageError::IoError(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
             })?;
         }
         return Ok(false);
@@ -147,11 +150,7 @@ pub fn process_media_images(
         let is_banner = is_banner_image(path) || banner_paths.contains(&relative_path);
 
         // Determine target width
-        let target_width = if is_banner {
-            banner_width
-        } else {
-            max_width
-        };
+        let target_width = if is_banner { banner_width } else { max_width };
 
         if let Some(width) = target_width {
             match resize_image(path, path, width) {
