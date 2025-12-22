@@ -1605,6 +1605,7 @@ fn handle_file_mappings(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn handle_static_artifacts(
     input_folder: &Path,
     site_data: &Data,

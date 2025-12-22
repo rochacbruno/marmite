@@ -259,24 +259,24 @@ fn test_get_table_of_contents_from_html_with_mixed_content() {
 
 // Helper function to create test site data
 fn create_test_site_data() -> Data {
-    let mut posts = Vec::new();
-    posts.push(Content {
-        title: "TWSBI Eco Indigo Blue & de Atramentis Document Brown".to_string(),
-        slug: "twsbi-eco-indigo-blue-de-atramentis-document-brown".to_string(),
-        ..Default::default()
-    });
-    posts.push(Content {
-        title: "Another Post".to_string(),
-        slug: "another-post".to_string(),
-        ..Default::default()
-    });
+    let posts = vec![
+        Content {
+            title: "TWSBI Eco Indigo Blue & de Atramentis Document Brown".to_string(),
+            slug: "twsbi-eco-indigo-blue-de-atramentis-document-brown".to_string(),
+            ..Default::default()
+        },
+        Content {
+            title: "Another Post".to_string(),
+            slug: "another-post".to_string(),
+            ..Default::default()
+        },
+    ];
 
-    let mut pages = Vec::new();
-    pages.push(Content {
+    let pages = vec![Content {
         title: "About Page".to_string(),
         slug: "about".to_string(),
         ..Default::default()
-    });
+    }];
 
     Data {
         site: Marmite::default(),
@@ -288,7 +288,7 @@ fn create_test_site_data() -> Data {
         stream: GroupedContent::new(Kind::Stream),
         series: GroupedContent::new(Kind::Series),
         latest_timestamp: None,
-        config_path: "".to_string(),
+        config_path: String::new(),
         force_render: false,
         generated_urls: crate::site::UrlCollection::default(),
         galleries: HashMap::new(),

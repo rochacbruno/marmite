@@ -15,13 +15,13 @@ fn get_resize_settings(config: &Marmite) -> (Option<u32>, Option<u32>) {
 
     let banner_width = extra
         .get("banner_image_width")
-        .and_then(|v| v.as_u64())
-        .map(|v| v as u32);
+        .and_then(serde_yaml::Value::as_u64)
+        .and_then(|v| u32::try_from(v).ok());
 
     let max_width = extra
         .get("max_image_width")
-        .and_then(|v| v.as_u64())
-        .map(|v| v as u32);
+        .and_then(serde_yaml::Value::as_u64)
+        .and_then(|v| u32::try_from(v).ok());
 
     (banner_width, max_width)
 }
@@ -48,7 +48,7 @@ fn is_banner_image(path: &Path) -> bool {
 }
 
 /// Resize an image to a maximum width, maintaining aspect ratio
-/// Only resizes if the image is larger than max_width
+/// Only resizes if the image is larger than `max_width`
 fn resize_image(input_path: &Path, output_path: &Path, max_width: u32) -> Result<bool, ImageError> {
     let img = image::open(input_path)?;
     let (width, height) = img.dimensions();
@@ -57,18 +57,15 @@ fn resize_image(input_path: &Path, output_path: &Path, max_width: u32) -> Result
     if width <= max_width {
         // Copy original file without modification
         if input_path != output_path {
-            fs::copy(input_path, output_path).map_err(|e| {
-                ImageError::IoError(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    e.to_string(),
-                ))
-            })?;
+            fs::copy(input_path, output_path)
+                .map_err(|e| ImageError::IoError(std::io::Error::other(e.to_string())))?;
         }
         return Ok(false);
     }
 
     // Calculate new height maintaining aspect ratio
-    let new_height = (height as f64 * (max_width as f64 / width as f64)) as u32;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let new_height = (f64::from(height) * (f64::from(max_width) / f64::from(width))) as u32;
 
     let resized = img.resize(max_width, new_height, FilterType::Lanczos3);
     resized.save(output_path)?;
@@ -170,10 +167,7 @@ pub fn process_media_images(
     }
 
     if resized_count > 0 || skipped_count > 0 {
-        info!(
-            "Image processing complete: {} resized, {} unchanged",
-            resized_count, skipped_count
-        );
+        info!("Image processing complete: {resized_count} resized, {skipped_count} unchanged");
     }
 }
 

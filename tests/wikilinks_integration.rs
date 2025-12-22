@@ -42,10 +42,10 @@ Also links to [[Nonexistent Post]] which should remain unchanged.
     let config_file = temp_path.join("marmite.yaml");
     fs::write(
         &config_file,
-        r#"
+        "
 name: Test Blog
 url: https://test.blog
-"#,
+",
     )
     .unwrap();
 
