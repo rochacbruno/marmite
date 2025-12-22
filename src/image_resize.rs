@@ -1,21 +1,143 @@
 use image::{imageops::FilterType, GenericImageView, ImageError};
 use log::{debug, error, info, warn};
-use std::collections::HashSet;
-use std::fs;
+use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use std::fs::{self, File};
+use std::io::{BufReader, BufWriter};
 use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 use tempfile::Builder as TempFileBuilder;
 use walkdir::WalkDir;
 
+use crate::config::Marmite;
+
 /// Progress reporting interval: log every N images processed
 const PROGRESS_INTERVAL: usize = 10;
 
-use crate::config::Marmite;
+/// State file name for tracking processed images
+const STATE_FILE_NAME: &str = ".marmite-resize-state.json";
 
 /// Minimum allowed image width for resize configuration (in pixels)
 const MIN_IMAGE_WIDTH: u32 = 1;
 /// Maximum allowed image width for resize configuration (in pixels)
 const MAX_IMAGE_WIDTH: u32 = 10000;
+
+/// State entry for a processed image
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ImageState {
+    /// Original file size before processing
+    source_size: u64,
+    /// Modification time of source file (as unix timestamp)
+    source_modified: u64,
+    /// Target width used for resizing
+    target_width: u32,
+    /// Whether the image was actually resized (vs skipped)
+    was_resized: bool,
+}
+
+/// State tracking for incremental image processing
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct ResizeState {
+    /// Map of relative path -> image state
+    images: HashMap<String, ImageState>,
+    /// Configuration hash to detect config changes
+    config_hash: String,
+}
+
+impl ResizeState {
+    /// Load state from file, or return empty state if not found
+    fn load(output_path: &Path) -> Self {
+        let state_file = output_path.join(STATE_FILE_NAME);
+        if let Ok(file) = File::open(&state_file) {
+            let reader = BufReader::new(file);
+            if let Ok(state) = serde_json::from_reader(reader) {
+                return state;
+            }
+        }
+        Self::default()
+    }
+
+    /// Save state to file
+    fn save(&self, output_path: &Path) {
+        let state_file = output_path.join(STATE_FILE_NAME);
+        if let Ok(file) = File::create(&state_file) {
+            let writer = BufWriter::new(file);
+            if let Err(e) = serde_json::to_writer(writer, self) {
+                warn!("Failed to save resize state: {e}");
+            }
+        }
+    }
+
+    /// Check if an image needs processing
+    fn needs_processing(
+        &self,
+        relative_path: &str,
+        source_size: u64,
+        source_modified: u64,
+        target_width: u32,
+        config_hash: &str,
+    ) -> bool {
+        // If config changed, reprocess everything
+        if self.config_hash != config_hash {
+            return true;
+        }
+
+        // Check if we have state for this image
+        if let Some(state) = self.images.get(relative_path) {
+            // Skip if source hasn't changed and target width is the same
+            state.source_size != source_size
+                || state.source_modified != source_modified
+                || state.target_width != target_width
+        } else {
+            // No state means we need to process
+            true
+        }
+    }
+
+    /// Update state for a processed image
+    fn update(
+        &mut self,
+        relative_path: String,
+        source_size: u64,
+        source_modified: u64,
+        target_width: u32,
+        was_resized: bool,
+    ) {
+        self.images.insert(
+            relative_path,
+            ImageState {
+                source_size,
+                source_modified,
+                target_width,
+                was_resized,
+            },
+        );
+    }
+}
+
+/// Generate a hash of the resize configuration for change detection
+fn config_hash(settings: &ResizeSettings) -> String {
+    format!(
+        "bw:{:?},mw:{:?},f:{:?}",
+        settings.banner_width, settings.max_width, settings.filter
+    )
+}
+
+/// Get file metadata for state tracking
+fn get_file_metadata(path: &Path) -> Option<(u64, u64)> {
+    fs::metadata(path).ok().map(|m| {
+        let size = m.len();
+        let modified = m
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        (size, modified)
+    })
+}
 
 /// Validate that a width value is within acceptable limits
 fn validate_width(value: u32, config_key: &str) -> Option<u32> {
@@ -341,11 +463,32 @@ fn collect_image_paths(output_media_path: &Path) -> Vec<PathBuf> {
         .collect()
 }
 
+/// Result of processing a single image
+#[derive(Debug)]
+struct ProcessResult {
+    relative_path: String,
+    source_size: u64,
+    source_modified: u64,
+    target_width: u32,
+    result: ProcessOutcome,
+}
+
+#[derive(Debug)]
+enum ProcessOutcome {
+    Resized,
+    Skipped,
+    Cached,
+    Error,
+    NoTarget,
+}
+
 /// Process and resize images in the media directory.
 /// This function should be called after copying media to output.
 ///
-/// Provides progress reporting for large image collections, logging
-/// progress every 10 images and total elapsed time at completion.
+/// Features:
+/// - Parallel processing using rayon for faster builds
+/// - Incremental builds: tracks processed images to skip unchanged files
+/// - Progress reporting for large image collections
 pub fn process_media_images(
     output_media_path: &Path,
     config: &Marmite,
@@ -358,6 +501,15 @@ pub fn process_media_images(
         return;
     }
 
+    // Load previous state for incremental builds
+    let state = ResizeState::load(output_media_path);
+    let cfg_hash = config_hash(&settings);
+
+    // Check if config changed
+    if !state.config_hash.is_empty() && state.config_hash != cfg_hash {
+        info!("Image resize configuration changed, reprocessing all images");
+    }
+
     // Collect all image paths first for progress reporting
     let image_paths = collect_image_paths(output_media_path);
     let total_images = image_paths.len();
@@ -367,72 +519,181 @@ pub fn process_media_images(
         return;
     }
 
-    info!("Processing {total_images} images for resizing...");
+    info!("Processing {total_images} images for resizing (parallel)...");
 
     let start_time = Instant::now();
-    let mut resized_count = 0;
-    let mut skipped_count = 0;
-    let mut error_count = 0;
-    let mut processed_count = 0;
 
-    // Calculate progress interval: every 10 images or 10% of total, whichever is larger
+    // Atomic counters for thread-safe progress tracking
+    let processed_count = AtomicUsize::new(0);
     let progress_step = (total_images / 10).max(PROGRESS_INTERVAL);
 
-    for path in &image_paths {
-        // Determine if this is a banner image
-        let relative_path = path
-            .strip_prefix(output_media_path)
-            .unwrap_or(path)
-            .to_string_lossy()
-            .to_string();
+    // Process images in parallel
+    let results: Vec<ProcessResult> = image_paths
+        .par_iter()
+        .map(|path| {
+            // Determine relative path for state tracking
+            let relative_path = path
+                .strip_prefix(output_media_path)
+                .unwrap_or(path)
+                .to_string_lossy()
+                .to_string();
 
-        let is_banner = is_banner_image(path) || banner_paths.contains(&relative_path);
+            // Get file metadata for change detection
+            let (source_size, source_modified) = get_file_metadata(path).unwrap_or((0, 0));
 
-        // Determine target width
-        let target_width = if is_banner {
-            settings.banner_width
-        } else {
-            settings.max_width
-        };
+            // Determine if this is a banner image
+            let is_banner = is_banner_image(path) || banner_paths.contains(&relative_path);
 
-        if let Some(width) = target_width {
-            match resize_image(path, path, width, settings.filter) {
-                Ok(true) => {
-                    resized_count += 1;
-                    debug!("Resized: {} (max width: {width}px)", path.display());
+            // Determine target width
+            let target_width = if is_banner {
+                settings.banner_width
+            } else {
+                settings.max_width
+            };
+
+            let result = if let Some(width) = target_width {
+                // Check if we can skip based on state
+                if !state.needs_processing(
+                    &relative_path,
+                    source_size,
+                    source_modified,
+                    width,
+                    &cfg_hash,
+                ) {
+                    debug!("Cached (unchanged): {}", path.display());
+                    ProcessResult {
+                        relative_path,
+                        source_size,
+                        source_modified,
+                        target_width: width,
+                        result: ProcessOutcome::Cached,
+                    }
+                } else {
+                    // Process the image
+                    match resize_image(path, path, width, settings.filter) {
+                        Ok(true) => {
+                            debug!("Resized: {} (max width: {width}px)", path.display());
+                            ProcessResult {
+                                relative_path,
+                                source_size,
+                                source_modified,
+                                target_width: width,
+                                result: ProcessOutcome::Resized,
+                            }
+                        }
+                        Ok(false) => {
+                            debug!("Skipped (already smaller): {}", path.display());
+                            ProcessResult {
+                                relative_path,
+                                source_size,
+                                source_modified,
+                                target_width: width,
+                                result: ProcessOutcome::Skipped,
+                            }
+                        }
+                        Err(e) => {
+                            error!("Failed to resize {}: {e}", path.display());
+                            ProcessResult {
+                                relative_path,
+                                source_size,
+                                source_modified,
+                                target_width: width,
+                                result: ProcessOutcome::Error,
+                            }
+                        }
+                    }
                 }
-                Ok(false) => {
-                    skipped_count += 1;
-                    debug!("Skipped (already smaller): {}", path.display());
+            } else {
+                ProcessResult {
+                    relative_path,
+                    source_size,
+                    source_modified,
+                    target_width: 0,
+                    result: ProcessOutcome::NoTarget,
                 }
-                Err(e) => {
-                    error_count += 1;
-                    error!("Failed to resize {}: {e}", path.display());
+            };
+
+            // Update progress counter
+            let count = processed_count.fetch_add(1, Ordering::Relaxed) + 1;
+            if count % progress_step == 0 && count < total_images {
+                let percent = (count * 100) / total_images;
+                info!("Progress: {count}/{total_images} ({percent}%)");
+            }
+
+            result
+        })
+        .collect();
+
+    // Aggregate results and update state
+    let mut new_state = ResizeState {
+        images: HashMap::new(),
+        config_hash: cfg_hash,
+    };
+
+    let mut resized_count = 0;
+    let mut skipped_count = 0;
+    let mut cached_count = 0;
+    let mut error_count = 0;
+
+    for result in results {
+        match result.result {
+            ProcessOutcome::Resized => {
+                resized_count += 1;
+                new_state.update(
+                    result.relative_path,
+                    result.source_size,
+                    result.source_modified,
+                    result.target_width,
+                    true,
+                );
+            }
+            ProcessOutcome::Skipped => {
+                skipped_count += 1;
+                new_state.update(
+                    result.relative_path,
+                    result.source_size,
+                    result.source_modified,
+                    result.target_width,
+                    false,
+                );
+            }
+            ProcessOutcome::Cached => {
+                cached_count += 1;
+                // Preserve existing state
+                if let Some(existing) = state.images.get(&result.relative_path) {
+                    new_state
+                        .images
+                        .insert(result.relative_path, existing.clone());
                 }
             }
-        } else {
-            skipped_count += 1;
-        }
-
-        processed_count += 1;
-
-        // Log progress at regular intervals
-        if processed_count % progress_step == 0 && processed_count < total_images {
-            let percent = (processed_count * 100) / total_images;
-            info!(
-                "Progress: {processed_count}/{total_images} ({percent}%) - {resized_count} resized, {skipped_count} unchanged"
-            );
+            ProcessOutcome::Error => {
+                error_count += 1;
+                // Don't save state for errors so they're retried
+            }
+            ProcessOutcome::NoTarget => {
+                skipped_count += 1;
+            }
         }
     }
+
+    // Save state for incremental builds
+    new_state.save(output_media_path);
 
     // Report final statistics with elapsed time
     let elapsed = start_time.elapsed();
     let elapsed_secs = elapsed.as_secs_f64();
 
-    if resized_count > 0 || skipped_count > 0 || error_count > 0 {
-        info!(
-            "Image processing complete in {elapsed_secs:.2}s: {resized_count} resized, {skipped_count} unchanged, {error_count} errors"
-        );
+    let total_processed = resized_count + skipped_count + cached_count + error_count;
+    if total_processed > 0 {
+        if cached_count > 0 {
+            info!(
+                "Image processing complete in {elapsed_secs:.2}s: {resized_count} resized, {skipped_count} unchanged, {cached_count} cached, {error_count} errors"
+            );
+        } else {
+            info!(
+                "Image processing complete in {elapsed_secs:.2}s: {resized_count} resized, {skipped_count} unchanged, {error_count} errors"
+            );
+        }
     }
 }
 

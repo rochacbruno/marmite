@@ -1676,20 +1676,26 @@ fn handle_static_artifacts(
             &output_folder.display()
         );
 
-        // Process image resizing if configured in extra
-        if let Some(extra) = &site_data.site.extra {
-            if extra.get("banner_image_width").is_some() || extra.get("max_image_width").is_some() {
-                let output_media_path = output_folder.join(&site_data.site.media_path);
-                let banner_paths = image_resize::collect_banner_paths_from_content(
-                    &site_data.posts,
-                    &site_data.pages,
-                );
-                image_resize::process_media_images(
-                    &output_media_path,
-                    &site_data.site,
-                    &banner_paths,
-                );
+        // Process image resizing if configured in extra (and not skipped)
+        if !site_data.site.skip_image_resize {
+            if let Some(extra) = &site_data.site.extra {
+                if extra.get("banner_image_width").is_some()
+                    || extra.get("max_image_width").is_some()
+                {
+                    let output_media_path = output_folder.join(&site_data.site.media_path);
+                    let banner_paths = image_resize::collect_banner_paths_from_content(
+                        &site_data.posts,
+                        &site_data.pages,
+                    );
+                    image_resize::process_media_images(
+                        &output_media_path,
+                        &site_data.site,
+                        &banner_paths,
+                    );
+                }
             }
+        } else {
+            debug!("Image resizing skipped (--skip-image-resize flag)");
         }
     }
 

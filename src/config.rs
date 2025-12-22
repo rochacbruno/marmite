@@ -268,6 +268,10 @@ pub struct Marmite {
 
     #[serde(default = "default_gallery_thumb_size")]
     pub gallery_thumb_size: u32,
+
+    /// Skip image resizing during build (faster development builds)
+    #[serde(default)]
+    pub skip_image_resize: bool,
 }
 
 fn default_true() -> bool {
@@ -426,6 +430,9 @@ impl Marmite {
         }
         if let Some(shortcode_pattern) = &cli_args.configuration.shortcode_pattern {
             self.shortcode_pattern = Some(shortcode_pattern.clone());
+        }
+        if let Some(skip_image_resize) = cli_args.configuration.skip_image_resize {
+            self.skip_image_resize = skip_image_resize;
         }
     }
 }

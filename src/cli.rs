@@ -215,4 +215,9 @@ pub struct Configuration {
     /// Custom shortcode pattern (regex) [default: <!-- \.(\w+)(?:\s+([^-][\s\S]*?))?\s*--> or from config file]
     #[arg(long)]
     pub shortcode_pattern: Option<String>,
+
+    /// Skip image resizing during build [default: false or from config file]
+    /// Use this for faster development builds when image optimization is not needed
+    #[arg(long)]
+    pub skip_image_resize: Option<bool>,
 }
