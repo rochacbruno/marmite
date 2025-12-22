@@ -6,8 +6,8 @@ authors: ["marmite"]
 
 # Shortcodes Demo
 
-> [!IMPORTANT]
-> This is a **Beta** feature currently available only on the main branch. It has not been released in a stable version yet.
+> [!NOTE]
+> This feature was added in version **0.2.7**.
 
 This post demonstrates the new shortcodes feature in Marmite.
 

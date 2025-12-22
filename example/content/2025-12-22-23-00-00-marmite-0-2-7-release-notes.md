@@ -84,7 +84,7 @@ enable_shortcodes: true
 
 ### Image Gallery
 
-Create beautiful image galleries with automatic thumbnail generation. [[Gallery Shortcode|gallery-shortcode]]
+Create beautiful image galleries with automatic thumbnail generation. [[Gallery Shortcode|image-gallery]]
 
 - Organize images in folders under `media/gallery/`
 - Automatic thumbnail creation with configurable sizes
@@ -101,7 +101,7 @@ gallery_thumb_size: 300
 
 ```markdown
 <!-- In your content -->
-<!-- .gallery folder=summer2025 -->
+<!-- .gallery path=summer2025 -->
 ```
 
 ### Live Reload
@@ -120,7 +120,7 @@ marmite myblog --watch --serve
 
 ### Sitemap Generation
 
-Automatic XML sitemap generation for better SEO. [[Automatic Sitemap Generation|2025-08-01-automatic-sitemap-generation]]
+Automatic XML sitemap generation for better SEO. [[Automatic Sitemap Generation|automatic-sitemap-generation]]
 
 - Enabled by default with `build_sitemap: true`
 - Includes all posts, pages, tags, and archives
@@ -129,7 +129,7 @@ Automatic XML sitemap generation for better SEO. [[Automatic Sitemap Generation|
 
 ### Show URLs Command
 
-Preview all site URLs without building. [[Show URLs Command|2025-08-01-show-urls-dry-run-command]]
+Preview all site URLs without building. [[Show URLs Command|show-urls-dry-run-command]]
 
 ```bash
 marmite myblog --show-urls
@@ -139,7 +139,7 @@ Displays all URLs organized by content type - useful for debugging and verificat
 
 ### File Mappings
 
-Copy or process files from arbitrary locations into your site. [[File Mapping Feature|2025-08-01-file-mapping-feature]]
+Copy or process files from arbitrary locations into your site. [[File Mapping Feature|file-mapping-feature]]
 
 ```yaml
 # In marmite.yaml
@@ -152,18 +152,24 @@ file_mapping:
 
 ### Python Package
 
-Install and run Marmite via pip! [[Python Installation|2025-08-06-03-35-05-python-installation-with-pip]]
+Install and run Marmite via pip! [[Python Installation|python-installation-with-pip]]
 
 ```bash
-pip install marmite-ssg
+pip install marmite
 marmite myblog --serve
+```
+
+Or use UV
+
+```
+uvx marmite
 ```
 
 Available on PyPI with pre-built binaries for major platforms.
 
 ### Install Script
 
-Easy installation with a single command. [[Installation Guide|2025-08-02-18-02-50-installation]]
+Easy installation with a single command. [[Installation Guide|installation]]
 
 ```bash
 curl -sSL https://marmite.blog/install.sh | bash
@@ -302,14 +308,14 @@ extra:
 
 This release includes comprehensive documentation for all new features:
 
-- [Installation Guide](/2025-08-02-18-02-50-installation.html)
-- [Python Installation](/2025-08-06-03-35-05-python-installation-with-pip.html)
-- [Shortcodes Guide](/2025-08-01-shortcodes-guide.html)
-- [Gallery Shortcode](/gallery-shortcode.html)
-- [Image Optimization and Resizing](/2025-12-22-image-optimization.html)
-- [Automatic Sitemap Generation](/2025-08-01-automatic-sitemap-generation.html)
-- [Show URLs Command](/2025-08-01-show-urls-dry-run-command.html)
-- [File Mapping Feature](/2025-08-01-file-mapping-feature.html)
+- [Installation Guide](/installation.html)
+- [Python Installation](/python-installation-with-pip.html)
+- [Shortcodes Guide](/shortcodes-guide.html)
+- [Gallery Shortcode](/image-gallery.html)
+- [Image Optimization and Resizing](/image-optimization-and-resizing.html)
+- [Automatic Sitemap Generation](/automatic-sitemap-generation.html)
+- [Show URLs Command](/show-urls-dry-run-command.html)
+- [File Mapping Feature](/file-mapping-feature.html)
 
 ## Upgrading
 

@@ -7,8 +7,8 @@ authors: ["rochacbruno"]
 
 # Automatic Sitemap Generation
 
-> [!IMPORTANT]
-> This is a **Beta** feature currently available only on the main branch. It has not been released in a stable version yet.
+> [!NOTE]
+> This feature was added in version **0.2.7**.
 
 Marmite now automatically generates a `sitemap.xml` file for your website. This feature is enabled by default and helps search engines discover and index your content more effectively.
 

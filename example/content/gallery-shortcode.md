@@ -7,8 +7,8 @@ date: 2025-08-03
 
 # Image Gallery
 
-> [!IMPORTANT]
-> This is a **Beta** feature currently available only on the main branch. It has not been released in a stable version yet.
+> [!NOTE]
+> This feature was added in version **0.2.7**.
 
 Marmite now includes a powerful gallery shortcode that allows you to create beautiful image galleries in your posts and pages.
 
