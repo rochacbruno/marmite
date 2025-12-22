@@ -29,10 +29,54 @@ fn validate_width(value: u32, config_key: &str) -> Option<u32> {
     }
 }
 
+/// Parse the resize filter configuration value.
+///
+/// Supported values:
+/// - `"fast"`: Triangle filter - fastest, lower quality
+/// - `"balanced"`: CatmullRom filter - good balance of speed and quality
+/// - `"quality"`: Lanczos3 filter - highest quality, slowest (default)
+///
+/// Returns `Lanczos3` if the value is invalid or not specified.
+fn parse_resize_filter(value: Option<&str>) -> FilterType {
+    match value {
+        Some("fast") => {
+            info!("Using 'fast' resize filter (Triangle)");
+            FilterType::Triangle
+        }
+        Some("balanced") => {
+            info!("Using 'balanced' resize filter (CatmullRom)");
+            FilterType::CatmullRom
+        }
+        Some("quality") => {
+            info!("Using 'quality' resize filter (Lanczos3)");
+            FilterType::Lanczos3
+        }
+        Some(invalid) => {
+            warn!(
+                "Invalid resize_filter value '{invalid}'. Valid options: 'fast', 'balanced', 'quality'. Using default 'quality'."
+            );
+            FilterType::Lanczos3
+        }
+        None => FilterType::Lanczos3, // Default, no logging needed
+    }
+}
+
+/// Image resize settings parsed from configuration.
+#[derive(Debug, Clone)]
+struct ResizeSettings {
+    banner_width: Option<u32>,
+    max_width: Option<u32>,
+    filter: FilterType,
+}
+
 /// Get image resize settings from config.extra
-fn get_resize_settings(config: &Marmite) -> (Option<u32>, Option<u32>) {
+fn get_resize_settings(config: &Marmite) -> ResizeSettings {
     let Some(extra) = &config.extra else {
-        return (None, None);
+        return ResizeSettings {
+            banner_width: None,
+            max_width: None,
+            filter: FilterType::Lanczos3,
+        };
     };
 
     let banner_width = extra
@@ -46,6 +90,11 @@ fn get_resize_settings(config: &Marmite) -> (Option<u32>, Option<u32>) {
         .and_then(serde_yaml::Value::as_u64)
         .and_then(|v| u32::try_from(v).ok())
         .and_then(|v| validate_width(v, "max_image_width"));
+
+    let filter = extra
+        .get("resize_filter")
+        .and_then(serde_yaml::Value::as_str);
+    let filter = parse_resize_filter(filter);
 
     // Log configuration when at least one setting is enabled
     match (banner_width, max_width) {
@@ -61,7 +110,11 @@ fn get_resize_settings(config: &Marmite) -> (Option<u32>, Option<u32>) {
         (None, None) => {}
     }
 
-    (banner_width, max_width)
+    ResizeSettings {
+        banner_width,
+        max_width,
+        filter,
+    }
 }
 
 /// Check if a file is a resizable raster image based on extension.
@@ -119,7 +172,18 @@ fn is_banner_image(path: &Path) -> bool {
 /// Uses atomic file operations: the resized image is first written to a
 /// temporary file in the same directory, then renamed to the target path.
 /// This ensures the original image is not corrupted if resizing fails.
-fn resize_image(input_path: &Path, output_path: &Path, max_width: u32) -> Result<bool, ImageError> {
+///
+/// # Arguments
+/// * `input_path` - Path to the source image
+/// * `output_path` - Path where the resized image will be saved
+/// * `max_width` - Maximum width in pixels
+/// * `filter` - The resampling filter to use for resizing
+fn resize_image(
+    input_path: &Path,
+    output_path: &Path,
+    max_width: u32,
+    filter: FilterType,
+) -> Result<bool, ImageError> {
     let img = image::open(input_path)?;
     let (width, height) = img.dimensions();
 
@@ -137,7 +201,7 @@ fn resize_image(input_path: &Path, output_path: &Path, max_width: u32) -> Result
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     let new_height = (f64::from(height) * (f64::from(max_width) / f64::from(width))) as u32;
 
-    let resized = img.resize(max_width, new_height, FilterType::Lanczos3);
+    let resized = img.resize(max_width, new_height, filter);
 
     // Use atomic write: save to temp file first, then rename
     // Temp file is created in the same directory to ensure atomic rename works
@@ -287,10 +351,10 @@ pub fn process_media_images(
     config: &Marmite,
     banner_paths: &HashSet<String>,
 ) {
-    let (banner_width, max_width) = get_resize_settings(config);
+    let settings = get_resize_settings(config);
 
     // If neither option is set, do nothing
-    if banner_width.is_none() && max_width.is_none() {
+    if settings.banner_width.is_none() && settings.max_width.is_none() {
         return;
     }
 
@@ -325,10 +389,14 @@ pub fn process_media_images(
         let is_banner = is_banner_image(path) || banner_paths.contains(&relative_path);
 
         // Determine target width
-        let target_width = if is_banner { banner_width } else { max_width };
+        let target_width = if is_banner {
+            settings.banner_width
+        } else {
+            settings.max_width
+        };
 
         if let Some(width) = target_width {
-            match resize_image(path, path, width) {
+            match resize_image(path, path, width, settings.filter) {
                 Ok(true) => {
                     resized_count += 1;
                     debug!("Resized: {} (max width: {width}px)", path.display());

@@ -32,9 +32,10 @@ fn test_get_resize_settings_valid_config() {
     extra.insert("banner_image_width".to_string(), Value::Number(1200.into()));
     config.extra = Some(extra);
 
-    let (banner_width, max_width) = get_resize_settings(&config);
-    assert_eq!(banner_width, Some(1200));
-    assert_eq!(max_width, Some(800));
+    let settings = get_resize_settings(&config);
+    assert_eq!(settings.banner_width, Some(1200));
+    assert_eq!(settings.max_width, Some(800));
+    assert!(matches!(settings.filter, FilterType::Lanczos3)); // Default filter
 }
 
 #[test]
@@ -44,8 +45,8 @@ fn test_get_resize_settings_invalid_zero_width() {
     extra.insert("max_image_width".to_string(), Value::Number(0.into()));
     config.extra = Some(extra);
 
-    let (_, max_width) = get_resize_settings(&config);
-    assert_eq!(max_width, None);
+    let settings = get_resize_settings(&config);
+    assert_eq!(settings.max_width, None);
 }
 
 #[test]
@@ -55,16 +56,67 @@ fn test_get_resize_settings_invalid_too_large() {
     extra.insert("max_image_width".to_string(), Value::Number(99999.into()));
     config.extra = Some(extra);
 
-    let (_, max_width) = get_resize_settings(&config);
-    assert_eq!(max_width, None);
+    let settings = get_resize_settings(&config);
+    assert_eq!(settings.max_width, None);
 }
 
 #[test]
 fn test_get_resize_settings_no_extra() {
     let config = Marmite::new();
-    let (banner_width, max_width) = get_resize_settings(&config);
-    assert_eq!(banner_width, None);
-    assert_eq!(max_width, None);
+    let settings = get_resize_settings(&config);
+    assert_eq!(settings.banner_width, None);
+    assert_eq!(settings.max_width, None);
+    assert!(matches!(settings.filter, FilterType::Lanczos3)); // Default filter
+}
+
+#[test]
+fn test_parse_resize_filter_valid_options() {
+    assert!(matches!(
+        parse_resize_filter(Some("fast")),
+        FilterType::Triangle
+    ));
+    assert!(matches!(
+        parse_resize_filter(Some("balanced")),
+        FilterType::CatmullRom
+    ));
+    assert!(matches!(
+        parse_resize_filter(Some("quality")),
+        FilterType::Lanczos3
+    ));
+}
+
+#[test]
+fn test_parse_resize_filter_default() {
+    assert!(matches!(parse_resize_filter(None), FilterType::Lanczos3));
+}
+
+#[test]
+fn test_parse_resize_filter_invalid() {
+    // Invalid values should fall back to Lanczos3
+    assert!(matches!(
+        parse_resize_filter(Some("invalid")),
+        FilterType::Lanczos3
+    ));
+    assert!(matches!(
+        parse_resize_filter(Some("")),
+        FilterType::Lanczos3
+    ));
+}
+
+#[test]
+fn test_get_resize_settings_with_filter() {
+    let mut config = Marmite::new();
+    let mut extra = HashMap::new();
+    extra.insert("max_image_width".to_string(), Value::Number(800.into()));
+    extra.insert(
+        "resize_filter".to_string(),
+        Value::String("fast".to_string()),
+    );
+    config.extra = Some(extra);
+
+    let settings = get_resize_settings(&config);
+    assert_eq!(settings.max_width, Some(800));
+    assert!(matches!(settings.filter, FilterType::Triangle));
 }
 
 // Path normalization tests
@@ -188,7 +240,7 @@ fn test_resize_image() {
     img.save(&input_path).unwrap();
 
     // Resize to max width 800
-    let resized = resize_image(&input_path, &output_path, 800).unwrap();
+    let resized = resize_image(&input_path, &output_path, 800, FilterType::Lanczos3).unwrap();
     assert!(resized);
 
     // Verify output dimensions
@@ -211,7 +263,7 @@ fn test_resize_image_in_place_atomic() {
     let original_size = original_metadata.len();
 
     // Resize in-place (input_path == output_path)
-    let resized = resize_image(&image_path, &image_path, 800).unwrap();
+    let resized = resize_image(&image_path, &image_path, 800, FilterType::Lanczos3).unwrap();
     assert!(resized);
 
     // Verify the file was replaced atomically
@@ -249,7 +301,7 @@ fn test_resize_image_smaller_than_max() {
     img.save(&input_path).unwrap();
 
     // Try to resize to max width 800
-    let resized = resize_image(&input_path, &output_path, 800).unwrap();
+    let resized = resize_image(&input_path, &output_path, 800, FilterType::Lanczos3).unwrap();
     assert!(!resized); // Should not resize
 
     // Verify output dimensions unchanged
