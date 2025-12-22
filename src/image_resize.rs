@@ -1,0 +1,182 @@
+use image::{imageops::FilterType, GenericImageView, ImageError};
+use log::{debug, error, info};
+use std::collections::HashSet;
+use std::fs;
+use std::path::Path;
+use walkdir::WalkDir;
+
+use crate::config::Marmite;
+
+/// Get image resize settings from config.extra
+fn get_resize_settings(config: &Marmite) -> (Option<u32>, Option<u32>) {
+    let Some(extra) = &config.extra else {
+        return (None, None);
+    };
+
+    let banner_width = extra
+        .get("banner_image_width")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as u32);
+
+    let max_width = extra
+        .get("max_image_width")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as u32);
+
+    (banner_width, max_width)
+}
+
+/// Check if a file is an image based on extension
+fn is_image_file(path: &Path) -> bool {
+    let Some(ext) = path.extension().and_then(|e| e.to_str()) else {
+        return false;
+    };
+
+    matches!(
+        ext.to_lowercase().as_str(),
+        "jpg" | "jpeg" | "png" | "webp" | "gif" | "bmp" | "tiff"
+    )
+}
+
+/// Check if an image is a banner image based on filename pattern
+fn is_banner_image(path: &Path) -> bool {
+    let Some(filename) = path.file_stem().and_then(|s| s.to_str()) else {
+        return false;
+    };
+
+    filename.ends_with(".banner") || filename.contains(".banner.")
+}
+
+/// Resize an image to a maximum width, maintaining aspect ratio
+/// Only resizes if the image is larger than max_width
+fn resize_image(input_path: &Path, output_path: &Path, max_width: u32) -> Result<bool, ImageError> {
+    let img = image::open(input_path)?;
+    let (width, height) = img.dimensions();
+
+    // Only resize if image is larger than max_width
+    if width <= max_width {
+        // Copy original file without modification
+        if input_path != output_path {
+            fs::copy(input_path, output_path).map_err(|e| {
+                ImageError::IoError(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
+            })?;
+        }
+        return Ok(false);
+    }
+
+    // Calculate new height maintaining aspect ratio
+    let new_height = (height as f64 * (max_width as f64 / width as f64)) as u32;
+
+    let resized = img.resize(max_width, new_height, FilterType::Lanczos3);
+    resized.save(output_path)?;
+
+    debug!(
+        "Resized {} from {}x{} to {}x{}",
+        input_path.display(),
+        width,
+        height,
+        max_width,
+        new_height
+    );
+
+    Ok(true)
+}
+
+/// Collect all banner image paths from content frontmatter
+pub fn collect_banner_paths_from_content(
+    posts: &[crate::content::Content],
+    pages: &[crate::content::Content],
+) -> HashSet<String> {
+    let mut banner_paths = HashSet::new();
+
+    for content in posts.iter().chain(pages.iter()) {
+        if let Some(banner) = &content.banner_image {
+            // Normalize the path (remove leading media/ if present)
+            let normalized = banner
+                .trim_start_matches("media/")
+                .trim_start_matches("./media/")
+                .to_string();
+            banner_paths.insert(normalized);
+        }
+    }
+
+    banner_paths
+}
+
+/// Process and resize images in the media directory
+/// This function should be called after copying media to output
+pub fn process_media_images(
+    output_media_path: &Path,
+    config: &Marmite,
+    banner_paths: &HashSet<String>,
+) {
+    let (banner_width, max_width) = get_resize_settings(config);
+
+    // If neither option is set, do nothing
+    if banner_width.is_none() && max_width.is_none() {
+        return;
+    }
+
+    info!("Processing images for resizing...");
+
+    let mut resized_count = 0;
+    let mut skipped_count = 0;
+
+    for entry in WalkDir::new(output_media_path)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_file() && is_image_file(e.path()))
+    {
+        let path = entry.path();
+
+        // Skip thumbnails directory
+        if path
+            .components()
+            .any(|c| c.as_os_str() == "thumbnails" || c.as_os_str() == "_resized")
+        {
+            continue;
+        }
+
+        // Determine if this is a banner image
+        let relative_path = path
+            .strip_prefix(output_media_path)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .to_string();
+
+        let is_banner = is_banner_image(path) || banner_paths.contains(&relative_path);
+
+        // Determine target width
+        let target_width = if is_banner { banner_width } else { max_width };
+
+        if let Some(width) = target_width {
+            match resize_image(path, path, width) {
+                Ok(true) => {
+                    resized_count += 1;
+                    info!("Resized: {} (max width: {}px)", path.display(), width);
+                }
+                Ok(false) => {
+                    skipped_count += 1;
+                    debug!("Skipped (already smaller): {}", path.display());
+                }
+                Err(e) => {
+                    error!("Failed to resize {}: {}", path.display(), e);
+                }
+            }
+        }
+    }
+
+    if resized_count > 0 || skipped_count > 0 {
+        info!(
+            "Image processing complete: {} resized, {} unchanged",
+            resized_count, skipped_count
+        );
+    }
+}
+
+#[cfg(test)]
+#[path = "tests/image_resize.rs"]
+mod tests;
