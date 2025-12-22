@@ -27,11 +27,11 @@ fn test_image_resize_integration_basic() {
     fs::create_dir_all(input_dir.join("content").join("media")).unwrap();
 
     // Create config with image resize settings
-    let config = r#"
+    let config = r"
 name: Test Site
 extra:
   max_image_width: 800
-"#;
+";
     fs::write(input_dir.join("marmite.yaml"), config).unwrap();
 
     // Create a large test image (1200x600)
@@ -98,12 +98,12 @@ fn test_image_resize_integration_banner_detection() {
     fs::create_dir_all(input_dir.join("content").join("media")).unwrap();
 
     // Create config with separate banner and regular image widths
-    let config = r#"
+    let config = r"
 name: Test Site
 extra:
   max_image_width: 600
   banner_image_width: 1000
-"#;
+";
     fs::write(input_dir.join("marmite.yaml"), config).unwrap();
 
     // Create a banner image (detected by filename pattern)
@@ -177,12 +177,12 @@ fn test_image_resize_integration_frontmatter_banner() {
     fs::create_dir_all(input_dir.join("content").join("media")).unwrap();
 
     // Create config with separate banner and regular image widths
-    let config = r#"
+    let config = r"
 name: Test Site
 extra:
   max_image_width: 600
   banner_image_width: 1000
-"#;
+";
     fs::write(input_dir.join("marmite.yaml"), config).unwrap();
 
     // Create an image that will be referenced as banner in frontmatter
@@ -252,11 +252,11 @@ fn test_image_resize_integration_thumbnails_skipped() {
     fs::create_dir_all(input_dir.join("content").join("media").join("thumbnails")).unwrap();
 
     // Create config with image resize settings
-    let config = r#"
+    let config = r"
 name: Test Site
 extra:
   max_image_width: 800
-"#;
+";
     fs::write(input_dir.join("marmite.yaml"), config).unwrap();
 
     // Create a regular image
@@ -327,9 +327,9 @@ fn test_image_resize_integration_no_config() {
     fs::create_dir_all(input_dir.join("content").join("media")).unwrap();
 
     // Create config WITHOUT image resize settings
-    let config = r#"
+    let config = r"
 name: Test Site
-"#;
+";
     fs::write(input_dir.join("marmite.yaml"), config).unwrap();
 
     // Create a large test image
@@ -384,11 +384,11 @@ fn test_image_resize_integration_multiple_formats() {
     fs::create_dir_all(input_dir.join("content").join("media")).unwrap();
 
     // Create config with image resize settings
-    let config = r#"
+    let config = r"
 name: Test Site
 extra:
   max_image_width: 800
-"#;
+";
     fs::write(input_dir.join("marmite.yaml"), config).unwrap();
 
     // Create test images in different formats
