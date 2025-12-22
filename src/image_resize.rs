@@ -59,7 +59,20 @@ fn get_resize_settings(config: &Marmite) -> (Option<u32>, Option<u32>) {
     (banner_width, max_width)
 }
 
-/// Check if a file is an image based on extension
+/// Check if a file is a resizable raster image based on extension.
+///
+/// Supported formats:
+/// - JPEG (jpg, jpeg)
+/// - PNG
+/// - WebP
+/// - GIF
+/// - BMP
+/// - TIFF
+/// - AVIF (modern format with good compression)
+///
+/// Note: Vector formats (SVG) and icon formats (ICO) are intentionally excluded
+/// because they cannot be meaningfully resized as raster images. Use
+/// `is_vector_or_icon_image` to detect these formats.
 fn is_image_file(path: &Path) -> bool {
     let Some(ext) = path.extension().and_then(|e| e.to_str()) else {
         return false;
@@ -67,8 +80,23 @@ fn is_image_file(path: &Path) -> bool {
 
     matches!(
         ext.to_lowercase().as_str(),
-        "jpg" | "jpeg" | "png" | "webp" | "gif" | "bmp" | "tiff"
+        "jpg" | "jpeg" | "png" | "webp" | "gif" | "bmp" | "tiff" | "avif"
     )
+}
+
+/// Check if a file is a vector or icon image format that should be skipped for resizing.
+///
+/// These formats are excluded from resizing because:
+/// - SVG: Vector format that scales infinitely without quality loss.
+///   Rasterizing and resizing would defeat the purpose of using SVG.
+/// - ICO: Icon format containing multiple sizes. Resizing would corrupt
+///   the multi-resolution structure.
+fn is_vector_or_icon_image(path: &Path) -> bool {
+    let Some(ext) = path.extension().and_then(|e| e.to_str()) else {
+        return false;
+    };
+
+    matches!(ext.to_lowercase().as_str(), "svg" | "ico")
 }
 
 /// Check if an image is a banner image based on filename pattern
@@ -201,7 +229,7 @@ pub fn process_media_images(
     for entry in WalkDir::new(output_media_path)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file() && is_image_file(e.path()))
+        .filter(|e| e.file_type().is_file())
     {
         let path = entry.path();
 
@@ -210,6 +238,20 @@ pub fn process_media_images(
             .components()
             .any(|c| c.as_os_str() == "thumbnails" || c.as_os_str() == "_resized")
         {
+            continue;
+        }
+
+        // Skip vector and icon formats with debug logging
+        if is_vector_or_icon_image(path) {
+            debug!(
+                "Skipped vector/icon image (not resizable): {}",
+                path.display()
+            );
+            continue;
+        }
+
+        // Skip non-image files
+        if !is_image_file(path) {
             continue;
         }
 

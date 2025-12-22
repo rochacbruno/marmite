@@ -131,12 +131,42 @@ fn test_normalize_banner_path_mixed_separators() {
 
 #[test]
 fn test_is_image_file() {
+    // Supported raster formats
     assert!(is_image_file(Path::new("test.jpg")));
     assert!(is_image_file(Path::new("test.JPEG")));
     assert!(is_image_file(Path::new("test.png")));
     assert!(is_image_file(Path::new("test.webp")));
+    assert!(is_image_file(Path::new("test.gif")));
+    assert!(is_image_file(Path::new("test.bmp")));
+    assert!(is_image_file(Path::new("test.tiff")));
+    assert!(is_image_file(Path::new("test.avif")));
+    assert!(is_image_file(Path::new("test.AVIF")));
+
+    // Non-image files
     assert!(!is_image_file(Path::new("test.txt")));
     assert!(!is_image_file(Path::new("test.md")));
+
+    // Vector/icon formats should NOT be detected as resizable images
+    assert!(!is_image_file(Path::new("test.svg")));
+    assert!(!is_image_file(Path::new("test.ico")));
+}
+
+#[test]
+fn test_is_vector_or_icon_image() {
+    // Vector and icon formats
+    assert!(is_vector_or_icon_image(Path::new("logo.svg")));
+    assert!(is_vector_or_icon_image(Path::new("logo.SVG")));
+    assert!(is_vector_or_icon_image(Path::new("favicon.ico")));
+    assert!(is_vector_or_icon_image(Path::new("favicon.ICO")));
+
+    // Raster formats should NOT be detected as vector/icon
+    assert!(!is_vector_or_icon_image(Path::new("test.jpg")));
+    assert!(!is_vector_or_icon_image(Path::new("test.png")));
+    assert!(!is_vector_or_icon_image(Path::new("test.avif")));
+
+    // Non-image files
+    assert!(!is_vector_or_icon_image(Path::new("test.txt")));
+    assert!(!is_vector_or_icon_image(Path::new("test.html")));
 }
 
 #[test]
