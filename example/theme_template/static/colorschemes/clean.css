@@ -1,0 +1,55 @@
+/* Marmite Clean Theme */
+/* For theme_template */
+
+/* Light Mode */
+[data-theme="light"],
+:root:not([data-theme="dark"]) {
+    --primary-color: #333333;
+    --secondary-color: #f5f5f5;
+    --text-color: #333333;
+    --link-color: #333333;
+    --link-hover-color: #666666;
+    --border-color: #e0e0e0;
+    --background-color: #ffffff;
+    --code-background: #f0f0f0;
+}
+
+/* Dark Mode */
+[data-theme="dark"],
+:root:not([data-theme="light"]) {
+    --primary-color: #e0e0e0;
+    --secondary-color: #2a2a2a;
+    --text-color: #e0e0e0;
+    --link-color: #e0e0e0;
+    --link-hover-color: #ffffff;
+    --border-color: #444444;
+    --background-color: #1a1a1a;
+    --code-background: #333333;
+}
+
+/* System preference fallback */
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+        --primary-color: #333333;
+        --secondary-color: #f5f5f5;
+        --text-color: #333333;
+        --link-color: #333333;
+        --link-hover-color: #666666;
+        --border-color: #e0e0e0;
+        --background-color: #ffffff;
+        --code-background: #f0f0f0;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        --primary-color: #e0e0e0;
+        --secondary-color: #2a2a2a;
+        --text-color: #e0e0e0;
+        --link-color: #e0e0e0;
+        --link-hover-color: #ffffff;
+        --border-color: #444444;
+        --background-color: #1a1a1a;
+        --code-background: #333333;
+    }
+}

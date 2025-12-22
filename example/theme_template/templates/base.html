@@ -4,6 +4,7 @@
     <!-- Basic Meta Tags -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark" />
     <meta name="generator" content="Marmite" />
     {%- block head %}
     <title>{% if title %}{{title}} | {%endif%}{{ site.name }}</title>
@@ -12,6 +13,10 @@
     <!-- Theme Stylesheets -->
     <!-- Add your custom CSS in static/style.css -->
     <link rel="stylesheet" type="text/css" href="{{url_for(path='static/style.css')}}">
+    <!-- Colorscheme - Configure in marmite.yaml with extra: colorscheme: nord -->
+    {% if site.extra.colorscheme %}
+    <link rel="stylesheet" type="text/css" href="{{url_for(path='static/colorschemes/' ~ site.extra.colorscheme ~ '.css')}}">
+    {% endif %}
     <!-- Custom CSS - Add custom.css in your site root to override theme styles -->
     <link rel="stylesheet" type="text/css" href="{{url_for(path='static/custom.css')}}">
     {%- endblock %}
@@ -92,6 +97,11 @@
                         <button id="search-toggle">Search</button>
                     </li>
                     {% endif %}
+                    <!-- Color Mode Toggle -->
+                    <!-- Enable in marmite.yaml with extra: colormodetoggle: true -->
+                    {% if site.extra.colormodetoggle %}
+                    <li><span class="theme-toggle" title="dark mode">&#9789;</span></li>
+                    {% endif %}
                 </ul>
             </nav>
             {% endif %}
@@ -127,6 +137,14 @@
         {% else %}
         <footer class="site-footer">
             {{ site.footer | safe }}
+            <!-- Colorscheme Toggle -->
+            <!-- Enable in marmite.yaml with extra: colorscheme_toggle: true -->
+            {% if site.extra.colorscheme_toggle %}
+            <div class="colorscheme-toggle-div">
+                colorscheme: <select name="colorscheme" class="colorscheme-toggle"><option value="default">default</option></select>
+                <span class="theme-toggle" title="dark mode">&#9789;</span>
+            </div>
+            {% endif %}
         </footer>
         {% endif %}
 
@@ -153,6 +171,20 @@
     <script src="{{url_for(path='static/custom.js')}}"></script>
     {% if site.enable_search %}
     <script type="module" src="{{url_for(path='static/search.js')}}"></script>
+    {% endif %}
+    {% if site.extra.colorscheme_toggle %}
+    <script type="application/javascript">
+        colorschemeSwitcher();
+    </script>
+    {% endif %}
+    {% if site.extra.colormode %}
+    <script type="application/javascript">
+        // If there is already a scheme saved in localstorage, load that, else load config
+        if (themeSwitcher.scheme == "auto") {
+            themeSwitcher.scheme = "{{ site.extra.colormode }}";
+            themeSwitcher.updateIcon();
+        }
+    </script>
     {% endif %}
     {% endblock %}
 

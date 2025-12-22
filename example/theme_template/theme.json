@@ -17,11 +17,44 @@
           "description": "Enable Fediverse Username Verification by adding rel=\"me\" to the user's profile URL",
           "type": "string",
           "example": "https://mastodon.social/@username"
+      },
+      "colorscheme": {
+          "enabled": true,
+          "required": false,
+          "default": null,
+          "description": "Set a colorscheme for the theme. Available options: catppuccin, clean, dracula, github, gruvbox, iceberg, minimal, minimal_wb, monokai, nord, one, solarized, typewriter",
+          "type": "string",
+          "example": "nord"
+      },
+      "colorscheme_toggle": {
+          "enabled": true,
+          "required": false,
+          "default": false,
+          "description": "Show a colorscheme dropdown selector in the footer allowing users to switch between colorschemes",
+          "type": "boolean",
+          "example": true
+      },
+      "colormodetoggle": {
+          "enabled": true,
+          "required": false,
+          "default": false,
+          "description": "Show a light/dark mode toggle button in the navigation",
+          "type": "boolean",
+          "example": true
+      },
+      "colormode": {
+          "enabled": true,
+          "required": false,
+          "default": "auto",
+          "description": "Set the default color mode. Options: light, dark, auto (follows system preference)",
+          "type": "string",
+          "example": "dark"
       }
   },
   "features": [
     "Responsive design",
     "Dark mode support",
+    "Colorscheme support",
     "Clean typography",
     "Search functionality",
     "SEO optimized",

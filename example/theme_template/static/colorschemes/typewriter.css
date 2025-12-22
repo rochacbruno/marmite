@@ -1,0 +1,55 @@
+/* Marmite Typewriter Theme */
+/* For theme_template */
+
+/* Light Mode */
+[data-theme="light"],
+:root:not([data-theme="dark"]) {
+    --primary-color: #000000;
+    --secondary-color: #f5f5f5;
+    --text-color: #000000;
+    --link-color: #000000;
+    --link-hover-color: #333333;
+    --border-color: #cccccc;
+    --background-color: #ffffff;
+    --code-background: #f5f5f5;
+}
+
+/* Dark Mode */
+[data-theme="dark"],
+:root:not([data-theme="light"]) {
+    --primary-color: #ffffff;
+    --secondary-color: #2e2e2e;
+    --text-color: #ffffff;
+    --link-color: #ffffff;
+    --link-hover-color: #cccccc;
+    --border-color: #555555;
+    --background-color: #1e1e1e;
+    --code-background: #2e2e2e;
+}
+
+/* System preference fallback */
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+        --primary-color: #000000;
+        --secondary-color: #f5f5f5;
+        --text-color: #000000;
+        --link-color: #000000;
+        --link-hover-color: #333333;
+        --border-color: #cccccc;
+        --background-color: #ffffff;
+        --code-background: #f5f5f5;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        --primary-color: #ffffff;
+        --secondary-color: #2e2e2e;
+        --text-color: #ffffff;
+        --link-color: #ffffff;
+        --link-hover-color: #cccccc;
+        --border-color: #555555;
+        --background-color: #1e1e1e;
+        --code-background: #2e2e2e;
+    }
+}

@@ -1,0 +1,55 @@
+/* Marmite One Theme (Atom One) */
+/* For theme_template */
+
+/* Light Mode */
+[data-theme="light"],
+:root:not([data-theme="dark"]) {
+    --primary-color: #007acc;
+    --secondary-color: #ffffff;
+    --text-color: #383a42;
+    --link-color: #007acc;
+    --link-hover-color: #005f99;
+    --border-color: #d0d0d0;
+    --background-color: #fafafa;
+    --code-background: #f0f0f0;
+}
+
+/* Dark Mode */
+[data-theme="dark"],
+:root:not([data-theme="light"]) {
+    --primary-color: #61afef;
+    --secondary-color: #2c313c;
+    --text-color: #abb2bf;
+    --link-color: #61afef;
+    --link-hover-color: #528bff;
+    --border-color: #3e4451;
+    --background-color: #282c34;
+    --code-background: #21252b;
+}
+
+/* System preference fallback */
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+        --primary-color: #007acc;
+        --secondary-color: #ffffff;
+        --text-color: #383a42;
+        --link-color: #007acc;
+        --link-hover-color: #005f99;
+        --border-color: #d0d0d0;
+        --background-color: #fafafa;
+        --code-background: #f0f0f0;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        --primary-color: #61afef;
+        --secondary-color: #2c313c;
+        --text-color: #abb2bf;
+        --link-color: #61afef;
+        --link-hover-color: #528bff;
+        --border-color: #3e4451;
+        --background-color: #282c34;
+        --code-background: #21252b;
+    }
+}

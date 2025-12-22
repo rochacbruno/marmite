@@ -1,9 +1,166 @@
 /*
   Clean Marmite Theme JavaScript
-  
+
   This file contains basic interactivity for the theme.
   You can extend it with your own custom functionality.
 */
+
+// Theme switcher - light/dark
+const themeSwitcher = {
+    // Config
+    _scheme: "auto",
+    toggleButton: document.querySelectorAll(".theme-toggle"),
+    rootAttribute: "data-theme",
+    localStorageKey: "picoPreferredColorScheme",
+
+    // Init
+    init() {
+        this.scheme = this.schemeFromLocalStorage;
+        this.initToggle();
+        this.updateIcon();
+    },
+
+    // Get color scheme from local storage
+    get schemeFromLocalStorage() {
+        return window.localStorage?.getItem(this.localStorageKey);
+    },
+
+    // Preferred color scheme
+    get preferredColorScheme() {
+        return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    },
+
+    // Init toggle
+    initToggle() {
+        // for each toggle button add event listener
+        this.toggleButton.forEach((button) => {
+            button.addEventListener(
+                "click",
+                (event) => {
+                    event.preventDefault();
+                    // Toggle scheme
+                    this.scheme = this.scheme === "dark" ? "light" : "dark";
+                    this.updateIcon();
+                },
+                false
+            );
+        });
+    },
+
+    // Set scheme
+    set scheme(scheme) {
+        if (scheme == "auto") {
+            this._scheme = this.preferredColorScheme;
+        } else if (scheme == "dark" || scheme == "light") {
+            this._scheme = scheme;
+        }
+        this.applyScheme();
+        this.schemeToLocalStorage();
+    },
+
+    // Get scheme
+    get scheme() {
+        return this._scheme;
+    },
+
+    // Apply scheme
+    applyScheme() {
+        document.querySelector("html")?.setAttribute(this.rootAttribute, this.scheme);
+        const githubTheme = this.scheme === "dark" ? "-dark" : "";
+        document.querySelector("#highlightjs-theme")?.setAttribute("href", `https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/github${githubTheme}.min.css`);
+    },
+
+    // Store scheme to local storage
+    schemeToLocalStorage() {
+        window.localStorage?.setItem(this.localStorageKey, this.scheme);
+    },
+
+    // Update icon based on the current scheme
+    updateIcon() {
+        // for each toggle button update icon
+        this.toggleButton.forEach((button) => {
+            if (this.scheme === "dark") {
+                button.innerHTML = "&#9788;"; // Sun icon for light mode
+                button.title = "light mode";
+            } else {
+                button.innerHTML = "&#9789;"; // Moon icon for dark mode
+                button.title = "dark mode";
+            }
+        });
+    },
+};
+
+// Init theme switcher
+themeSwitcher.init();
+
+// Colorscheme switcher
+function colorschemeSwitcher() {
+    const colorschemes = [
+        'catppuccin',
+        'clean',
+        'dracula',
+        'github',
+        'gruvbox',
+        'iceberg',
+        'minimal',
+        'minimal_wb',
+        'monokai',
+        'nord',
+        'one',
+        'solarized',
+        'typewriter'
+    ];
+
+    const colorschemeDropdown = document.querySelectorAll('.colorscheme-toggle');
+
+    colorschemeDropdown.forEach((dropdown) => {
+
+        dropdown.addEventListener('change', function () {
+            const colorscheme = this.value;
+            const colorschemeLink = document.querySelector('#colorscheme-link');
+            if (colorscheme === 'default') {
+                if (colorschemeLink) {
+                    colorschemeLink.remove();
+                }
+
+                localStorage.removeItem('marmitePreferredColorScheme');
+                return;
+            }
+            if (colorschemeLink) {
+                colorschemeLink.href = `static/colorschemes/${colorscheme}.css`;
+            } else {
+                const link = document.createElement('link');
+                link.id = 'colorscheme-link';
+                link.rel = 'stylesheet';
+                link.href = `static/colorschemes/${colorscheme}.css`;
+                document.head.appendChild(link);
+            }
+            localStorage.setItem('marmitePreferredColorScheme', colorscheme);
+
+            colorschemeDropdown.forEach((dropdown) => {
+                dropdown.value = colorscheme;
+            });
+        });
+
+        colorschemes.forEach((colorscheme) => {
+            const option = document.createElement('option');
+            option.value = colorscheme;
+            option.textContent = colorscheme;
+            dropdown.appendChild(option);
+        });
+
+        const colorscheme = localStorage.getItem('marmitePreferredColorScheme');
+        if (colorscheme) {
+            dropdown.value = colorscheme;
+            dropdown.dispatchEvent(new Event('change'));
+        }
+    });
+}
+
+// Add event listener for system theme changes
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    themeSwitcher.scheme = e.matches ? 'dark' : 'light';
+});
 
 document.addEventListener('DOMContentLoaded', function() {
     // Search functionality
@@ -165,25 +322,3 @@ function throttle(func, limit) {
     };
 }
 
-/**
- * Simple theme switcher (light/dark mode)
- * Uncomment if you want to add manual theme switching
- */
-/*
-function initializeThemeSwitcher() {
-    const themeToggle = document.getElementById('theme-toggle');
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    
-    document.documentElement.setAttribute('data-theme', currentTheme);
-    
-    if (themeToggle) {
-        themeToggle.addEventListener('click', function() {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-        });
-    }
-}
-*/

@@ -1,0 +1,55 @@
+/* Marmite Catppuccin Theme */
+/* For theme_template */
+
+/* Light Mode - Latte */
+[data-theme="light"],
+:root:not([data-theme="dark"]) {
+    --primary-color: #8839ef;
+    --secondary-color: #eff1f5;
+    --text-color: #4c4f69;
+    --link-color: #8839ef;
+    --link-hover-color: #ea76cb;
+    --border-color: #ccd0da;
+    --background-color: #e6e9ef;
+    --code-background: #dce0e8;
+}
+
+/* Dark Mode - Mocha */
+[data-theme="dark"],
+:root:not([data-theme="light"]) {
+    --primary-color: #cba6f7;
+    --secondary-color: #302d41;
+    --text-color: #cdd6f4;
+    --link-color: #cba6f7;
+    --link-hover-color: #f5c2e7;
+    --border-color: #585b70;
+    --background-color: #1e1e2e;
+    --code-background: #313244;
+}
+
+/* System preference fallback */
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+        --primary-color: #8839ef;
+        --secondary-color: #eff1f5;
+        --text-color: #4c4f69;
+        --link-color: #8839ef;
+        --link-hover-color: #ea76cb;
+        --border-color: #ccd0da;
+        --background-color: #e6e9ef;
+        --code-background: #dce0e8;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        --primary-color: #cba6f7;
+        --secondary-color: #302d41;
+        --text-color: #cdd6f4;
+        --link-color: #cba6f7;
+        --link-hover-color: #f5c2e7;
+        --border-color: #585b70;
+        --background-color: #1e1e2e;
+        --code-background: #313244;
+    }
+}

@@ -1,0 +1,55 @@
+/* Marmite GitHub Theme */
+/* For theme_template */
+
+/* Light Mode */
+[data-theme="light"],
+:root:not([data-theme="dark"]) {
+    --primary-color: #0969da;
+    --secondary-color: #f6f8fa;
+    --text-color: #24292f;
+    --link-color: #0969da;
+    --link-hover-color: #0550ae;
+    --border-color: #d0d7de;
+    --background-color: #ffffff;
+    --code-background: #f6f8fa;
+}
+
+/* Dark Mode */
+[data-theme="dark"],
+:root:not([data-theme="light"]) {
+    --primary-color: #58a6ff;
+    --secondary-color: #21262d;
+    --text-color: #c9d1d9;
+    --link-color: #58a6ff;
+    --link-hover-color: #79c0ff;
+    --border-color: #30363d;
+    --background-color: #0d1117;
+    --code-background: #161b22;
+}
+
+/* System preference fallback */
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme]) {
+        --primary-color: #0969da;
+        --secondary-color: #f6f8fa;
+        --text-color: #24292f;
+        --link-color: #0969da;
+        --link-hover-color: #0550ae;
+        --border-color: #d0d7de;
+        --background-color: #ffffff;
+        --code-background: #f6f8fa;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme]) {
+        --primary-color: #58a6ff;
+        --secondary-color: #21262d;
+        --text-color: #c9d1d9;
+        --link-color: #58a6ff;
+        --link-hover-color: #79c0ff;
+        --border-color: #30363d;
+        --background-color: #0d1117;
+        --code-background: #161b22;
+    }
+}
