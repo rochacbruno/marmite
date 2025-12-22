@@ -4,7 +4,7 @@ slug: marmite-0-2-6-release-notes
 description: "Marmite 0.2.6 brings powerful new features including themes, series support, enhanced markdown parsing, and much more. This release includes breaking changes to the --start-theme command."
 tags: [release-notes, marmite, features, announcement]
 author: rochacbruno
-pinned: true
+pinned: false
 ---
 
 We're excited to announce Marmite 0.2.6, a release packed with powerful new features, improvements, and bug fixes. This release introduces themes, series support for grouping related content, enhanced markdown parsing capabilities, and much more.

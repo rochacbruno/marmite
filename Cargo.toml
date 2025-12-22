@@ -17,7 +17,6 @@ exclude = [
     "marmitesite/",
     "assets/",
     "python/",
-    "tests/",
     ".github/",
     "Dockerfile",
     "CONTEXT.md",
