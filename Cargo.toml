@@ -8,6 +8,22 @@ homepage = "https://marmite.blog"
 repository = "https://github.com/rochacbruno/marmite"
 readme = "README.md"
 keywords = ["web", "blog", "static", "site", "html"]
+exclude = [
+    "example/content",
+    "example/site",
+    "example/target",
+    "example/ai",
+    "example/scripts",
+    "marmitesite/",
+    "assets/",
+    "python/",
+    "tests/",
+    ".github/",
+    "Dockerfile",
+    "CONTEXT.md",
+    "CONTRIBUTING.md",
+    "docs_report.md",
+]
 
 [dependencies]
 serde = { version = "1.0.228", features = ["derive"] }
