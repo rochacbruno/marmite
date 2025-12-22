@@ -701,7 +701,7 @@ fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
             .map(|fragment| {
                 let fragment_path = content_dir.join(format!("_{fragment}.md"));
                 let fragment_content = if fragment_path.exists() {
-                    fs::read_to_string(fragment_path).unwrap_or_else(|e| {
+                    fs::read_to_string(&fragment_path).unwrap_or_else(|e| {
                         error!("Failed to read fragment {fragment}: {e}");
                         String::new()
                     })

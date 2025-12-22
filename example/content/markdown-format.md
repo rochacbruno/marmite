@@ -63,11 +63,16 @@ And on the end of the file:
 ```markdown
 [^1]: My footnote.
 [^2]: Another footnote.
+
 [1]: <https://en.wikipedia.org/wiki/Hobbit#Lifestyle> "Hobbit lifestyles"
 ```
 
 > [!TIP]  
 > Add global references to the `_references.md` file to reuse on any content.
+
+> [!IMPORTANT]  
+> Footnote definitions must be separated from other content (like link references) by a blank line. 
+> Without a blank line, subsequent content may be parsed as part of the footnote instead of as separate definitions.
 
 ### Block quote
 
@@ -673,4 +678,5 @@ Bye!
 
 [^1]: My footnote.
 [^2]: Another footnote.
+
 [1]: <https://en.wikipedia.org/wiki/Hobbit#Lifestyle> "Hobbit lifestyles"

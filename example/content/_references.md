@@ -1,4 +1,5 @@
 [^2]: Another footnote
+
 [Github]: https://github.com/rochacbruno/marmite
 [docs]: <./tag-docs.html> "Marmite Docs"
 [Enabling Comments]: <./enabling-comments.html> "Enabling Comments"
