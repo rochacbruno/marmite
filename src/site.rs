@@ -2,6 +2,7 @@ use crate::config::{Author, Marmite};
 use crate::content::{check_for_duplicate_slugs, Content, ContentBuilder, GroupedContent, Kind};
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
 use crate::gallery::Gallery;
+use crate::image_resize;
 use crate::parser::fix_wikilinks;
 use crate::shortcodes::ShortcodeProcessor;
 use crate::tera_functions::{
@@ -1673,6 +1674,24 @@ fn handle_static_artifacts(
             &media_source.display(),
             &output_folder.display()
         );
+
+        // Process image resizing if configured in extra
+        if let Some(extra) = &site_data.site.extra {
+            if extra.get("banner_image_width").is_some()
+                || extra.get("max_image_width").is_some()
+            {
+                let output_media_path = output_folder.join(&site_data.site.media_path);
+                let banner_paths = image_resize::collect_banner_paths_from_content(
+                    &site_data.posts,
+                    &site_data.pages,
+                );
+                image_resize::process_media_images(
+                    &output_media_path,
+                    &site_data.site,
+                    &banner_paths,
+                );
+            }
+        }
     }
 
     // Handle file mappings

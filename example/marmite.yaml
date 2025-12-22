@@ -84,6 +84,8 @@ publish_urls_json: true
 
 # extra data for template customization
 extra:
+  # banner_image_width: 124 # resize the banner images
+  # max_image_width: 100 # resize the max size of all the images
   colorscheme_toggle: true
   #colorscheme: dracula
   colormode: dark

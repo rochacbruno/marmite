@@ -13,6 +13,7 @@ mod embedded;
 mod feed;
 mod gallery;
 mod image_provider;
+mod image_resize;
 mod parser;
 mod re;
 mod server;
