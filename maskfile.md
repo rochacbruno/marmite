@@ -119,7 +119,7 @@ cargo watch -c -q -x "run example --force -vvvv"
 
 ~~~bash
 #!/usr/bin/env bash
-cargo set-version --version || cargo install -y cargo-edit@0.13.0
+cargo set-version --version || cargo install cargo-edit@0.13.0
 cargo set-version --package marmite --locked "$tag"
 cargo generate-lockfile
 mask fmt
