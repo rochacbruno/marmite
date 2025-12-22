@@ -55,17 +55,17 @@ import Fuse from "https://cdnjs.cloudflare.com/ajax/libs/fuse.js/7.0.0/fuse.basi
 const toggleSearchBar = () => {
     document.body.classList.toggle('show');
     document.getElementById("marmite-search-input").value = "";
-    document.getElementById("marmite-search-bar-result").innerHTML = ""; 
+    document.getElementById("marmite-search-bar-result").innerHTML = "";
     // Focus the search input if the search bar is shown
     const searchInput = document.getElementById("marmite-search-input");
-    if (document.body.classList.contains('show')) {
+    if (searchInput && document.body.classList.contains('show')) {
         searchInput.focus();
     }
 };
 
-document.getElementById("search-toggle").addEventListener("click", toggleSearchBar);
-document.getElementById("search-close").addEventListener("click", toggleSearchBar);
-document.getElementById("overlay-close").addEventListener("click", toggleSearchBar);
+document.getElementById("search-toggle")?.addEventListener("click", toggleSearchBar);
+document.getElementById("search-close")?.addEventListener("click", toggleSearchBar);
+document.getElementById("overlay-close")?.addEventListener("click", toggleSearchBar);
 
 // Event listener for keyboard shortcuts
 document.addEventListener("keydown", (event) => {

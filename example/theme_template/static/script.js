@@ -26,24 +26,26 @@ function initializeSearch() {
     const searchToggle = document.getElementById('search-toggle');
     const searchOverlay = document.getElementById('search-overlay');
     const searchClose = document.getElementById('search-close');
-    const searchInput = document.getElementById('search-input');
-    
+
     if (!searchToggle || !searchOverlay) {
         return; // Search not enabled
     }
-    
+
     // Show search overlay
     searchToggle.addEventListener('click', function(e) {
         e.preventDefault();
         searchOverlay.style.display = 'flex';
-        searchInput.focus();
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) searchInput.focus();
     });
-    
+
     // Hide search overlay
     function hideSearch() {
         searchOverlay.style.display = 'none';
-        searchInput.value = '';
-        document.getElementById('search-results').innerHTML = '';
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) searchInput.value = '';
+        const searchResults = document.getElementById('search-results');
+        if (searchResults) searchResults.innerHTML = '';
     }
     
     if (searchClose) {
@@ -69,7 +71,8 @@ function initializeSearch() {
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
             e.preventDefault();
             searchOverlay.style.display = 'flex';
-            searchInput.focus();
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.focus();
         }
     });
 }
