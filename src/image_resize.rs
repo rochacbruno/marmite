@@ -3,6 +3,7 @@ use log::{debug, error, info, warn};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+use tempfile::Builder as TempFileBuilder;
 use walkdir::WalkDir;
 
 use crate::config::Marmite;
@@ -108,8 +109,12 @@ fn is_banner_image(path: &Path) -> bool {
     filename.ends_with(".banner") || filename.contains(".banner.")
 }
 
-/// Resize an image to a maximum width, maintaining aspect ratio
-/// Only resizes if the image is larger than `max_width`
+/// Resize an image to a maximum width, maintaining aspect ratio.
+/// Only resizes if the image is larger than `max_width`.
+///
+/// Uses atomic file operations: the resized image is first written to a
+/// temporary file in the same directory, then renamed to the target path.
+/// This ensures the original image is not corrupted if resizing fails.
 fn resize_image(input_path: &Path, output_path: &Path, max_width: u32) -> Result<bool, ImageError> {
     let img = image::open(input_path)?;
     let (width, height) = img.dimensions();
@@ -129,7 +134,32 @@ fn resize_image(input_path: &Path, output_path: &Path, max_width: u32) -> Result
     let new_height = (f64::from(height) * (f64::from(max_width) / f64::from(width))) as u32;
 
     let resized = img.resize(max_width, new_height, FilterType::Lanczos3);
-    resized.save(output_path)?;
+
+    // Use atomic write: save to temp file first, then rename
+    // Temp file is created in the same directory to ensure atomic rename works
+    // (rename across filesystems is not atomic)
+    let output_dir = output_path.parent().unwrap_or(Path::new("."));
+
+    // Preserve file extension so image library can determine output format
+    let extension = output_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| format!(".{e}"))
+        .unwrap_or_default();
+
+    let temp_file = TempFileBuilder::new()
+        .suffix(&extension)
+        .tempfile_in(output_dir)
+        .map_err(|e| ImageError::IoError(std::io::Error::other(e.to_string())))?;
+
+    // Save to temp file
+    resized.save(temp_file.path())?;
+
+    // Atomically rename temp file to final destination
+    // persist() consumes the NamedTempFile and renames it, preventing automatic cleanup
+    temp_file
+        .persist(output_path)
+        .map_err(|e| ImageError::IoError(std::io::Error::other(e.to_string())))?;
 
     debug!(
         "Resized {} from {}x{} to {}x{}",

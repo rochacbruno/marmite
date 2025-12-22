@@ -198,6 +198,47 @@ fn test_resize_image() {
 }
 
 #[test]
+fn test_resize_image_in_place_atomic() {
+    let temp_dir = TempDir::new().unwrap();
+    let image_path = temp_dir.path().join("inplace.jpg");
+
+    // Create a 1000x500 test image
+    let img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(1000, 500);
+    img.save(&image_path).unwrap();
+
+    // Get original file metadata for comparison
+    let original_metadata = std::fs::metadata(&image_path).unwrap();
+    let original_size = original_metadata.len();
+
+    // Resize in-place (input_path == output_path)
+    let resized = resize_image(&image_path, &image_path, 800).unwrap();
+    assert!(resized);
+
+    // Verify the file was replaced atomically
+    let resized_img = image::open(&image_path).unwrap();
+    assert_eq!(resized_img.width(), 800);
+    assert_eq!(resized_img.height(), 400);
+
+    // Verify no temp files remain in the directory
+    let remaining_files: Vec<_> = std::fs::read_dir(temp_dir.path())
+        .unwrap()
+        .filter_map(Result::ok)
+        .collect();
+    assert_eq!(
+        remaining_files.len(),
+        1,
+        "Only the resized image should remain"
+    );
+
+    // Verify file size changed (resized should be different from original)
+    let new_size = std::fs::metadata(&image_path).unwrap().len();
+    assert_ne!(
+        original_size, new_size,
+        "File size should change after resize"
+    );
+}
+
+#[test]
 fn test_resize_image_smaller_than_max() {
     let temp_dir = TempDir::new().unwrap();
     let input_path = temp_dir.path().join("small.jpg");
