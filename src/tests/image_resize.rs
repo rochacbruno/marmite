@@ -67,6 +67,68 @@ fn test_get_resize_settings_no_extra() {
     assert_eq!(max_width, None);
 }
 
+// Path normalization tests
+#[test]
+fn test_normalize_banner_path_simple_media_prefix() {
+    assert_eq!(normalize_banner_path("media/file.jpg"), "file.jpg");
+    assert_eq!(
+        normalize_banner_path("media/subdir/file.jpg"),
+        "subdir/file.jpg"
+    );
+}
+
+#[test]
+fn test_normalize_banner_path_relative_with_dot() {
+    assert_eq!(normalize_banner_path("./media/file.jpg"), "file.jpg");
+    assert_eq!(
+        normalize_banner_path("./media/subdir/file.jpg"),
+        "subdir/file.jpg"
+    );
+}
+
+#[test]
+fn test_normalize_banner_path_parent_dir() {
+    assert_eq!(normalize_banner_path("../media/file.jpg"), "file.jpg");
+    assert_eq!(normalize_banner_path("../../media/file.jpg"), "file.jpg");
+}
+
+#[test]
+fn test_normalize_banner_path_windows_backslashes() {
+    assert_eq!(normalize_banner_path("media\\file.jpg"), "file.jpg");
+    assert_eq!(
+        normalize_banner_path("media\\subdir\\file.jpg"),
+        "subdir/file.jpg"
+    );
+    assert_eq!(normalize_banner_path(".\\media\\file.jpg"), "file.jpg");
+}
+
+#[test]
+fn test_normalize_banner_path_no_media_prefix() {
+    assert_eq!(normalize_banner_path("file.jpg"), "file.jpg");
+    assert_eq!(normalize_banner_path("subdir/file.jpg"), "subdir/file.jpg");
+}
+
+#[test]
+fn test_normalize_banner_path_case_insensitive_media() {
+    assert_eq!(normalize_banner_path("Media/file.jpg"), "file.jpg");
+    assert_eq!(normalize_banner_path("MEDIA/file.jpg"), "file.jpg");
+}
+
+#[test]
+fn test_normalize_banner_path_only_media() {
+    // Edge case: path is just "media" with no file
+    assert_eq!(normalize_banner_path("media"), "");
+    assert_eq!(normalize_banner_path("./media"), "");
+}
+
+#[test]
+fn test_normalize_banner_path_mixed_separators() {
+    assert_eq!(
+        normalize_banner_path("./media\\subdir/file.jpg"),
+        "subdir/file.jpg"
+    );
+}
+
 #[test]
 fn test_is_image_file() {
     assert!(is_image_file(Path::new("test.jpg")));

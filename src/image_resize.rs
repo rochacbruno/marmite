@@ -2,7 +2,7 @@ use image::{imageops::FilterType, GenericImageView, ImageError};
 use log::{debug, error, info, warn};
 use std::collections::HashSet;
 use std::fs;
-use std::path::Path;
+use std::path::{Component, Path, PathBuf};
 use walkdir::WalkDir;
 
 use crate::config::Marmite;
@@ -115,6 +115,51 @@ fn resize_image(input_path: &Path, output_path: &Path, max_width: u32) -> Result
     Ok(true)
 }
 
+/// Normalize a banner image path by removing leading media directory prefixes.
+/// Handles cross-platform paths (both forward slashes and backslashes) and
+/// various relative path formats.
+///
+/// # Examples
+/// - `"media/file.jpg"` -> `"file.jpg"`
+/// - `"./media/file.jpg"` -> `"file.jpg"`
+/// - `"media\\file.jpg"` -> `"file.jpg"` (Windows)
+/// - `"../media/file.jpg"` -> `"file.jpg"`
+/// - `"file.jpg"` -> `"file.jpg"` (unchanged)
+/// - `"subdir/file.jpg"` -> `"subdir/file.jpg"` (no media prefix)
+fn normalize_banner_path(path_str: &str) -> String {
+    // Normalize Windows backslashes to forward slashes for consistent handling
+    let normalized_str = path_str.replace('\\', "/");
+    let path = Path::new(&normalized_str);
+
+    let components: Vec<Component> = path.components().collect();
+
+    // Find the index after which we should keep components
+    // Skip CurDir (.), ParentDir (..), and "media" directory
+    let mut start_idx = 0;
+    for (i, component) in components.iter().enumerate() {
+        match component {
+            Component::CurDir | Component::ParentDir => {
+                start_idx = i + 1;
+            }
+            Component::Normal(name) if name.to_string_lossy().eq_ignore_ascii_case("media") => {
+                start_idx = i + 1;
+                break; // Stop after finding media directory
+            }
+            _ => break, // Stop at first normal component that isn't "media"
+        }
+    }
+
+    // Rebuild the path from remaining components
+    if start_idx >= components.len() {
+        // Edge case: path was only "media" or similar
+        return String::new();
+    }
+
+    let remaining: PathBuf = components[start_idx..].iter().collect();
+    // Convert back to string with forward slashes for consistent storage
+    remaining.to_string_lossy().replace('\\', "/")
+}
+
 /// Collect all banner image paths from content frontmatter
 pub fn collect_banner_paths_from_content(
     posts: &[crate::content::Content],
@@ -124,12 +169,10 @@ pub fn collect_banner_paths_from_content(
 
     for content in posts.iter().chain(pages.iter()) {
         if let Some(banner) = &content.banner_image {
-            // Normalize the path (remove leading media/ if present)
-            let normalized = banner
-                .trim_start_matches("media/")
-                .trim_start_matches("./media/")
-                .to_string();
-            banner_paths.insert(normalized);
+            let normalized = normalize_banner_path(banner);
+            if !normalized.is_empty() {
+                banner_paths.insert(normalized);
+            }
         }
     }
 
