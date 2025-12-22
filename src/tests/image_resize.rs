@@ -7,6 +7,67 @@ use std::collections::{HashMap, HashSet};
 use tempfile::TempDir;
 
 #[test]
+fn test_validate_width_valid_values() {
+    assert_eq!(validate_width(1, "test"), Some(1));
+    assert_eq!(validate_width(800, "test"), Some(800));
+    assert_eq!(validate_width(10000, "test"), Some(10000));
+}
+
+#[test]
+fn test_validate_width_invalid_zero() {
+    assert_eq!(validate_width(0, "test"), None);
+}
+
+#[test]
+fn test_validate_width_invalid_too_large() {
+    assert_eq!(validate_width(10001, "test"), None);
+    assert_eq!(validate_width(u32::MAX, "test"), None);
+}
+
+#[test]
+fn test_get_resize_settings_valid_config() {
+    let mut config = Marmite::new();
+    let mut extra = HashMap::new();
+    extra.insert("max_image_width".to_string(), Value::Number(800.into()));
+    extra.insert("banner_image_width".to_string(), Value::Number(1200.into()));
+    config.extra = Some(extra);
+
+    let (banner_width, max_width) = get_resize_settings(&config);
+    assert_eq!(banner_width, Some(1200));
+    assert_eq!(max_width, Some(800));
+}
+
+#[test]
+fn test_get_resize_settings_invalid_zero_width() {
+    let mut config = Marmite::new();
+    let mut extra = HashMap::new();
+    extra.insert("max_image_width".to_string(), Value::Number(0.into()));
+    config.extra = Some(extra);
+
+    let (_, max_width) = get_resize_settings(&config);
+    assert_eq!(max_width, None);
+}
+
+#[test]
+fn test_get_resize_settings_invalid_too_large() {
+    let mut config = Marmite::new();
+    let mut extra = HashMap::new();
+    extra.insert("max_image_width".to_string(), Value::Number(99999.into()));
+    config.extra = Some(extra);
+
+    let (_, max_width) = get_resize_settings(&config);
+    assert_eq!(max_width, None);
+}
+
+#[test]
+fn test_get_resize_settings_no_extra() {
+    let config = Marmite::new();
+    let (banner_width, max_width) = get_resize_settings(&config);
+    assert_eq!(banner_width, None);
+    assert_eq!(max_width, None);
+}
+
+#[test]
 fn test_is_image_file() {
     assert!(is_image_file(Path::new("test.jpg")));
     assert!(is_image_file(Path::new("test.JPEG")));

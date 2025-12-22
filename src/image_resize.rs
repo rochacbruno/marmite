@@ -1,11 +1,28 @@
 use image::{imageops::FilterType, GenericImageView, ImageError};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 use walkdir::WalkDir;
 
 use crate::config::Marmite;
+
+/// Minimum allowed image width for resize configuration (in pixels)
+const MIN_IMAGE_WIDTH: u32 = 1;
+/// Maximum allowed image width for resize configuration (in pixels)
+const MAX_IMAGE_WIDTH: u32 = 10000;
+
+/// Validate that a width value is within acceptable limits
+fn validate_width(value: u32, config_key: &str) -> Option<u32> {
+    if (MIN_IMAGE_WIDTH..=MAX_IMAGE_WIDTH).contains(&value) {
+        Some(value)
+    } else {
+        warn!(
+            "Invalid value for '{config_key}': {value} (must be between {MIN_IMAGE_WIDTH} and {MAX_IMAGE_WIDTH} pixels). Setting ignored."
+        );
+        None
+    }
+}
 
 /// Get image resize settings from config.extra
 fn get_resize_settings(config: &Marmite) -> (Option<u32>, Option<u32>) {
@@ -16,12 +33,28 @@ fn get_resize_settings(config: &Marmite) -> (Option<u32>, Option<u32>) {
     let banner_width = extra
         .get("banner_image_width")
         .and_then(serde_yaml::Value::as_u64)
-        .and_then(|v| u32::try_from(v).ok());
+        .and_then(|v| u32::try_from(v).ok())
+        .and_then(|v| validate_width(v, "banner_image_width"));
 
     let max_width = extra
         .get("max_image_width")
         .and_then(serde_yaml::Value::as_u64)
-        .and_then(|v| u32::try_from(v).ok());
+        .and_then(|v| u32::try_from(v).ok())
+        .and_then(|v| validate_width(v, "max_image_width"));
+
+    // Log configuration when at least one setting is enabled
+    match (banner_width, max_width) {
+        (Some(bw), Some(mw)) => {
+            info!("Image resize enabled: banner_image_width={bw}px, max_image_width={mw}px");
+        }
+        (Some(bw), None) => {
+            info!("Image resize enabled: banner_image_width={bw}px");
+        }
+        (None, Some(mw)) => {
+            info!("Image resize enabled: max_image_width={mw}px");
+        }
+        (None, None) => {}
+    }
 
     (banner_width, max_width)
 }
