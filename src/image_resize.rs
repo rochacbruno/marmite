@@ -3,8 +3,12 @@ use log::{debug, error, info, warn};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+use std::time::Instant;
 use tempfile::Builder as TempFileBuilder;
 use walkdir::WalkDir;
+
+/// Progress reporting interval: log every N images processed
+const PROGRESS_INTERVAL: usize = 10;
 
 use crate::config::Marmite;
 
@@ -237,8 +241,47 @@ pub fn collect_banner_paths_from_content(
     banner_paths
 }
 
-/// Process and resize images in the media directory
-/// This function should be called after copying media to output
+/// Collect all eligible image paths for resizing, filtering out non-images and special directories.
+fn collect_image_paths(output_media_path: &Path) -> Vec<PathBuf> {
+    WalkDir::new(output_media_path)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_file())
+        .filter_map(|entry| {
+            let path = entry.path();
+
+            // Skip thumbnails directory
+            if path
+                .components()
+                .any(|c| c.as_os_str() == "thumbnails" || c.as_os_str() == "_resized")
+            {
+                return None;
+            }
+
+            // Skip vector and icon formats with debug logging
+            if is_vector_or_icon_image(path) {
+                debug!(
+                    "Skipped vector/icon image (not resizable): {}",
+                    path.display()
+                );
+                return None;
+            }
+
+            // Skip non-image files
+            if !is_image_file(path) {
+                return None;
+            }
+
+            Some(path.to_path_buf())
+        })
+        .collect()
+}
+
+/// Process and resize images in the media directory.
+/// This function should be called after copying media to output.
+///
+/// Provides progress reporting for large image collections, logging
+/// progress every 10 images and total elapsed time at completion.
 pub fn process_media_images(
     output_media_path: &Path,
     config: &Marmite,
@@ -251,40 +294,27 @@ pub fn process_media_images(
         return;
     }
 
-    info!("Processing images for resizing...");
+    // Collect all image paths first for progress reporting
+    let image_paths = collect_image_paths(output_media_path);
+    let total_images = image_paths.len();
 
+    if total_images == 0 {
+        debug!("No images found to process");
+        return;
+    }
+
+    info!("Processing {total_images} images for resizing...");
+
+    let start_time = Instant::now();
     let mut resized_count = 0;
     let mut skipped_count = 0;
+    let mut error_count = 0;
+    let mut processed_count = 0;
 
-    for entry in WalkDir::new(output_media_path)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file())
-    {
-        let path = entry.path();
+    // Calculate progress interval: every 10 images or 10% of total, whichever is larger
+    let progress_step = (total_images / 10).max(PROGRESS_INTERVAL);
 
-        // Skip thumbnails directory
-        if path
-            .components()
-            .any(|c| c.as_os_str() == "thumbnails" || c.as_os_str() == "_resized")
-        {
-            continue;
-        }
-
-        // Skip vector and icon formats with debug logging
-        if is_vector_or_icon_image(path) {
-            debug!(
-                "Skipped vector/icon image (not resizable): {}",
-                path.display()
-            );
-            continue;
-        }
-
-        // Skip non-image files
-        if !is_image_file(path) {
-            continue;
-        }
-
+    for path in &image_paths {
         // Determine if this is a banner image
         let relative_path = path
             .strip_prefix(output_media_path)
@@ -301,21 +331,40 @@ pub fn process_media_images(
             match resize_image(path, path, width) {
                 Ok(true) => {
                     resized_count += 1;
-                    info!("Resized: {} (max width: {}px)", path.display(), width);
+                    debug!("Resized: {} (max width: {width}px)", path.display());
                 }
                 Ok(false) => {
                     skipped_count += 1;
                     debug!("Skipped (already smaller): {}", path.display());
                 }
                 Err(e) => {
-                    error!("Failed to resize {}: {}", path.display(), e);
+                    error_count += 1;
+                    error!("Failed to resize {}: {e}", path.display());
                 }
             }
+        } else {
+            skipped_count += 1;
+        }
+
+        processed_count += 1;
+
+        // Log progress at regular intervals
+        if processed_count % progress_step == 0 && processed_count < total_images {
+            let percent = (processed_count * 100) / total_images;
+            info!(
+                "Progress: {processed_count}/{total_images} ({percent}%) - {resized_count} resized, {skipped_count} unchanged"
+            );
         }
     }
 
-    if resized_count > 0 || skipped_count > 0 {
-        info!("Image processing complete: {resized_count} resized, {skipped_count} unchanged");
+    // Report final statistics with elapsed time
+    let elapsed = start_time.elapsed();
+    let elapsed_secs = elapsed.as_secs_f64();
+
+    if resized_count > 0 || skipped_count > 0 || error_count > 0 {
+        info!(
+            "Image processing complete in {elapsed_secs:.2}s: {resized_count} resized, {skipped_count} unchanged, {error_count} errors"
+        );
     }
 }
 
