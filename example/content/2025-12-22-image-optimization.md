@@ -18,6 +18,8 @@ The image resize feature:
 - **Preserves originals** in your source directory (only output copies are resized)
 - **Supports banner images** with separate size settings for hero/banner images
 - **Uses high-quality resampling** with configurable filter algorithms
+- **Parallel processing** - uses all CPU cores for faster builds
+- **Incremental builds** - skips unchanged images on subsequent builds
 
 ### When to Use This Feature
 
@@ -30,9 +32,12 @@ This feature is ideal when:
 
 ## Configuration Options
 
-Add these settings to the `extra` section of your `marmite.yaml`:
+Add these settings to your `marmite.yaml`:
 
 ```yaml
+# Skip image resizing entirely (for fast development builds)
+skip_image_resize: false
+
 extra:
   # Maximum width for regular images (in pixels)
   max_image_width: 800
@@ -49,9 +54,22 @@ extra:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `max_image_width` | integer | none | Maximum width for regular images. Images wider than this will be resized. |
-| `banner_image_width` | integer | none | Maximum width for banner images. Allows larger sizes for hero images. |
-| `resize_filter` | string | `"quality"` | Resampling algorithm. See [Filter Options](#filter-options) below. |
+| `skip_image_resize` | boolean | `false` | Skip all image resizing (top-level config) |
+| `max_image_width` | integer | none | Maximum width for regular images (in `extra`) |
+| `banner_image_width` | integer | none | Maximum width for banner images (in `extra`) |
+| `resize_filter` | string | `"quality"` | Resampling algorithm (in `extra`) |
+
+### CLI Flag
+
+You can also skip image resizing via command line:
+
+```bash
+# Skip image resizing for this build
+marmite mysite --skip-image-resize
+
+# Useful for quick development iterations
+marmite mysite --serve --skip-image-resize
+```
 
 ### Filter Options
 
@@ -141,12 +159,25 @@ extra:
 
 ```yaml
 # marmite.yaml
+skip_image_resize: true  # Skip resizing entirely
+```
+
+Or use the CLI flag:
+
+```bash
+marmite mysite --skip-image-resize
+```
+
+### Production with Fast Filter
+
+```yaml
+# marmite.yaml
 extra:
   max_image_width: 800
   resize_filter: "fast"
 ```
 
-Uses faster algorithm for quicker development builds.
+Uses faster algorithm for quicker builds while still resizing.
 
 ### High-Quality Photography Site
 
@@ -177,6 +208,7 @@ Larger sizes with highest quality resampling for photography portfolios.
 2. **Use appropriate formats** - WebP or AVIF for best compression
 3. **Consider retina displays** - 2x your target display size
 4. **Test different filter settings** - Balance speed vs. quality for your needs
+5. **Use `--skip-image-resize` during development** - Faster iteration cycles
 
 ### When NOT to Use This Feature
 
@@ -190,12 +222,30 @@ Larger sizes with highest quality resampling for photography portfolios.
 During site generation:
 
 1. Marmite scans the output media directory
-2. For each supported image format:
+2. Loads previous state for incremental builds
+3. For each supported image format (in parallel):
    - Checks if it's a banner image (filename or frontmatter)
+   - Checks if the image has changed since last build
    - Compares current width to target width
-   - Resizes if larger, skips if already smaller
-3. Uses atomic file operations (safe even if interrupted)
-4. Reports statistics on completion
+   - Resizes if needed, skips if unchanged or already smaller
+4. Uses atomic file operations (safe even if interrupted)
+5. Saves state for next build
+6. Reports statistics on completion
+
+### Parallel Processing
+
+Image resizing uses all available CPU cores via the rayon library. This significantly speeds up processing for sites with many images.
+
+### Incremental Builds
+
+Marmite tracks processed images in a state file (`.marmite-resize-state.json`). On subsequent builds:
+
+- **Unchanged images** are skipped (shown as "cached")
+- **Modified images** are reprocessed
+- **New images** are processed
+- **Config changes** trigger full reprocessing
+
+This makes rebuilds much faster when only a few images change.
 
 ### Build Output
 
@@ -203,9 +253,16 @@ When image resizing is active, you'll see output like:
 
 ```
 [INFO] Image resize enabled: max_image_width=800px, banner_image_width=1200px
-[INFO] Processing 45 images for resizing...
-[INFO] Progress: 20/45 (44%) - 12 resized, 8 unchanged
-[INFO] Image processing complete in 3.45s: 28 resized, 17 unchanged, 0 errors
+[INFO] Processing 45 images for resizing (parallel)...
+[INFO] Progress: 20/45 (44%)
+[INFO] Image processing complete in 1.23s: 5 resized, 10 unchanged, 30 cached, 0 errors
+```
+
+On subsequent builds with unchanged images:
+
+```
+[INFO] Processing 45 images for resizing (parallel)...
+[INFO] Image processing complete in 0.15s: 0 resized, 0 unchanged, 45 cached, 0 errors
 ```
 
 ## Troubleshooting
@@ -216,6 +273,11 @@ When image resizing is active, you'll see output like:
 ```yaml
 extra:
   max_image_width: 800  # Must be in 'extra' section
+```
+
+**Check if skipping is enabled:**
+```yaml
+skip_image_resize: false  # Must be false or omitted
 ```
 
 **Check image dimensions:**
@@ -232,9 +294,19 @@ Only supported raster formats are resized. SVG and ICO are skipped.
 
 ### Build is Slow
 
-- Use `resize_filter: "fast"` for development
-- Only enable resizing for production builds
-- Consider pre-optimizing large images
+- Use `resize_filter: "fast"` for faster processing
+- Use `--skip-image-resize` during development
+- Incremental builds are automatic - second build will be faster
+- Consider pre-optimizing large images before adding to your site
+
+### Cached Images Not Updating
+
+If you modify an image but it's not being reprocessed:
+
+1. Delete the state file: `rm output/media/.marmite-resize-state.json`
+2. Rebuild the site
+
+Or change the resize configuration (any change triggers full reprocessing).
 
 ### Error Messages
 
@@ -244,6 +316,9 @@ Only supported raster formats are resized. SVG and ICO are skipped.
 **"Failed to resize [path]"**
 - Check if the file is a valid image
 - Ensure file permissions allow reading/writing
+
+**"Image resize configuration changed, reprocessing all images"**
+- This is normal when you change `max_image_width`, `banner_image_width`, or `resize_filter`
 
 ## Verifying Results
 
@@ -265,17 +340,33 @@ ls -lh content/media/large-photo.jpg
 ls -lh output/media/large-photo.jpg
 ```
 
-## Performance Impact
+Check the state file for processed images:
 
-| Images | Filter | Approximate Time |
-|--------|--------|------------------|
-| 10 | quality | ~2 seconds |
-| 100 | quality | ~20 seconds |
-| 100 | fast | ~8 seconds |
-| 1000 | fast | ~80 seconds |
+```bash
+cat output/media/.marmite-resize-state.json | jq '.images | keys'
+```
+
+## Performance
+
+### Parallel Processing Speedup
+
+| Images | Sequential | Parallel (8 cores) | Speedup |
+|--------|------------|-------------------|---------|
+| 50 | ~10s | ~2s | 5x |
+| 200 | ~40s | ~6s | 6-7x |
+| 500 | ~100s | ~15s | 6-7x |
+
+### Incremental Build Performance
+
+| Scenario | Time |
+|----------|------|
+| First build (100 images) | ~6s |
+| Rebuild (no changes) | ~0.2s |
+| Rebuild (5 images changed) | ~0.5s |
+| Rebuild (config changed) | ~6s |
 
 Times vary based on image sizes and hardware.
 
 ---
 
-The image optimization feature helps ensure your Marmite site loads quickly while maintaining visual quality. Configure it once, and every build automatically optimizes your images.
+The image optimization feature helps ensure your Marmite site loads quickly while maintaining visual quality. With parallel processing and incremental builds, it's fast enough for development workflows while thorough enough for production deployments.

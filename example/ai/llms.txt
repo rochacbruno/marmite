@@ -1,6 +1,6 @@
 # Marmite Documentation
 
-**Mar**kdown **M**akes S**ite**s  
+**Mar**kdown **M**akes S**ite**s
 
 > Marmite is a fast, minimal static site generator written in Rust that converts Markdown files into HTML websites. It's designed for simplicity and includes features like live reloading, RSS feeds, and a built-in development server.
 
@@ -24,7 +24,7 @@ $ marmite myblog --init-site \
     --tagline "My Articles and Notes" \
     --colorscheme nord \
     --toc true \
-    --enable-search true 
+    --enable-search true
 
 $ marmite myblog --new "My First Blog Post" -t "new,post"
 
@@ -63,6 +63,7 @@ $ marmite myblog --serve
 
 ### Features
 
+- [Image Optimization and Resizing](https://marmite.blog/image-optimization-and-resizing.html): Automatic image resizing with parallel processing and incremental builds
 - [Image Gallery](https://marmite.blog/image-gallery.html): Create and display image galleries with automatic thumbnail generation
 - [Shortcodes Guide](https://marmite.blog/shortcodes-guide.html): Using shortcodes to add dynamic content to posts and pages
 - [Shortcodes Demo](https://marmite.blog/shortcodes-demo.html): Examples of all available shortcodes including YouTube, Spotify, cards, and content listings
@@ -104,6 +105,7 @@ $ marmite myblog --serve
 
 ## Key Features
 
+- **Image Optimization**: Automatic image resizing with configurable max widths, parallel processing using all CPU cores, and incremental builds that skip unchanged images
 - **Shortcodes**: Insert dynamic content using simple markers like `<!-- .youtube id=VIDEO_ID -->`, `<!-- .spotify url="album/ID" -->`, or `<!-- .card slug=content-slug -->`
 - **Enhanced Tera Functions**: New template functions including `get_data_by_slug()` for content lookup and enhanced `group()` function with sorting and limiting
 - **Content Cards**: Display linked previews of any content (posts, pages, tags, authors, series) with automatic data resolution
