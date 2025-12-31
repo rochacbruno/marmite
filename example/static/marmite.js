@@ -42,7 +42,7 @@ const themeSwitcher = {
     
     // Set scheme
     set scheme(scheme) {
-        if (scheme == "auto") {
+        if (scheme == "auto" || scheme == null) {
             this._scheme = this.preferredColorScheme;
         } else if (scheme == "dark" || scheme == "light") {
             this._scheme = scheme;
