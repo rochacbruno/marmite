@@ -83,6 +83,13 @@ Chris Brown/Code World, No Blanket Research Group, https://code-world-no-blanket
 </a>
 </article>
 
+<article>
+<h4>blog do Fabiano</h4>
+<a class="card" href="https://eufabiano.site/" target="_blank" title="blog do Fabiano">
+    <img src="media/showcase/fabiano-blog.png" alt="blog do Fabiano" width="300" />
+</a>
+</article>
+
 ---
 
 ### Add your site
