@@ -1,10 +1,10 @@
 /* https://picocss.com/docs */
 @font-face {
-  font-family: "Atkinson Hyperlegible";
-  src: url("./Atkinson-Hyperlegible-Regular-102.woff");
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("./AtkinsonHyperlegibleNext-Regular.woff2");
 }
 :root {
-  --pico-font-family: "Atkinson Hyperlegible", sans-serif;
+  --pico-font-family: "Atkinson Hyperlegible Next", sans-serif;
   --pico-color-grey-50: #f1f1f1;
   --pico-color-azure-50: #e9f2fc;
   --pico-color-azure-200: #9bccfd;

@@ -39,12 +39,12 @@ The theme uses a flexible layout system. You can customize:
 
 ### Typography
 
-The theme includes the accessible Atkinson Hyperlegible font for better readability:
+The theme includes the accessible Atkinson Hyperlegible Next font for better readability:
 
 ```css
 @font-face {
-  font-family: "Atkinson Hyperlegible";
-  src: url("./Atkinson-Hyperlegible-Regular-102.woff");
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("./AtkinsonHyperlegibleNext-Regular.woff2");
 }
 ```
 
@@ -145,7 +145,7 @@ About page content...
 
 The theme comes with these pre-built assets:
 
-- **Atkinson-Hyperlegible-Regular-102.woff**: Accessible web font for better readability
+- **AtkinsonHyperlegibleNext-Regular.woff2**: Accessible web font for better readability
 - **avatar-placeholder.png**: Default avatar image for authors
 - **favicon.ico**: Site favicon
 - **logo.png**: Default site logo placeholder
@@ -162,7 +162,7 @@ To customize the theme further:
 2. **JavaScript**: Edit `static/script.js`  
 3. **Templates**: Modify files in `templates/`
 4. **Assets**: Replace or add images, fonts, etc. in `static/`
-5. **Fonts**: The theme includes Atkinson Hyperlegible font, or you can add your own
+5. **Fonts**: The theme includes Atkinson Hyperlegible Next font, or you can add your own
 
 ## Browser Support
 
@@ -179,7 +179,7 @@ The theme is optimized for performance:
 
 - **CSS**: Single file with CSS custom properties for easy theming
 - **JavaScript**: Minimal, focused functionality
-- **Web font**: Single Atkinson Hyperlegible font file (~40KB) for accessibility
+- **Web font**: Single Atkinson Hyperlegible Next font file for accessibility
 - **System fonts**: Used as fallback for fast loading
 - **No external dependencies** (except for search.js from Marmite)
 - **Embedded assets**: All theme files are embedded in Marmite binary
