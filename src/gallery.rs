@@ -32,7 +32,6 @@ pub enum GalleryOrder {
     Desc,
 }
 
-
 #[derive(Debug, Deserialize)]
 struct ImageDescription {
     filename: String,

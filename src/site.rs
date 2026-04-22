@@ -2812,7 +2812,12 @@ fn render_html(
     output_dir: &Path,
 ) -> Result<(), String> {
     render_html_with_shortcodes(
-        template, filename, tera, context, output_dir, &PostProcessors::default(),
+        template,
+        filename,
+        tera,
+        context,
+        output_dir,
+        &PostProcessors::default(),
     )
 }
 
