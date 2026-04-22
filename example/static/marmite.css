@@ -650,6 +650,12 @@ th {
   color: inherit;
 }
 
+.marmite-code .marmite-code-inner:not(.language-mermaid) {
+  background-color: var(--pico-code-background-color);
+  padding: 0.3em;
+  border-radius: 4px;
+}
+
 select.colorscheme-toggle {
   /* background-color: var(--pico-card-background-color); */
   background-color: transparent;
