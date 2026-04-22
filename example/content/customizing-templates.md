@@ -353,8 +353,21 @@ With the above HTML your index page will look like:
 Just create a `static` folder side by side with your `templates` folder and add
 all `css`, `js`, `fonts` etc on this folder.
 
-Marmite will copy this folder to the output site, if this folder is not found
-marmite will then copy the embedded static files to the static folder.
+When no theme is set, Marmite first writes the embedded static files (CSS, JS, fonts,
+colorschemes) to the output, then copies your `static/` folder on top. This means
+your files override the embedded defaults while keeping any embedded files you
+didn't replace.
+
+> [!WARNING]
+> If you override a core file like `marmite.css`, `search.js`, `pico.min.css`,
+> `marmite.js`, a font, or a colorscheme, Marmite will warn you when the embedded
+> version differs from yours. This can happen after upgrading Marmite, when the
+> embedded file contains fixes or improvements. To resolve the drift, review the
+> changes and either update your copy or delete it from your `static/` folder to
+> use the embedded version.
+
+When a theme is set, static files come entirely from the theme's `static/` folder
+and the embedded files are not used.
 
 ## URL 
 

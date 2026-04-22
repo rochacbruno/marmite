@@ -50,9 +50,66 @@ fn test_site_generation_with_static_files() {
         String::from_utf8_lossy(&output.stderr)
     );
 
-    // Verify static files were copied
+    // Verify user static files were copied
     assert!(output_dir.join("static").join("style.css").exists());
     assert!(output_dir.join("static").join("script.js").exists());
+
+    // Verify embedded static files are also present (merged)
+    assert!(output_dir.join("static").join("marmite.css").exists());
+    assert!(output_dir.join("static").join("marmite.js").exists());
+    assert!(output_dir.join("static").join("pico.min.css").exists());
+    assert!(output_dir.join("static").join("search.js").exists());
+}
+
+#[test]
+fn test_static_drift_warning_for_core_files() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+    fs::create_dir_all(input_dir.join("static")).unwrap();
+
+    let config_path = input_dir.join("marmite.yaml");
+    fs::write(&config_path, "name: Site").unwrap();
+
+    // Create a modified core file that differs from embedded
+    fs::write(
+        input_dir.join("static").join("search.js"),
+        "// my customized search",
+    )
+    .unwrap();
+
+    fs::write(input_dir.join("content").join("page.md"), "# Page").unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(output.status.success());
+
+    // The user's customized version should be in the output (user wins)
+    let output_search_js = fs::read_to_string(output_dir.join("static").join("search.js")).unwrap();
+    assert_eq!(output_search_js, "// my customized search");
+
+    // Embedded files the user didn't override should still be present
+    assert!(output_dir.join("static").join("marmite.css").exists());
+    assert!(output_dir.join("static").join("pico.min.css").exists());
+
+    // Drift warning should appear in stderr
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("search.js") && stderr.contains("differs from the embedded version"),
+        "Expected drift warning for search.js in stderr, got: {stderr}"
+    );
 }
 
 #[test]

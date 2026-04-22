@@ -1,6 +1,6 @@
 use crate::config::{Author, Marmite};
 use crate::content::{check_for_duplicate_slugs, Content, ContentBuilder, GroupedContent, Kind};
-use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
+use crate::embedded::{generate_static, Templates, EMBEDDED_STATIC, EMBEDDED_TERA};
 use crate::gallery::Gallery;
 use crate::highlight::{self, MarmiteHighlighter};
 use crate::image_resize;
@@ -15,7 +15,7 @@ use core::str;
 use fs_extra::dir::{copy as dircopy, CopyOptions};
 use glob::glob;
 use hotwatch::{Event, EventKind, Hotwatch};
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use rayon::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
@@ -1663,6 +1663,40 @@ fn write_code_highlight_css(site: &Marmite, output_folder: &Arc<std::path::PathB
     }
 }
 
+const CORE_STATIC_FILES: &[&str] = &[
+    "marmite.css",
+    "marmite.js",
+    "search.js",
+    "pico.min.css",
+    "AtkinsonHyperlegibleNext-Regular.woff2",
+];
+
+fn is_core_static_file(name: &str) -> bool {
+    CORE_STATIC_FILES.contains(&name) || name.starts_with("colorschemes/")
+}
+
+fn check_static_drift(user_static_dir: &Path) {
+    for (name, embedded_data) in EMBEDDED_STATIC.iter() {
+        if !is_core_static_file(name) {
+            continue;
+        }
+        let user_file = user_static_dir.join(name);
+        if user_file.exists() {
+            if let Ok(user_data) = fs::read(&user_file) {
+                if user_data != *embedded_data {
+                    warn!(
+                        "Static file '{}' differs from the embedded version. \
+                         The embedded version may contain updates or fixes. \
+                         To use the embedded version, remove '{}' from your static folder.",
+                        name,
+                        user_file.display()
+                    );
+                }
+            }
+        }
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 fn handle_static_artifacts(
     input_folder: &Path,
@@ -1671,9 +1705,12 @@ fn handle_static_artifacts(
     content_dir: &std::path::Path,
 ) {
     let static_source = site_data.site.get_static_path(input_folder);
-    if static_source.is_dir() {
+    let has_theme = site_data.site.theme.is_some();
+
+    if has_theme && static_source.is_dir() {
+        // Theme provides its own complete static files
         let mut options = CopyOptions::new();
-        options.overwrite = true; // Overwrite files if they already exist
+        options.overwrite = true;
 
         if let Err(e) = dircopy(&static_source, &**output_folder, &options) {
             error!("Failed to copy static directory: {e:?}");
@@ -1686,7 +1723,29 @@ fn handle_static_artifacts(
             &output_folder.display()
         );
     } else {
-        generate_static(&output_folder.join(site_data.site.static_path.clone()));
+        // No theme (or theme without static dir) - use embedded as base
+        let output_static = output_folder.join(site_data.site.static_path.clone());
+        generate_static(&output_static);
+
+        // Copy user's own static files on top if they exist
+        let user_static = input_folder.join(&site_data.site.static_path);
+        if user_static.is_dir() {
+            check_static_drift(&user_static);
+
+            let mut options = CopyOptions::new();
+            options.overwrite = true;
+
+            if let Err(e) = dircopy(&user_static, &**output_folder, &options) {
+                error!("Failed to copy user static directory: {e:?}");
+                process::exit(1);
+            }
+
+            info!(
+                "Copied '{}' on top of embedded static to '{}/'",
+                &user_static.display(),
+                &output_folder.display()
+            );
+        }
     }
 
     // Copy extra static folders if present

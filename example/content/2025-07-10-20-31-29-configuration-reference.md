@@ -169,8 +169,13 @@ theme: "mytheme"                  # Theme name (default: none)
 
 When a theme is specified, Marmite will:
 - Load templates from `{theme}/templates/` instead of `templates/`
-- Copy static files from `{theme}/static/` instead of `static/`
+- Copy static files from `{theme}/static/` instead of `static/` (the theme provides a complete set; embedded files are not used)
 - Fall back to embedded templates if theme files are missing
+
+When no theme is specified, Marmite writes the embedded static files first, then
+merges your `static/` folder on top — your files override matching embedded files
+while the rest remain available. Marmite will warn if your overrides of core files
+(like `marmite.css`, `search.js`, `pico.min.css`) differ from the embedded version.
 
 **CLI Override**: Use `--theme mytheme` to override the configuration theme for a single build.
 
