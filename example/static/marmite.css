@@ -439,7 +439,7 @@ pre:has(> code.language-mermaid) p {
 /* Style for the search results */
 .marmite-search-bar-result {
   width: 100%;
-  max-height: 200px;
+  max-height: 400px;
   overflow-y: auto;
 }
 
@@ -466,6 +466,21 @@ pre:has(> code.language-mermaid) p {
 .show .marmite-background-overlay,
 .show .marmite-search-bar {
   display: block;
+}
+
+.search-match-snippet {
+  font-size: 0.85em;
+  color: var(--pico-home);
+  margin: 2px 0 8px 0;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.search-match-snippet mark {
+  background-color: var(--pico-color-azure-200);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
 }
 
 /* Close button styling */

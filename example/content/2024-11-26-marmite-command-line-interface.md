@@ -514,6 +514,8 @@ Options:
           Number of posts per page [default: 10 or value from config file]
       --enable-search <ENABLE_SEARCH>
           Enable search [default: false or from config file] [possible values: true, false]
+      --search-show-matches <SEARCH_SHOW_MATCHES>
+          Show matched text snippets in search results [default: false or from config file] [possible values: true, false]
       --enable-related-content <ENABLE_RELATED_CONTENT>
           Enable backlinks and related content for posts [default: true or from config file] [possible values: true, false]
       --show-next-prev-links <SHOW_NEXT_PREV_LINKS>

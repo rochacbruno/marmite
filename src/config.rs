@@ -193,6 +193,9 @@ pub struct Marmite {
     #[serde(default)]
     pub enable_search: bool,
 
+    #[serde(default)]
+    pub search_show_matches: bool,
+
     #[serde(default = "default_enable_related_content")]
     pub enable_related_content: bool,
 
@@ -386,6 +389,9 @@ impl Marmite {
         }
         if let Some(enable_search) = cli_args.configuration.enable_search {
             self.enable_search = enable_search;
+        }
+        if let Some(search_show_matches) = cli_args.configuration.search_show_matches {
+            self.search_show_matches = search_show_matches;
         }
         if let Some(enable_related_content) = cli_args.configuration.enable_related_content {
             self.enable_related_content = enable_related_content;

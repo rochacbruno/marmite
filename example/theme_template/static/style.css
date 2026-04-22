@@ -581,6 +581,22 @@ a:hover {
   overflow-y: auto;
 }
 
+.search-match-snippet {
+  font-size: 0.85em;
+  color: var(--text-color);
+  opacity: 0.75;
+  margin: 2px 0 8px 0;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.search-match-snippet mark {
+  background-color: #ffeb3b;
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
 /* Announcement */
 .announcement {
   background-color: var(--primary-color);
