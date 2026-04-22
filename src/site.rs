@@ -152,7 +152,7 @@ impl Data {
             // stream by name
             if let Some(stream) = &content.stream {
                 self.stream
-                    .entry(stream.to_string())
+                    .entry(stream.clone())
                     .or_default()
                     .push(content.clone());
             }
@@ -160,7 +160,7 @@ impl Data {
             // series by name
             if let Some(series) = &content.series {
                 self.series
-                    .entry(series.to_string())
+                    .entry(series.clone())
                     .or_default()
                     .push(content.clone());
             }
@@ -984,7 +984,7 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
     tera.register_function(
         "url_for",
         UrlFor {
-            base_url: site_data.site.url.to_string(),
+            base_url: site_data.site.url.clone(),
         },
     );
     tera.register_function(
@@ -1034,7 +1034,7 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
     tera.register_filter(
         "default_date_format",
         tera_filter::DefaultDateFormat {
-            date_format: site_data.site.default_date_format.to_string(),
+            date_format: site_data.site.default_date_format.clone(),
         },
     );
     tera.register_filter("remove_draft", tera_filter::RemoveDraft);
@@ -1432,7 +1432,7 @@ fn handle_author_pages(
         .par_iter()
         .map(|(username, _)| -> Result<(), String> {
             let default_author = Author {
-                name: (*username).to_string(),
+                name: (*username).clone(),
                 bio: None,
                 avatar: Some("static/avatar-placeholder.png".to_string()),
                 links: None,
@@ -2623,7 +2623,7 @@ fn handle_tag_pages(
                         .find(|t| slug::slugify(t) == tag_slug.as_str())
                         .cloned()
                 })
-                .unwrap_or_else(|| (*tag_slug).to_string());
+                .unwrap_or_else(|| (*tag_slug).clone());
 
             debug!("Tag slug: '{tag_slug}' -> Original tag: '{original_tag}'");
 

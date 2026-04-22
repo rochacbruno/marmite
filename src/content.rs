@@ -146,7 +146,7 @@ impl Content {
             }
             get_html_with_options(&raw_markdown, parser_options, highlighter)
         } else if fragments.is_some() {
-            let mut markdown_without_title = markdown_without_title.to_string();
+            let mut markdown_without_title = markdown_without_title.clone();
             if let Some(header) = fragments.and_then(|f| f.get("markdown_header")) {
                 markdown_without_title.insert_str(0, format!("{header}\n\n").as_str());
             }
@@ -383,7 +383,7 @@ impl ContentBuilder {
 /// return (title, markdown without title)
 pub fn get_title<'a>(frontmatter: &'a Frontmatter, markdown: &'a str) -> (String, String) {
     let title = match frontmatter.get("title") {
-        Some(Value::String(t)) => t.to_string(),
+        Some(Value::String(t)) => t.clone(),
         _ => markdown
             .lines()
             .find(|line| !line.trim().is_empty() && !line.trim().starts_with("<!"))
@@ -801,7 +801,7 @@ fn find_matching_file(
             }
             let file_path = parent_path.join(&image_filename);
             if file_path.exists() {
-                return Some(image_filename.to_string());
+                return Some(image_filename.clone());
             }
         }
     }
