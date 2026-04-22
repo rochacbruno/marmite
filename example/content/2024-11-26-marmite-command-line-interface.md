@@ -516,6 +516,8 @@ Options:
           Enable search [default: false or from config file] [possible values: true, false]
       --search-show-matches <SEARCH_SHOW_MATCHES>
           Show matched text snippets in search results [default: false or from config file] [possible values: true, false]
+      --search-match-count <SEARCH_MATCH_COUNT>
+          Number of match snippets to show per search result [default: 3 or from config file]
       --enable-related-content <ENABLE_RELATED_CONTENT>
           Enable backlinks and related content for posts [default: true or from config file] [possible values: true, false]
       --show-next-prev-links <SHOW_NEXT_PREV_LINKS>

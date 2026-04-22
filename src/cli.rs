@@ -141,6 +141,10 @@ pub struct Configuration {
     #[arg(long)]
     pub search_show_matches: Option<bool>,
 
+    /// Number of match snippets to show per search result [default: 3 or from config file]
+    #[arg(long)]
+    pub search_match_count: Option<usize>,
+
     /// Enable backlinks and related content for posts [default: true or from config file]
     #[arg(long, default_value = None)]
     pub enable_related_content: Option<bool>,

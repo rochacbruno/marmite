@@ -196,6 +196,9 @@ pub struct Marmite {
     #[serde(default)]
     pub search_show_matches: bool,
 
+    #[serde(default = "default_search_match_count")]
+    pub search_match_count: usize,
+
     #[serde(default = "default_enable_related_content")]
     pub enable_related_content: bool,
 
@@ -392,6 +395,9 @@ impl Marmite {
         }
         if let Some(search_show_matches) = cli_args.configuration.search_show_matches {
             self.search_show_matches = search_show_matches;
+        }
+        if let Some(search_match_count) = cli_args.configuration.search_match_count {
+            self.search_match_count = search_match_count;
         }
         if let Some(enable_related_content) = cli_args.configuration.enable_related_content {
             self.enable_related_content = enable_related_content;
@@ -604,6 +610,10 @@ fn default_menu() -> Option<Vec<(String, String)>> {
 
 fn default_search_title() -> String {
     "Search".to_string()
+}
+
+fn default_search_match_count() -> usize {
+    3
 }
 
 fn default_language() -> String {

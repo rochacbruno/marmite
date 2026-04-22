@@ -1,46 +1,58 @@
 import Fuse from "https://cdnjs.cloudflare.com/ajax/libs/fuse.js/7.0.0/fuse.basic.min.mjs";
 
-function getMatchSnippet(result, searchPattern) {
-    if (!result.matches?.length) return null;
+function buildSnippet(text, start, len) {
+    const end = start + len;
+    const snippetStart = Math.max(0, start - 40);
+    const snippetEnd = Math.min(text.length, end + 40);
+    const prefix = snippetStart > 0 ? '...' : '';
+    const suffix = snippetEnd < text.length ? '...' : '';
+    const before = escapeHtml(text.substring(snippetStart, start));
+    const matched = escapeHtml(text.substring(start, end));
+    const after = escapeHtml(text.substring(end, snippetEnd));
+    return `${prefix}${before}<mark>${matched}</mark>${after}${suffix}`;
+}
+
+function getMatchSnippets(result, searchPattern, maxCount) {
+    if (!result.matches?.length) return [];
     const match = result.matches.find(m => m.key === "html")
                   || result.matches.find(m => m.key === "description");
-    if (!match) return null;
+    if (!match) return [];
     const text = match.value;
     const textLower = text.toLowerCase();
 
-    // Try full query first, then individual terms, pick the longest direct hit
     const candidates = [searchPattern, ...searchPattern.split(/\s+/)].filter(t => t.length > 2);
-    let bestStart = -1;
-    let bestLen = 0;
+    candidates.sort((a, b) => b.length - a.length);
+
+    const snippets = [];
+    const usedRanges = [];
+
     for (const term of candidates) {
-        const idx = textLower.indexOf(term.toLowerCase());
-        if (idx !== -1 && term.length > bestLen) {
-            bestStart = idx;
-            bestLen = term.length;
+        const termLower = term.toLowerCase();
+        let searchFrom = 0;
+        while (snippets.length < maxCount) {
+            const idx = textLower.indexOf(termLower, searchFrom);
+            if (idx === -1) break;
+            searchFrom = idx + termLower.length;
+            const overlaps = usedRanges.some(([s, e]) =>
+                idx < e + 40 && idx + termLower.length > s - 40
+            );
+            if (overlaps) continue;
+            usedRanges.push([idx, idx + termLower.length]);
+            snippets.push(buildSnippet(text, idx, termLower.length));
+        }
+        if (snippets.length >= maxCount) break;
+    }
+
+    // Fallback to longest Fuse.js index ranges
+    if (snippets.length === 0 && match.indices?.length) {
+        const sorted = [...match.indices].sort((a, b) => (b[1] - b[0]) - (a[1] - a[0]));
+        for (const idx of sorted) {
+            if (snippets.length >= maxCount) break;
+            snippets.push(buildSnippet(text, idx[0], idx[1] - idx[0] + 1));
         }
     }
 
-    // Fallback to longest Fuse.js index range
-    if (bestStart === -1 && match.indices?.length) {
-        let best = match.indices[0];
-        for (const idx of match.indices) {
-            if ((idx[1] - idx[0]) > (best[1] - best[0])) best = idx;
-        }
-        bestStart = best[0];
-        bestLen = best[1] - best[0] + 1;
-    }
-
-    if (bestStart === -1) return null;
-
-    const bestEnd = bestStart + bestLen;
-    const snippetStart = Math.max(0, bestStart - 40);
-    const snippetEnd = Math.min(text.length, bestEnd + 40);
-    const prefix = snippetStart > 0 ? '...' : '';
-    const suffix = snippetEnd < text.length ? '...' : '';
-    const before = escapeHtml(text.substring(snippetStart, bestStart));
-    const matched = escapeHtml(text.substring(bestStart, bestEnd));
-    const after = escapeHtml(text.substring(bestEnd, snippetEnd));
-    return `${prefix}${before}<mark>${matched}</mark>${after}${suffix}`;
+    return snippets;
 }
 
 function escapeHtml(str) {
@@ -50,6 +62,7 @@ function escapeHtml(str) {
 (async () => {
     const searchInput = document.getElementById("marmite-search-input");
     const showMatches = searchInput?.dataset.showMatches === "true";
+    const matchCount = parseInt(searchInput?.dataset.matchCount, 10) || 3;
 
     const fuseOptions = {
         threshold: 0.25,
@@ -88,8 +101,7 @@ function escapeHtml(str) {
                         resultElement.innerText = result.item.title;
                         elementList.appendChild(resultElement);
                         if (showMatches) {
-                            const snippet = getMatchSnippet(result, searchPattern);
-                            if (snippet) {
+                            for (const snippet of getMatchSnippets(result, searchPattern, matchCount)) {
                                 const snippetEl = document.createElement("p");
                                 snippetEl.className = "search-match-snippet";
                                 snippetEl.innerHTML = snippet;
