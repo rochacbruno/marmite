@@ -29,7 +29,9 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/styles/github.min.css" id="highlightjs-theme" />
+{% if not site.code_highlight or site.code_highlight.enabled %}
+<link rel="stylesheet" href="{{ url_for(path='static/arborium.css') }}" />
+{% endif %}
 {%if content.extra.math %}
 <script type="text/x-mathjax-config">
   MathJax.Hub.Config({tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}});
@@ -222,13 +224,6 @@
 
 {% block scripts %}
 {{ super() }}
-
-{% if "code class" in content.html %}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js"></script>
-<script>
-  hljs.highlightAll();
-</script>
-{% endif %}
 
 {%if content.extra.mermaid %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.3.0/mermaid.min.js"></script>

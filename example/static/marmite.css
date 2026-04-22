@@ -636,8 +636,14 @@ th {
   border-radius: 50%;
 }
 
-.hljs {
-  background-color: var(--pico-code-background-color) !important;
+.marmite-code {
+  overflow-x: auto;
+  border-radius: 4px;
+}
+
+.marmite-code .marmite-code-inner {
+  padding: 0;
+  color: inherit;
 }
 
 select.colorscheme-toggle {

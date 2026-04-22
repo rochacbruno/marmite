@@ -1,4 +1,5 @@
 use crate::embedded::EMBEDDED_SHORTCODES;
+use crate::highlight::MarmiteHighlighter;
 use crate::re;
 use log::{debug, warn};
 use regex::Regex;
@@ -199,7 +200,13 @@ impl ShortcodeProcessor {
     }
 
     /// Process shortcodes in HTML content
-    pub fn process_shortcodes(&self, html: &str, context: &Context, tera: &Tera) -> String {
+    pub fn process_shortcodes(
+        &self,
+        html: &str,
+        context: &Context,
+        tera: &Tera,
+        highlighter: Option<&MarmiteHighlighter>,
+    ) -> String {
         let mut result = html.to_string();
 
         debug!(
@@ -216,7 +223,7 @@ impl ShortcodeProcessor {
                 "Processing shortcode: name='{shortcode_name}', params='{params}', full_match='{full_match}'"
             );
 
-            match self.render_shortcode(shortcode_name, params, context, tera) {
+            match self.render_shortcode(shortcode_name, params, context, tera, highlighter) {
                 Ok(rendered) => {
                     debug!("Successfully rendered shortcode '{shortcode_name}': '{rendered}'");
                     result = result.replace(full_match, &rendered);
@@ -248,6 +255,7 @@ impl ShortcodeProcessor {
         params: &str,
         context: &Context,
         tera: &Tera,
+        highlighter: Option<&MarmiteHighlighter>,
     ) -> Result<String, String> {
         let shortcode = self
             .shortcodes
@@ -301,6 +309,7 @@ impl ShortcodeProcessor {
             Ok(crate::parser::get_html_with_options(
                 &rendered,
                 &default_parser_options,
+                highlighter,
             ))
         }
     }

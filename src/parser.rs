@@ -1,7 +1,11 @@
 use crate::config::ParserOptions;
+use crate::highlight::MarmiteHighlighter;
 use crate::re;
 use crate::site::Data;
-use comrak::{markdown_to_html, options::BrokenLinkReference, Options, ResolvedReference};
+use comrak::{
+    markdown_to_html, markdown_to_html_with_plugins, options::BrokenLinkReference,
+    options::Plugins, options::RenderPlugins, Options, ResolvedReference,
+};
 use frontmatter_gen::{detect_format, extract_raw_frontmatter, parse, Frontmatter};
 use log::warn;
 use regex::Regex;
@@ -99,14 +103,12 @@ pub fn get_table_of_contents_from_html(html: &str) -> String {
     toc
 }
 
-/// Convert markdown to html using comrak
-#[allow(dead_code)]
-pub fn get_html(markdown: &str) -> String {
-    get_html_with_options(markdown, &ParserOptions::default())
-}
-
 /// Convert markdown to html using comrak with configurable options
-pub fn get_html_with_options(markdown: &str, parser_options: &ParserOptions) -> String {
+pub fn get_html_with_options(
+    markdown: &str,
+    parser_options: &ParserOptions,
+    highlighter: Option<&MarmiteHighlighter>,
+) -> String {
     let mut options = Options::default();
 
     // Apply configurable render options
@@ -139,7 +141,20 @@ pub fn get_html_with_options(markdown: &str, parser_options: &ParserOptions) -> 
     options.extension.wikilinks_title_after_pipe =
         parser_options.extension.wikilinks_title_after_pipe;
 
-    fix_internal_links(&markdown_to_html(markdown, &options))
+    // Apply syntax highlighting (or not)
+    let rendered = if let Some(hl) = highlighter {
+        let render_plugins = RenderPlugins {
+            codefence_syntax_highlighter: Some(hl),
+            ..RenderPlugins::default()
+        };
+        let plugins = Plugins {
+            render: render_plugins,
+        };
+        markdown_to_html_with_plugins(markdown, &options, &plugins)
+    } else {
+        markdown_to_html(markdown, &options)
+    };
+    fix_internal_links(&rendered)
 }
 
 /// Takes the html content, finds all the internal links and

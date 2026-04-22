@@ -133,7 +133,7 @@ code, kbd {
     display: inline-block;
     padding: 0 .375rem;
 }
-pre code.hljs {
+pre.marmite-code {
     display: block;
     overflow-x: auto;
     padding: 0 1em;

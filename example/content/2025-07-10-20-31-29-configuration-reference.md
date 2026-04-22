@@ -473,6 +473,30 @@ See the [[File Mapping Feature]] documentation for detailed examples and use cas
 
 Marmite also allows customizing the markdown parser, the options are described on [[Configurable Markdown Parser Options]]
 
+## Code Highlighting
+
+Code fences have syntax highlighting applied at _build time_ (no client-side JS dependency) via [arborium](https://arborium.bearcove.eu/).
+A single stylesheet with light and dark themes is emitted to `static/arborium.css` as part of the site build process.
+
+```yaml
+code_highlight:
+  enabled: true                  # default; set false to skip highlighting and CSS generation
+  light_theme: "github-light"    # Customize theme identifiers here (defaults to github light/dark)
+  dark_theme: "github-dark"
+```
+
+You can find the list of themes on the [arborium site](https://arborium.bearcove.eu/#themes).
+
+### Supported languages
+
+By default, we build support for all grammars from arborium.
+
+You can also build with `--no-default-features` and enable only the `arborium/lang-*` features you need:
+
+```bash
+cargo install marmite --no-default-features --features arborium/lang-rust,arborium/lang-python
+```
+
 ----
 
 This comprehensive reference covers all available configuration options. Mix and match these settings to customize your Marmite site exactly as you need it.

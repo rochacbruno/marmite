@@ -55,6 +55,14 @@ zip = "7.0.0"
 urlencoding = "2.1.3"
 image = "0.25.9"
 tempfile = "3.24.0"
+arborium = { version = "2.16", default-features = false }
+
+[features]
+# Enables every arborium grammar.
+# This is not the default on the crate as nginx specifically is GPLv3,
+# but that's not a huge issue for marmite (AGPLv3).
+# See https://docs.rs/arborium/latest/arborium/ for the per-grammar license breakdown.
+default = ["arborium/all-languages"]
 
 [dev-dependencies]
 

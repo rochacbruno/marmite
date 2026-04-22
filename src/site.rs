@@ -2,6 +2,7 @@ use crate::config::{Author, Marmite};
 use crate::content::{check_for_duplicate_slugs, Content, ContentBuilder, GroupedContent, Kind};
 use crate::embedded::{generate_static, Templates, EMBEDDED_TERA};
 use crate::gallery::Gallery;
+use crate::highlight::{self, MarmiteHighlighter};
 use crate::image_resize;
 use crate::parser::fix_wikilinks;
 use crate::shortcodes::ShortcodeProcessor;
@@ -530,8 +531,15 @@ pub fn generate(
                 site_data.force_render = true;
             }
 
+            let highlighter = build_code_highlighter(&site_data.site);
+
             let fragments = collect_content_fragments(&content_folder);
-            collect_content(&content_folder, &mut site_data, &fragments);
+            collect_content(
+                &content_folder,
+                &mut site_data,
+                &fragments,
+                highlighter.as_deref(),
+            );
 
             // Process galleries
             let media_path = content_folder.join(&site_data.site.media_path);
@@ -575,6 +583,7 @@ pub fn generate(
                         &fragments,
                         latest_build_info.as_ref(),
                         shortcode_processor.as_ref(),
+                        highlighter.as_deref(),
                     ) {
                         error!("Failed to render templates: {e:?}");
                         process::exit(1);
@@ -722,6 +731,7 @@ fn collect_global_fragments(
     global_context: &mut Context,
     tera: &Tera,
     site_config: &Marmite,
+    highlighter: Option<&MarmiteHighlighter>,
 ) {
     let fragments = [
         "announce", "header", "hero", "sidebar", "footer", "comments", "htmlhead", "htmltail",
@@ -754,7 +764,7 @@ fn collect_global_fragments(
             .as_ref()
             .unwrap_or(&default_parser_options);
         let fragment_content =
-            crate::parser::get_html_with_options(&rendered_fragment, parser_options);
+            crate::parser::get_html_with_options(&rendered_fragment, parser_options, highlighter);
         // global_context.insert((*fragment).to_string(), &fragment_content);
         debug!("{} fragment {}", fragment, &fragment_content);
         ((*fragment).to_string(), fragment_content)
@@ -882,6 +892,7 @@ fn collect_content(
     content_dir: &std::path::PathBuf,
     site_data: &mut Data,
     fragments: &HashMap<String, String>,
+    highlighter: Option<&MarmiteHighlighter>,
 ) {
     let contents = WalkDir::new(content_dir)
         .into_iter()
@@ -933,6 +944,7 @@ fn collect_content(
                 Some(fragments),
                 &site_data.site,
                 modified_time,
+                highlighter,
             )
         })
         .collect::<Vec<_>>();
@@ -1120,6 +1132,7 @@ fn render_templates(
     fragments: &HashMap<String, String>,
     latest_build_info: Option<&BuildInfo>,
     shortcode_processor: Option<&ShortcodeProcessor>,
+    highlighter: Option<&MarmiteHighlighter>,
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
@@ -1132,7 +1145,13 @@ fn render_templates(
     global_context.insert("language", &site_data.site.language);
     debug!("Global Context site: {:?}", &site_data.site);
     debug!("Site data galleries count: {}", site_data.galleries.len());
-    collect_global_fragments(content_dir, &mut global_context, tera, &site_data.site);
+    collect_global_fragments(
+        content_dir,
+        &mut global_context,
+        tera,
+        &site_data.site,
+        highlighter,
+    );
 
     handle_stream_pages(&site_data, &global_context, tera, output_dir)?;
     handle_series_pages(&site_data, &global_context, tera, output_dir)?;
@@ -1157,7 +1176,7 @@ fn render_templates(
     )?;
 
     // Check and guarantees that page 404 was generated even if _404.md is removed
-    handle_404(content_dir, &global_context, tera, output_dir)?;
+    handle_404(content_dir, &global_context, tera, output_dir, highlighter)?;
 
     // Render individual content-slug.html from content.html template
     // content is rendered as last step so it gives the user the ability to
@@ -1171,6 +1190,7 @@ fn render_templates(
         input_folder,
         latest_build_info,
         shortcode_processor,
+        highlighter,
     )?;
 
     Ok(())
@@ -1605,6 +1625,44 @@ fn handle_file_mappings(
     }
 }
 
+fn build_code_highlighter(site: &Marmite) -> Option<Arc<MarmiteHighlighter>> {
+    let cfg = site.code_highlight.clone().unwrap_or_default();
+    if !cfg.enabled {
+        return None;
+    }
+    match highlight::build(&cfg) {
+        Ok(hl) => Some(hl),
+        Err(e) => {
+            error!("code_highlight misconfigured: {e}");
+            None
+        }
+    }
+}
+
+fn write_code_highlight_css(site: &Marmite, output_folder: &Arc<std::path::PathBuf>) {
+    let cfg = site.code_highlight.clone().unwrap_or_default();
+    if !cfg.enabled {
+        // NB: No CSS is written if syntax highlighting is disabled!
+        return;
+    }
+    match highlight::generate_css(&cfg) {
+        Ok(css) => {
+            let static_dir = output_folder.join(site.static_path.clone());
+            if let Err(e) = fs::create_dir_all(&static_dir) {
+                error!("Failed to create static dir for arborium.css: {e:?}");
+                return;
+            }
+            let path = static_dir.join("arborium.css");
+            if let Err(e) = fs::write(&path, css) {
+                error!("Failed to write {}: {e:?}", path.display());
+            } else {
+                info!("Generated {}", path.display());
+            }
+        }
+        Err(e) => error!("Failed to generate code-highlight CSS: {e}"),
+    }
+}
+
 #[allow(clippy::too_many_lines)]
 fn handle_static_artifacts(
     input_folder: &Path,
@@ -1737,6 +1795,9 @@ fn handle_static_artifacts(
             }
         }
     }
+
+    // Generate code highlighting CSS based on the site settings
+    write_code_highlight_css(&site_data.site, output_folder);
 }
 
 fn generate_search_index(site_data: &Data, output_folder: &Arc<std::path::PathBuf>) {
@@ -2377,6 +2438,7 @@ fn handle_content_pages(
     input_folder: &Path,
     latest_build_info: Option<&BuildInfo>,
     shortcode_processor: Option<&ShortcodeProcessor>,
+    highlighter: Option<&MarmiteHighlighter>,
 ) -> Result<(), String> {
     let last_build = site_data.latest_timestamp.unwrap_or(0);
     let force_render = should_force_render(
@@ -2423,6 +2485,7 @@ fn handle_content_pages(
                 output_dir,
                 shortcode_processor,
                 Some(site_data),
+                highlighter,
             )
         })
         .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
@@ -2506,6 +2569,7 @@ fn handle_404(
     global_context: &Context,
     tera: &Tera,
     output_dir: &Path,
+    highlighter: Option<&MarmiteHighlighter>,
 ) -> Result<(), String> {
     let input_404_path = content_dir.join("_404.md");
     let mut context = global_context.clone();
@@ -2515,8 +2579,13 @@ fn handle_404(
         .slug("404".to_string())
         .build();
     if input_404_path.exists() {
-        let custom_content =
-            Content::from_markdown(&input_404_path, None, &Marmite::default(), None)?;
+        let custom_content = Content::from_markdown(
+            &input_404_path,
+            None,
+            &Marmite::default(),
+            None,
+            highlighter,
+        )?;
         content.html.clone_from(&custom_content.html);
         content.title.clone_from(&custom_content.title);
     }
@@ -2733,7 +2802,9 @@ fn render_html(
     context: &Context,
     output_dir: &Path,
 ) -> Result<(), String> {
-    render_html_with_shortcodes(template, filename, tera, context, output_dir, None, None)
+    render_html_with_shortcodes(
+        template, filename, tera, context, output_dir, None, None, None,
+    )
 }
 
 fn render_html_with_shortcodes(
@@ -2744,6 +2815,7 @@ fn render_html_with_shortcodes(
     output_dir: &Path,
     shortcode_processor: Option<&ShortcodeProcessor>,
     site_data: Option<&Data>,
+    highlighter: Option<&MarmiteHighlighter>,
 ) -> Result<(), String> {
     let templates = template.split(',').collect::<Vec<_>>();
     let template = templates
@@ -2758,7 +2830,7 @@ fn render_html_with_shortcodes(
     // Process shortcodes if processor is available
     if let Some(processor) = shortcode_processor {
         debug!("Processing shortcodes for {filename}");
-        rendered = processor.process_shortcodes(&rendered, context, tera);
+        rendered = processor.process_shortcodes(&rendered, context, tera, highlighter);
     } else {
         debug!("No shortcode processor available for {filename}");
     }
@@ -2959,7 +3031,7 @@ pub fn show_urls(
 
     // Collect content fragments and process content
     let fragments = collect_content_fragments(&content_folder);
-    collect_content(&content_folder, &mut site_data, &fragments);
+    collect_content(&content_folder, &mut site_data, &fragments, None);
     site_data.sort_all();
 
     // Collect all URLs including pagination, feeds, and file mappings

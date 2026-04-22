@@ -12,6 +12,7 @@ mod content;
 mod embedded;
 mod feed;
 mod gallery;
+mod highlight;
 mod image_provider;
 mod image_resize;
 mod parser;
