@@ -1,4 +1,4 @@
-use image::{imageops::FilterType, GenericImageView, ImageError};
+use image::{imageops::FilterType, GenericImageView, ImageDecoder, ImageError, ImageReader};
 use log::{debug, error, info, warn};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -287,6 +287,21 @@ fn is_banner_image(path: &Path) -> bool {
     filename.ends_with(".banner") || filename.contains(".banner.")
 }
 
+/// Open an image and apply EXIF orientation to the pixel data.
+fn open_and_orient(path: &Path) -> Result<image::DynamicImage, ImageError> {
+    let mut decoder = ImageReader::open(path)
+        .map_err(ImageError::IoError)?
+        .with_guessed_format()
+        .map_err(ImageError::IoError)?
+        .into_decoder()?;
+    let orientation = decoder.orientation();
+    let mut img = image::DynamicImage::from_decoder(decoder)?;
+    if let Ok(orientation) = orientation {
+        img.apply_orientation(orientation);
+    }
+    Ok(img)
+}
+
 /// Resize an image to a maximum width, maintaining aspect ratio.
 /// Only resizes if the image is larger than `max_width`.
 ///
@@ -305,7 +320,7 @@ fn resize_image(
     max_width: u32,
     filter: FilterType,
 ) -> Result<bool, ImageError> {
-    let img = image::open(input_path)?;
+    let img = open_and_orient(input_path)?;
     let (width, height) = img.dimensions();
 
     // Only resize if image is larger than max_width
