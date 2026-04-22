@@ -33,6 +33,8 @@ fn create_test_cli(overrides: impl FnOnce(&mut cli::Cli)) -> cli::Cli {
             language: None,
             pagination: None,
             enable_search: None,
+            search_show_matches: None,
+            search_match_count: None,
             enable_related_content: None,
             content_path: None,
             templates_path: None,
