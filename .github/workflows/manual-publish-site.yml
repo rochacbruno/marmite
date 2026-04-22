@@ -1,0 +1,95 @@
+name: Manual Site Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      use_crates_io:
+        description: 'Use marmite from crates.io instead of building from source'
+        type: boolean
+        default: false
+      build_ref:
+        description: 'Git ref (branch/tag/commit) to build marmite from (ignored when using crates.io)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+
+jobs:
+
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@v4
+
+      - name: Cache Cargo dependencies 📦
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install marmite from crates.io 📥
+        if: ${{ inputs.use_crates_io }}
+        run: cargo install marmite
+
+      - name: Checkout build ref 🏷️
+        if: ${{ !inputs.use_crates_io && inputs.build_ref != '' }}
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.build_ref }}
+          path: marmite-build
+
+      - name: Build marmite from ref 🔧
+        if: ${{ !inputs.use_crates_io && inputs.build_ref != '' }}
+        run: |
+          cargo build --release --manifest-path marmite-build/Cargo.toml
+          echo "::add-path::$GITHUB_WORKSPACE/marmite-build/target/release"
+
+      - name: Build marmite from source 🔧
+        if: ${{ !inputs.use_crates_io && inputs.build_ref == '' }}
+        run: |
+          cargo build --release
+          echo "::add-path::$GITHUB_WORKSPACE/target/release"
+
+      - name: Prepare site 🏗️
+        run: .github/prepare_site.sh
+
+      - uses: actions/setup-python@v5
+        with:
+            python-version: '3.12'
+
+      - name: Generate contributors page 📝
+        run: |
+          python -m pip install requests
+          python .github/contributors.py marmitesite/content/contributors.md
+
+      - name: Build site 🏗️
+        run: marmite marmitesite site -vvvv
+
+      - name: Build site with alternative theme 🏗️
+        run: |
+          rm -rf marmitesite/content/_hero.md
+          marmite marmitesite site/theme_template -vvvv --theme theme_template --url https://marmite.blog/theme_template
+
+      - name: List files on site 📂
+        run: ls -R site
+
+      - name: Setup Pages 📄
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact 📦
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: 'site'
+
+      - name: Deploy to GitHub Pages 🚀
+        id: deployment
+        uses: actions/deploy-pages@v4

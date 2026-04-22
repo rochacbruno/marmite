@@ -5,7 +5,7 @@ description: "Marmite 0.3.1 fixes static file handling so user files are merged 
 tags: [release-notes, marmite, features, announcement]
 author: rochacbruno
 pinned: true
-draft: true
+stream: draft
 ---
 
 We're excited to announce Marmite 0.3.1! This release fixes how static files are handled when users provide their own `static/` folder, ensuring embedded and user files are properly merged instead of requiring users to provide a complete replacement.
