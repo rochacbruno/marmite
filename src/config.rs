@@ -63,6 +63,26 @@ pub struct ExtensionOptions {
     pub alerts: bool,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct CodeHighlightConfig {
+    #[serde(default = "default_code_highlight_enabled")]
+    pub enabled: bool,
+    #[serde(default = "default_code_highlight_light_theme")]
+    pub light_theme: String,
+    #[serde(default = "default_code_highlight_dark_theme")]
+    pub dark_theme: String,
+}
+
+impl Default for CodeHighlightConfig {
+    fn default() -> Self {
+        Self {
+            enabled: default_code_highlight_enabled(),
+            light_theme: default_code_highlight_light_theme(),
+            dark_theme: default_code_highlight_dark_theme(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Default)]
 pub struct ParserOptions {
     #[serde(default)]
@@ -241,6 +261,9 @@ pub struct Marmite {
 
     #[serde(default)]
     pub markdown_parser: Option<ParserOptions>,
+
+    #[serde(default)]
+    pub code_highlight: Option<CodeHighlightConfig>,
 
     #[serde(default)]
     pub theme: Option<String>,
@@ -669,4 +692,16 @@ fn default_gallery_path() -> String {
 
 fn default_gallery_thumb_size() -> u32 {
     50
+}
+
+fn default_code_highlight_enabled() -> bool {
+    true
+}
+
+fn default_code_highlight_light_theme() -> String {
+    "github-light".to_string()
+}
+
+fn default_code_highlight_dark_theme() -> String {
+    "github-dark".to_string()
 }

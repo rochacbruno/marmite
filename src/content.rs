@@ -1,5 +1,6 @@
 use crate::cli::Cli;
 use crate::config::Marmite;
+use crate::highlight::MarmiteHighlighter;
 use crate::image_provider;
 use crate::parser::{
     append_references, get_html_with_options, get_links_to, get_table_of_contents_from_html,
@@ -122,6 +123,7 @@ impl Content {
         fragments: Option<&HashMap<String, String>>,
         site: &Marmite,
         modified_time: Option<i64>,
+        highlighter: Option<&MarmiteHighlighter>,
     ) -> Result<Content, String> {
         let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
         let (frontmatter, raw_markdown) = parse_front_matter(&file_content)?;
@@ -142,7 +144,7 @@ impl Content {
             if path != references_path {
                 raw_markdown = append_references(&raw_markdown, &references_path);
             }
-            get_html_with_options(&raw_markdown, parser_options)
+            get_html_with_options(&raw_markdown, parser_options, highlighter)
         } else if fragments.is_some() {
             let mut markdown_without_title = markdown_without_title.to_string();
             if let Some(header) = fragments.and_then(|f| f.get("markdown_header")) {
@@ -154,9 +156,9 @@ impl Content {
             if let Some(references) = fragments.and_then(|f| f.get("references")) {
                 markdown_without_title.push_str(format!("\n\n{references}").as_str());
             }
-            get_html_with_options(&markdown_without_title, parser_options)
+            get_html_with_options(&markdown_without_title, parser_options, highlighter)
         } else {
-            get_html_with_options(&markdown_without_title, parser_options)
+            get_html_with_options(&markdown_without_title, parser_options, highlighter)
         };
 
         let description = get_description(&frontmatter);

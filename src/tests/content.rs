@@ -584,7 +584,7 @@ date: "2023-01-01"
 This is a test content.
 "#;
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None).unwrap();
+    let result = Content::from_markdown(path, None, &Marmite::default(), None, None).unwrap();
     assert_eq!(result.title, "Test Title");
     assert_eq!(result.description, Some("\"Test Description\"".to_string()));
     assert_eq!(result.slug, "test-title");
@@ -610,7 +610,7 @@ extra: "extra content"
 This is a test content.
 "#;
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None);
+    let result = Content::from_markdown(path, None, &Marmite::default(), None, None);
     assert!(result.is_err());
     fs::remove_file(path).unwrap();
 }
@@ -623,7 +623,7 @@ fn test_get_content_without_frontmatter() {
 This is a test content.
 ";
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None).unwrap();
+    let result = Content::from_markdown(path, None, &Marmite::default(), None, None).unwrap();
     assert_eq!(result.title, "Test Content".to_string());
     assert_eq!(result.description, None);
     assert_eq!(result.slug, "test_get_content_without_frontmatter");
@@ -639,7 +639,7 @@ fn test_get_content_with_empty_file() {
     let path = Path::new("test_get_content_with_empty_file.md");
     let content = "";
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None).unwrap();
+    let result = Content::from_markdown(path, None, &Marmite::default(), None, None).unwrap();
     assert_eq!(result.slug, "test_get_content_with_empty_file".to_string());
     fs::remove_file(path).unwrap();
 }

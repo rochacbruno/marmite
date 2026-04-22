@@ -4,6 +4,13 @@ use crate::content::{Content, GroupedContent, Kind};
 use crate::site::Data;
 use std::collections::HashMap;
 
+/// Convert markdown to html using comrak,
+///
+/// Uses the default parser options and no syntax highlighting.
+pub fn get_html(markdown: &str) -> String {
+    get_html_with_options(markdown, &ParserOptions::default(), None)
+}
+
 #[test]
 fn test_fix_internal_links_with_md_extension() {
     let html = r#"<a href="test.md">test.md</a>"#;
