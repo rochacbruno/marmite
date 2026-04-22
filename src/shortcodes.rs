@@ -209,9 +209,16 @@ impl ShortcodeProcessor {
     ) -> String {
         let mut result = html.to_string();
 
+        let preview_end = {
+            let mut end = html.len().min(1500);
+            while end > 0 && !html.is_char_boundary(end) {
+                end -= 1;
+            }
+            end
+        };
         debug!(
             "Searching for shortcode pattern in HTML (first 1500 chars): {}",
-            &html[..html.len().min(1500)]
+            &html[..preview_end]
         );
 
         for captures in self.pattern.captures_iter(html) {
