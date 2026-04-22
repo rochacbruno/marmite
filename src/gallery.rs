@@ -1,4 +1,4 @@
-use image::{imageops::FilterType, ImageError};
+use image::{imageops::FilterType, ImageDecoder, ImageError, ImageReader};
 use log::{error, info};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -271,7 +271,16 @@ fn generate_thumbnail(image_path: &Path, thumbnails_dir: &Path, size: u32) -> Op
 }
 
 fn create_thumbnail(input_path: &Path, output_path: &Path, size: u32) -> Result<(), ImageError> {
-    let img = image::open(input_path)?;
+    let mut decoder = ImageReader::open(input_path)
+        .map_err(ImageError::IoError)?
+        .with_guessed_format()
+        .map_err(ImageError::IoError)?
+        .into_decoder()?;
+    let orientation = decoder.orientation();
+    let mut img = image::DynamicImage::from_decoder(decoder)?;
+    if let Ok(orientation) = orientation {
+        img.apply_orientation(orientation);
+    }
     let thumbnail = img.resize(size, size, FilterType::Nearest);
     thumbnail.save(output_path)?;
     Ok(())
