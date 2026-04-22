@@ -294,6 +294,10 @@ grid-row-gap: 0px;
   color: var(--pico-secondary);
 } 
 
+article {
+  box-shadow: none;
+}
+
 article footer {
   display: flex;
   justify-content: space-between;
