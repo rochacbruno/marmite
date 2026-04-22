@@ -137,6 +137,10 @@ pub struct Configuration {
     #[arg(long)]
     pub enable_search: Option<bool>,
 
+    /// Show matched text snippets in search results [default: false or from config file]
+    #[arg(long)]
+    pub search_show_matches: Option<bool>,
+
     /// Enable backlinks and related content for posts [default: true or from config file]
     #[arg(long, default_value = None)]
     pub enable_related_content: Option<bool>,

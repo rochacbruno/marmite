@@ -27,7 +27,7 @@ card_image: ./media/og_image.jpg
 # image_provider: picsum
 
 enable_search: true
-
+search_show_matches: true
 menu:
   # - ["About", "about.html"]
   - ["Pages", "pages.html"]

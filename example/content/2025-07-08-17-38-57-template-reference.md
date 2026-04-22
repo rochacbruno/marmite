@@ -42,6 +42,7 @@ templates/
 {{ site.pagination }}              <!-- Posts per page -->
 {{ site.default_date_format }}     <!-- Default date format -->
 {{ site.enable_search }}           <!-- Search enabled boolean -->
+{{ site.search_show_matches }}     <!-- Search match snippets enabled -->
 {{ site.enable_related_content }}  <!-- Related content enabled -->
 {{ site.toc }}                     <!-- Table of contents enabled -->
 {{ site.json_feed }}               <!-- JSON feed enabled -->

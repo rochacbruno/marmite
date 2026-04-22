@@ -108,6 +108,7 @@ menu:
 ### Search and Content Discovery
 ```yaml
 enable_search: true                # Enable search functionality (default: false)
+search_show_matches: true          # Show matched text snippets in search results (default: false)
 enable_related_content: true      # Enable backlinks/related content (default: true)
 show_next_prev_links: true        # Show next/previous navigation (default: true)
 ```
@@ -351,6 +352,7 @@ menu:
 
 # Features
 enable_search: true
+search_show_matches: true
 enable_related_content: true
 show_next_prev_links: true
 toc: true
