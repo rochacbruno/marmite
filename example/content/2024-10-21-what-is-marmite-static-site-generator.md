@@ -73,7 +73,7 @@ Baymard Institute conducted a [research for optimal line lenght](https://baymard
 #### Readable Font
 
 The font face choosen for the built-in theme also was taken because of readability, the Braile Institute created a freefont with unique features to
-improve readability in any media, that is why Marmite uses [Atkinson Hyperlegible](https://www.brailleinstitute.org/freefont/) by default.
+improve readability in any media, that is why Marmite uses [Atkinson Hyperlegible Next](https://www.brailleinstitute.org/freefont/) by default.
 
 ![braile](media/braile.png)
 
