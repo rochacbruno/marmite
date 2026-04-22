@@ -24,7 +24,7 @@ pub fn generate_rss(
         };
         format!("{}{}", protocol, &config.url)
     } else {
-        config.url.to_string()
+        config.url.clone()
     };
 
     let mut channel = ChannelBuilder::default()

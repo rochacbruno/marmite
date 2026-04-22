@@ -152,7 +152,7 @@ impl Data {
             // stream by name
             if let Some(stream) = &content.stream {
                 self.stream
-                    .entry(stream.to_string())
+                    .entry(stream.clone())
                     .or_default()
                     .push(content.clone());
             }
@@ -160,7 +160,7 @@ impl Data {
             // series by name
             if let Some(series) = &content.series {
                 self.series
-                    .entry(series.to_string())
+                    .entry(series.clone())
                     .or_default()
                     .push(content.clone());
             }
@@ -984,7 +984,7 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
     tera.register_function(
         "url_for",
         UrlFor {
-            base_url: site_data.site.url.to_string(),
+            base_url: site_data.site.url.clone(),
         },
     );
     tera.register_function(
@@ -1034,7 +1034,7 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
     tera.register_filter(
         "default_date_format",
         tera_filter::DefaultDateFormat {
-            date_format: site_data.site.default_date_format.to_string(),
+            date_format: site_data.site.default_date_format.clone(),
         },
     );
     tera.register_filter("remove_draft", tera_filter::RemoveDraft);
@@ -1432,7 +1432,7 @@ fn handle_author_pages(
         .par_iter()
         .map(|(username, _)| -> Result<(), String> {
             let default_author = Author {
-                name: (*username).to_string(),
+                name: (*username).clone(),
                 bio: None,
                 avatar: Some("static/avatar-placeholder.png".to_string()),
                 links: None,
@@ -2483,9 +2483,11 @@ fn handle_content_pages(
                 tera,
                 &content_context,
                 output_dir,
-                shortcode_processor,
-                Some(site_data),
-                highlighter,
+                &PostProcessors {
+                    shortcode_processor,
+                    site_data: Some(site_data),
+                    highlighter,
+                },
             )
         })
         .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
@@ -2623,7 +2625,7 @@ fn handle_tag_pages(
                         .find(|t| slug::slugify(t) == tag_slug.as_str())
                         .cloned()
                 })
-                .unwrap_or_else(|| (*tag_slug).to_string());
+                .unwrap_or_else(|| (*tag_slug).clone());
 
             debug!("Tag slug: '{tag_slug}' -> Original tag: '{original_tag}'");
 
@@ -2795,6 +2797,13 @@ impl UrlCollection {
     }
 }
 
+#[derive(Default)]
+struct PostProcessors<'a> {
+    shortcode_processor: Option<&'a ShortcodeProcessor>,
+    site_data: Option<&'a Data>,
+    highlighter: Option<&'a MarmiteHighlighter>,
+}
+
 fn render_html(
     template: &str,
     filename: &str,
@@ -2803,7 +2812,7 @@ fn render_html(
     output_dir: &Path,
 ) -> Result<(), String> {
     render_html_with_shortcodes(
-        template, filename, tera, context, output_dir, None, None, None,
+        template, filename, tera, context, output_dir, &PostProcessors::default(),
     )
 }
 
@@ -2813,9 +2822,7 @@ fn render_html_with_shortcodes(
     tera: &Tera,
     context: &Context,
     output_dir: &Path,
-    shortcode_processor: Option<&ShortcodeProcessor>,
-    site_data: Option<&Data>,
-    highlighter: Option<&MarmiteHighlighter>,
+    processors: &PostProcessors<'_>,
 ) -> Result<(), String> {
     let templates = template.split(',').collect::<Vec<_>>();
     let template = templates
@@ -2827,16 +2834,14 @@ fn render_html_with_shortcodes(
         e.to_string()
     })?;
 
-    // Process shortcodes if processor is available
-    if let Some(processor) = shortcode_processor {
+    if let Some(processor) = processors.shortcode_processor {
         debug!("Processing shortcodes for {filename}");
-        rendered = processor.process_shortcodes(&rendered, context, tera, highlighter);
+        rendered = processor.process_shortcodes(&rendered, context, tera, processors.highlighter);
     } else {
         debug!("No shortcode processor available for {filename}");
     }
 
-    // Process wikilinks if site data is available
-    if let Some(data) = site_data {
+    if let Some(data) = processors.site_data {
         debug!("Processing wikilinks for {filename}");
         rendered = fix_wikilinks(&rendered, data);
     }

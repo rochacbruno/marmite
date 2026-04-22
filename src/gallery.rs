@@ -25,16 +25,13 @@ pub struct Gallery {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum GalleryOrder {
+    #[default]
     Asc,
     Desc,
 }
 
-impl Default for GalleryOrder {
-    fn default() -> Self {
-        Self::Asc
-    }
-}
 
 #[derive(Debug, Deserialize)]
 struct ImageDescription {

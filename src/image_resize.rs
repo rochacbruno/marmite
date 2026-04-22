@@ -699,7 +699,7 @@ pub fn process_media_images(
 
             // Update progress counter
             let count = processed_count.fetch_add(1, Ordering::Relaxed) + 1;
-            if count % progress_step == 0 && count < total_images {
+            if count.is_multiple_of(progress_step) && count < total_images {
                 let percent = (count * 100) / total_images;
                 info!("Progress: {count}/{total_images} ({percent}%)");
             }
