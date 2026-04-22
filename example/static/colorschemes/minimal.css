@@ -3,6 +3,7 @@
 /* picocss.com  */
 :root {
     --pico-border-radius: 0;
+    --pico-card-box-shadow: none;
 }
 
 .content-tags a:where(a:not([role=button])),
