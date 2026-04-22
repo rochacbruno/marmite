@@ -11,6 +11,8 @@ use log::warn;
 
 use crate::config::CodeHighlightConfig;
 
+const CLIENT_RENDERED_LANGS: &[&str] = &["mermaid"];
+
 pub struct MarmiteHighlighter {
     inner: Mutex<Highlighter>,
 }
@@ -43,6 +45,15 @@ impl SyntaxHighlighterAdapter for MarmiteHighlighter {
         // Fence info strings can carry metadata after the language name
         // (e.g. ```rust main.rs); arborium wants just the language token.
         let lang = raw_lang.split_whitespace().next().unwrap_or(raw_lang);
+
+        // Some fence "languages" are rendered client-side
+        // (e.g. mermaid via MermaidJS) and intentionally bypass syntax highlighting.
+        // Arborium should leave these alone.
+        // comrak still adds `language-<lang>` to the <code> tag,
+        // which is what the client-side renderer looks for.
+        if CLIENT_RENDERED_LANGS.contains(&lang) {
+            return html::escape(output, code);
+        }
 
         let mut guard = match self.inner.lock() {
             Ok(g) => g,
@@ -204,6 +215,22 @@ mod tests {
         assert!(
             css.contains("prefers-color-scheme: dark"),
             "missing media-query fallback"
+        );
+    }
+
+    #[test]
+    fn mermaid_fence_bypasses_highlighter() {
+        let hl = MarmiteHighlighter::new();
+        let body = "graph LR\n  A --> B\n";
+        let mut out = String::new();
+        hl.write_highlighted(&mut out, Some("mermaid"), body)
+            .expect("write_highlighted should succeed for mermaid");
+
+        let mut expected = String::new();
+        html::escape(&mut expected, body).unwrap();
+        assert_eq!(
+            out, expected,
+            "mermaid fences must pass through as escaped raw source for MermaidJS"
         );
     }
 
