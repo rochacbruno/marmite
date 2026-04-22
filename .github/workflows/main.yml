@@ -55,6 +55,17 @@ jobs:
       - name: Checkout 🛎
         uses: actions/checkout@v4
 
+      - name: Check if release version 🏷️
+        id: version
+        run: |
+          VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)"/\1/')
+          echo "version=$VERSION"
+          if echo "$VERSION" | grep -q -- '-dev'; then
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Cache Cargo dependencies 📦
         uses: Swatinem/rust-cache@v2
 
@@ -88,17 +99,17 @@ jobs:
         run: ls -R site
 
       - name: Setup Pages 📄
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.version.outputs.is_release == 'true'
         uses: actions/configure-pages@v5
 
       - name: Upload artifact 📦
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.version.outputs.is_release == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'site'
 
       - name: Deploy to GitHub Pages 🚀
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' && steps.version.outputs.is_release == 'true'
         id: deployment
         uses: actions/deploy-pages@v4
 

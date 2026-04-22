@@ -125,6 +125,8 @@ mask pedantic_fix
 
 Marmite is published to three registries: **GitHub Releases** (pre-built binaries), **crates.io** (Rust crate), and **PyPI** (Python package). The version in `Cargo.toml` is the single source of truth — `pyproject.toml` reads from it dynamically.
 
+> **Note:** The project website (marmite.blog) is deployed by the [`main.yml`](.github/workflows/main.yml) workflow. Deployment to GitHub Pages only happens when the version in `Cargo.toml` is a GA release (e.g. `0.3.0`). If the version contains `-dev` (e.g. `0.3.1-dev`), the site is still built so the output can be inspected in the workflow logs, but the publish/deploy steps are skipped. This prevents in-development versions from overwriting the live documentation site. After a release, once the `-dev` suffix is removed, the next push to `main` will deploy the updated site automatically.
+
 ### Prerequisites for Releasing
 
 - [mask](https://crates.io/crates/mask) task runner installed (`cargo install mask`)
