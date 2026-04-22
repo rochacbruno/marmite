@@ -42,3 +42,49 @@ fn test_render_not_found_fallback() {
     // Should return fallback 404 response
     // Testing the actual content is difficult without accessing internal data
 }
+
+#[test]
+fn test_content_type_for_svg() {
+    assert_eq!(content_type_for("image.svg"), Some("image/svg+xml"));
+}
+
+#[test]
+fn test_content_type_for_common_types() {
+    assert_eq!(
+        content_type_for("index.html"),
+        Some("text/html; charset=utf-8")
+    );
+    assert_eq!(
+        content_type_for("style.css"),
+        Some("text/css; charset=utf-8")
+    );
+    assert_eq!(
+        content_type_for("app.js"),
+        Some("text/javascript; charset=utf-8")
+    );
+    assert_eq!(
+        content_type_for("data.json"),
+        Some("application/json; charset=utf-8")
+    );
+    assert_eq!(
+        content_type_for("sitemap.xml"),
+        Some("application/xml; charset=utf-8")
+    );
+    assert_eq!(content_type_for("photo.png"), Some("image/png"));
+    assert_eq!(content_type_for("photo.jpg"), Some("image/jpeg"));
+    assert_eq!(content_type_for("photo.webp"), Some("image/webp"));
+    assert_eq!(content_type_for("font.woff2"), Some("font/woff2"));
+}
+
+#[test]
+fn test_content_type_for_unknown_extension() {
+    assert_eq!(content_type_for("file.xyz"), None);
+}
+
+#[test]
+fn test_content_type_for_nested_path() {
+    assert_eq!(
+        content_type_for("assets/icons/logo.svg"),
+        Some("image/svg+xml")
+    );
+}
