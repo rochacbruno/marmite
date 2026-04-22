@@ -10,6 +10,7 @@ Thank you for considering contributing to the Marmite Site Generator project! Co
 4. [Pull Requests](#pull-requests)
 5. [Commit Messages](#commit-messages)
 6. [Code Quality](#code-quality)
+7. [Releasing](#releasing)
 
 ## Code of Conduct
 
@@ -119,3 +120,99 @@ mask fix
 mask pedantic 
 mask pedantic_fix
 ```
+
+## Releasing
+
+Marmite is published to three registries: **GitHub Releases** (pre-built binaries), **crates.io** (Rust crate), and **PyPI** (Python package). The version in `Cargo.toml` is the single source of truth — `pyproject.toml` reads from it dynamically.
+
+### Prerequisites for Releasing
+
+- [mask](https://crates.io/crates/mask) task runner installed (`cargo install mask`)
+- [cargo-edit](https://crates.io/crates/cargo-edit) installed (`cargo install cargo-edit`) for `cargo set-version`
+- Push access to the repository
+- For crates.io: `cargo login` with a valid API token
+- For PyPI: the `PYPI_API_TOKEN` secret configured in the repository settings
+
+### Step 1: Bump the Version and Tag
+
+The `mask publish` command handles version bumping and tagging in one step:
+
+```bash
+mask publish 0.3.0
+```
+
+This runs two sub-commands:
+
+1. **`mask bumpversion 0.3.0`** — Updates the version in `Cargo.toml`, regenerates `Cargo.lock`, runs `cargo fmt`, and commits the change.
+2. **`mask pushtag 0.3.0`** — Creates an annotated git tag and pushes it to the remote.
+
+You can also run these separately if you need more control:
+
+```bash
+mask bumpversion 0.3.0
+# review the commit, make adjustments if needed
+mask pushtag 0.3.0
+```
+
+### Step 2: GitHub Releases (automatic)
+
+Pushing any tag triggers the [`build-release.yml`](.github/workflows/build-release.yml) workflow, which:
+
+- Builds release binaries for 5 platforms (macOS ARM64, macOS x86_64, Linux musl, Linux gnu, Windows)
+- Generates SHA256 checksums
+- Creates a GitHub Release with all binaries attached
+- Tags ending in `-pre` (e.g. `0.3.0-pre`) are marked as pre-releases
+
+The [`container.yml`](.github/workflows/container.yml) workflow also triggers on tag push, building and publishing a Docker image to `ghcr.io`.
+
+### Step 3: Publish to crates.io (manual)
+
+Publishing to crates.io is done manually after the tag is pushed:
+
+```bash
+cargo publish --locked
+```
+
+You can verify what would be published first with:
+
+```bash
+cargo publish --dry-run --locked
+```
+
+### Step 4: Publish to PyPI (automatic)
+
+Pushing a tag prefixed with `py` (e.g. `py0.3.0`) triggers the [`release-python.yml`](.github/workflows/release-python.yml) workflow, which:
+
+- Runs tests, `cargo fmt`, and `cargo clippy`
+- Builds Python wheels for 5 platforms using [maturin](https://github.com/PyO3/maturin) (with zig for cross-compilation)
+- Builds a source distribution (`sdist`)
+- Publishes wheels and sdist to PyPI via `twine`
+
+To trigger a PyPI release after the Rust release:
+
+```bash
+git tag -a "py0.3.0" -m "chore: push py0.3.0"
+git push origin py0.3.0
+```
+
+The workflow can also be triggered manually via `workflow_dispatch` with options for dry-run mode and skipping PyPI or crates.io publishing.
+
+### Fixing a Bad Release
+
+If you need to re-tag a release (e.g. a last-minute fix):
+
+```bash
+mask retag 0.3.0
+```
+
+This deletes the remote tag, amends the current commit, force-pushes the branch, and re-creates the tag. Use with caution as it rewrites history.
+
+### Release Checklist
+
+1. Ensure all tests pass: `mask test`
+2. Ensure code quality: `mask check`
+3. Bump version and tag: `mask publish <version>`
+4. Verify the GitHub Release is created with all binaries
+5. Publish to crates.io: `cargo publish --locked`
+6. Tag and push for PyPI: `git tag -a "py<version>" -m "chore: push py<version>" && git push origin py<version>`
+7. Verify the package is available on [crates.io](https://crates.io/crates/marmite) and [PyPI](https://pypi.org/project/marmite/)
