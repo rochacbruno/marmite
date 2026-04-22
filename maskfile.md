@@ -133,6 +133,7 @@ git commit -m "chore: bump version to $tag"
 
 ~~~bash
 #!/usr/bin/env bash
+git push
 git tag -a "$tag" -m "chore: push $tag"
 git push --tags
 ~~~
