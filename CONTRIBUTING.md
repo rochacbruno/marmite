@@ -130,7 +130,7 @@ Marmite is published to three registries: **GitHub Releases** (pre-built binarie
 - [mask](https://crates.io/crates/mask) task runner installed (`cargo install mask`)
 - [cargo-edit](https://crates.io/crates/cargo-edit) installed (`cargo install cargo-edit`) for `cargo set-version`
 - Push access to the repository
-- For crates.io: `cargo login` with a valid API token
+- For crates.io: the `CARGO_REGISTRY_TOKEN` secret configured in the repository settings
 - For PyPI: the `PYPI_API_TOKEN` secret configured in the repository settings
 
 ### Step 1: Bump the Version and Tag
@@ -165,37 +165,28 @@ Pushing any tag triggers the [`build-release.yml`](.github/workflows/build-relea
 
 The [`container.yml`](.github/workflows/container.yml) workflow also triggers on tag push, building and publishing a Docker image to `ghcr.io`.
 
-### Step 3: Publish to crates.io (manual)
+### Step 3: Publish to crates.io and PyPI (automatic)
 
-Publishing to crates.io is done manually after the tag is pushed:
-
-```bash
-cargo publish --locked
-```
-
-You can verify what would be published first with:
-
-```bash
-cargo publish --dry-run --locked
-```
-
-### Step 4: Publish to PyPI (automatic)
-
-Pushing a tag prefixed with `py` (e.g. `py0.3.0`) triggers the [`release-python.yml`](.github/workflows/release-python.yml) workflow, which:
+Pushing a tag prefixed with `release` (e.g. `release0.3.0`) triggers the [`release-pkgs.yml`](.github/workflows/release-pkgs.yml) workflow, which:
 
 - Runs tests, `cargo fmt`, and `cargo clippy`
+- Publishes the crate to crates.io
 - Builds Python wheels for 5 platforms using [maturin](https://github.com/PyO3/maturin) (with zig for cross-compilation)
 - Builds a source distribution (`sdist`)
 - Publishes wheels and sdist to PyPI via `twine`
 
-To trigger a PyPI release after the Rust release:
+To trigger the release after the GitHub Release is created:
 
 ```bash
-git tag -a "py0.3.0" -m "chore: push py0.3.0"
-git push origin py0.3.0
+git tag -a "release0.3.0" -m "chore: release 0.3.0"
+git push origin release0.3.0
 ```
 
-The workflow can also be triggered manually via `workflow_dispatch` with options for dry-run mode and skipping PyPI or crates.io publishing.
+The workflow can also be triggered manually via `workflow_dispatch` with options for:
+- **Dry run mode** — build everything but skip actual publishing
+- **Skip tests** — skip the test suite if main is already passing
+- **Skip crates.io** — skip publishing to crates.io (if already published)
+- **Skip PyPI** — skip publishing to PyPI (if already published)
 
 ### Fixing a Bad Release
 
@@ -213,6 +204,5 @@ This deletes the remote tag, amends the current commit, force-pushes the branch,
 2. Ensure code quality: `mask check`
 3. Bump version and tag: `mask publish <version>`
 4. Verify the GitHub Release is created with all binaries
-5. Publish to crates.io: `cargo publish --locked`
-6. Tag and push for PyPI: `git tag -a "py<version>" -m "chore: push py<version>" && git push origin py<version>`
-7. Verify the package is available on [crates.io](https://crates.io/crates/marmite) and [PyPI](https://pypi.org/project/marmite/)
+5. Publish to crates.io and PyPI: `git tag -a "release<version>" -m "chore: release <version>" && git push origin release<version>`
+6. Verify the package is available on [crates.io](https://crates.io/crates/marmite) and [PyPI](https://pypi.org/project/marmite/)

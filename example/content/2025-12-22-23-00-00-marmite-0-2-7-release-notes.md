@@ -326,7 +326,7 @@ To upgrade to Marmite 0.2.7:
 cargo install marmite --force
 
 # If installed via pip
-pip install --upgrade marmite-ssg
+pip install --upgrade marmite
 
 # Or use the install script
 curl -sSL https://marmite.blog/install.sh | bash
