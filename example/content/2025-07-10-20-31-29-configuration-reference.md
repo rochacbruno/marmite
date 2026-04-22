@@ -489,11 +489,7 @@ You can find the list of themes on the [arborium site](https://arborium.bearcove
 
 ### Supported languages
 
-By default, we build support for all permissively licensed grammars from arborium.
-Two Cargo features control the this:
-
-- `highlight-default-languages` (default): every permissively-licensed grammar arborium ships — all 102 `lang-*` features except `lang-nginx`. Licenses in the set are MIT, Apache-2.0, ISC, Unlicense, or MPL-2.0.
-- `highlight-all-languages` (opt-in): also enables the GPL-3.0 `lang-nginx` grammar. Building with this may place stricter redistribution obligations on the resulting binary — see the [arborium documentation](https://docs.rs/arborium/latest/arborium/) for the per-grammar license breakdown.
+By default, we build support for all grammars from arborium.
 
 You can also build with `--no-default-features` and enable only the `arborium/lang-*` features you need:
 
