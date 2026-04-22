@@ -3,6 +3,7 @@ tagline: Static Site Generator <br> <small>for blogs</small> <br> <small>made wi
 url: https://marmite.blog
 pagination: 10
 enable_search: true
+search_show_matches: true
 toc: true
 json_feed: true
 sitemap: true
