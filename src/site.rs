@@ -2483,9 +2483,11 @@ fn handle_content_pages(
                 tera,
                 &content_context,
                 output_dir,
-                shortcode_processor,
-                Some(site_data),
-                highlighter,
+                &PostProcessors {
+                    shortcode_processor,
+                    site_data: Some(site_data),
+                    highlighter,
+                },
             )
         })
         .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
@@ -2795,6 +2797,13 @@ impl UrlCollection {
     }
 }
 
+#[derive(Default)]
+struct PostProcessors<'a> {
+    shortcode_processor: Option<&'a ShortcodeProcessor>,
+    site_data: Option<&'a Data>,
+    highlighter: Option<&'a MarmiteHighlighter>,
+}
+
 fn render_html(
     template: &str,
     filename: &str,
@@ -2803,7 +2812,7 @@ fn render_html(
     output_dir: &Path,
 ) -> Result<(), String> {
     render_html_with_shortcodes(
-        template, filename, tera, context, output_dir, None, None, None,
+        template, filename, tera, context, output_dir, &PostProcessors::default(),
     )
 }
 
@@ -2813,9 +2822,7 @@ fn render_html_with_shortcodes(
     tera: &Tera,
     context: &Context,
     output_dir: &Path,
-    shortcode_processor: Option<&ShortcodeProcessor>,
-    site_data: Option<&Data>,
-    highlighter: Option<&MarmiteHighlighter>,
+    processors: &PostProcessors<'_>,
 ) -> Result<(), String> {
     let templates = template.split(',').collect::<Vec<_>>();
     let template = templates
@@ -2827,16 +2834,14 @@ fn render_html_with_shortcodes(
         e.to_string()
     })?;
 
-    // Process shortcodes if processor is available
-    if let Some(processor) = shortcode_processor {
+    if let Some(processor) = processors.shortcode_processor {
         debug!("Processing shortcodes for {filename}");
-        rendered = processor.process_shortcodes(&rendered, context, tera, highlighter);
+        rendered = processor.process_shortcodes(&rendered, context, tera, processors.highlighter);
     } else {
         debug!("No shortcode processor available for {filename}");
     }
 
-    // Process wikilinks if site data is available
-    if let Some(data) = site_data {
+    if let Some(data) = processors.site_data {
         debug!("Processing wikilinks for {filename}");
         rendered = fix_wikilinks(&rendered, data);
     }
