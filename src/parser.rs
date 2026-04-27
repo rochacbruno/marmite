@@ -15,6 +15,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use url::Url;
+use urlencoding::decode as urldecode;
 
 pub fn append_references(content: &str, references_path: &Path) -> String {
     if references_path.exists() {
@@ -126,8 +127,8 @@ pub fn get_html_with_options(
     options.extension.description_lists = parser_options.extension.description_lists;
     options.extension.footnotes = parser_options.extension.footnotes;
     options.extension.greentext = parser_options.extension.greentext;
-    options.extension.header_ids = Some(String::new()); // Not configurable
-                                                        // options.extension.image_url_rewriter = TODO: implement this to point to a resized image
+    options.extension.header_id_prefix = Some(String::new());
+    // options.extension.image_url_rewriter = TODO: implement this to point to a resized image
     options.extension.multiline_block_quotes = parser_options.extension.multiline_block_quotes;
     options.extension.tagfilter = parser_options.extension.tagfilter;
     options.extension.shortcodes = parser_options.extension.shortcodes;
@@ -195,15 +196,18 @@ pub fn fix_internal_links(html: &str) -> String {
         }
 
         let new_href = if let Ok(parsed) = Url::parse(&format!("m://m/{href}")) {
-            let path = slug::slugify(
-                parsed
-                    .path()
-                    .trim_start_matches('/')
-                    .trim_end_matches(".md")
-                    .trim_end_matches(".html"),
-            );
+            let raw_path = parsed
+                .path()
+                .trim_start_matches('/')
+                .trim_end_matches(".md")
+                .trim_end_matches(".html");
+            let decoded_path = urldecode(raw_path).unwrap_or_else(|_| raw_path.into());
+            let path = slug::slugify(&*decoded_path);
             let fragment = match parsed.fragment() {
-                Some(f) => slug::slugify(f),
+                Some(f) => {
+                    let decoded_f = urldecode(f).unwrap_or_else(|_| f.into());
+                    slug::slugify(&*decoded_f)
+                }
                 None => String::new(),
             };
 

@@ -366,6 +366,22 @@ fn test_fix_wikilinks_mixed_content() {
 }
 
 #[test]
+fn test_fix_internal_links_with_percent_encoded_spaces() {
+    let html = r#"<a href="Markdown%20Format" data-wikilink="true">Markdown Format</a>"#;
+    let expected = r#"<a href="markdown-format.html" data-wikilink="true">Markdown Format</a>"#;
+    assert_eq!(fix_internal_links(html), expected);
+}
+
+#[test]
+fn test_fix_internal_links_with_percent_encoded_spaces_and_fragment() {
+    let html =
+        r#"<a href="Markdown%20Format#Obsidian%20Links" data-wikilink="true">Markdown Format</a>"#;
+    let expected =
+        r#"<a href="markdown-format.html#obsidian-links" data-wikilink="true">Markdown Format</a>"#;
+    assert_eq!(fix_internal_links(html), expected);
+}
+
+#[test]
 fn test_decode_html_entities() {
     assert_eq!(decode_html_entities("Test &amp; Example"), "Test & Example");
     assert_eq!(decode_html_entities("&lt;tag&gt;"), "<tag>");
