@@ -41,6 +41,9 @@ cargo_binstall = true
 # Experimental features
 experimental = true
 
+# Disable aqua attestation verification (workaround for uv install failures)
+aqua.github_attestations = false
+
 # Enable idiomatic version files (like rust-toolchain.toml)
 idiomatic_version_file_enable_tools = ["rust"]
 
