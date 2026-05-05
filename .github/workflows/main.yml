@@ -32,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout 🛎
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: check formatting 🖌️
         run: cargo fmt -- --check
@@ -53,7 +53,7 @@ jobs:
     needs: test
     steps:
       - name: Checkout 🛎
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Check if release version 🏷️
         id: version
@@ -122,7 +122,7 @@ jobs:
       options: --security-opt seccomp=unconfined
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Generate code coverage
         run: |
