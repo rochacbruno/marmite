@@ -104,8 +104,11 @@ pub fn generate_static(static_folder: &Path) {
 }
 
 pub fn get_skill_content() -> Option<String> {
-    AgentSkills::get("skills/marmite/SKILL.md")
-        .and_then(|file| std::str::from_utf8(file.data.as_ref()).ok().map(String::from))
+    AgentSkills::get("skills/marmite/SKILL.md").and_then(|file| {
+        std::str::from_utf8(file.data.as_ref())
+            .ok()
+            .map(String::from)
+    })
 }
 
 pub fn install_skills_to_agents(target_folder: &Path) {

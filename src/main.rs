@@ -110,9 +110,9 @@ fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let input_folder_path = args.input_folder.ok_or(
-        "Input folder is required. Usage: marmite <INPUT_FOLDER> [OUTPUT_FOLDER]",
-    )?;
+    let input_folder_path = args
+        .input_folder
+        .ok_or("Input folder is required. Usage: marmite <INPUT_FOLDER> [OUTPUT_FOLDER]")?;
     let input_folder = Arc::new(input_folder_path);
     let config_path = Arc::new(get_config_path(&input_folder, &args.config));
 
