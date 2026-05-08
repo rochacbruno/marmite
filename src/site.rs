@@ -2927,16 +2927,20 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         error!("Failed to create input folder: {e:?}");
         process::exit(1);
     }
-    if input_folder
+    let has_visible_files = input_folder
         .read_dir()
         .map_err(|e| {
             error!("Failed to read input folder: {e}");
             process::exit(1);
         })
         .unwrap_or_else(|()| std::process::exit(1))
-        .next()
-        .is_some()
-    {
+        .any(|entry| {
+            entry
+                .ok()
+                .and_then(|e| e.file_name().to_str().map(|n| !n.starts_with('.')))
+                .unwrap_or(false)
+        });
+    if has_visible_files {
         error!("Input folder is not empty: {}", input_folder.display());
         process::exit(1);
     }
