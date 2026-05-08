@@ -23,6 +23,10 @@ pub struct ThemeTemplate;
 #[folder = "$CARGO_MANIFEST_DIR/example/shortcodes/"]
 pub struct Shortcodes;
 
+#[derive(Embed, Debug)]
+#[folder = "$CARGO_MANIFEST_DIR/.agents/"]
+pub struct AgentSkills;
+
 pub static EMBEDDED_SHORTCODES: LazyLock<Vec<(String, Vec<u8>)>> = LazyLock::new(|| {
     let mut files: Vec<(String, Vec<u8>)> = Vec::new();
 
@@ -50,6 +54,19 @@ pub static EMBEDDED_TERA: LazyLock<Tera> = LazyLock::new(|| {
     tera
 });
 
+pub static EMBEDDED_AGENT_SKILLS: LazyLock<Vec<(String, Vec<u8>)>> = LazyLock::new(|| {
+    let mut files: Vec<(String, Vec<u8>)> = Vec::new();
+
+    for name in AgentSkills::iter() {
+        let file = AgentSkills::get(name.as_ref())
+            .expect("Failed to get embedded agent skill file - this is a build-time error");
+        let file_data = file.data;
+        files.push((name.clone().to_string(), file_data.clone().to_vec()));
+    }
+
+    files
+});
+
 pub static EMBEDDED_STATIC: LazyLock<Vec<(String, Vec<u8>)>> = LazyLock::new(|| {
     let mut files: Vec<(String, Vec<u8>)> = Vec::new();
 
@@ -72,6 +89,41 @@ pub fn generate_static(static_folder: &Path) {
     for (name, file_data) in EMBEDDED_STATIC.iter() {
         let file_path = static_folder.join(name); // static/foo.ext
                                                   // ensure the parent directory exists
+        if let Some(parent) = file_path.parent() {
+            if let Err(e) = fs::create_dir_all(parent) {
+                error!("Unable to create directory: {e:?}");
+                return;
+            }
+        }
+
+        match write_bytes_to_file(file_path.as_path(), file_data) {
+            Ok(()) => info!("Generated {}", &file_path.display()),
+            Err(e) => error!("Error writing file: {e:?}"),
+        }
+    }
+}
+
+pub fn get_skill_content() -> Option<String> {
+    AgentSkills::get("skills/marmite/SKILL.md")
+        .and_then(|file| std::str::from_utf8(file.data.as_ref()).ok().map(String::from))
+}
+
+pub fn install_skills_to_agents(target_folder: &Path) {
+    install_skills_to_dir(&target_folder.join(".agents"));
+}
+
+pub fn install_skills_to_claude(target_folder: &Path) {
+    install_skills_to_dir(&target_folder.join(".claude"));
+}
+
+fn install_skills_to_dir(base_dir: &Path) {
+    if let Err(e) = fs::create_dir_all(base_dir) {
+        error!("Unable to create directory: {e:?}");
+        return;
+    }
+
+    for (name, file_data) in EMBEDDED_AGENT_SKILLS.iter() {
+        let file_path = base_dir.join(name);
         if let Some(parent) = file_path.parent() {
             if let Err(e) = fs::create_dir_all(parent) {
                 error!("Unable to create directory: {e:?}");

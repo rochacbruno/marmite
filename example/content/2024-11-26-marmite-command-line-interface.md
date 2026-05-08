@@ -449,6 +449,48 @@ This command is useful for:
 > [!TIP]
 > Use `--show-urls` as a dry run to check how your site will be structured without actually generating any files. The JSON output makes it easy to integrate with scripts and automation tools.
 
+## Agent Skills
+
+Marmite ships with an embedded [Agent Skill](https://agentskills.io) that lets AI coding agents build, configure, and manage marmite sites with full context.
+
+These commands do not require an input folder argument.
+
+### Print the skill document
+
+```console
+$ marmite --skill
+```
+
+Outputs the full SKILL.md to stdout, useful for piping or reviewing the embedded documentation.
+
+### Install for standard agents
+
+```console
+$ marmite --skill-install
+```
+
+Installs the skill to `.agents/skills/marmite/` in the current directory. This is the standard [agent-skills.io](https://agentskills.io) location used by Codex, Gemini CLI, Cursor, and other agents.
+
+### Install for Claude Code
+
+```console
+$ marmite --skill-install-claude
+```
+
+Installs the skill to `.claude/skills/marmite/` in the current directory, which is the path convention used by Claude Code.
+
+### Install for all agents at once
+
+```console
+$ marmite --skill-install --skill-install-claude
+```
+
+Both flags can be combined to set up all agents in one command.
+
+> [!TIP]
+> An optional input folder can be passed to install the skill to a specific project directory:
+> `marmite /path/to/project --skill-install --skill-install-claude`
+
 ## CLI Help
 
 
@@ -456,16 +498,15 @@ This command is useful for:
 $ marmite --help
 Marmite is the easiest static site generator.
 
-Usage: marmite [OPTIONS] <INPUT_FOLDER> [OUTPUT_FOLDER]
+Usage: marmite [OPTIONS] [INPUT_FOLDER] [OUTPUT_FOLDER]
 
 Arguments:
-  <INPUT_FOLDER>   Input folder containing markdown files
+  [INPUT_FOLDER]   Input folder containing markdown files
   [OUTPUT_FOLDER]  Output folder to generate the site [default: `input_folder/site`]
 
 Options:
   -v, --verbose...
-          Verbosity level (0-4) [default: 0 warn] options: -v: info,-vv: debug,-vvv: trace,-vvvv: trace
-          all
+          Verbosity level (0-4) [default: 0 warn] options: -v: info,-vv: debug,-vvv: trace,-vvvv: trace all
   -w, --watch
           Detect changes and rebuild the site automatically
       --serve
@@ -476,9 +517,9 @@ Options:
           Path to custom configuration file [default: marmite.yaml]
       --init-templates
           Initialize templates in the project
-      --start-theme <THEME_NAME>
+      --start-theme <START_THEME>
           Initialize a theme with templates and static assets
-      --set-theme <THEME_SOURCE>
+      --set-theme <SET_THEME>
           Download and set a theme from a remote URL or local folder
       --generate-config
           Generate the configuration file
@@ -492,6 +533,12 @@ Options:
           List all available shortcodes
       --show-urls
           Show all site URLs organized by content type
+      --skill
+          Print the embedded agent skill document (SKILL.md) to stdout
+      --skill-install
+          Install the skill into .agents/skills/ in the current directory
+      --skill-install-claude
+          Also install the skill into .claude/skills/ for Claude Code
       --new <NEW>
           Create a new post with the given title and open in the default editor
   -e
@@ -506,6 +553,9 @@ Options:
           Site tagline [default: empty or value from config file]
       --url <URL>
           Site url [default: empty or value from config file]
+      --https <HTTPS>
+          If protocol is missing in the URL setting, whether to use HTTPS or not [default: false]
+          [possible values: true, false]
       --footer <FOOTER>
           Site footer [default: from '_footer.md' or config file]
       --language <LANGUAGE>
@@ -515,13 +565,16 @@ Options:
       --enable-search <ENABLE_SEARCH>
           Enable search [default: false or from config file] [possible values: true, false]
       --search-show-matches <SEARCH_SHOW_MATCHES>
-          Show matched text snippets in search results [default: false or from config file] [possible values: true, false]
+          Show matched text snippets in search results [default: false or from config file]
+          [possible values: true, false]
       --search-match-count <SEARCH_MATCH_COUNT>
           Number of match snippets to show per search result [default: 3 or from config file]
       --enable-related-content <ENABLE_RELATED_CONTENT>
-          Enable backlinks and related content for posts [default: true or from config file] [possible values: true, false]
+          Enable backlinks and related content for posts [default: true or from config file]
+          [possible values: true, false]
       --show-next-prev-links <SHOW_NEXT_PREV_LINKS>
-          Show next and previous links in posts [default: true or from config file] [possible values: true, false]
+          Show next and previous links in posts [default: true or from config file]
+          [possible values: true, false]
       --content-path <CONTENT_PATH>
           Path for content subfolder [default: "content" or value from config file] this is the folder
           where markdown files are stored inside `input_folder` no need to change this if your markdown
@@ -536,8 +589,17 @@ Options:
       --default-date-format <DEFAULT_DATE_FORMAT>
           Default date format [default: "%b %e, %Y" or from config file] see
           <https://docs.rs/chrono/0.4.19/chrono/format/strftime/index.html>
+      --colorscheme <COLORSCHEME>
+          Name of the colorscheme to use [default: "default" or from config file] see
+          <https://marmite.blog/getting-started.html#colorschemes>
+      --toc <TOC>
+          Show Table of Contents in posts [default: false or from config file] this will generate a
+          table of contents for each post [possible values: true, false]
+      --json-feed <JSON_FEED>
+          Generate JSON Feed [default: false or from config file] [possible values: true, false]
       --publish-md <PUBLISH_MD>
-          Publish markdown source files alongside HTML [default: false or from config file] [possible values: true, false]
+          Publish markdown source files alongside HTML [default: false or from config file]
+          [possible values: true, false]
       --source-repository <SOURCE_REPOSITORY>
           Source repository URL to link to markdown files [default: None or from config file]
       --image-provider <IMAGE_PROVIDER>
@@ -545,6 +607,18 @@ Options:
           Available providers: picsum
       --theme <THEME>
           Theme to use for the site [default: from config file or embedded templates]
+      --build-sitemap <BUILD_SITEMAP>
+          Generate sitemap.xml file [default: true or from config file] [possible values: true, false]
+      --publish-urls-json <PUBLISH_URLS_JSON>
+          Generate urls.json file [default: true or from config file] [possible values: true, false]
+      --enable-shortcodes <ENABLE_SHORTCODES>
+          Enable shortcodes processing [default: true or from config file] [possible values: true, false]
+      --shortcode-pattern <SHORTCODE_PATTERN>
+          Custom shortcode pattern (regex) [default: <!-- \.(\w+)(?:\s+([^-][\s\S]*?))?\s*-->
+          or from config file]
+      --skip-image-resize <SKIP_IMAGE_RESIZE>
+          Skip image resizing during build [default: false or from config file] Use this for faster
+          development builds when image optimization is not needed [possible values: true, false]
   -h, --help
           Print help
   -V, --version

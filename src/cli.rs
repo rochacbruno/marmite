@@ -7,7 +7,7 @@ use std::path::PathBuf;
 #[command(version, about, long_about = None)]
 pub struct Cli {
     /// Input folder containing markdown files
-    pub input_folder: PathBuf,
+    pub input_folder: Option<PathBuf>,
 
     /// Output folder to generate the site
     /// [default: `input_folder/site`]
@@ -74,6 +74,18 @@ pub struct Cli {
     /// Show all site URLs organized by content type
     #[arg(long)]
     pub show_urls: bool,
+
+    /// Print the embedded agent skill document (SKILL.md) to stdout
+    #[arg(long)]
+    pub skill: bool,
+
+    /// Install the skill into .agents/skills/ in the current directory
+    #[arg(long)]
+    pub skill_install: bool,
+
+    /// Also install the skill into .claude/skills/ for Claude Code
+    #[arg(long)]
+    pub skill_install_claude: bool,
 
     /// Create a new markdown file in the input folder
     #[command(flatten)]

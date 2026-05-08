@@ -38,3 +38,37 @@ fn test_embedded_static_initialization() {
     let static_files = &*EMBEDDED_STATIC;
     assert!(!static_files.is_empty());
 }
+
+#[test]
+fn test_embedded_agent_skills_initialization() {
+    let skill_files = &*EMBEDDED_AGENT_SKILLS;
+    assert!(!skill_files.is_empty());
+}
+
+#[test]
+fn test_get_skill_content() {
+    let content = get_skill_content();
+    assert!(content.is_some());
+    let content = content.unwrap();
+    assert!(content.contains("marmite"));
+}
+
+#[test]
+fn test_install_skills_to_agents() {
+    let temp_dir = TempDir::new().unwrap();
+    let target = temp_dir.path();
+
+    install_skills_to_agents(target);
+
+    assert!(target.join(".agents/skills/marmite/SKILL.md").exists());
+}
+
+#[test]
+fn test_install_skills_to_claude() {
+    let temp_dir = TempDir::new().unwrap();
+    let target = temp_dir.path();
+
+    install_skills_to_claude(target);
+
+    assert!(target.join(".claude/skills/marmite/SKILL.md").exists());
+}
