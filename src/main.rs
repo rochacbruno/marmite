@@ -51,7 +51,9 @@ fn determine_verbosity(args: &cli::Cli) -> u8 {
             || args.set_theme.is_some()
             || args.init_templates
             || args.generate_config
-            || args.init_site)
+            || args.init_site
+            || args.skill_install
+            || args.skill_install_claude)
     {
         verbose = 1;
     }
@@ -72,18 +74,47 @@ fn get_config_path(input_folder: &Path, config: &str) -> PathBuf {
 
 #[allow(clippy::too_many_lines)]
 fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
-    let cloned_args = Arc::new(args.clone()); // Clone to pass to the server thread
-    let input_folder = Arc::new(args.input_folder.clone());
+    let cloned_args = Arc::new(args.clone());
     let serve = args.serve;
     let watch = args.watch;
     let bind_address: &str = args.bind.as_str();
     let verbose = determine_verbosity(&args);
 
-    let config_path = Arc::new(get_config_path(args.input_folder.as_path(), &args.config));
-
     if let Err(e) = setup_logging(verbose, args.debug) {
         error!("Logger already initialized: {e:?}");
     }
+
+    if args.skill {
+        match embedded::get_skill_content() {
+            Some(content) => {
+                print!("{content}");
+                return Ok(());
+            }
+            None => {
+                return Err("Embedded skill file not found".into());
+            }
+        }
+    }
+
+    if args.skill_install || args.skill_install_claude {
+        let target = args
+            .input_folder
+            .clone()
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
+        if args.skill_install {
+            embedded::install_skills_to_agents(&target);
+        }
+        if args.skill_install_claude {
+            embedded::install_skills_to_claude(&target);
+        }
+        return Ok(());
+    }
+
+    let input_folder_path = args
+        .input_folder
+        .ok_or("Input folder is required. Usage: marmite <INPUT_FOLDER> [OUTPUT_FOLDER]")?;
+    let input_folder = Arc::new(input_folder_path);
+    let config_path = Arc::new(get_config_path(&input_folder, &args.config));
 
     if args.init_site {
         site::initialize(&input_folder, &cloned_args);

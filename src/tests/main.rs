@@ -2,7 +2,7 @@ use super::*;
 
 fn create_test_cli(overrides: impl FnOnce(&mut cli::Cli)) -> cli::Cli {
     let mut args = cli::Cli {
-        input_folder: PathBuf::from("test"),
+        input_folder: Some(PathBuf::from("test")),
         output_folder: None,
         verbose: 0,
         watch: false,
@@ -18,6 +18,9 @@ fn create_test_cli(overrides: impl FnOnce(&mut cli::Cli)) -> cli::Cli {
         force: false,
         shortcodes: false,
         show_urls: false,
+        skill: false,
+        skill_install: false,
+        skill_install_claude: false,
         create: cli::Create {
             new: None,
             edit: false,
@@ -127,7 +130,7 @@ fn test_get_config_path_dot_relative() {
 #[test]
 fn test_run_cli_nonexistent_folder() {
     let args = create_test_cli(|args| {
-        args.input_folder = PathBuf::from("/nonexistent/folder");
+        args.input_folder = Some(PathBuf::from("/nonexistent/folder"));
     });
 
     let result = run_cli(args);

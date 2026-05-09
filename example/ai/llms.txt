@@ -123,3 +123,87 @@ $ marmite myblog --serve
 - **Draft Content Management**: Special handling of draft posts with filtering from feeds and search
 - **Related Content**: Configurable related content and backlinks between posts
 - **Markdown Alerts**: Support for GitHub-style callouts and alert boxes in markdown
+
+## Agents
+
+Marmite ships with an embedded agent skill following the [Agent Skills](https://agentskills.io) open format. AI coding agents (Claude Code, Codex, Gemini CLI, Cursor, and others) can use this skill to build, configure, and manage marmite sites.
+
+### Viewing the Skill
+
+Print the embedded skill document to stdout:
+
+```console
+$ marmite --skill
+```
+
+This outputs the full SKILL.md with workflows for project setup, content authoring, configuration, templates, themes, shortcodes, and deployment.
+
+### Installing the Skill
+
+Install the skill into a project so agents discover it automatically. No input folder argument is needed - the skill is installed in the current directory by default.
+
+For agents that follow the standard agent-skills pattern (Codex, Gemini CLI, Cursor, etc.):
+
+```console
+$ marmite --skill-install
+```
+
+This creates `.agents/skills/marmite/` with the SKILL.md and all reference files.
+
+For Claude Code, which uses `.claude/skills/` instead:
+
+```console
+$ marmite --skill-install-claude
+```
+
+This creates `.claude/skills/marmite/` with the same files.
+
+Both flags can be combined to install for all agents at once:
+
+```console
+$ marmite --skill-install --skill-install-claude
+```
+
+The installed structure:
+
+```
+.agents/skills/marmite/                     # Standard agent-skills pattern
+  SKILL.md                                  # Main skill document
+  references/
+    cli-reference.md                        # All CLI flags and options
+    installation.md                         # Installation methods
+    config-reference.md                     # Complete marmite.yaml reference
+    frontmatter.md                          # Content frontmatter fields
+    content-organization.md                 # Directory structure and taxonomy
+    markdown-format.md                      # Markdown syntax and extensions
+    tera-templates.md                       # Template system and variables
+    shortcodes.md                           # Shortcode creation and usage
+    deployment-guide.md                     # Hosting and deployment guides
+    comment-system.md                       # Comment system integration
+
+.claude/skills/marmite/                     # Claude Code
+  SKILL.md                                  # Same files as above
+  references/                               # Same references
+```
+
+### How Agents Use It
+
+Agents that support the agent-skills pattern load skills in three stages:
+
+1. **Discovery** - the agent reads the skill name and description from SKILL.md frontmatter
+2. **Activation** - when the task matches (e.g., "create a blog with marmite"), the agent reads the full SKILL.md
+3. **Execution** - the agent follows the workflows and loads reference files as needed for detailed information
+
+### Example Agent Interactions
+
+With the skill installed, an agent can handle requests like:
+
+- "Create a new marmite blog about cooking with search enabled and the dracula colorscheme"
+- "Add a Python tutorial series with three parts"
+- "Set up GitHub Pages deployment for this site"
+- "Create a custom shortcode for embedding recipe cards"
+- "Add Giscus comments to the blog"
+- "Customize the homepage with a hero section and sidebar"
+- "Create a new theme based on the default one"
+
+The skill provides the agent with the exact commands, configuration fields, frontmatter syntax, and template variables needed to complete each task correctly.
