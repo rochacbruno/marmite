@@ -528,6 +528,137 @@ header h1 {
   color: var(--header-bg) !important;
 }
 
+/* Mobile panel toggle - hidden on desktop */
+#mobile-panel-toggle {
+  display: none;
+  background: var(--tab-inactive);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#mobile-panel-toggle button {
+  flex: 1;
+  padding: 8px;
+  background: var(--tab-inactive);
+  color: var(--subtext);
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#mobile-panel-toggle button.active {
+  color: var(--text);
+  border-bottom-color: var(--blue);
+}
+
+/* Responsive - mobile */
+@media (max-width: 768px) {
+  header {
+    padding: 0 8px;
+    height: 44px;
+    flex-wrap: nowrap;
+  }
+
+  header h1 {
+    font-size: 14px;
+  }
+
+  .header-right {
+    gap: 4px;
+  }
+
+  #status {
+    display: none;
+  }
+
+  #docs-link,
+  #download-btn,
+  #upload-btn,
+  #new-session-btn {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  #mobile-panel-toggle {
+    display: flex;
+  }
+
+  #app {
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  #editor-panel {
+    width: 100% !important;
+    min-width: 0;
+  }
+
+  #divider {
+    display: none;
+  }
+
+  #preview-panel {
+    min-width: 0;
+  }
+
+  #app.show-preview #editor-panel {
+    display: none;
+  }
+
+  #app.show-preview #preview-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  #app:not(.show-preview) #preview-panel {
+    display: none;
+  }
+
+  #app:not(.show-preview) #editor-panel {
+    flex: 1;
+    overflow: hidden;
+  }
+
+  #editor-container {
+    min-height: 0;
+  }
+
+  #editor-statusbar {
+    gap: 4px;
+  }
+
+  #editor-statusbar-right label {
+    display: none;
+  }
+
+  .statusbar-link {
+    font-size: 10px;
+  }
+
+  .dialog-content {
+    min-width: 0;
+    width: calc(100vw - 32px);
+    max-width: 400px;
+  }
+
+  .dialog-row {
+    flex-direction: column;
+  }
+
+  .dialog-row select {
+    width: 100%;
+  }
+
+  .tab-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+}
+
 /* Output panel */
 #output-panel {
   position: fixed;

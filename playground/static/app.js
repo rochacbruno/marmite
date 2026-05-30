@@ -497,6 +497,23 @@ newSessionBtn.addEventListener("click", async () => {
   }
 });
 
+// Mobile panel toggle
+const showEditorBtn = $("#show-editor");
+const showPreviewBtn = $("#show-preview");
+const appEl = $("#app");
+
+showEditorBtn.addEventListener("click", () => {
+  appEl.classList.remove("show-preview");
+  showEditorBtn.classList.add("active");
+  showPreviewBtn.classList.remove("active");
+});
+
+showPreviewBtn.addEventListener("click", () => {
+  appEl.classList.add("show-preview");
+  showPreviewBtn.classList.add("active");
+  showEditorBtn.classList.remove("active");
+});
+
 // Download
 downloadBtn.addEventListener("click", (e) => {
   e.stopPropagation();
