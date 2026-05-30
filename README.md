@@ -10,6 +10,7 @@ Marmite [**Mar**kdown **m**akes s**ite**s] is a **very!** simple static site gen
   
 [![Create blog](https://img.shields.io/badge/CREATE%20YOUR%20BLOG%20WITH%20ONE%20CLICK-20B2AA?style=for-the-badge)](https://github.com/rochacbruno/blog)
 
+[![Playground](https://img.shields.io/badge/PLAYGROUND-20B2AA?style=for-the-badge)](https://play.marmite.blog)
 
 > I'm a big user of other SSGs but it is frequently frustrating that it takes so much setup to get started.  
 Just having a directory of markdown files and running a single command sounds really useful.  
