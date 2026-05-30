@@ -1,0 +1,578 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root,
+[data-theme="dark"] {
+  --bg: #1e1e2e;
+  --surface: #181825;
+  --overlay: #313244;
+  --text: #cdd6f4;
+  --subtext: #a6adc8;
+  --blue: #89b4fa;
+  --green: #a6e3a1;
+  --red: #f38ba8;
+  --yellow: #f9e2af;
+  --border: #45475a;
+  --tab-active: #1e1e2e;
+  --tab-inactive: #11111b;
+  --header-bg: #11111b;
+  --preview-bg: #fff;
+  --preview-placeholder-bg: #f5f5f5;
+  --preview-placeholder-color: #666;
+  --dialog-backdrop: rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] {
+  --bg: #eff1f5;
+  --surface: #e6e9ef;
+  --overlay: #ccd0da;
+  --text: #4c4f69;
+  --subtext: #6c6f85;
+  --blue: #1e66f5;
+  --green: #40a02b;
+  --red: #d20f39;
+  --yellow: #df8e1d;
+  --border: #bcc0cc;
+  --tab-active: #eff1f5;
+  --tab-inactive: #dce0e8;
+  --header-bg: #dce0e8;
+  --preview-bg: #fff;
+  --preview-placeholder-bg: #f5f5f5;
+  --preview-placeholder-color: #666;
+  --dialog-backdrop: rgba(0, 0, 0, 0.3);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 48px;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--blue);
+}
+
+#view-only-badge {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--yellow);
+  border: 1px solid var(--yellow);
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#status {
+  font-size: 13px;
+  color: var(--subtext);
+}
+
+#docs-link {
+  font-size: 12px;
+  color: var(--subtext);
+  text-decoration: none;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+#docs-link:hover {
+  border-color: var(--blue);
+  color: var(--text);
+}
+
+#download-group {
+  position: relative;
+}
+
+#download-btn,
+#upload-btn {
+  padding: 5px 12px;
+  background: none;
+  color: var(--subtext);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+#download-btn:hover,
+#upload-btn:hover {
+  border-color: var(--blue);
+  color: var(--text);
+}
+
+#download-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  z-index: 300;
+  min-width: 150px;
+}
+
+#download-menu.hidden {
+  display: none;
+}
+
+#download-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  background: none;
+  color: var(--text);
+  border: none;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+#download-menu button:hover {
+  background: var(--overlay);
+}
+
+#download-menu button + button {
+  border-top: 1px solid var(--border);
+}
+
+#new-session-btn {
+  padding: 5px 12px;
+  background: none;
+  color: var(--subtext);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+#new-session-btn:hover {
+  border-color: var(--blue);
+  color: var(--text);
+}
+
+#theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: border-color 0.15s;
+}
+
+#theme-toggle:hover {
+  border-color: var(--blue);
+}
+
+#app {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+#editor-panel {
+  display: flex;
+  flex-direction: column;
+  width: 50%;
+  min-width: 300px;
+}
+
+#tabs-bar {
+  display: flex;
+  background: var(--tab-inactive);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#tabs {
+  display: flex;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  border-right: 1px solid var(--border);
+}
+
+.tab-btn {
+  padding: 8px 12px;
+  background: var(--tab-inactive);
+  color: var(--subtext);
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+
+.tab-btn:hover {
+  background: var(--overlay);
+}
+
+.tab-btn.active {
+  background: var(--tab-active);
+  color: var(--text);
+  border-bottom: 2px solid var(--blue);
+}
+
+.tab-btn.dirty::after {
+  content: " *";
+  color: var(--yellow);
+}
+
+.tab-delete {
+  background: none;
+  border: none;
+  color: var(--subtext);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 6px;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s;
+}
+
+.tab:hover .tab-delete {
+  opacity: 1;
+}
+
+.tab-delete:hover {
+  color: var(--red);
+}
+
+#new-file-btn {
+  padding: 4px 12px;
+  background: none;
+  border: none;
+  color: var(--subtext);
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.1s;
+}
+
+#new-file-btn:hover {
+  color: var(--blue);
+}
+
+#editor-container {
+  flex: 1;
+  overflow: auto;
+  background: var(--bg);
+}
+
+#editor-container .cm-editor {
+  height: 100%;
+}
+
+#editor-container .cm-scroller {
+  overflow: auto;
+}
+
+#editor-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 10px;
+  background: var(--tab-inactive);
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--subtext);
+  flex-shrink: 0;
+  height: 26px;
+}
+
+#editor-file-info {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#editor-statusbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+#editor-statusbar-right label {
+  color: var(--subtext);
+  font-size: 11px;
+}
+
+.statusbar-link {
+  color: var(--subtext);
+  text-decoration: none;
+  font-size: 11px;
+  transition: color 0.15s;
+}
+
+.statusbar-link:hover {
+  color: var(--blue);
+}
+
+.statusbar-sep {
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+}
+
+#editor-statusbar #editor-theme {
+  padding: 1px 4px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+#editor-statusbar #editor-theme:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+#divider {
+  width: 4px;
+  background: var(--border);
+  cursor: col-resize;
+  flex-shrink: 0;
+}
+
+#divider:hover {
+  background: var(--blue);
+}
+
+#preview-panel {
+  flex: 1;
+  min-width: 300px;
+  position: relative;
+  background: var(--preview-bg);
+}
+
+#preview-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--preview-placeholder-color);
+  font-size: 15px;
+  background: var(--preview-placeholder-bg);
+}
+
+#preview-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: none;
+}
+
+#preview-frame.visible {
+  display: block;
+}
+
+/* New file dialog */
+#new-file-dialog {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dialog-backdrop);
+  z-index: 200;
+}
+
+#new-file-dialog.hidden {
+  display: none;
+}
+
+.dialog-content {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  min-width: 360px;
+}
+
+.dialog-content h3 {
+  font-size: 15px;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+#new-file-help {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--subtext);
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+#new-file-help code {
+  font-size: 11px;
+  background: var(--overlay);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+#new-file-help a {
+  color: var(--blue);
+}
+
+.dialog-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.dialog-row select,
+.dialog-row input {
+  padding: 6px 10px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.dialog-row select {
+  width: 130px;
+}
+
+.dialog-row input {
+  flex: 1;
+}
+
+.dialog-row input:focus,
+.dialog-row select:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialog-actions button {
+  padding: 6px 16px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--overlay);
+  color: var(--text);
+  transition: border-color 0.15s;
+}
+
+.dialog-actions button:hover {
+  border-color: var(--blue);
+}
+
+#new-file-add {
+  background: var(--blue) !important;
+  color: #fff !important;
+  border-color: var(--blue) !important;
+}
+
+[data-theme="dark"] #new-file-add {
+  color: var(--header-bg) !important;
+}
+
+/* Output panel */
+#output-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+#output-panel.hidden {
+  display: none;
+}
+
+#output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--overlay);
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+#output-header button {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+#output-content {
+  padding: 8px 12px;
+  font-family: "Fira Code", "Cascadia Code", "JetBrains Mono", monospace;
+  font-size: 12px;
+  overflow: auto;
+  flex: 1;
+  color: var(--subtext);
+  white-space: pre-wrap;
+  word-break: break-all;
+}

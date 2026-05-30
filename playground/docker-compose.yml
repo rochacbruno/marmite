@@ -1,0 +1,15 @@
+services:
+  playground:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/marmite-playground:/tmp/marmite-playground
+    environment:
+      - PLAYGROUND_BIND=0.0.0.0:3000
+      - MARMITE_RENDER_MODE=docker
+      - MARMITE_DOCKER_IMAGE=ghcr.io/rochacbruno/marmite:latest
+      - PLAYGROUND_SESSION_TTL=3600
+      - RUST_LOG=marmite_playground=info
+    restart: unless-stopped

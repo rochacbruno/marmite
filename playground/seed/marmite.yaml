@@ -1,0 +1,172 @@
+# Marmite Configuration Reference
+# Uncomment and edit any field to customize your site.
+# Docs: https://marmite.blog/configuration-reference.html
+
+# -- Site Identity --
+name: Playground Site
+tagline: Built with the Marmite Playground
+# url: https://example.com
+# footer: "Powered by <a href='https://marmite.blog'>Marmite</a>"
+# language: en
+# logo_image: media/logo.png
+
+# -- Navigation Menu --
+# Array of [label, url] pairs shown in the top nav.
+menu:
+  - ["Home", "/"]
+  - ["About", "about.html"]
+  - ["Tags", "tags.html"]
+  - ["Archive", "archive.html"]
+
+# -- Content Organization --
+pagination: 10
+# default_author: ""
+# default_date_format: "%b %e, %Y"
+# toc: false
+# show_next_prev_links: true
+# enable_related_content: true
+
+# -- Search --
+# enable_search: false
+# search_show_matches: false
+# search_match_count: 3
+# search_title: Search
+
+# -- Images --
+# card_image: media/og_image.jpg
+# banner_image: media/banner.jpg
+# image_provider: picsum
+# skip_image_resize: false
+
+# -- Paths --
+# content_path: content
+# templates_path: templates
+# static_path: static
+# media_path: media
+# gallery_path: gallery
+# site_path: ""
+
+# -- Feeds and Output --
+# json_feed: false
+# build_sitemap: true
+# publish_urls_json: true
+# publish_md: false
+# source_repository: ""
+
+# -- Shortcodes --
+# enable_shortcodes: true
+# shortcode_pattern: ""
+
+# -- Code Highlighting --
+# code_highlight:
+#   enabled: true
+#   light_theme: github-light
+#   dark_theme: github-dark
+
+# -- Theme --
+# theme: theme_template
+
+# -- Section Titles --
+# pages_title: Pages
+# tags_title: Tags
+# tags_content_title: "Posts tagged with '$tag'"
+# archives_title: Archive
+# archives_content_title: "Posts from '$year'"
+# authors_title: Authors
+# streams_title: Streams
+# series_title: Series
+
+# -- Authors --
+# authors:
+#   johndoe:
+#     name: John Doe
+#     avatar: media/john.jpg
+#     bio: Writer and developer
+#     links:
+#       - ["GitHub", "https://github.com/johndoe"]
+#       - ["Twitter", "https://twitter.com/johndoe"]
+
+# -- Streams (content categories) --
+# streams:
+#   tutorials:
+#     display_name: Tutorials
+#   news:
+#     display_name: News
+
+# -- Series (multi-part content) --
+# series:
+#   getting-started:
+#     display_name: Getting Started
+#     description: A beginner's guide to Marmite
+
+# -- Gallery --
+# gallery_create_thumbnails: true
+# gallery_thumb_size: 50
+# galleries:
+#   photos:
+#     title: Photo Gallery
+
+# -- File Mapping --
+# file_mapping:
+#   - source: extra/robots.txt
+#     dest: robots.txt
+
+# -- Extra Configuration --
+extra:
+  # Colorscheme: catppuccin, clean, dracula, github, gruvbox, iceberg,
+  #   minimal, minimal_wb, monokai, nord, one, solarized, typewriter
+  colorscheme: catppuccin
+  colorscheme_toggle: true
+  colormodetoggle: true
+  # colormode: dark
+
+  # Mermaid and Math are enabled per-content via frontmatter:
+  #   extra:
+  #     mermaid: true
+  #     math: true
+
+  # Social networks shown in footer
+  # social_networks:
+  #   - ["GitHub", "https://github.com/yourname"]
+  #   - ["Twitter", "https://twitter.com/yourname"]
+
+  # max_image_width: 1200
+  # banner_image_width: 1200
+  # resize_filter: balanced
+
+# -- Markdown Parser Options --
+# markdown:
+#   render:
+#     unsafe_: true
+#     escape: false
+#     sourcepos: false
+#     hardbreaks: false
+#     github_pre_lang: true
+#     full_info_string: false
+#   parse:
+#     smart: true
+#     default_info_string: ""
+#     relaxed_tasklist_matching: true
+#     relaxed_autolinks: true
+#   extension:
+#     strikethrough: true
+#     tagfilter: true
+#     table: true
+#     autolink: true
+#     tasklist: true
+#     superscript: true
+#     header_ids: ""
+#     footnotes: true
+#     description_lists: true
+#     multiline_block_quotes: true
+#     math_dollars: true
+#     math_code: false
+#     wikilinks_title_after_pipe: true
+#     wikilinks_title_before_pipe: false
+#     underline: true
+#     spoiler: true
+#     greentext: false
+#     shortcodes: true
+#     emoji: true
+#     image_url_rewriter: ""
+#     alerts: true

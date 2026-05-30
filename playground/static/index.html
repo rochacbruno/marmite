@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marmite Playground</title>
+  <link rel="stylesheet" href="/style.css">
+  <script>
+    (function() {
+      var t = localStorage.getItem("playground_theme") || "dark";
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+  <script type="importmap">
+  {
+    "imports": {
+      "@codemirror/state": "https://esm.sh/@codemirror/state@6.5.2",
+      "@codemirror/view": "https://esm.sh/@codemirror/view@6.36.5?external=@codemirror/state",
+      "@codemirror/language": "https://esm.sh/@codemirror/language@6.10.8?external=@codemirror/state,@codemirror/view",
+      "@codemirror/commands": "https://esm.sh/@codemirror/commands@6.8.0?external=@codemirror/state,@codemirror/view,@codemirror/language",
+      "@codemirror/search": "https://esm.sh/@codemirror/search@6.5.10?external=@codemirror/state,@codemirror/view",
+      "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6.18.6?external=@codemirror/state,@codemirror/view,@codemirror/language",
+      "@codemirror/lint": "https://esm.sh/@codemirror/lint@6.8.5?external=@codemirror/state,@codemirror/view",
+      "codemirror": "https://esm.sh/codemirror@6.0.1?external=@codemirror/state,@codemirror/view,@codemirror/language,@codemirror/commands,@codemirror/search,@codemirror/autocomplete,@codemirror/lint",
+      "@codemirror/lang-markdown": "https://esm.sh/@codemirror/lang-markdown@6.3.1?external=@codemirror/state,@codemirror/view,@codemirror/language",
+      "@codemirror/lang-yaml": "https://esm.sh/@codemirror/lang-yaml@6.1.2?external=@codemirror/state,@codemirror/view,@codemirror/language",
+      "@codemirror/theme-one-dark": "https://esm.sh/@codemirror/theme-one-dark@6.1.2?external=@codemirror/state,@codemirror/view",
+      "thememirror": "https://esm.sh/thememirror@2.0.1?external=@codemirror/state,@codemirror/view,@codemirror/language"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header>
+    <div class="header-left">
+      <h1>Marmite Playground</h1>
+      <span id="view-only-badge" style="display:none">View only</span>
+    </div>
+    <div class="header-right">
+      <span id="status"></span>
+      <a href="https://marmite.blog/docs.html" target="_blank" id="docs-link">Docs</a>
+      <div id="download-group">
+        <button id="download-btn" title="Download project or rendered site">Download</button>
+        <div id="download-menu" class="hidden">
+          <button id="download-source">Source (.tar.gz)</button>
+          <button id="download-site">Site (.tar.gz)</button>
+        </div>
+      </div>
+      <button id="upload-btn" title="Upload a marmite project (.tar.gz or .zip)" style="display:none">Upload</button>
+      <input type="file" id="upload-input" accept=".tar.gz,.tgz,.zip" hidden>
+      <button id="new-session-btn" title="Clone this session into your own" style="display:none">Clone</button>
+      <button id="theme-toggle" title="Toggle light/dark UI theme"></button>
+    </div>
+  </header>
+  <main id="app">
+    <div id="editor-panel">
+      <div id="tabs-bar">
+        <div id="tabs"></div>
+        <button id="new-file-btn" title="Add a new file" style="display:none">+</button>
+      </div>
+      <div id="editor-container"></div>
+      <div id="editor-statusbar">
+        <span id="editor-file-info"></span>
+        <div id="editor-statusbar-right">
+          <a href="https://marmite.blog/markdown-format.html" target="_blank" class="statusbar-link">Markdown Reference</a>
+          <span class="statusbar-sep"></span>
+          <label for="editor-theme">Editor Theme:</label>
+          <select id="editor-theme">
+            <optgroup label="Light">
+              <option value="solarizedLight">Solarized Light</option>
+              <option value="ayuLight">Ayu Light</option>
+              <option value="clouds">Clouds</option>
+              <option value="rosePineDawn">Rose Pine Dawn</option>
+              <option value="noctisLilac">Noctis Lilac</option>
+              <option value="tomorrow">Tomorrow</option>
+              <option value="espresso">Espresso</option>
+            </optgroup>
+            <optgroup label="Dark">
+              <option value="dracula" selected>Dracula</option>
+              <option value="oneDark">One Dark</option>
+              <option value="cobalt">Cobalt</option>
+              <option value="coolGlow">Cool Glow</option>
+              <option value="amy">Amy</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div id="divider"></div>
+    <div id="preview-panel">
+      <div id="preview-placeholder">Loading preview...</div>
+      <iframe id="preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
+  </main>
+  <div id="new-file-dialog" class="hidden">
+    <div class="dialog-content">
+      <h3>New File</h3>
+      <div class="dialog-row">
+        <select id="new-file-folder">
+          <option value="content">content/</option>
+          <option value="static">static/</option>
+          <option value="templates">templates/</option>
+        </select>
+        <input id="new-file-name" type="text" placeholder="filename.md">
+      </div>
+      <div id="new-file-help"></div>
+      <div class="dialog-actions">
+        <button id="new-file-cancel">Cancel</button>
+        <button id="new-file-add">Add</button>
+      </div>
+    </div>
+  </div>
+  <div id="output-panel" class="hidden">
+    <div id="output-header">
+      <span>Build Output</span>
+      <button id="output-close">&times;</button>
+    </div>
+    <pre id="output-content"></pre>
+  </div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
