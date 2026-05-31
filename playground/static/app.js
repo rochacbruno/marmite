@@ -31,6 +31,7 @@ const themeToggle = $("#theme-toggle");
 const editorThemeSelect = $("#editor-theme");
 const newFileBtn = $("#new-file-btn");
 const configBtn = $("#config-btn");
+const syncToggle = $("#sync-toggle");
 const downloadBtn = $("#download-btn");
 const downloadMenu = $("#download-menu");
 const downloadSourceBtn = $("#download-source");
@@ -60,6 +61,8 @@ let files = {};
 let currentFile = null;
 let editorView = null;
 let dirty = new Set();
+let contentMap = {};
+let syncEnabled = localStorage.getItem("playground_sync") !== "false";
 
 const themeCompartment = new Compartment();
 const readOnlyCompartment = new Compartment();
@@ -105,6 +108,50 @@ function toggleTheme() {
 
 updateThemeIcon();
 themeToggle.addEventListener("click", toggleTheme);
+
+function updateSyncToggle() {
+  syncToggle.classList.toggle("active", syncEnabled);
+}
+updateSyncToggle();
+
+syncToggle.addEventListener("click", () => {
+  syncEnabled = !syncEnabled;
+  localStorage.setItem("playground_sync", syncEnabled);
+  updateSyncToggle();
+  if (syncEnabled && currentFile) {
+    navigatePreviewToFile(currentFile);
+  }
+});
+
+async function loadContentMap() {
+  try {
+    const res = await fetch(`/preview/${sessionId}/marmite.json`);
+    if (!res.ok) return;
+    const data = await res.json();
+    contentMap = {};
+    for (const item of [...(data.posts || []), ...(data.pages || [])]) {
+      if (item.source_path) {
+        const inputMarker = "/input/";
+        const idx = item.source_path.indexOf(inputMarker);
+        const relPath = idx !== -1
+          ? item.source_path.slice(idx + inputMarker.length)
+          : item.source_path;
+        contentMap[relPath] = item.url;
+      }
+    }
+  } catch {
+    contentMap = {};
+  }
+}
+
+function navigatePreviewToFile(path) {
+  if (!syncEnabled) return;
+  if (!previewFrame.classList.contains("visible")) return;
+  const url = contentMap[path];
+  if (url) {
+    previewFrame.src = `/preview/${sessionId}${url}`;
+  }
+}
 
 function setStatus(msg, color) {
   statusEl.textContent = msg;
@@ -205,6 +252,18 @@ async function saveFile(path, content) {
   await api("PUT", `/api/sessions/${sessionId}/files/${path}`, { content });
 }
 
+function sortFilePaths(paths) {
+  const priority = ["content/about.md", "marmite.yaml"];
+  return [...paths].sort((a, b) => {
+    const ai = priority.indexOf(a);
+    const bi = priority.indexOf(b);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return a.localeCompare(b);
+  });
+}
+
 async function deleteFile(path) {
   await api("DELETE", `/api/sessions/${sessionId}/files/${path}`);
 }
@@ -262,6 +321,7 @@ function switchTab(path) {
   createEditor(files[path] || "", path);
   updateTabStates();
   editorFileInfo.textContent = path;
+  navigatePreviewToFile(path);
 }
 
 function buildTabs(filePaths) {
@@ -304,7 +364,7 @@ function buildTabs(filePaths) {
 
 async function refreshFileList() {
   const data = await api("GET", `/api/sessions/${sessionId}/files`);
-  const filePaths = data.files;
+  const filePaths = sortFilePaths(data.files);
 
   // Load any new files we don't have yet
   for (const path of filePaths) {
@@ -364,7 +424,13 @@ async function doRender() {
       setStatus(`Rendered in ${result.duration_ms}ms`, "var(--green)");
       previewPlaceholder.style.display = "none";
       previewFrame.classList.add("visible");
-      previewFrame.src = `/preview/${sessionId}/?t=${Date.now()}`;
+      await loadContentMap();
+      const targetUrl = contentMap[currentFile];
+      if (syncEnabled && targetUrl) {
+        previewFrame.src = `/preview/${sessionId}${targetUrl}?t=${Date.now()}`;
+      } else {
+        previewFrame.src = `/preview/${sessionId}/?t=${Date.now()}`;
+      }
     } else {
       setStatus("Render failed", "var(--red)");
       showOutput(result.stderr || result.stdout);
@@ -383,6 +449,15 @@ function showOutput(text) {
 
 outputClose.addEventListener("click", () => {
   outputPanel.classList.add("hidden");
+});
+
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+    e.preventDefault();
+    if (isOwner && dirty.size > 0) {
+      doRender();
+    }
+  }
 });
 
 // New file dialog
@@ -485,7 +560,7 @@ newSessionBtn.addEventListener("click", async () => {
 
     files = {};
     dirty.clear();
-    const filePaths = data.files;
+    const filePaths = sortFilePaths(data.files);
     for (const path of filePaths) {
       files[path] = await loadFile(path);
     }
@@ -590,13 +665,14 @@ uploadInput.addEventListener("change", async () => {
     }
 
     const data = await res.json();
+    const filePaths = sortFilePaths(data.files);
     files = {};
     dirty.clear();
-    for (const path of data.files) {
+    for (const path of filePaths) {
       files[path] = await loadFile(path);
     }
-    buildTabs(data.files);
-    if (data.files.length > 0) switchTab(data.files[0]);
+    buildTabs(filePaths);
+    if (filePaths.length > 0) switchTab(filePaths[0]);
     doRender();
   } catch (err) {
     setStatus(`Upload failed: ${err.message}`, "var(--red)");
@@ -860,7 +936,7 @@ divider.addEventListener("mousedown", (e) => {
 (async () => {
   try {
     setStatus("Loading...");
-    const filePaths = await initSession();
+    const filePaths = sortFilePaths(await initSession());
     updateOwnerUI();
     buildTabs(filePaths);
 

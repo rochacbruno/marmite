@@ -40,7 +40,10 @@ async fn main() {
     let state = Arc::new(AppState { config, sessions });
 
     let api = Router::new()
-        .route("/api/sessions", post(handlers::create_session_handler))
+        .route(
+            "/api/sessions",
+            get(handlers::list_sessions_handler).post(handlers::create_session_handler),
+        )
         .route("/api/sessions/{id}", get(handlers::get_session_handler))
         .route(
             "/api/sessions/{id}/files",

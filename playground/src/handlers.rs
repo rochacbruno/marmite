@@ -84,6 +84,22 @@ async fn verify_owner(
     Ok(())
 }
 
+pub async fn list_sessions_handler(
+    State(state): State<Arc<AppState>>,
+) -> Json<Vec<serde_json::Value>> {
+    let sessions = state.sessions.read().await;
+    let list: Vec<serde_json::Value> = sessions
+        .values()
+        .map(|s| {
+            serde_json::json!({
+                "session_id": s.id.to_string(),
+                "created_ago_secs": s.last_activity.elapsed().as_secs(),
+            })
+        })
+        .collect();
+    Json(list)
+}
+
 pub async fn create_session_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<CreateSessionResponse>, AppError> {

@@ -1,6 +1,6 @@
 # Marmite Configuration Reference
-# Uncomment and edit any field to customize your site.
-# Docs: https://marmite.blog/configuration-reference.html
+# Tip: Use the "Config" button in the toolbar for a visual editor.
+# Or edit this file directly. Docs: https://marmite.blog/configuration-reference.html
 
 # -- Site Identity --
 name: Playground Site
@@ -115,20 +115,10 @@ pagination: 10
 extra:
   # Colorscheme: catppuccin, clean, dracula, github, gruvbox, iceberg,
   #   minimal, minimal_wb, monokai, nord, one, solarized, typewriter
-  colorscheme: catppuccin
+  # colorscheme: catppuccin
   colorscheme_toggle: true
   colormodetoggle: true
   # colormode: dark
-
-  # Mermaid and Math are enabled per-content via frontmatter:
-  #   extra:
-  #     mermaid: true
-  #     math: true
-
-  # Social networks shown in footer
-  # social_networks:
-  #   - ["GitHub", "https://github.com/yourname"]
-  #   - ["Twitter", "https://twitter.com/yourname"]
 
   # max_image_width: 1200
   # banner_image_width: 1200

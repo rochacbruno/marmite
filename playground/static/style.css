@@ -115,6 +115,32 @@ header h1 {
   color: var(--text);
 }
 
+#sync-toggle {
+  padding: 5px 12px;
+  background: none;
+  color: var(--subtext);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+#sync-toggle:hover {
+  border-color: var(--blue);
+  color: var(--text);
+}
+
+#sync-toggle.active {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+
+[data-theme="dark"] #sync-toggle.active {
+  color: var(--header-bg);
+}
+
 #config-btn {
   padding: 5px 12px;
   background: none;

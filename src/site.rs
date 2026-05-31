@@ -463,10 +463,53 @@ impl Data {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+struct ContentInfo {
+    title: String,
+    slug: String,
+    url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_path: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    date: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    tags: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    authors: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stream: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    series: Option<String>,
+    pinned: bool,
+}
+
+impl ContentInfo {
+    fn from_content(content: &Content) -> Self {
+        Self {
+            title: content.title.clone(),
+            slug: content.slug.clone(),
+            url: format!("/{}.html", content.slug),
+            source_path: content
+                .source_path
+                .as_ref()
+                .map(|p| p.to_string_lossy().to_string()),
+            date: content.date.map(|d| d.format("%Y-%m-%d").to_string()),
+            tags: content.tags.clone(),
+            authors: content.authors.clone(),
+            description: content.description.clone(),
+            stream: content.stream.clone(),
+            series: content.series.clone(),
+            pinned: content.pinned,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 struct BuildInfo {
     marmite_version: String,
-    posts: usize,
-    pages: usize,
+    posts: Vec<ContentInfo>,
+    pages: Vec<ContentInfo>,
     generated_at: String,
     timestamp: i64,
     elapsed_time: f64,
@@ -1968,8 +2011,16 @@ fn write_build_info(
 ) {
     let build_info = BuildInfo {
         marmite_version: env!("CARGO_PKG_VERSION").to_string(),
-        posts: site_data.posts.len(),
-        pages: site_data.pages.len(),
+        posts: site_data
+            .posts
+            .iter()
+            .map(ContentInfo::from_content)
+            .collect(),
+        pages: site_data
+            .pages
+            .iter()
+            .map(ContentInfo::from_content)
+            .collect(),
         generated_at: chrono::Local::now().to_string(),
         timestamp: chrono::Utc::now().timestamp(),
         elapsed_time: end_time,
