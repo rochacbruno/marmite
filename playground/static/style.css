@@ -115,6 +115,22 @@ header h1 {
   color: var(--text);
 }
 
+#config-btn {
+  padding: 5px 12px;
+  background: none;
+  color: var(--subtext);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+#config-btn:hover {
+  border-color: var(--blue);
+  color: var(--text);
+}
+
 #download-group {
   position: relative;
 }
@@ -525,6 +541,237 @@ header h1 {
 }
 
 [data-theme="dark"] #new-file-add {
+  color: var(--header-bg) !important;
+}
+
+/* Config modal */
+#config-dialog {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dialog-backdrop);
+  z-index: 200;
+}
+
+#config-dialog.hidden {
+  display: none;
+}
+
+.config-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 640px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+
+.config-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 0;
+}
+
+.config-header h3 {
+  font-size: 16px;
+  color: var(--text);
+}
+
+.config-header button {
+  background: none;
+  border: none;
+  color: var(--subtext);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.config-header button:hover {
+  color: var(--text);
+}
+
+.config-tabs {
+  display: flex;
+  gap: 0;
+  padding: 12px 18px 0;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.config-tab {
+  padding: 8px 14px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--subtext);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.1s;
+}
+
+.config-tab:hover {
+  color: var(--text);
+}
+
+.config-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--blue);
+}
+
+.config-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 18px;
+}
+
+.config-pane {
+  display: none;
+}
+
+.config-pane.active {
+  display: block;
+}
+
+.cfg-field {
+  margin-bottom: 14px;
+}
+
+.cfg-field > label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.cfg-field input[type="text"],
+.cfg-field input[type="number"],
+.cfg-field select {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.cfg-field input:focus,
+.cfg-field select:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.cfg-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--subtext);
+  margin-top: 3px;
+}
+
+.cfg-check label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cfg-check input[type="checkbox"] {
+  accent-color: var(--blue);
+  width: 15px;
+  height: 15px;
+}
+
+/* Menu editor */
+.cfg-menu-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.cfg-menu-row input {
+  flex: 1;
+  padding: 6px 10px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.cfg-menu-row input:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.cfg-menu-del {
+  background: none;
+  border: none;
+  color: var(--subtext);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.cfg-menu-del:hover {
+  color: var(--red);
+}
+
+.cfg-menu-add-btn {
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  color: var(--subtext);
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  width: 100%;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.cfg-menu-add-btn:hover {
+  border-color: var(--blue);
+  color: var(--text);
+}
+
+.config-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.config-footer button {
+  padding: 7px 20px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--overlay);
+  color: var(--text);
+}
+
+.config-footer button:hover {
+  border-color: var(--blue);
+}
+
+#config-save {
+  background: var(--blue) !important;
+  color: #fff !important;
+  border-color: var(--blue) !important;
+}
+
+[data-theme="dark"] #config-save {
   color: var(--header-bg) !important;
 }
 

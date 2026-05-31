@@ -8,6 +8,7 @@ import {
   amy, espresso, clouds, tomorrow,
   noctisLilac, rosePineDawn, ayuLight,
 } from "thememirror";
+import jsyaml from "js-yaml";
 
 const editorThemes = {
   solarizedLight: { ext: solarizedLight, label: "Solarized Light" },
@@ -29,6 +30,7 @@ const statusEl = $("#status");
 const themeToggle = $("#theme-toggle");
 const editorThemeSelect = $("#editor-theme");
 const newFileBtn = $("#new-file-btn");
+const configBtn = $("#config-btn");
 const downloadBtn = $("#download-btn");
 const downloadMenu = $("#download-menu");
 const downloadSourceBtn = $("#download-source");
@@ -111,6 +113,7 @@ function setStatus(msg, color) {
 
 function updateOwnerUI() {
   newFileBtn.style.display = isOwner ? "" : "none";
+  configBtn.style.display = isOwner ? "" : "none";
   uploadBtn.style.display = isOwner ? "" : "none";
   newSessionBtn.style.display = isOwner ? "none" : "";
   viewOnlyBadge.style.display = isOwner ? "none" : "";
@@ -598,6 +601,236 @@ uploadInput.addEventListener("change", async () => {
   } catch (err) {
     setStatus(`Upload failed: ${err.message}`, "var(--red)");
   }
+});
+
+// Config form
+const configDialog = $("#config-dialog");
+const configClose = $("#config-close");
+const configCancel = $("#config-cancel");
+const configSave = $("#config-save");
+const cfgMenuList = $("#cfg-menu-list");
+const cfgMenuAdd = $("#cfg-menu-add");
+
+const CONFIG_FILE = "marmite.yaml";
+
+const SIMPLE_FIELDS = [
+  "name", "tagline", "url", "language", "footer", "logo_image",
+  "pagination", "default_author", "default_date_format",
+  "toc", "show_next_prev_links", "enable_related_content",
+  "enable_search", "search_show_matches", "search_match_count", "search_title",
+  "json_feed", "build_sitemap", "publish_urls_json", "publish_md", "enable_shortcodes",
+  "card_image", "banner_image", "skip_image_resize",
+];
+
+const NESTED_FIELDS = {
+  "extra.colorscheme": ["extra", "colorscheme"],
+  "extra.colorscheme_toggle": ["extra", "colorscheme_toggle"],
+  "extra.colormode": ["extra", "colormode"],
+  "extra.colormodetoggle": ["extra", "colormodetoggle"],
+  "extra.max_image_width": ["extra", "max_image_width"],
+  "extra.banner_image_width": ["extra", "banner_image_width"],
+  "extra.resize_filter": ["extra", "resize_filter"],
+  "code_highlight.enabled": ["code_highlight", "enabled"],
+};
+
+function getNestedValue(obj, keys) {
+  let v = obj;
+  for (const k of keys) {
+    if (v == null || typeof v !== "object") return undefined;
+    v = v[k];
+  }
+  return v;
+}
+
+function setNestedValue(obj, keys, value) {
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (obj[keys[i]] == null || typeof obj[keys[i]] !== "object") {
+      obj[keys[i]] = {};
+    }
+    obj = obj[keys[i]];
+  }
+  obj[keys[keys.length - 1]] = value;
+}
+
+function deleteNestedValue(obj, keys) {
+  for (let i = 0; i < keys.length - 1; i++) {
+    if (obj[keys[i]] == null) return;
+    obj = obj[keys[i]];
+  }
+  delete obj[keys[keys.length - 1]];
+}
+
+function populateConfigForm(cfg) {
+  for (const key of SIMPLE_FIELDS) {
+    const el = configDialog.querySelector(`[data-key="${key}"]`);
+    if (!el) continue;
+    const val = cfg[key];
+    if (el.type === "checkbox") {
+      el.checked = val === true;
+    } else {
+      el.value = val != null ? val : "";
+    }
+  }
+
+  for (const [dataKey, path] of Object.entries(NESTED_FIELDS)) {
+    const el = configDialog.querySelector(`[data-key="${dataKey}"]`);
+    if (!el) continue;
+    const val = getNestedValue(cfg, path);
+    if (el.type === "checkbox") {
+      el.checked = val === true;
+    } else {
+      el.value = val != null ? val : "";
+    }
+  }
+
+  cfgMenuList.innerHTML = "";
+  const menu = cfg.menu || [];
+  for (const item of menu) {
+    addMenuRow(item[0] || "", item[1] || "");
+  }
+}
+
+function addMenuRow(label, url) {
+  const row = document.createElement("div");
+  row.className = "cfg-menu-row";
+  row.innerHTML = `<input type="text" placeholder="Label" value="${label.replace(/"/g, "&quot;")}">` +
+    `<input type="text" placeholder="URL" value="${url.replace(/"/g, "&quot;")}">` +
+    `<button class="cfg-menu-del" title="Remove">&times;</button>`;
+  row.querySelector(".cfg-menu-del").addEventListener("click", () => row.remove());
+  cfgMenuList.appendChild(row);
+}
+
+cfgMenuAdd.addEventListener("click", () => addMenuRow("", ""));
+
+function collectConfigForm(original) {
+  const cfg = {};
+
+  for (const key of SIMPLE_FIELDS) {
+    const el = configDialog.querySelector(`[data-key="${key}"]`);
+    if (!el) continue;
+    let val;
+    if (el.type === "checkbox") {
+      val = el.checked;
+    } else if (el.type === "number") {
+      val = el.value ? Number(el.value) : undefined;
+    } else {
+      val = el.value || undefined;
+    }
+    if (val !== undefined) cfg[key] = val;
+  }
+
+  for (const [dataKey, path] of Object.entries(NESTED_FIELDS)) {
+    const el = configDialog.querySelector(`[data-key="${dataKey}"]`);
+    if (!el) continue;
+    let val;
+    if (el.type === "checkbox") {
+      val = el.checked;
+    } else if (el.type === "number") {
+      val = el.value ? Number(el.value) : undefined;
+    } else {
+      val = el.value || undefined;
+    }
+    if (val !== undefined) {
+      setNestedValue(cfg, path, val);
+    }
+  }
+
+  const menuRows = cfgMenuList.querySelectorAll(".cfg-menu-row");
+  if (menuRows.length > 0) {
+    cfg.menu = [];
+    menuRows.forEach((row) => {
+      const inputs = row.querySelectorAll("input");
+      const label = inputs[0].value.trim();
+      const url = inputs[1].value.trim();
+      if (label || url) cfg.menu.push([label, url]);
+    });
+  }
+
+  // Preserve fields not in the form (authors, streams, series, markdown_parser, etc.)
+  const preserved = ["authors", "streams", "series", "file_mapping", "galleries",
+    "theme", "source_repository", "shortcode_pattern", "markdown_parser",
+    "pages_title", "tags_title", "tags_content_title", "archives_title",
+    "archives_content_title", "authors_title", "streams_title",
+    "streams_content_title", "series_title", "series_content_title",
+    "content_path", "templates_path", "static_path", "media_path",
+    "gallery_path", "site_path", "gallery_create_thumbnails", "gallery_thumb_size",
+    "image_provider", "https"];
+  for (const key of preserved) {
+    if (original[key] !== undefined && cfg[key] === undefined) {
+      cfg[key] = original[key];
+    }
+  }
+
+  // Preserve extra keys not in the form
+  if (original.extra) {
+    if (!cfg.extra) cfg.extra = {};
+    const formExtraKeys = ["colorscheme", "colorscheme_toggle", "colormode",
+      "colormodetoggle", "max_image_width", "banner_image_width", "resize_filter"];
+    for (const [k, v] of Object.entries(original.extra)) {
+      if (!formExtraKeys.includes(k) && cfg.extra[k] === undefined) {
+        cfg.extra[k] = v;
+      }
+    }
+  }
+
+  return cfg;
+}
+
+configBtn.addEventListener("click", () => {
+  const yamlContent = files[CONFIG_FILE] || "";
+  let cfg = {};
+  try {
+    cfg = jsyaml.load(yamlContent) || {};
+  } catch {
+    cfg = {};
+  }
+  populateConfigForm(cfg);
+  configDialog.classList.remove("hidden");
+
+  // Activate first tab
+  configDialog.querySelectorAll(".config-tab").forEach((t) => t.classList.remove("active"));
+  configDialog.querySelectorAll(".config-pane").forEach((p) => p.classList.remove("active"));
+  configDialog.querySelector('.config-tab[data-tab="site"]').classList.add("active");
+  configDialog.querySelector('.config-pane[data-tab="site"]').classList.add("active");
+});
+
+configDialog.querySelectorAll(".config-tab").forEach((tab) => {
+  tab.addEventListener("click", () => {
+    configDialog.querySelectorAll(".config-tab").forEach((t) => t.classList.remove("active"));
+    configDialog.querySelectorAll(".config-pane").forEach((p) => p.classList.remove("active"));
+    tab.classList.add("active");
+    configDialog.querySelector(`.config-pane[data-tab="${tab.dataset.tab}"]`).classList.add("active");
+  });
+});
+
+configClose.addEventListener("click", () => configDialog.classList.add("hidden"));
+configCancel.addEventListener("click", () => configDialog.classList.add("hidden"));
+
+configSave.addEventListener("click", async () => {
+  const originalYaml = files[CONFIG_FILE] || "";
+  let original = {};
+  try {
+    original = jsyaml.load(originalYaml) || {};
+  } catch {
+    original = {};
+  }
+
+  const cfg = collectConfigForm(original);
+  const newYaml = jsyaml.dump(cfg, { lineWidth: -1, quotingType: '"', forceQuotes: false });
+
+  files[CONFIG_FILE] = newYaml;
+  dirty.add(CONFIG_FILE);
+
+  configDialog.classList.add("hidden");
+
+  if (currentFile === CONFIG_FILE && editorView) {
+    editorView.dispatch({
+      changes: { from: 0, to: editorView.state.doc.length, insert: newYaml },
+    });
+  }
+
+  scheduleAutoRender();
+  setStatus("Config saved", "var(--green)");
 });
 
 // Resizable divider

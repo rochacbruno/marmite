@@ -25,7 +25,8 @@
       "@codemirror/lang-markdown": "https://esm.sh/@codemirror/lang-markdown@6.3.1?external=@codemirror/state,@codemirror/view,@codemirror/language",
       "@codemirror/lang-yaml": "https://esm.sh/@codemirror/lang-yaml@6.1.2?external=@codemirror/state,@codemirror/view,@codemirror/language",
       "@codemirror/theme-one-dark": "https://esm.sh/@codemirror/theme-one-dark@6.1.2?external=@codemirror/state,@codemirror/view",
-      "thememirror": "https://esm.sh/thememirror@2.0.1?external=@codemirror/state,@codemirror/view,@codemirror/language"
+      "thememirror": "https://esm.sh/thememirror@2.0.1?external=@codemirror/state,@codemirror/view,@codemirror/language",
+      "js-yaml": "https://esm.sh/js-yaml@4.1.0"
     }
   }
   </script>
@@ -39,6 +40,7 @@
     <div class="header-right">
       <span id="status"></span>
       <a href="https://marmite.blog/docs.html" target="_blank" id="docs-link">Docs</a>
+      <button id="config-btn" title="Visual site configuration" style="display:none">Config</button>
       <div id="download-group">
         <button id="download-btn" title="Download project or rendered site">Download</button>
         <div id="download-menu" class="hidden">
@@ -111,6 +113,214 @@
       <div class="dialog-actions">
         <button id="new-file-cancel">Cancel</button>
         <button id="new-file-add">Add</button>
+      </div>
+    </div>
+  </div>
+  <div id="config-dialog" class="hidden">
+    <div class="config-modal">
+      <div class="config-header">
+        <h3>Site Configuration</h3>
+        <button id="config-close">&times;</button>
+      </div>
+      <div class="config-tabs">
+        <button class="config-tab active" data-tab="site">Site</button>
+        <button class="config-tab" data-tab="content">Content</button>
+        <button class="config-tab" data-tab="search">Search</button>
+        <button class="config-tab" data-tab="feeds">Feeds</button>
+        <button class="config-tab" data-tab="appearance">Appearance</button>
+        <button class="config-tab" data-tab="images">Images</button>
+        <button class="config-tab" data-tab="menu">Menu</button>
+      </div>
+      <div class="config-body">
+        <div class="config-pane active" data-tab="site">
+          <div class="cfg-field">
+            <label for="cfg-name">Site Name</label>
+            <input type="text" id="cfg-name" data-key="name" placeholder="Home">
+            <span class="cfg-hint">Shown in the title bar and feeds</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-tagline">Tagline</label>
+            <input type="text" id="cfg-tagline" data-key="tagline" placeholder="A short subtitle">
+            <span class="cfg-hint">Subtitle shown below the site name</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-url">Base URL</label>
+            <input type="text" id="cfg-url" data-key="url" placeholder="https://example.com">
+            <span class="cfg-hint">Full URL for feeds, sitemap, and Open Graph</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-language">Language</label>
+            <input type="text" id="cfg-language" data-key="language" placeholder="en">
+            <span class="cfg-hint">2-letter ISO code (en, pt, es, fr...)</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-footer">Footer</label>
+            <input type="text" id="cfg-footer" data-key="footer" placeholder="Custom footer HTML">
+            <span class="cfg-hint">HTML content for the site footer</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-logo">Logo Image</label>
+            <input type="text" id="cfg-logo" data-key="logo_image" placeholder="media/logo.png">
+            <span class="cfg-hint">Path to logo image file</span>
+          </div>
+        </div>
+        <div class="config-pane" data-tab="content">
+          <div class="cfg-field">
+            <label for="cfg-pagination">Posts per page</label>
+            <input type="number" id="cfg-pagination" data-key="pagination" placeholder="10" min="1">
+            <span class="cfg-hint">Number of posts shown per page</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-default-author">Default Author</label>
+            <input type="text" id="cfg-default-author" data-key="default_author" placeholder="">
+            <span class="cfg-hint">Author used when posts don't specify one</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-date-format">Date Format</label>
+            <input type="text" id="cfg-date-format" data-key="default_date_format" placeholder="%b %e, %Y">
+            <span class="cfg-hint">chrono strftime format string</span>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-toc" data-key="toc"> Table of Contents</label>
+            <span class="cfg-hint">Show TOC on all posts</span>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-next-prev" data-key="show_next_prev_links" checked> Next/Previous Links</label>
+            <span class="cfg-hint">Navigation between posts</span>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-related" data-key="enable_related_content" checked> Related Content</label>
+            <span class="cfg-hint">Show backlinks and related posts</span>
+          </div>
+        </div>
+        <div class="config-pane" data-tab="search">
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-search" data-key="enable_search"> Enable Search</label>
+            <span class="cfg-hint">Add full-text search to your site</span>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-search-matches" data-key="search_show_matches"> Show Match Snippets</label>
+            <span class="cfg-hint">Display matched text in search results</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-search-count">Snippets per Result</label>
+            <input type="number" id="cfg-search-count" data-key="search_match_count" placeholder="3" min="1">
+            <span class="cfg-hint">Number of match snippets shown per result</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-search-title">Search Page Title</label>
+            <input type="text" id="cfg-search-title" data-key="search_title" placeholder="Search">
+          </div>
+        </div>
+        <div class="config-pane" data-tab="feeds">
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-json-feed" data-key="json_feed"> JSON Feed</label>
+            <span class="cfg-hint">Generate index.json feed</span>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-sitemap" data-key="build_sitemap" checked> Sitemap</label>
+            <span class="cfg-hint">Generate sitemap.xml</span>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-urls-json" data-key="publish_urls_json" checked> URLs JSON</label>
+            <span class="cfg-hint">Generate urls.json with all site URLs</span>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-publish-md" data-key="publish_md"> Publish Markdown</label>
+            <span class="cfg-hint">Copy markdown source files to output</span>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-shortcodes" data-key="enable_shortcodes" checked> Enable Shortcodes</label>
+            <span class="cfg-hint">Process shortcodes in markdown content</span>
+          </div>
+        </div>
+        <div class="config-pane" data-tab="appearance">
+          <div class="cfg-field">
+            <label for="cfg-colorscheme">Colorscheme</label>
+            <select id="cfg-colorscheme" data-key="extra.colorscheme">
+              <option value="">Default</option>
+              <option value="catppuccin">Catppuccin</option>
+              <option value="clean">Clean</option>
+              <option value="dracula">Dracula</option>
+              <option value="github">GitHub</option>
+              <option value="gruvbox">Gruvbox</option>
+              <option value="iceberg">Iceberg</option>
+              <option value="minimal">Minimal</option>
+              <option value="minimal_wb">Minimal WB</option>
+              <option value="monokai">Monokai</option>
+              <option value="nord">Nord</option>
+              <option value="one">One</option>
+              <option value="solarized">Solarized</option>
+              <option value="typewriter">Typewriter</option>
+            </select>
+            <span class="cfg-hint">CSS theme for the rendered site</span>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-colorscheme-toggle" data-key="extra.colorscheme_toggle"> Colorscheme Picker</label>
+            <span class="cfg-hint">Let visitors switch colorschemes</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-colormode">Default Color Mode</label>
+            <select id="cfg-colormode" data-key="extra.colormode">
+              <option value="">Auto</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-colormode-toggle" data-key="extra.colormodetoggle"> Light/Dark Toggle</label>
+            <span class="cfg-hint">Let visitors switch between light and dark</span>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-highlight" data-key="code_highlight.enabled" checked> Code Highlighting</label>
+            <span class="cfg-hint">Syntax highlighting for code blocks</span>
+          </div>
+        </div>
+        <div class="config-pane" data-tab="images">
+          <div class="cfg-field">
+            <label for="cfg-card-image">Card Image</label>
+            <input type="text" id="cfg-card-image" data-key="card_image" placeholder="media/og_image.jpg">
+            <span class="cfg-hint">Default Open Graph / social media card image</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-banner-image">Banner Image</label>
+            <input type="text" id="cfg-banner-image" data-key="banner_image" placeholder="media/banner.jpg">
+            <span class="cfg-hint">Default banner image for posts</span>
+          </div>
+          <div class="cfg-field cfg-check">
+            <label><input type="checkbox" id="cfg-skip-resize" data-key="skip_image_resize"> Skip Image Resize</label>
+            <span class="cfg-hint">Disable image optimization (faster builds)</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-max-width">Max Image Width</label>
+            <input type="number" id="cfg-max-width" data-key="extra.max_image_width" placeholder="1200" min="100">
+            <span class="cfg-hint">Maximum width in pixels for images</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-banner-width">Banner Image Width</label>
+            <input type="number" id="cfg-banner-width" data-key="extra.banner_image_width" placeholder="1200" min="100">
+            <span class="cfg-hint">Maximum width in pixels for banners</span>
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-resize-filter">Resize Filter</label>
+            <select id="cfg-resize-filter" data-key="extra.resize_filter">
+              <option value="">Default</option>
+              <option value="fast">Fast</option>
+              <option value="balanced">Balanced</option>
+              <option value="quality">Quality</option>
+            </select>
+            <span class="cfg-hint">Image resize quality vs speed</span>
+          </div>
+        </div>
+        <div class="config-pane" data-tab="menu">
+          <p class="cfg-hint" style="margin-bottom:12px">Navigation links shown in the site header. Each item has a label and URL.</p>
+          <div id="cfg-menu-list"></div>
+          <button id="cfg-menu-add" class="cfg-menu-add-btn">+ Add Menu Item</button>
+        </div>
+      </div>
+      <div class="config-footer">
+        <button id="config-cancel">Cancel</button>
+        <button id="config-save">Save</button>
       </div>
     </div>
   </div>
