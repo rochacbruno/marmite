@@ -510,6 +510,7 @@ struct BuildInfo {
     marmite_version: String,
     posts: Vec<ContentInfo>,
     pages: Vec<ContentInfo>,
+    shortcodes: Vec<String>,
     generated_at: String,
     timestamp: i64,
     elapsed_time: f64,
@@ -663,7 +664,7 @@ pub fn generate(
             }
 
             let end_time = start_time.elapsed().as_secs_f64();
-            write_build_info(&output_path, &site_data, end_time);
+            write_build_info(&output_path, &site_data, &moved_input_folder, end_time);
             debug!("Site generated in {end_time:.2}s");
             info!("Site generated at: {}/", moved_output_folder.display());
             Ok(())
@@ -2007,8 +2008,21 @@ fn copy_markdown_sources(site_data: &Data, content_folder: &Path, output_path: &
 fn write_build_info(
     output_path: &Path,
     site_data: &std::sync::MutexGuard<'_, Data>,
+    input_folder: &Path,
     end_time: f64,
 ) {
+    let shortcodes = if site_data.site.enable_shortcodes {
+        let mut processor = ShortcodeProcessor::new(site_data.site.shortcode_pattern.as_deref());
+        let _ = processor.collect_shortcodes(input_folder);
+        processor
+            .list_shortcodes_with_descriptions()
+            .into_iter()
+            .map(|(name, _)| name.to_string())
+            .collect()
+    } else {
+        Vec::new()
+    };
+
     let build_info = BuildInfo {
         marmite_version: env!("CARGO_PKG_VERSION").to_string(),
         posts: site_data
@@ -2021,6 +2035,7 @@ fn write_build_info(
             .iter()
             .map(ContentInfo::from_content)
             .collect(),
+        shortcodes,
         generated_at: chrono::Local::now().to_string(),
         timestamp: chrono::Utc::now().timestamp(),
         elapsed_time: end_time,

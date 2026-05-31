@@ -20,15 +20,15 @@ menu:
 
 # -- Content Organization --
 pagination: 10
-# default_author: ""
+default_author: "you"
 # default_date_format: "%b %e, %Y"
-# toc: false
-# show_next_prev_links: true
-# enable_related_content: true
+toc: true
+show_next_prev_links: true
+enable_related_content: true
 
 # -- Search --
-# enable_search: false
-# search_show_matches: false
+enable_search: true
+search_show_matches: true
 # search_match_count: 3
 # search_title: Search
 

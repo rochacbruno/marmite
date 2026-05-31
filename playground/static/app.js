@@ -9,6 +9,7 @@ import {
   noctisLilac, rosePineDawn, ayuLight,
 } from "thememirror";
 import jsyaml from "js-yaml";
+import { autocompletion, startCompletion } from "@codemirror/autocomplete";
 
 const editorThemes = {
   solarizedLight: { ext: solarizedLight, label: "Solarized Light" },
@@ -63,6 +64,12 @@ let editorView = null;
 let dirty = new Set();
 let contentMap = {};
 let syncEnabled = localStorage.getItem("playground_sync") !== "false";
+let acContent = [];
+let acTags = [];
+let acAuthors = [];
+let acStreams = [];
+let acSeries = [];
+let acShortcodes = [];
 
 const themeCompartment = new Compartment();
 const readOnlyCompartment = new Compartment();
@@ -129,7 +136,14 @@ async function loadContentMap() {
     if (!res.ok) return;
     const data = await res.json();
     contentMap = {};
-    for (const item of [...(data.posts || []), ...(data.pages || [])]) {
+    const tags = new Set();
+    const authors = new Set();
+    const streams = new Set();
+    const series = new Set();
+    acContent = [];
+
+    const allItems = [...(data.posts || []), ...(data.pages || [])];
+    for (const item of allItems) {
       if (item.source_path) {
         const inputMarker = "/input/";
         const idx = item.source_path.indexOf(inputMarker);
@@ -138,7 +152,28 @@ async function loadContentMap() {
           : item.source_path;
         contentMap[relPath] = item.url;
       }
+      acContent.push({ title: item.title, slug: item.slug });
+      (item.tags || []).forEach((t) => tags.add(t));
+      (item.authors || []).forEach((a) => authors.add(a));
+      if (item.stream) streams.add(item.stream);
+      if (item.series) series.add(item.series);
     }
+
+    if (data.config?.authors) {
+      Object.keys(data.config.authors).forEach((a) => authors.add(a));
+    }
+    if (data.config?.streams) {
+      Object.keys(data.config.streams).forEach((s) => streams.add(s));
+    }
+    if (data.config?.series) {
+      Object.keys(data.config.series).forEach((s) => series.add(s));
+    }
+
+    acTags = [...tags].sort();
+    acAuthors = [...authors].sort();
+    acStreams = [...streams].filter((s) => s !== "index").sort();
+    acSeries = [...series].sort();
+    acShortcodes = data.shortcodes || [];
   } catch {
     contentMap = {};
   }
@@ -273,17 +308,136 @@ function langExtension(path) {
   return markdown();
 }
 
+const FRONTMATTER_KEYS = [
+  "title", "slug", "date", "tags", "authors", "author", "description",
+  "stream", "series", "series_order", "pinned", "toc", "comments",
+  "card_image", "banner_image", "extra",
+];
+
+function playgroundCompletions(context) {
+  const pos = context.pos;
+  const line = context.state.doc.lineAt(pos);
+  const textBefore = line.text.slice(0, pos - line.from);
+  const doc = context.state.doc.toString();
+
+  // Wikilinks: [[partial  or  [[partial]]
+  const wikiMatch = textBefore.match(/\[\[([^\]|]*)$/);
+  if (wikiMatch) {
+    const partial = wikiMatch[1].toLowerCase();
+    const from = pos - wikiMatch[1].length;
+    const textAfter = line.text.slice(pos - line.from);
+    const closingBrackets = textAfter.match(/^\]{0,2}/)[0].length;
+    const to = pos + closingBrackets;
+    const filtered = partial
+      ? acContent.filter((c) => c.title.toLowerCase().includes(partial) || c.slug.includes(partial))
+      : acContent;
+    const options = filtered.map((c) => ({
+      label: c.title,
+      detail: c.slug,
+      apply: c.title === c.slug ? `${c.slug}]]` : `${c.title}|${c.slug}]]`,
+    }));
+    if (options.length) return { from, to, options, filter: false };
+  }
+
+  // Shortcodes: <!-- .partial
+  const scMatch = textBefore.match(/<!--\s*\.(\w*)$/);
+  if (scMatch) {
+    const partial = scMatch[1].toLowerCase();
+    const from = pos - scMatch[1].length;
+    const options = acShortcodes
+      .filter((name) => name.startsWith(partial))
+      .map((name) => ({
+        label: name,
+        apply: `${name} -->`,
+      }));
+    if (options.length) return { from, options };
+  }
+
+  // Frontmatter context: check if cursor is inside --- block
+  const beforeCursor = doc.slice(0, pos);
+  const fmStart = beforeCursor.indexOf("---\n");
+  if (fmStart === -1 || fmStart > 5) return null;
+  const fmEnd = beforeCursor.indexOf("\n---", fmStart + 4);
+  if (fmEnd !== -1 && pos > fmEnd + 4) return null;
+
+  // Frontmatter key: start of line, typing a key name
+  const keyMatch = textBefore.match(/^(\w*)$/);
+  if (keyMatch && keyMatch[1].length > 0) {
+    const partial = keyMatch[1].toLowerCase();
+    const from = pos - keyMatch[1].length;
+    const options = FRONTMATTER_KEYS
+      .filter((k) => k.startsWith(partial))
+      .map((k) => ({ label: k, apply: `${k}: ` }));
+    if (options.length) return { from, options };
+  }
+
+  // Frontmatter values: tags, authors, stream, series
+  const tagsMatch = textBefore.match(/^tags:\s*(?:.*,\s*)?(\w*)$/);
+  if (tagsMatch) {
+    const partial = tagsMatch[1].toLowerCase();
+    const from = pos - tagsMatch[1].length;
+    const options = acTags
+      .filter((t) => t.toLowerCase().startsWith(partial))
+      .map((t) => ({ label: t }));
+    if (options.length) return { from, options };
+  }
+
+  const authorsMatch = textBefore.match(/^authors?:\s*(?:.*,\s*)?(\w*)$/);
+  if (authorsMatch) {
+    const partial = authorsMatch[1].toLowerCase();
+    const from = pos - authorsMatch[1].length;
+    const options = acAuthors
+      .filter((a) => a.toLowerCase().startsWith(partial))
+      .map((a) => ({ label: a }));
+    if (options.length) return { from, options };
+  }
+
+  const streamMatch = textBefore.match(/^stream:\s*(\w*)$/);
+  if (streamMatch) {
+    const partial = streamMatch[1].toLowerCase();
+    const from = pos - streamMatch[1].length;
+    const options = acStreams
+      .filter((s) => s.toLowerCase().startsWith(partial))
+      .map((s) => ({ label: s }));
+    if (options.length) return { from, options };
+  }
+
+  const seriesMatch = textBefore.match(/^series:\s*(.*)$/);
+  if (seriesMatch) {
+    const partial = seriesMatch[1].toLowerCase();
+    const from = pos - seriesMatch[1].length;
+    const options = acSeries
+      .filter((s) => s.toLowerCase().startsWith(partial))
+      .map((s) => ({ label: s }));
+    if (options.length) return { from, options };
+  }
+
+  return null;
+}
+
 function createEditor(content, path) {
   if (editorView) {
     editorView.destroy();
   }
 
+  const isContent = path.startsWith("content/") || path === "marmite.yaml";
   const state = EditorState.create({
     doc: content,
     extensions: [
       basicSetup,
       langExtension(path),
       themeCompartment.of(getEditorThemeExt(getEditorThemeName())),
+      ...(isContent
+        ? [
+            autocompletion({ override: [playgroundCompletions] }),
+            EditorView.inputHandler.of((view, from, to, text) => {
+              if (text === "[" || text === ".") {
+                setTimeout(() => startCompletion(view), 0);
+              }
+              return false;
+            }),
+          ]
+        : []),
       readOnlyCompartment.of([
         EditorView.editable.of(isOwner),
         EditorState.readOnly.of(!isOwner),
@@ -736,15 +890,35 @@ function deleteNestedValue(obj, keys) {
   delete obj[keys[keys.length - 1]];
 }
 
+const MARMITE_DEFAULTS = {
+  name: "Home",
+  language: "en",
+  pagination: 10,
+  default_date_format: "%b %e, %Y",
+  show_next_prev_links: true,
+  enable_related_content: true,
+  enable_shortcodes: true,
+  build_sitemap: true,
+  publish_urls_json: true,
+  search_match_count: 3,
+  search_title: "Search",
+  "code_highlight.enabled": true,
+};
+
+function getDefault(key) {
+  return MARMITE_DEFAULTS[key];
+}
+
 function populateConfigForm(cfg) {
   for (const key of SIMPLE_FIELDS) {
     const el = configDialog.querySelector(`[data-key="${key}"]`);
     if (!el) continue;
     const val = cfg[key];
+    const def = getDefault(key);
     if (el.type === "checkbox") {
-      el.checked = val === true;
+      el.checked = val != null ? val === true : def === true;
     } else {
-      el.value = val != null ? val : "";
+      el.value = val != null ? val : (def != null ? def : "");
     }
   }
 
@@ -752,10 +926,11 @@ function populateConfigForm(cfg) {
     const el = configDialog.querySelector(`[data-key="${dataKey}"]`);
     if (!el) continue;
     const val = getNestedValue(cfg, path);
+    const def = getDefault(dataKey);
     if (el.type === "checkbox") {
-      el.checked = val === true;
+      el.checked = val != null ? val === true : def === true;
     } else {
-      el.value = val != null ? val : "";
+      el.value = val != null ? val : (def != null ? def : "");
     }
   }
 
