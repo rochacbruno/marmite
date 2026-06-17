@@ -301,6 +301,10 @@ pub struct Marmite {
     /// Skip image resizing during build (faster development builds)
     #[serde(default)]
     pub skip_image_resize: bool,
+
+    /// atproto standard.site publishing configuration
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub atproto: Option<AtprotoConfig>,
 }
 
 fn default_true() -> bool {
@@ -495,6 +499,17 @@ pub struct SeriesConfig {
 pub struct FileMapping {
     pub source: String,
     pub dest: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, Default, PartialEq)]
+pub struct AtprotoConfig {
+    /// atproto handle (e.g. myhandle.bsky.social)
+    pub handle: Option<String>,
+    /// AT URI of the publication record
+    pub publication_uri: Option<String>,
+    /// Include markdown body as textContent in document records [default: true]
+    #[serde(default = "default_true")]
+    pub publish_content: bool,
 }
 
 /// Generates a default configuration file

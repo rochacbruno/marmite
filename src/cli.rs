@@ -1,6 +1,27 @@
 #![allow(clippy::struct_excessive_bools)]
-use clap::{Args, Parser};
+use clap::{Args, Parser, Subcommand};
 use std::path::PathBuf;
+
+/// atproto / standard.site subcommands
+#[derive(Subcommand, Debug, Clone)]
+pub enum AtprotoCommand {
+    /// Authenticate with your atproto PDS using app-password credentials.
+    ///
+    /// Reads atproto.handle from marmite.yaml and ATPROTO_APP_PASSWORD env var.
+    /// If no publication exists, prints the config needed in marmite.yaml.
+    Auth,
+
+    /// Publish posts to atproto as site.standard.document records.
+    Publish {
+        /// Force re-publish all posts, ignoring change detection
+        #[arg(long, short)]
+        force: bool,
+
+        /// Preview what would be published without making any changes
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+    },
+}
 
 /// Command Line Argument Parser for Marmite CLI
 #[derive(Parser, Debug, Clone)]
@@ -94,6 +115,10 @@ pub struct Cli {
     /// Override configuration values from CLI arguments
     #[command(flatten)]
     pub configuration: Configuration,
+
+    /// Publish to atproto standard.site
+    #[command(subcommand)]
+    pub atproto: Option<AtprotoCommand>,
 }
 
 /// Create a new markdown file in the input folder

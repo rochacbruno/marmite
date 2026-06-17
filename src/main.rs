@@ -6,6 +6,7 @@ use std::{
     sync::Arc,
 };
 
+mod atproto;
 mod cli;
 mod config;
 mod content;
@@ -74,6 +75,11 @@ fn get_config_path(input_folder: &Path, config: &str) -> PathBuf {
 
 #[allow(clippy::too_many_lines)]
 fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
+    // Handle atproto subcommands before anything else
+    if let Some(ref atproto_cmd) = args.atproto {
+        return atproto::dispatch(atproto_cmd, &args);
+    }
+
     let cloned_args = Arc::new(args.clone());
     let serve = args.serve;
     let watch = args.watch;

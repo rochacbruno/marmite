@@ -25,6 +25,9 @@
 {% endif %}
 
 {% include "json_ld_content.html" ignore missing%}
+{% if content.at_uri %}
+<link rel="site.standard.document" href="{{ content.at_uri }}">
+{% endif %}
 {% endblock %}
 
 {% block head %}
