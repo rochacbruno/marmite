@@ -32,6 +32,9 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{site.name}}">
     {% endblock %}
+    {% if site.atproto and site.atproto.publication_uri %}
+    <link rel="site.standard.publication" href="{{ site.atproto.publication_uri }}">
+    {% endif %}
     {% if site.extra.fediverse_verification %}
     <link rel="me" href="{{site.extra.fediverse_verification}}">
     {% endif %}
