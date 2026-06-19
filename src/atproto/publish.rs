@@ -129,15 +129,7 @@ pub fn publish(
         })?;
 
     // 3. Authenticate
-    let pds_url = env::var("ATPROTO_PDS_URL").unwrap_or_else(|_| {
-        match client::resolve_pds_endpoint(handle) {
-            Ok(resolved) => resolved,
-            Err(e) => {
-                log::warn!("Could not resolve PDS endpoint for handle '{handle}': {e}. Falling back to default.");
-                "https://bsky.social".to_string()
-            }
-        }
-    });
+    let pds_url = env::var("ATPROTO_PDS_URL").unwrap_or(cred.pds_url.clone());
     let session = client::create_session(&pds_url, &cred.identifier, &cred.password)
         .map_err(|e| format!("Authentication failed: {e}"))?;
 
@@ -232,16 +224,11 @@ pub fn publish(
                     result.uri
                 }
                 None => {
-                    let result = client::create_record(
-                        &pds_url,
-                        &session.access_jwt,
-                        &session.did,
-                        "site.standard.document",
-                        &record,
+                    return Err(format!(
+                        "Could not parse record key (rkey) from AT-URI '{}' for post '{}'",
+                        entry.at_uri, post.slug
                     )
-                    .map_err(|e| format!("Failed to publish '{}': {e}", post.slug))?;
-                    published += 1;
-                    result.uri
+                    .into());
                 }
             }
         } else {

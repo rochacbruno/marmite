@@ -58,7 +58,7 @@ fn create_test_cli(overrides: impl FnOnce(&mut cli::Cli)) -> cli::Cli {
             shortcode_pattern: None,
             skip_image_resize: None,
         },
-        atproto: None,
+        subcommand: None,
     };
     overrides(&mut args);
     args

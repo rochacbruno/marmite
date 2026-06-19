@@ -23,6 +23,14 @@ pub enum AtprotoCommand {
     },
 }
 
+/// Global CLI Subcommands
+#[derive(Subcommand, Debug, Clone)]
+pub enum CliSubcommand {
+    /// Manage atproto / standard.site integration
+    #[command(subcommand)]
+    Atproto(AtprotoCommand),
+}
+
 /// Command Line Argument Parser for Marmite CLI
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
@@ -116,9 +124,9 @@ pub struct Cli {
     #[command(flatten)]
     pub configuration: Configuration,
 
-    /// Publish to atproto standard.site
+    /// Global subcommand
     #[command(subcommand)]
-    pub atproto: Option<AtprotoCommand>,
+    pub subcommand: Option<CliSubcommand>,
 }
 
 /// Create a new markdown file in the input folder

@@ -52,6 +52,14 @@ Finally, run the authentication subcommand pointing to your site's directory:
 marmite <site_folder> atproto auth
 ```
 
+### Custom PDS / Self-Hosting (Optional)
+
+If you are self-hosting your PDS or if the automatic endpoint resolution fails, you can explicitly override the PDS endpoint using the `ATPROTO_PDS_URL` environment variable before authenticating:
+
+```bash
+export ATPROTO_PDS_URL="https://my-custom-pds.com"
+```
+
 Marmite will:
 *   Perform a decentralized DNS/HTTP lookup to resolve your handle to its Decentralized Identifier (DID).
 *   Query `plc.directory` to resolve your DID to your actual <abbr title="Personal Data Server">PDS</abbr> endpoint.
@@ -98,7 +106,7 @@ That command:
 
 1. Gathers all valid markdown posts (excluding drafts).
 2. Computes a content hash of each post to detect modifications.
-3. Authenticates with your resolved <abbr title="Personal Data Server">PDS</abbr>.
+3. Authenticates with your <abbr title="Personal Data Server">PDS</abbr> (using the saved PDS URL or overridden via the `ATPROTO_PDS_URL` environment variable).
 4. Performs `createRecord` (for new posts) or `putRecord` (for modified posts) under the `site.standard.document` collection in your repository.
 5. Saves the mapping of post slugs to AT-URIs inside `.marmite-atproto-state.json`.
 

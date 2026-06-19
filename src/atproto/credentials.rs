@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
 
@@ -14,8 +15,9 @@ pub struct Credential {
 type CredentialsStore = HashMap<String, Credential>;
 
 fn credentials_dir() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(".config").join("marmite")
+    dirs::config_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("marmite")
 }
 
 pub fn credentials_path() -> PathBuf {
@@ -40,6 +42,7 @@ fn save_store(store: &CredentialsStore) -> Result<(), Box<dyn std::error::Error>
     let path = credentials_path();
     let json = serde_json::to_string_pretty(store)?;
     fs::write(&path, json)?;
+    #[cfg(unix)]
     fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
     Ok(())
 }
