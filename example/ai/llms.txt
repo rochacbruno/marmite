@@ -75,6 +75,7 @@ $ marmite myblog --serve
 - [Link Checker with Lychee](https://marmite.blog/how-to-run-a-link-checker-on-your-marmite-website.html): Checking for broken links
 - [Enabling Comments](https://marmite.blog/enabling-comments.html): Adding comment systems to your blog
 - [Draft Posts Guide](https://marmite.blog/how-to-use-draft-posts-in-marmite.html): Working with draft content and publishing workflow
+- [AT Protocol standard.site](https://marmite.blog/atproto-standard-site.html): Complete guide to publishing your Marmite blog posts to the decentralized AT Protocol
 
 ### Deployment
 
@@ -123,6 +124,7 @@ $ marmite myblog --serve
 - **Draft Content Management**: Special handling of draft posts with filtering from feeds and search
 - **Related Content**: Configurable related content and backlinks between posts
 - **Markdown Alerts**: Support for GitHub-style callouts and alert boxes in markdown
+- **AT Protocol Publishing**: Native support for publishing blog posts to standard.site and the decentralized AT Protocol with automatic well-known verification
 
 ## Agents
 

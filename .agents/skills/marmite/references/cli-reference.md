@@ -124,6 +124,21 @@ marmite --version
 marmite --help
 ```
 
+### AT Protocol / standard.site
+
+```bash
+# Authenticate with your PDS (Personal Data Server)
+# Requires ATPROTO_APP_PASSWORD env var and atproto.handle configured in marmite.yaml
+marmite [site_folder] atproto auth
+
+# Publish your blog posts to the PDS as site.standard.document records
+marmite [site_folder] atproto publish
+
+# Publish posts with options
+marmite [site_folder] atproto publish --force
+marmite [site_folder] atproto publish --dry-run
+```
+
 ## All Flags and Options
 
 ### Build Control
