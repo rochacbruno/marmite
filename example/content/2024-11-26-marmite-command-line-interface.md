@@ -498,7 +498,11 @@ Both flags can be combined to set up all agents in one command.
 $ marmite --help
 Marmite is the easiest static site generator.
 
-Usage: marmite [OPTIONS] [INPUT_FOLDER] [OUTPUT_FOLDER]
+Usage: marmite [OPTIONS] [INPUT_FOLDER] [OUTPUT_FOLDER] [COMMAND]
+
+Commands:
+  atproto  Manage atproto / standard.site integration
+  help     Print this message or the help of the given subcommand(s)
 
 Arguments:
   [INPUT_FOLDER]   Input folder containing markdown files

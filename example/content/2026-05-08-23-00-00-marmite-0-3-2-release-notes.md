@@ -98,6 +98,17 @@ The `--skill`, `--skill-install`, and `--skill-install-claude` commands do not r
 
 For all other commands, the input folder remains required and behaves exactly as before.
 
+## New Feature: AT Protocol & standard.site Integration
+
+Marmite now supports native integration with the **AT Protocol** and the **standard.site** specification. This allows you to publish your blog posts to the decentralized social web while keeping your Marmite site as the canonical source.
+
+Key capabilities:
+- **Fully optional** and opt-in.
+- **CLI Subcommand**: All functionality is cleanly organized under the `marmite atproto` command (`marmite atproto auth` to authenticate and `marmite atproto publish` to push updates).
+- **Decentralized Endpoint Resolution**: Respects the protocol's decentralized nature: resolves handles via DNS or `.well-known` endpoints directly, finds your PDS using the PLC directory (`plc.directory`), and interacts directly with your PDS.
+- **Verification and Header Injection**: Automatically generates verification files under `/.well-known/site.standard.publication` and injects publication and document headers (`link` tags) inside HTML templates.
+- **Change Detection**: Tracks content hashes and last-published state dynamically to only publish new or modified posts.
+
 ## Upgrading
 
 To upgrade to Marmite 0.3.2:
