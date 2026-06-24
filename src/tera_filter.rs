@@ -23,6 +23,21 @@ impl Filter for DefaultDateFormat {
     }
 }
 
+pub struct Slugify;
+
+impl Filter for Slugify {
+    fn filter(
+        &self,
+        value: &Value,
+        _: &std::collections::HashMap<String, Value>,
+    ) -> tera::Result<Value> {
+        let s = value
+            .as_str()
+            .ok_or_else(|| tera::Error::msg("Expected a string for slugify filter"))?;
+        to_value(crate::slugify::slugify(s)).map_err(tera::Error::from)
+    }
+}
+
 pub struct RemoveDraft;
 
 impl Filter for RemoveDraft {

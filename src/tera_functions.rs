@@ -114,10 +114,28 @@ impl Function for Group {
             _ => return Err(tera::Error::msg("Invalid `kind` argument")),
         };
 
-        // Convert to vector for sorting
+        // Convert to vector for sorting.
+        // For tags, filter out backward-compat duplicate keys and recover original names.
         let mut group_list: Vec<(String, Vec<Content>)> = grouped_content
             .iter()
-            .map(|(name, posts)| (name.clone(), posts.clone()))
+            .filter(|(key, _)| kind != "tag" || crate::slugify::slugify(key) == key.as_str())
+            .map(|(name, posts)| {
+                if kind == "tag" {
+                    let original_name = posts
+                        .iter()
+                        .find_map(|content| {
+                            content
+                                .tags
+                                .iter()
+                                .find(|t| crate::slugify::slugify(t) == name.as_str())
+                                .cloned()
+                        })
+                        .unwrap_or_else(|| name.clone());
+                    (original_name, posts.clone())
+                } else {
+                    (name.clone(), posts.clone())
+                }
+            })
             .collect();
 
         // Sort based on kind and ord parameter

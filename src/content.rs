@@ -433,9 +433,9 @@ pub fn get_slug<'a>(frontmatter: &'a Frontmatter, path: &'a Path) -> String {
     let mut final_slug: String;
 
     if let Some(slug) = frontmatter.get("slug") {
-        final_slug = slug::slugify(slug.to_string());
+        final_slug = crate::slugify::slugify(slug.to_string());
     } else if let Some(title) = frontmatter.get("title") {
-        final_slug = slug::slugify(title.to_string());
+        final_slug = crate::slugify::slugify(title.to_string());
     } else {
         final_slug = path
             .file_stem()
@@ -701,7 +701,7 @@ pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String>
 pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &Path) {
     let content_folder = get_content_folder(&Data::from_file(config_path).site, input_folder);
     let mut path = content_folder.clone();
-    let slug = slug::slugify(text);
+    let slug = crate::slugify::slugify(text);
     if cli_args.create.page {
         path.push(format!("{slug}.md"));
     } else {
