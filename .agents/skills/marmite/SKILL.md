@@ -77,6 +77,10 @@ marmite <folder> --set-theme https://github.com/user/marmite-theme
 marmite --skill-install                      # for standard agents (.agents/)
 marmite --skill-install-claude               # for Claude Code (.claude/skills/)
 marmite --skill-install --skill-install-claude  # both at once
+
+# Manage atproto / standard.site integration
+marmite <folder> atproto auth                # Authenticate with your PDS
+marmite <folder> atproto publish             # Publish posts to standard.site PDS
 ```
 
 ## Workflow: Start a New Project

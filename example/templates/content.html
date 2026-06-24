@@ -29,6 +29,9 @@
 
 {% block head %}
 {{ super() }}
+{% if content.at_uri %}
+<link rel="site.standard.document" href="{{ content.at_uri }}">
+{% endif %}
 {% if not site.code_highlight or site.code_highlight.enabled %}
 <link rel="stylesheet" href="{{ url_for(path='static/arborium.css') }}" />
 {% endif %}

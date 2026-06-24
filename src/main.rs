@@ -6,6 +6,7 @@ use std::{
     sync::Arc,
 };
 
+mod atproto;
 mod cli;
 mod config;
 mod content;
@@ -53,7 +54,8 @@ fn determine_verbosity(args: &cli::Cli) -> u8 {
             || args.generate_config
             || args.init_site
             || args.skill_install
-            || args.skill_install_claude)
+            || args.skill_install_claude
+            || args.subcommand.is_some())
     {
         verbose = 1;
     }
@@ -74,15 +76,21 @@ fn get_config_path(input_folder: &Path, config: &str) -> PathBuf {
 
 #[allow(clippy::too_many_lines)]
 fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
+    let verbose = determine_verbosity(&args);
+
+    if let Err(e) = setup_logging(verbose, args.debug) {
+        eprintln!("Logger already initialized: {e:?}");
+    }
+
+    // Handle atproto subcommands before anything else
+    if let Some(cli::CliSubcommand::Atproto(ref atproto_cmd)) = args.subcommand {
+        return atproto::dispatch(atproto_cmd, &args);
+    }
+
     let cloned_args = Arc::new(args.clone());
     let serve = args.serve;
     let watch = args.watch;
     let bind_address: &str = args.bind.as_str();
-    let verbose = determine_verbosity(&args);
-
-    if let Err(e) = setup_logging(verbose, args.debug) {
-        error!("Logger already initialized: {e:?}");
-    }
 
     if args.skill {
         match embedded::get_skill_content() {

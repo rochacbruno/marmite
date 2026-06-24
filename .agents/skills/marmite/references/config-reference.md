@@ -104,6 +104,17 @@ shortcode_pattern: '\{%\s*(\w+)([^%]*)\s*%\}'
 
 When a theme is set, templates and static files are loaded from the theme folder instead of the project root.
 
+## AT Protocol standard.site
+
+Configure the AT Protocol standard.site publishing integration:
+
+```yaml
+atproto:
+  handle: "myhandle.bsky.social"                                   # Your AT Protocol handle
+  publication_uri: "at://did:plc:.../site.standard.publication/..."  # The publication AT-URI
+  publish_content: true                                            # Publish full markdown body text (default: true)
+```
+
 ## Authors
 
 ```yaml

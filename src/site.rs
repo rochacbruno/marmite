@@ -585,6 +585,36 @@ pub fn generate(
                 highlighter.as_deref(),
             );
 
+            // Load atproto state to populate at_uri on matching posts/pages
+            let state_path = moved_input_folder.join(".marmite-atproto-state.json");
+            if state_path.exists() {
+                if let Ok(state_str) = fs::read_to_string(&state_path) {
+                    if let Ok(state_json) = serde_json::from_str::<serde_json::Value>(&state_str) {
+                        if let Some(posts_obj) = state_json.get("posts").and_then(|p| p.as_object())
+                        {
+                            for post in &mut site_data.posts {
+                                if let Some(entry) = posts_obj.get(&post.slug) {
+                                    if let Some(at_uri) =
+                                        entry.get("at_uri").and_then(|u| u.as_str())
+                                    {
+                                        post.at_uri = Some(at_uri.to_string());
+                                    }
+                                }
+                            }
+                            for page in &mut site_data.pages {
+                                if let Some(entry) = posts_obj.get(&page.slug) {
+                                    if let Some(at_uri) =
+                                        entry.get("at_uri").and_then(|u| u.as_str())
+                                    {
+                                        page.at_uri = Some(at_uri.to_string());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Process galleries
             let media_path = content_folder.join(&site_data.site.media_path);
             site_data.galleries = crate::gallery::process_galleries(
@@ -661,6 +691,23 @@ pub fn generate(
             // Generate urls.json if enabled
             if site_data.site.publish_urls_json {
                 generate_urls_json(&site_data, &output_path);
+            }
+
+            // Generate standard.site verification file if configured
+            if let Some(atproto) = &site_data.site.atproto {
+                if let Some(pub_uri) = &atproto.publication_uri {
+                    let wk_dir = output_path.join(".well-known");
+                    if let Err(e) = fs::create_dir_all(&wk_dir) {
+                        error!("Failed to create .well-known directory: {e:?}");
+                    } else {
+                        let wk_file = wk_dir.join("site.standard.publication");
+                        if let Err(e) = fs::write(&wk_file, pub_uri) {
+                            error!("Failed to write site.standard.publication verification file: {e:?}");
+                        } else {
+                            info!("Generated /.well-known/site.standard.publication verification file");
+                        }
+                    }
+                }
             }
 
             let end_time = start_time.elapsed().as_secs_f64();

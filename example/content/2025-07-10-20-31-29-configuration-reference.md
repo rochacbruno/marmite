@@ -53,7 +53,7 @@ authors:
       - ["Website", "https://johndoe.com"]
       - ["Twitter", "https://twitter.com/johndoe"]
       - ["GitHub", "https://github.com/johndoe"]
-  
+
   jane:
     name: "Jane Smith"
     avatar: "media/jane-avatar.jpg"
@@ -71,19 +71,19 @@ Configure content streams with friendly display names:
 streams:
   tutorial:
     display_name: "Python Tutorials"
-  
+
   guide:
     display_name: "User Guides"
-  
+
   news:
     display_name: "Latest News"
-  
+
   review:
     display_name: "Product Reviews"
 ```
 
 Streams help organize content beyond tags and create focused RSS feeds. Posts can be assigned to streams via:
-- Frontmatter: `stream: tutorial`  
+- Frontmatter: `stream: tutorial`
 - Filename patterns: `tutorial-2024-01-01-post-title.md`
 - S-pattern for pages: `guide-S-comprehensive-guide.md`
 
@@ -259,7 +259,7 @@ Access in templates:
 
 ### Comments System
 
-The recommended way of configuring comments is using the file `_comments.md`, see more on [[Enabling Comments]] page, but alternatively 
+The recommended way of configuring comments is using the file `_comments.md`, see more on [[Enabling Comments]] page, but alternatively
 you can set a `comments` section in the settings file:
 
 ```yaml
@@ -445,7 +445,7 @@ publish_urls_json: true
 When enabled, Marmite automatically generates a `urls.json` file containing all your site's URLs organized by content type. This file has the same structure as the `--show-urls` command output and includes:
 
 - Posts, pages, tags, authors, series, streams, and archive URLs
-- RSS and JSON feed URLs  
+- RSS and JSON feed URLs
 - Pagination page URLs
 - File mapping URLs
 - Summary with counts and metadata
@@ -478,7 +478,20 @@ file_mapping:
 
 See the [[File Mapping Feature]] documentation for detailed examples and use cases.
 
-## Markdown parser options 
+## [AT Protocol](https://atproto.com) [`standard.site`](https://standard.site)
+
+Publish your blog posts to atproto:
+
+```yaml
+atproto:
+  handle: "myhandle.bsky.social"
+  publication_uri: "at://did:plc:.../site.standard.publication/..."
+  publish_content: true
+```
+
+See the [[AT Protocol standard.site]] documentation for more details.
+
+## Markdown parser options
 
 Marmite also allows customizing the markdown parser, the options are described on [[Configurable Markdown Parser Options]]
 

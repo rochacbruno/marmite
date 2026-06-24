@@ -21,6 +21,9 @@
     <link rel="me" href="{{site.extra.fediverse_verification}}">
     {% endif %}
     {% endblock %}
+    {% if site.atproto and site.atproto.publication_uri %}
+    <link rel="site.standard.publication" href="{{ site.atproto.publication_uri }}">
+    {% endif %}
     {%- block head %}
     <title>{% if title %}{{title}} | {%endif%}{{ site.name }}</title>
     <link rel="stylesheet" type="text/css" href="{{url_for(path='static/pico.min.css')}}">
