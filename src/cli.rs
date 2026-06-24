@@ -7,7 +7,7 @@ use std::path::PathBuf;
 pub enum AtprotoCommand {
     /// Authenticate with your atproto PDS using app-password credentials.
     ///
-    /// Reads atproto.handle from marmite.yaml and ATPROTO_APP_PASSWORD env var.
+    /// Reads atproto.handle from marmite.yaml and `ATPROTO_APP_PASSWORD` env var.
     /// If no publication exists, prints the config needed in marmite.yaml.
     Auth,
 
