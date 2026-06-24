@@ -152,7 +152,7 @@ pub fn resolve_pds_endpoint(handle: &str) -> Result<String, Box<dyn std::error::
 
 fn resolve_handle_to_did(handle: &str) -> Result<String, Box<dyn std::error::Error>> {
     // Try HTTPS .well-known lookup
-    let well_known_url = format!("https://{}/.well-known/atproto-did", handle);
+    let well_known_url = format!("https://{handle}/.well-known/atproto-did");
     if let Ok(mut resp) = ureq::get(&well_known_url).call() {
         if resp.status().as_u16() == 200 {
             if let Ok(body) = resp.body_mut().read_to_string() {
@@ -165,10 +165,7 @@ fn resolve_handle_to_did(handle: &str) -> Result<String, Box<dyn std::error::Err
     }
 
     // Try Cloudflare DNS-over-HTTPS JSON query for TXT record fallback
-    let dns_url = format!(
-        "https://cloudflare-dns.com/dns-query?name=_atproto.{}&type=TXT",
-        handle
-    );
+    let dns_url = format!("https://cloudflare-dns.com/dns-query?name=_atproto.{handle}&type=TXT");
     if let Ok(mut resp) = ureq::get(&dns_url)
         .header("Accept", "application/dns-json")
         .call()
@@ -195,16 +192,16 @@ fn resolve_handle_to_did(handle: &str) -> Result<String, Box<dyn std::error::Err
         }
     }
 
-    Err(format!("Could not resolve handle {} to a DID", handle).into())
+    Err(format!("Could not resolve handle {handle} to a DID").into())
 }
 
 fn resolve_did_to_pds(did: &str) -> Result<String, Box<dyn std::error::Error>> {
     let url = if did.starts_with("did:plc:") {
-        format!("https://plc.directory/{}", did)
+        format!("https://plc.directory/{did}")
     } else if let Some(stripped) = did.strip_prefix("did:web:") {
-        format!("https://{}/.well-known/did.json", stripped)
+        format!("https://{stripped}/.well-known/did.json")
     } else {
-        return Err(format!("Unsupported DID method: {}", did).into());
+        return Err(format!("Unsupported DID method: {did}").into());
     };
 
     let mut resp = ureq::get(&url).call()?;

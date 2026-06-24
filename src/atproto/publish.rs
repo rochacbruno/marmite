@@ -57,12 +57,150 @@ fn strip_html(html: &str) -> String {
     re.replace_all(html, "").to_string()
 }
 
-/// Extract the rkey from an AT URI string (at://did/.../rkey).
+/// Extract the rkey from an AT URI string (`at://did/.../rkey`).
 fn rkey_from_at_uri(at_uri: &str) -> Option<String> {
     at_uri
         .parse::<shrike::syntax::AtUri>()
         .ok()
-        .and_then(|u| u.rkey().map(|r| r.to_string()))
+        .and_then(|u| u.rkey().map(std::string::ToString::to_string))
+}
+
+enum PostAction {
+    Published,
+    Updated,
+    Skipped,
+    NoSource,
+}
+
+fn build_record(
+    post: &Content,
+    marmite: &crate::config::Marmite,
+    publication_uri: &str,
+    publish_content: bool,
+) -> serde_json::Value {
+    let published_at = post
+        .date
+        .map_or_else(|| Utc::now().to_rfc3339(), |d| d.and_utc().to_rfc3339());
+
+    let canonical_url = format!("{}/{}.html", marmite.url.trim_end_matches('/'), post.slug);
+
+    let mut record = serde_json::json!({
+        "$type": "site.standard.document",
+        "title": post.title,
+        "site": publication_uri,
+        "path": format!("/{}", post.slug),
+        "canonicalUrl": canonical_url,
+        "publishedAt": published_at,
+    });
+
+    if let Some(desc) = &post.description {
+        record["description"] = serde_json::Value::String(desc.clone());
+    }
+    if !post.tags.is_empty() {
+        record["tags"] = serde_json::json!(post.tags);
+    }
+    if publish_content {
+        let text: String = strip_html(&post.html).chars().take(10_000).collect();
+        record["textContent"] = serde_json::Value::String(text);
+    }
+
+    record
+}
+
+struct PublishContext<'a> {
+    pds_url: &'a str,
+    session: &'a client::Session,
+    marmite: &'a crate::config::Marmite,
+    publication_uri: &'a str,
+    publish_content: bool,
+    force: bool,
+    dry_run: bool,
+}
+
+fn process_post(
+    post: &Content,
+    state: &mut PublishState,
+    ctx: &PublishContext<'_>,
+) -> Result<PostAction, Box<dyn std::error::Error>> {
+    let source_path = match &post.source_path {
+        Some(p) => p.clone(),
+        None => return Ok(PostAction::NoSource),
+    };
+
+    let raw_bytes = match fs::read(&source_path) {
+        Ok(b) => b,
+        Err(e) => {
+            eprintln!("Warning: could not read {}: {e}", source_path.display());
+            return Ok(PostAction::NoSource);
+        }
+    };
+    let hash = sha256_hex(&raw_bytes);
+
+    let existing = state.posts.get(&post.slug);
+    if !ctx.force {
+        if let Some(entry) = existing {
+            if entry.content_hash == hash {
+                return Ok(PostAction::Skipped);
+            }
+        }
+    }
+
+    let record = build_record(post, ctx.marmite, ctx.publication_uri, ctx.publish_content);
+
+    if ctx.dry_run {
+        let action = if existing.is_some() {
+            "update"
+        } else {
+            "publish"
+        };
+        eprintln!("[dry-run] {action}: {}", post.slug);
+        return Ok(PostAction::Skipped);
+    }
+
+    let (at_uri, action) = if let Some(entry) = existing {
+        match rkey_from_at_uri(&entry.at_uri) {
+            Some(rkey) => {
+                let result = client::put_record(
+                    ctx.pds_url,
+                    &ctx.session.access_jwt,
+                    &ctx.session.did,
+                    "site.standard.document",
+                    &rkey,
+                    &record,
+                )
+                .map_err(|e| format!("Failed to update '{}': {e}", post.slug))?;
+                (result.uri, PostAction::Updated)
+            }
+            None => {
+                return Err(format!(
+                    "Could not parse record key (rkey) from AT-URI '{}' for post '{}'",
+                    entry.at_uri, post.slug
+                )
+                .into());
+            }
+        }
+    } else {
+        let result = client::create_record(
+            ctx.pds_url,
+            &ctx.session.access_jwt,
+            &ctx.session.did,
+            "site.standard.document",
+            &record,
+        )
+        .map_err(|e| format!("Failed to publish '{}': {e}", post.slug))?;
+        (result.uri, PostAction::Published)
+    };
+
+    state.posts.insert(
+        post.slug.clone(),
+        StateEntry {
+            content_hash: hash,
+            at_uri,
+            last_published: Utc::now().to_rfc3339(),
+        },
+    );
+
+    Ok(action)
 }
 
 fn collect_publishable_posts(input_folder: &Path, config_path: &Path) -> Vec<Content> {
@@ -143,115 +281,22 @@ pub fn publish(
     let mut updated = 0usize;
     let mut skipped = 0usize;
 
+    let ctx = PublishContext {
+        pds_url: &pds_url,
+        session: &session,
+        marmite,
+        publication_uri,
+        publish_content: atproto.publish_content,
+        force,
+        dry_run,
+    };
+
     for post in &posts {
-        let source_path = match &post.source_path {
-            Some(p) => p.clone(),
-            None => continue,
-        };
-
-        // Hash raw file content for change detection
-        let raw_bytes = match fs::read(&source_path) {
-            Ok(b) => b,
-            Err(e) => {
-                eprintln!("Warning: could not read {}: {e}", source_path.display());
-                continue;
-            }
-        };
-        let hash = sha256_hex(&raw_bytes);
-
-        let existing = state.posts.get(&post.slug);
-        if !force {
-            if let Some(entry) = existing {
-                if entry.content_hash == hash {
-                    skipped += 1;
-                    continue;
-                }
-            }
+        match process_post(post, &mut state, &ctx)? {
+            PostAction::Published => published += 1,
+            PostAction::Updated => updated += 1,
+            PostAction::Skipped | PostAction::NoSource => skipped += 1,
         }
-
-        // Build document record
-        let published_at = post
-            .date
-            .map(|d| d.and_utc().to_rfc3339())
-            .unwrap_or_else(|| Utc::now().to_rfc3339());
-
-        let canonical_url = format!("{}/{}.html", marmite.url.trim_end_matches('/'), post.slug);
-
-        let mut record = serde_json::json!({
-            "$type": "site.standard.document",
-            "title": post.title,
-            "site": publication_uri,
-            "path": format!("/{}", post.slug),
-            "canonicalUrl": canonical_url,
-            "publishedAt": published_at,
-        });
-
-        if let Some(desc) = &post.description {
-            record["description"] = serde_json::Value::String(desc.clone());
-        }
-        if !post.tags.is_empty() {
-            record["tags"] = serde_json::json!(post.tags);
-        }
-        if atproto.publish_content {
-            let text: String = strip_html(&post.html).chars().take(10_000).collect();
-            record["textContent"] = serde_json::Value::String(text);
-        }
-
-        if dry_run {
-            let action = if existing.is_some() {
-                "update"
-            } else {
-                "publish"
-            };
-            eprintln!("[dry-run] {action}: {}", post.slug);
-            continue;
-        }
-
-        // Publish or update
-        let at_uri = if let Some(entry) = existing {
-            match rkey_from_at_uri(&entry.at_uri) {
-                Some(rkey) => {
-                    let result = client::put_record(
-                        &pds_url,
-                        &session.access_jwt,
-                        &session.did,
-                        "site.standard.document",
-                        &rkey,
-                        &record,
-                    )
-                    .map_err(|e| format!("Failed to update '{}': {e}", post.slug))?;
-                    updated += 1;
-                    result.uri
-                }
-                None => {
-                    return Err(format!(
-                        "Could not parse record key (rkey) from AT-URI '{}' for post '{}'",
-                        entry.at_uri, post.slug
-                    )
-                    .into());
-                }
-            }
-        } else {
-            let result = client::create_record(
-                &pds_url,
-                &session.access_jwt,
-                &session.did,
-                "site.standard.document",
-                &record,
-            )
-            .map_err(|e| format!("Failed to publish '{}': {e}", post.slug))?;
-            published += 1;
-            result.uri
-        };
-
-        state.posts.insert(
-            post.slug.clone(),
-            StateEntry {
-                content_hash: hash,
-                at_uri,
-                last_published: Utc::now().to_rfc3339(),
-            },
-        );
     }
 
     if !dry_run {

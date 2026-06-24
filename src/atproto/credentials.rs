@@ -29,9 +29,8 @@ fn load_store() -> CredentialsStore {
     if !path.exists() {
         return HashMap::new();
     }
-    let content = match fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(_) => return HashMap::new(),
+    let Ok(content) = fs::read_to_string(&path) else {
+        return HashMap::new();
     };
     serde_json::from_str(&content).unwrap_or_default()
 }
