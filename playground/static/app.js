@@ -174,6 +174,10 @@ async function loadContentMap() {
     acStreams = [...streams].filter((s) => s !== "index").sort();
     acSeries = [...series].sort();
     acShortcodes = data.shortcodes || [];
+
+    if (data.marmite_version) {
+      $("#marmite-version").textContent = `v${data.marmite_version}`;
+    }
   } catch {
     contentMap = {};
   }

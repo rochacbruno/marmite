@@ -78,6 +78,12 @@ header h1 {
   color: var(--blue);
 }
 
+#marmite-version {
+  font-size: 11px;
+  color: var(--subtext);
+  font-weight: 400;
+}
+
 #view-only-badge {
   font-size: 11px;
   font-weight: 600;
