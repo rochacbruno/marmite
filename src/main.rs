@@ -21,6 +21,7 @@ mod re;
 mod server;
 mod shortcodes;
 mod site;
+mod slugify;
 mod templates;
 mod tera_filter;
 mod tera_functions;

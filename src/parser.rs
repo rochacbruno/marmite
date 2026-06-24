@@ -75,7 +75,7 @@ pub fn get_table_of_contents_from_html(html: &str) -> String {
         let level = cap.get(1).map_or(0, |m| m.as_str().parse().unwrap_or(0));
         let title = cap.get(3).map_or("", |m| m.as_str());
         let slug = cap.get(2).map_or_else(
-            || format!("#{}", slug::slugify(title)),
+            || format!("#{}", crate::slugify::slugify(title)),
             |m| m.as_str().to_string(),
         );
 
@@ -202,11 +202,11 @@ pub fn fix_internal_links(html: &str) -> String {
                 .trim_end_matches(".md")
                 .trim_end_matches(".html");
             let decoded_path = urldecode(raw_path).unwrap_or_else(|_| raw_path.into());
-            let path = slug::slugify(&*decoded_path);
+            let path = crate::slugify::slugify(&*decoded_path);
             let fragment = match parsed.fragment() {
                 Some(f) => {
                     let decoded_f = urldecode(f).unwrap_or_else(|_| f.into());
-                    slug::slugify(&*decoded_f)
+                    crate::slugify::slugify(&*decoded_f)
                 }
                 None => String::new(),
             };

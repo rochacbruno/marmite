@@ -101,7 +101,7 @@ impl SyntaxHighlighterAdapter for MarmiteHighlighter {
 }
 
 fn normalize(name: &str) -> String {
-    slug::slugify(name)
+    crate::slugify::slugify(name)
 }
 
 fn theme_by_name(name: &str) -> Option<Theme> {

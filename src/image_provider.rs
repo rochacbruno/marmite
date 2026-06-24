@@ -45,12 +45,12 @@ fn download_picsum_image(
     }
 
     // Build URL: https://picsum.photos/seed/{slugified-site-name-post-slug-tags}/1200/300
-    let slugified_site_name = slug::slugify(&config.name);
+    let slugified_site_name = crate::slugify::slugify(&config.name);
     let tags_string = tags.join("-");
     let slugified_tags = if tags_string.is_empty() {
         String::new()
     } else {
-        format!("-{}", slug::slugify(&tags_string))
+        format!("-{}", crate::slugify::slugify(&tags_string))
     };
     let seed = format!("{slugified_site_name}-{slug}{slugified_tags}");
     let url = format!("https://picsum.photos/seed/{seed}/1200/300");
