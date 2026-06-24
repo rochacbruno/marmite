@@ -1097,12 +1097,17 @@ divider.addEventListener("mousedown", (e) => {
   const startX = e.clientX;
   const startWidth = editorPanel.offsetWidth;
 
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;z-index:9999;cursor:col-resize;";
+  document.body.appendChild(overlay);
+
   function onMove(e) {
     const newWidth = startWidth + (e.clientX - startX);
     editorPanel.style.width = `${Math.max(200, newWidth)}px`;
   }
 
   function onUp() {
+    overlay.remove();
     document.removeEventListener("mousemove", onMove);
     document.removeEventListener("mouseup", onUp);
   }
