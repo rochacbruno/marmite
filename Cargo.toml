@@ -33,7 +33,7 @@ tera = {version = "1.20", features = ["preserve_order"]}
 comrak = { version = "0.52.0", features = ["shortcodes"], default-features = false }
 walkdir = "2.5"
 chrono = { version = "0.4", features = ["serde"] }
-frontmatter-gen = { version = "0.0.5", features=["default"] }
+frontmatter-gen = { version = "0.0.6", features=["default"] }
 tiny_http = "0.12"
 tungstenite = "0.29"
 clap = { version = "4.5.54", features = ["derive"] }
