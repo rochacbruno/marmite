@@ -19,7 +19,7 @@ uv = "latest"
 "cargo:cargo-nextest" = "latest"
 "cargo:cargo-watch" = "latest"
 "cargo:maturin" = "latest"
-"cargo:cargo-binstall" = "latest"
+"cargo:cargo-binstall" = "1.12"
 
 # Zig for cross-compilation (used by maturin)
 zig = "0.13"
