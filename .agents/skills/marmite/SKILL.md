@@ -462,6 +462,50 @@ image_provider: picsum
 
 Downloads a deterministic placeholder image as `{slug}.banner.jpg` for each post. Only applies to posts, not pages. Delete the downloaded image and rebuild to get a different one.
 
+## Workflow: Media Management
+
+### Directory Layout
+
+Place media files in `content/media/`. You can use flat files or organize per-content subfolders:
+
+```
+content/
+  media/
+    my-post.banner.jpg              # Flat: auto-discovered for slug "my-post"
+    my-post/                        # Subfolder: named after the slug
+      banner.jpg                    # Auto-discovered as banner image
+      card.png                      # Auto-discovered as card image
+      diagram.svg                   # Referenced via @/ in markdown
+      photo.jpg
+  2024-06-15-my-post.md
+```
+
+### Automatic Banner and Card Discovery
+
+Marmite looks for banner and card images in this order:
+
+1. Explicit `banner_image` / `card_image` in frontmatter (always wins)
+2. Flat file: `media/{slug}.banner.{ext}` or `media/{slug}.{ext}`
+3. Subfolder: `media/{slug}/banner.{ext}` or `media/{slug}/card.{ext}`
+4. First `<img>` in the rendered HTML (card image fallback)
+
+Flat files take precedence over subfolder files, so existing sites are unaffected by the subfolder feature.
+
+### The `@/` Shorthand
+
+Use `@/` in markdown images and links to reference files in the content's media subfolder. Marmite replaces `@/` with `media/{slug}/` in `src` and `href` attributes of the rendered HTML:
+
+```markdown
+![Sunset photo](@/sunset.jpg)
+[Download the PDF](@/report.pdf)
+```
+
+For a post with slug `my-post`, the above becomes `src="media/my-post/sunset.jpg"` and `href="media/my-post/report.pdf"`.
+
+The replacement only targets HTML attributes, so `@/` in plain text, code blocks, and fragment files (`_` prefixed) is never touched. The prefix respects the configured `media_path`.
+
+See `references/content-organization.md` for full media organization details.
+
 ## Workflow: Comments
 
 Add a comment system by creating `content/_comments.md`:
