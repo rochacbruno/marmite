@@ -110,13 +110,13 @@ jobs:
         run: |
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             # Use zig for cross-compilation to Linux ARM64
-            mise exec -- maturin build --release --target ${{ matrix.target }} --compatibility manylinux2014 --zig
+            mise exec -- maturin build --locked --release --target ${{ matrix.target }} --compatibility manylinux2014 --zig
           elif [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
             # Use manylinux2014 with zig for better compatibility on x86_64 Linux
-            mise exec -- maturin build --release --target ${{ matrix.target }} --compatibility manylinux2014 --zig
+            mise exec -- maturin build --locked --release --target ${{ matrix.target }} --compatibility manylinux2014 --zig
           else
             # Native compilation or standard cross-compilation
-            mise exec -- maturin build --release --target ${{ matrix.target }}
+            mise exec -- maturin build --locked --release --target ${{ matrix.target }}
           fi
         shell: bash
 
@@ -126,10 +126,10 @@ jobs:
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             # Use cargo-zigbuild for cross-compilation to Linux ARM64
             cargo install cargo-zigbuild --locked
-            mise exec -- cargo zigbuild --release --target ${{ matrix.target }}
+            mise exec -- cargo zigbuild --locked --release --target ${{ matrix.target }}
           else
             # Native compilation or standard cross-compilation
-            cargo build --release --target ${{ matrix.target }}
+            cargo build --locked --release --target ${{ matrix.target }}
           fi
         shell: bash
 
