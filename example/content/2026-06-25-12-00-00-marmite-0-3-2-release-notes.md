@@ -5,7 +5,7 @@ description: "Marmite 0.3.2 adds embedded AI agent skills, AT Protocol / standar
 tags: [release-notes, marmite, features, announcement]
 author: rochacbruno
 pinned: true
-stream: draft
+date: 2026-06-25 12:00:00
 ---
 
 We're excited to announce Marmite 0.3.2! This release introduces embedded AI agent skills, native AT Protocol publishing via standard.site, and the Marmite Playground - an interactive web app for trying marmite in the browser.
@@ -100,7 +100,7 @@ _None in this release._
 
 ## Dependency Updates
 
-- `arborium` 2.16.0 -> 2.18.0
+- `arborium` 2.16.0 -> 2.18.0 (pinned to =2.18.0; 2.18.1 has a C scanner bug that breaks zig cross-compilation)
 - `chrono` 0.4.44 -> 0.4.45
 - `frontmatter-gen` 0.0.5 -> 0.0.6
 - `log` 0.4.29 -> 0.4.33
