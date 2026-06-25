@@ -506,6 +506,63 @@ The replacement only targets HTML attributes, so `@/` in plain text, code blocks
 
 See `references/content-organization.md` for full media organization details.
 
+### Image Galleries
+
+Marmite has a built-in gallery system for displaying collections of images with thumbnails, navigation, and full-screen viewing.
+
+**Setup:**
+
+1. Create a gallery folder inside `content/media/gallery/`:
+
+```
+content/media/gallery/summer2025/
+  sunset.jpg
+  beach.jpg
+  palm-trees.jpg
+  gallery.yaml          # Optional configuration
+```
+
+2. Use the gallery shortcode in any post or page:
+
+```markdown
+<!-- .gallery path=summer2025 -->
+<!-- .gallery path=summer2025 width=800 height=600 ord=desc -->
+```
+
+**Gallery configuration** (`gallery.yaml`, all fields optional):
+
+```yaml
+name: "Summer 2025 Vacation"
+ord: asc                        # asc (default) or desc
+cover: "sunset.jpg"             # Cover image (defaults to first image)
+images:                         # Per-image descriptions (supports HTML)
+  - filename: "sunset.jpg"
+    description: "Sunset at the beach"
+  - filename: "*"               # Catch-all for remaining images
+    description: "Vacation photos"
+```
+
+Description matching supports exact match, partial match, regex patterns, and `*` catch-all. Matched in order - first match wins.
+
+**Config options** in `marmite.yaml`:
+
+```yaml
+gallery_path: "gallery"           # Subfolder of media/ for galleries (default: "gallery")
+gallery_create_thumbnails: true   # Auto-generate thumbnails (default: true)
+gallery_thumb_size: 50            # Thumbnail size in pixels (default: 50)
+```
+
+**Template function** for custom gallery layouts:
+
+```html
+{% set gallery = get_gallery(path="summer2025") %}
+{% for item in gallery.files %}
+  <img src="media/gallery/summer2025/{{ item.image }}" alt="{{ item.description }}">
+{% endfor %}
+```
+
+The gallery interface includes thumbnail strip navigation, keyboard arrow keys, touch/swipe gestures, and responsive design. Image formats: JPG, PNG, WebP, GIF, BMP, TIFF, AVIF.
+
 ## Workflow: Comments
 
 Add a comment system by creating `content/_comments.md`:
