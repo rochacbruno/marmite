@@ -4,6 +4,7 @@ use chrono::NaiveDate;
 use frontmatter_gen::{Frontmatter, Value};
 use std::fs;
 use std::path::Path;
+use tempfile::TempDir;
 
 #[test]
 fn test_extract_stream_from_date_pattern() {
@@ -642,4 +643,193 @@ fn test_get_content_with_empty_file() {
     let result = Content::from_markdown(path, None, &Marmite::default(), None, None).unwrap();
     assert_eq!(result.slug, "test_get_content_with_empty_file".to_string());
     fs::remove_file(path).unwrap();
+}
+
+#[test]
+fn test_find_matching_file_subfolder_banner() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path();
+    let media_dir = content_dir.join("media").join("test-slug");
+    fs::create_dir_all(&media_dir).unwrap();
+    fs::write(media_dir.join("banner.png"), b"fake image").unwrap();
+
+    let dummy_file = content_dir.join("test.md");
+    fs::write(&dummy_file, "").unwrap();
+
+    let result = find_matching_file("test-slug", &dummy_file, "banner", &["png", "jpg"], "media");
+    assert_eq!(result, Some("media/test-slug/banner.png".to_string()));
+}
+
+#[test]
+fn test_find_matching_file_subfolder_card() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path();
+    let media_dir = content_dir.join("media").join("test-slug");
+    fs::create_dir_all(&media_dir).unwrap();
+    fs::write(media_dir.join("card.jpg"), b"fake image").unwrap();
+
+    let dummy_file = content_dir.join("test.md");
+    fs::write(&dummy_file, "").unwrap();
+
+    let result = find_matching_file("test-slug", &dummy_file, "card", &["png", "jpg"], "media");
+    assert_eq!(result, Some("media/test-slug/card.jpg".to_string()));
+}
+
+#[test]
+fn test_find_matching_file_flat_takes_precedence_over_subfolder() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path();
+    let media_dir = content_dir.join("media");
+    fs::create_dir_all(media_dir.join("test-slug")).unwrap();
+    fs::write(media_dir.join("test-slug.banner.png"), b"flat").unwrap();
+    fs::write(media_dir.join("test-slug").join("banner.png"), b"subfolder").unwrap();
+
+    let dummy_file = content_dir.join("test.md");
+    fs::write(&dummy_file, "").unwrap();
+
+    let result = find_matching_file("test-slug", &dummy_file, "banner", &["png"], "media");
+    assert_eq!(
+        result,
+        Some("media/test-slug.banner.png".to_string()),
+        "Flat file should take precedence over subfolder"
+    );
+}
+
+#[test]
+fn test_find_matching_file_subfolder_slug_named() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path();
+    let media_dir = content_dir.join("media").join("my-post");
+    fs::create_dir_all(&media_dir).unwrap();
+    fs::write(media_dir.join("my-post.jpg"), b"fake image").unwrap();
+
+    let dummy_file = content_dir.join("test.md");
+    fs::write(&dummy_file, "").unwrap();
+
+    let result = find_matching_file("my-post", &dummy_file, "card", &["png", "jpg"], "media");
+    assert_eq!(result, Some("media/my-post/my-post.jpg".to_string()));
+}
+
+#[test]
+fn test_find_matching_file_subfolder_nonexistent() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path();
+    fs::create_dir_all(content_dir.join("media")).unwrap();
+
+    let dummy_file = content_dir.join("test.md");
+    fs::write(&dummy_file, "").unwrap();
+
+    let result = find_matching_file(
+        "no-such-slug",
+        &dummy_file,
+        "banner",
+        &["png", "jpg"],
+        "media",
+    );
+    assert_eq!(result, None);
+}
+
+#[test]
+fn test_at_prefix_replacement_in_content() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("2024-01-01-my-post.md");
+    let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n![](@/photo.png)\n";
+    fs::write(&path, content).unwrap();
+
+    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None).unwrap();
+    assert!(
+        result.html.contains("media/my-post/photo.png"),
+        "Expected @/ to be replaced with media/my-post/, got: {}",
+        result.html
+    );
+}
+
+#[test]
+fn test_at_prefix_replacement_multiple_occurrences() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("2024-01-01-my-post.md");
+    let content =
+        "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n![](@/a.png)\n\n[PDF](@/doc.pdf)\n";
+    fs::write(&path, content).unwrap();
+
+    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None).unwrap();
+    assert!(
+        result.html.contains("media/my-post/a.png"),
+        "got: {}",
+        result.html
+    );
+    assert!(
+        result.html.contains("media/my-post/doc.pdf"),
+        "got: {}",
+        result.html
+    );
+}
+
+#[test]
+fn test_at_prefix_no_replacement_in_fragments() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("_fragment.md");
+    let content = "---\ntitle: Fragment\n---\n![](@/should-stay.png)\n";
+    fs::write(&path, content).unwrap();
+
+    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None).unwrap();
+    assert!(
+        result.html.contains("@/should-stay.png"),
+        "Fragments should not have @/ replaced, got: {}",
+        result.html
+    );
+}
+
+#[test]
+fn test_at_prefix_with_custom_media_path() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("2024-01-01-my-post.md");
+    let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n![](@/photo.png)\n";
+    fs::write(&path, content).unwrap();
+
+    let mut config = Marmite::new();
+    config.media_path = "assets".to_string();
+
+    let result = Content::from_markdown(&path, None, &config, None, None).unwrap();
+    assert!(
+        result.html.contains("assets/my-post/photo.png"),
+        "Expected @/ to use custom media_path 'assets', got: {}",
+        result.html
+    );
+}
+
+#[test]
+fn test_at_prefix_not_replaced_in_plain_text() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("2024-01-01-my-post.md");
+    let content =
+        "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\nHello, this is my symbol @/ and should not be replaced\n";
+    fs::write(&path, content).unwrap();
+
+    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None).unwrap();
+    assert!(
+        result.html.contains("@/"),
+        "Plain text @/ should not be replaced, got: {}",
+        result.html
+    );
+    assert!(
+        !result.html.contains("media/my-post/"),
+        "Plain text @/ should not become a media path, got: {}",
+        result.html
+    );
+}
+
+#[test]
+fn test_at_prefix_not_replaced_in_code_block() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("2024-01-01-my-post.md");
+    let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\nHere is how you use it:\n\n```markdown\n![](@/foo.png)\n```\n";
+    fs::write(&path, content).unwrap();
+
+    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None).unwrap();
+    assert!(
+        !result.html.contains("media/my-post/foo.png"),
+        "Code block @/ should not be replaced, got: {}",
+        result.html
+    );
 }
