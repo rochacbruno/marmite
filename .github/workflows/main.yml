@@ -89,7 +89,7 @@ jobs:
       - name: Prepare site 🏗️
         run: .github/prepare_site.sh
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
             python-version: '3.12' 
       
@@ -111,11 +111,11 @@ jobs:
 
       - name: Setup Pages 📄
         if: github.event_name == 'push' && steps.version.outputs.is_release == 'true'
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload artifact 📦
         if: github.event_name == 'push' && steps.version.outputs.is_release == 'true'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: 'site'
 
@@ -140,7 +140,7 @@ jobs:
           cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           fail_ci_if_error: false

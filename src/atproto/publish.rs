@@ -49,7 +49,8 @@ fn save_state(input_folder: &Path, state: &PublishState) -> Result<(), Box<dyn s
 fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
-    format!("{:x}", hasher.finalize())
+    let result = hasher.finalize();
+    result.iter().map(|b| format!("{b:02x}")).collect()
 }
 
 fn strip_html(html: &str) -> String {
