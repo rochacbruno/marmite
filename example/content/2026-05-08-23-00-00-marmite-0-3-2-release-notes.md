@@ -93,13 +93,19 @@ _None in this release._
 
 ## Fixes
 
-_No bug fixes in this release (see 0.3.1 for recent fixes)._
+- **Fixed Chinese/CJK character tags generating duplicate entries** - Non-ASCII tags (Chinese, Japanese, Korean, etc.) appeared twice in tag lists because the backward-compatibility layer stored tags under both slugified and original keys, and the Group Tera function iterated over all entries without filtering. Fixed by filtering backward-compat duplicates in the Group function and recovering original tag names for display. Also centralized all slugify calls through a new wrapper module with a Unicode fallback for scripts the `slug` crate cannot transliterate, and overrode Tera's built-in `slugify` filter for consistency. (#449, #452)
+- **Fixed playground resize handle** - The resize handle in the Marmite Playground was not working correctly. (#359)
+- **Fixed playground responsive layout** - Improved responsive behavior for the playground on smaller screens. (#359)
+- **Fixed clippy pedantic warnings in atproto module** - Cleaned up code quality warnings in the AT Protocol module. (#453)
 
 ## Dependency Updates
 
 - `arborium` 2.16.0 -> 2.18.0
+- `chrono` 0.4.44 -> 0.4.45
+- `frontmatter-gen` 0.0.5 -> 0.0.6
+- `log` 0.4.29 -> 0.4.33
+- `regex` 1.12.3 -> 1.12.4
 - `rss` 2.0.12 -> 2.0.13
-- `log` 0.4.29 -> 0.4.30
 - `serde_json` 1.0.149 -> 1.0.150
 
 New dependencies for AT Protocol support: `ureq` (with JSON feature), `shrike`, `sha2`, `dirs`.
