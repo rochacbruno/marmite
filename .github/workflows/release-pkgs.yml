@@ -167,7 +167,7 @@ jobs:
     #   # Upload Homebrew archives
     #   - name: Upload Homebrew archives
     #     if: runner.os == 'macOS'
-    #     uses: actions/upload-artifact@v4
+    #     uses: actions/upload-artifact@v7
     #     with:
     #       path: |
     #         marmite-*-${{ matrix.target }}.tar.gz
@@ -176,13 +176,13 @@ jobs:
 
       # Upload artifacts
       - name: Upload wheel
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           path: target/wheels/*
           name: wheel-${{ matrix.target }}
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           path: marmite-${{ matrix.target }}*
           name: marmite-${{ matrix.target }}
@@ -201,7 +201,7 @@ jobs:
         run: mise install --yes
       - name: Build source distribution
         run: mise exec -- maturin sdist
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           path: target/wheels/*.tar.gz
           name: sdist
@@ -232,7 +232,7 @@ jobs:
         run: echo "⏭️ Skipping crates.io publishing as requested"
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: artifacts
 
