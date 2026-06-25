@@ -104,7 +104,7 @@ jobs:
 
       - name: Upload artifact 📦
         if: github.event_name == 'push' && steps.version.outputs.is_release == 'true'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: 'site'
 
