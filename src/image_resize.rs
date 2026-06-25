@@ -284,7 +284,7 @@ fn is_banner_image(path: &Path) -> bool {
         return false;
     };
 
-    filename.ends_with(".banner") || filename.contains(".banner.")
+    filename == "banner" || filename.ends_with(".banner") || filename.contains(".banner.")
 }
 
 /// Open an image and apply EXIF orientation to the pixel data.

@@ -71,6 +71,7 @@ $ marmite myblog --serve
 - [Automatic Sitemap Generation](https://marmite.blog/automatic-sitemap-generation.html): Built-in sitemap.xml generation for better SEO with configurable options
 - [File Mapping Feature](https://marmite.blog/file-mapping-feature.html): Copy arbitrary files during site generation using configurable mappings
 - [Automatic Image Download](https://marmite.blog/automatic-image-download.html): Auto-generating banner images
+- [Media Organization](https://marmite.blog/media-organization.html): Slug-based media subfolders and @/ shorthand for per-content media files
 - [Markdown Source Publishing](https://marmite.blog/markdown-source-publishing.html): Publishing source files alongside HTML
 - [Link Checker with Lychee](https://marmite.blog/how-to-run-a-link-checker-on-your-marmite-website.html): Checking for broken links
 - [Enabling Comments](https://marmite.blog/enabling-comments.html): Adding comment systems to your blog

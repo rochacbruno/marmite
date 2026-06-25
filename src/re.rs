@@ -100,4 +100,11 @@ pub const CAPTURE_STREAM_FROM_S_FILENAME: &str = r"^([a-zA-Z0-9]+)-S-";
 /// Used for parsing dates from content metadata
 pub const CAPTURE_DATE_PREFIX_FROM_TEXT: &str = r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2}(:\d{2})?)?";
 
+// === Content Path Patterns ===
+
+/// Matches @/ at the start of src or href attribute values in HTML tags
+/// Captures: 1) the attribute name (src or href)
+/// Used for replacing @/ with media/{slug}/ in rendered HTML
+pub const REPLACE_AT_MEDIA_REF_IN_HTML: &str = r#"(?P<attr>src|href)="@/"#;
+
 // === Text Processing Patterns ===

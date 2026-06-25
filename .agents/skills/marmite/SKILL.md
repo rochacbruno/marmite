@@ -462,6 +462,107 @@ image_provider: picsum
 
 Downloads a deterministic placeholder image as `{slug}.banner.jpg` for each post. Only applies to posts, not pages. Delete the downloaded image and rebuild to get a different one.
 
+## Workflow: Media Management
+
+### Directory Layout
+
+Place media files in `content/media/`. You can use flat files or organize per-content subfolders:
+
+```
+content/
+  media/
+    my-post.banner.jpg              # Flat: auto-discovered for slug "my-post"
+    my-post/                        # Subfolder: named after the slug
+      banner.jpg                    # Auto-discovered as banner image
+      card.png                      # Auto-discovered as card image
+      diagram.svg                   # Referenced via @/ in markdown
+      photo.jpg
+  2024-06-15-my-post.md
+```
+
+### Automatic Banner and Card Discovery
+
+Marmite looks for banner and card images in this order:
+
+1. Explicit `banner_image` / `card_image` in frontmatter (always wins)
+2. Flat file: `media/{slug}.banner.{ext}` or `media/{slug}.{ext}`
+3. Subfolder: `media/{slug}/banner.{ext}` or `media/{slug}/card.{ext}`
+4. First `<img>` in the rendered HTML (card image fallback)
+
+Flat files take precedence over subfolder files, so existing sites are unaffected by the subfolder feature.
+
+### The `@/` Shorthand
+
+Use `@/` in markdown images and links to reference files in the content's media subfolder. Marmite replaces `@/` with `media/{slug}/` in `src` and `href` attributes of the rendered HTML:
+
+```markdown
+![Sunset photo](@/sunset.jpg)
+[Download the PDF](@/report.pdf)
+```
+
+For a post with slug `my-post`, the above becomes `src="media/my-post/sunset.jpg"` and `href="media/my-post/report.pdf"`.
+
+The replacement only targets HTML attributes, so `@/` in plain text, code blocks, and fragment files (`_` prefixed) is never touched. The prefix respects the configured `media_path`.
+
+See `references/content-organization.md` for full media organization details.
+
+### Image Galleries
+
+Marmite has a built-in gallery system for displaying collections of images with thumbnails, navigation, and full-screen viewing.
+
+**Setup:**
+
+1. Create a gallery folder inside `content/media/gallery/`:
+
+```
+content/media/gallery/summer2025/
+  sunset.jpg
+  beach.jpg
+  palm-trees.jpg
+  gallery.yaml          # Optional configuration
+```
+
+2. Use the gallery shortcode in any post or page:
+
+```markdown
+<!-- .gallery path=summer2025 -->
+<!-- .gallery path=summer2025 width=800 height=600 ord=desc -->
+```
+
+**Gallery configuration** (`gallery.yaml`, all fields optional):
+
+```yaml
+name: "Summer 2025 Vacation"
+ord: asc                        # asc (default) or desc
+cover: "sunset.jpg"             # Cover image (defaults to first image)
+images:                         # Per-image descriptions (supports HTML)
+  - filename: "sunset.jpg"
+    description: "Sunset at the beach"
+  - filename: "*"               # Catch-all for remaining images
+    description: "Vacation photos"
+```
+
+Description matching supports exact match, partial match, regex patterns, and `*` catch-all. Matched in order - first match wins.
+
+**Config options** in `marmite.yaml`:
+
+```yaml
+gallery_path: "gallery"           # Subfolder of media/ for galleries (default: "gallery")
+gallery_create_thumbnails: true   # Auto-generate thumbnails (default: true)
+gallery_thumb_size: 50            # Thumbnail size in pixels (default: 50)
+```
+
+**Template function** for custom gallery layouts:
+
+```html
+{% set gallery = get_gallery(path="summer2025") %}
+{% for item in gallery.files %}
+  <img src="media/gallery/summer2025/{{ item.image }}" alt="{{ item.description }}">
+{% endfor %}
+```
+
+The gallery interface includes thumbnail strip navigation, keyboard arrow keys, touch/swipe gestures, and responsive design. Image formats: JPG, PNG, WebP, GIF, BMP, TIFF, AVIF.
+
 ## Workflow: Comments
 
 Add a comment system by creating `content/_comments.md`:

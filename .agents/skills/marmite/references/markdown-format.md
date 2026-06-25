@@ -101,6 +101,17 @@ Images are wrapped in `<figure>` tags with captions by default (`figure_with_cap
 
 Place images in the `content/media/` folder (or the path configured by `media_path`).
 
+### `@/` shorthand for per-content media
+
+Use `@/` to reference files in a media subfolder named after the content's slug:
+
+```markdown
+![Photo](@/photo.png)
+[Download](@/file.pdf)
+```
+
+For a post with slug `my-post`, `@/photo.png` becomes `media/my-post/photo.png` in the rendered HTML. The replacement only targets `src` and `href` attributes - `@/` in plain text and code blocks is left untouched.
+
 ## Lists
 
 ### Unordered

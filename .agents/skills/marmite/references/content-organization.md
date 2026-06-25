@@ -298,6 +298,33 @@ Place images in `content/media/` (or the path configured by `media_path`):
 
 Marmite copies the media folder to the output and optionally resizes images.
 
+#### Slug-based media subfolders
+
+Media files can be organized in subfolders named after the content's slug:
+
+```
+content/
+  media/
+    my-post/
+      banner.jpg       # Auto-discovered as banner image
+      card.png         # Auto-discovered as card image
+      photo.png        # Referenced via @/ in markdown
+  2024-01-15-my-post.md
+```
+
+Marmite checks `media/{slug}/banner.{ext}` and `media/{slug}/card.{ext}` for automatic image discovery. Flat files (`media/{slug}.banner.{ext}`) take precedence over subfolder files for backward compatibility.
+
+#### The `@/` shorthand
+
+Use `@/` in markdown image and link syntax to reference files in the content's media subfolder:
+
+```markdown
+![Photo](@/photo.png)          <!-- becomes media/{slug}/photo.png -->
+[Download PDF](@/report.pdf)   <!-- becomes media/{slug}/report.pdf -->
+```
+
+The replacement targets only `src` and `href` attributes in the rendered HTML, so `@/` in plain text, code blocks, and fragment files (`_` prefixed) is left untouched. The `@/` prefix respects the configured `media_path`.
+
 ### Static Assets
 
 Place CSS, JS, fonts, and other assets in `static/`:

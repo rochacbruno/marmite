@@ -129,11 +129,13 @@ impl Content {
         let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
         let (frontmatter, raw_markdown) = parse_front_matter(&file_content)?;
         let (title, markdown_without_title) = get_title(&frontmatter, raw_markdown);
+        let slug = get_slug(&frontmatter, path);
 
         let is_fragment = path
             .file_name()
             .and_then(|name| name.to_str())
             .is_some_and(|s| s.starts_with('_'));
+
         let default_parser_options = crate::config::ParserOptions::default();
         let parser_options = site
             .markdown_parser
@@ -162,9 +164,14 @@ impl Content {
             get_html_with_options(&markdown_without_title, parser_options, highlighter)
         };
 
+        let html = if !is_fragment {
+            fix_at_media_refs(&html, &site.media_path, &slug)
+        } else {
+            html
+        };
+
         let description = get_description(&frontmatter);
         let tags = get_tags(&frontmatter);
-        let slug = get_slug(&frontmatter, path);
         let date = get_date(&frontmatter, path);
         let extra = frontmatter.get("extra").map(std::borrow::ToOwned::to_owned);
         let links_to = get_links_to(&html);
@@ -813,6 +820,15 @@ fn find_matching_file(
                 return Some(image_filename.clone());
             }
         }
+        let slug_subfolder = media_path.join(slug);
+        if slug_subfolder.is_dir() {
+            for subfolder_filename in [format!("{kind}.{ext}"), format!("{slug}.{ext}")] {
+                let file_path = slug_subfolder.join(&subfolder_filename);
+                if file_path.exists() {
+                    return Some(format!("{media_folder_name}/{slug}/{subfolder_filename}"));
+                }
+            }
+        }
     }
     None
 }
@@ -851,6 +867,16 @@ fn get_banner_image(
         }
     }
     None
+}
+
+/// Replace `@/` references in rendered HTML `src` and `href` attributes
+/// with the slug-specific media path.
+/// Operates on final HTML so code blocks and plain text are not affected.
+fn fix_at_media_refs(html: &str, media_path: &str, slug: &str) -> String {
+    let re =
+        Regex::new(re::REPLACE_AT_MEDIA_REF_IN_HTML).expect("At-media HTML regex should compile");
+    let replacement = format!("${{attr}}=\"{media_path}/{slug}/");
+    re.replace_all(html, replacement.as_str()).into_owned()
 }
 
 #[cfg(test)]

@@ -383,11 +383,32 @@ pub static EMBEDDED_MY_ASSETS: LazyLock<Vec<(String, Vec<u8>)>> = LazyLock::new(
    - Detect stream from frontmatter or filename prefix
    - Generate slug from frontmatter, title, or filename
    - Convert markdown to HTML via comrak
+   - Post-process the HTML (fix internal links, replace `@/` media refs)
    - Process shortcodes if enabled
 3. Build taxonomy indexes (tags, authors, archive, streams, series)
 4. Resolve backlinks and related content
 5. Render Tera templates with content and site data
 6. Write HTML output, copy static/media, resize images
+
+### HTML post-processing over raw markdown rewriting
+
+When a feature needs to rewrite URLs, paths, or other content in the output, always operate on the rendered HTML rather than on the raw markdown before comrak processes it.
+
+Comrak turns markdown into HTML and applies its own transformations (wrapping images in `<figure>`, generating anchor links, rendering code fences into `<code>` blocks, etc.). A naive find-and-replace on the raw markdown cannot distinguish between content the user intends to render (an image `src`, a link `href`) and content that should be left literal (code blocks, inline code, plain prose). By the time HTML is produced, that distinction is already made - real attributes live in tags, and literal text is inside `<code>` or plain text nodes.
+
+Existing functions that follow this pattern:
+
+- `fix_internal_links()` in `parser.rs` - rewrites `<a href="...">` attributes to turn `.md` references into `.html` slugs. Runs at the end of `get_html_with_options()`.
+- `fix_wikilinks()` in `parser.rs` - rewrites `<a data-wikilink="true">` attributes to resolve wikilink targets. Called in `site.rs` after content is collected.
+- `fix_at_media_refs()` in `content.rs` - rewrites `src="@/..."` and `href="@/..."` to `src="media/{slug}/..."`. Runs after `get_html_with_options()` returns in `from_markdown()`.
+
+When implementing a new feature that needs to transform paths, URLs, or text in content output, follow the same approach:
+
+1. Let comrak convert markdown to HTML first.
+2. Write a regex that targets the specific HTML attribute or tag (e.g., `src="..."`, `href="..."`, `<a ... >`).
+3. Define the regex pattern as a constant in `re.rs` with a doc comment.
+4. Apply the replacement on the HTML string after `get_html_with_options()` returns.
+5. Test that the replacement does not affect code blocks or plain text containing the same pattern.
 
 ### CLI command routing
 

@@ -225,6 +225,8 @@ fn test_is_vector_or_icon_image() {
 fn test_is_banner_image() {
     assert!(is_banner_image(Path::new("post.banner.jpg")));
     assert!(is_banner_image(Path::new("my-post.banner.png")));
+    assert!(is_banner_image(Path::new("banner.jpg")));
+    assert!(is_banner_image(Path::new("banner.png")));
     assert!(!is_banner_image(Path::new("regular-image.jpg")));
     assert!(!is_banner_image(Path::new("banner-style.jpg")));
 }
