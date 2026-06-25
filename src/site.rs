@@ -105,7 +105,7 @@ impl Data {
     }
 
     pub fn sort_all(&mut self) {
-        self.posts.sort_by(|a, b| b.date.cmp(&a.date));
+        self.posts.sort_by_key(|a| std::cmp::Reverse(a.date));
         self.pages.sort_by(|a, b| b.title.cmp(&a.title));
         self.tag.sort_all();
         self.archive.sort_all();
@@ -684,10 +684,8 @@ pub fn generate(
                         generate_search_index(&site_data, &moved_output_folder);
                     }
                 }
-                "copy_markdown_sources" => {
-                    if site_data.site.publish_md {
-                        copy_markdown_sources(&site_data, &content_folder, &output_path);
-                    }
+                "copy_markdown_sources" if site_data.site.publish_md => {
+                    copy_markdown_sources(&site_data, &content_folder, &output_path);
                 }
                 _ => {}
             });
@@ -921,7 +919,7 @@ fn set_next_and_previous_links(site_data: &mut std::sync::MutexGuard<'_, Data>) 
 
     // Sort series posts chronologically (oldest to newest)
     for posts in series_posts.values_mut() {
-        posts.sort_by(|a, b| a.date.cmp(&b.date));
+        posts.sort_by_key(|a| a.date);
     }
 
     // Set next/previous for posts in series

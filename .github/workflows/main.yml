@@ -34,6 +34,17 @@ jobs:
       - name: Checkout 🛎
         uses: actions/checkout@v6
 
+      - name: Check Rust version consistency
+        run: |
+          TOOLCHAIN_VER=$(grep '^channel' rust-toolchain.toml | sed 's/.*"\(.*\)"/\1/')
+          MISE_VER=$(grep '^rust' mise.toml | sed 's/.*"\(.*\)"/\1/')
+          echo "rust-toolchain.toml: $TOOLCHAIN_VER"
+          echo "mise.toml: $MISE_VER"
+          if [ "$TOOLCHAIN_VER" != "$MISE_VER" ]; then
+            echo "::error::Rust version mismatch: rust-toolchain.toml ($TOOLCHAIN_VER) != mise.toml ($MISE_VER)"
+            exit 1
+          fi
+
       - name: check formatting 🖌️
         run: cargo fmt -- --check
 

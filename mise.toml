@@ -7,7 +7,7 @@ RUST_BACKTRACE = "1"
 
 [tools]
 # Rust toolchain - version matches rust-toolchain.toml
-rust = "1.92.0"
+rust = "1.96.0"
 
 # Python for maturin/python bindings
 python = "3.12"
@@ -19,7 +19,7 @@ uv = "latest"
 "cargo:cargo-nextest" = "latest"
 "cargo:cargo-watch" = "latest"
 "cargo:maturin" = "latest"
-"cargo:cargo-binstall" = "1.12"
+"cargo:cargo-binstall" = "latest"
 
 # Zig for cross-compilation (used by maturin)
 zig = "0.13"
@@ -95,13 +95,3 @@ make test-quick
 #   CARGO_INCREMENTAL: "0"
 #   CARGO_NET_RETRY: "10"
 #   RUSTFLAGS: "-D warnings"
-
-# Platform-specific tool versions (optional)
-# [tools.linux]
-# rust = "1.87.0"
-#
-# [tools.macos]
-# rust = "1.87.0"
-#
-# [tools.windows]
-# rust = "1.87.0"

@@ -151,7 +151,7 @@ impl Function for Group {
                 if ord == "asc" {
                     group_list.sort_by(|a, b| a.0.cmp(&b.0));
                 } else {
-                    group_list.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+                    group_list.sort_by_key(|a| std::cmp::Reverse(a.1.len()));
                 }
             }
         }

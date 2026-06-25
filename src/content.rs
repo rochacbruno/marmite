@@ -54,11 +54,11 @@ impl GroupedContent {
             match self.kind {
                 Kind::Series => {
                     // Series should be sorted chronologically (oldest to newest)
-                    contents.sort_by(|a, b| a.date.cmp(&b.date));
+                    contents.sort_by_key(|a| a.date);
                 }
                 _ => {
                     // All other content types sort newest first
-                    contents.sort_by(|a, b| b.date.cmp(&a.date));
+                    contents.sort_by_key(|a| std::cmp::Reverse(a.date));
                 }
             }
         }
@@ -72,7 +72,7 @@ impl GroupedContent {
         match self.kind {
             Kind::Tag => {
                 // sort by number of contents
-                vec.sort_by(|a, b| b.1.len().cmp(&a.1.len()));
+                vec.sort_by_key(|a| std::cmp::Reverse(a.1.len()));
             }
             Kind::Archive => {
                 // sort by year, newest first
