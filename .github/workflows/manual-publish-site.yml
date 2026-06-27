@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout 🛎
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Cache Cargo dependencies 📦
         uses: Swatinem/rust-cache@v2
@@ -42,7 +42,7 @@ jobs:
 
       - name: Checkout build ref 🏷️
         if: ${{ !inputs.use_crates_io && inputs.build_ref != '' }}
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.build_ref }}
           path: marmite-build
