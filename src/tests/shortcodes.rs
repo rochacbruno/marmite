@@ -282,3 +282,97 @@ fn test_parse_parameters() {
     let params = ShortcodeProcessor::parse_parameters("   ");
     assert_eq!(params, vec![]);
 }
+
+// --- macro_to_component conversion tests ---
+
+#[test]
+fn test_macro_to_component_basic() {
+    let input = r#"{% macro youtube(id, width="560") %}
+<iframe src="{{id}}" width="{{width}}"></iframe>
+{% endmacro youtube %}"#;
+    let result = ShortcodeProcessor::macro_to_component(input);
+    assert!(result.contains("{% component youtube(id, width=\"560\") %}"));
+    assert!(result.contains("{% endcomponent %}"));
+    assert!(!result.contains("macro"));
+    assert!(!result.contains("endmacro"));
+}
+
+#[test]
+fn test_macro_to_component_no_args() {
+    let input = r#"{% macro toc() %}
+<nav>Table of contents</nav>
+{% endmacro toc %}"#;
+    let result = ShortcodeProcessor::macro_to_component(input);
+    assert!(result.contains("{% component toc() %}"));
+    assert!(result.contains("{% endcomponent %}"));
+}
+
+#[test]
+fn test_macro_to_component_preserves_body() {
+    let input = r#"{% macro card(slug) %}
+<div class="card">{{ slug }}</div>
+{% endmacro card %}"#;
+    let result = ShortcodeProcessor::macro_to_component(input);
+    assert!(result.contains(r#"<div class="card">{{ slug }}</div>"#));
+}
+
+#[test]
+fn test_macro_to_component_preserves_comments() {
+    let input = r#"{# Embed a YouTube video #}
+{% macro youtube(id) %}
+<iframe src="{{id}}"></iframe>
+{% endmacro youtube %}"#;
+    let result = ShortcodeProcessor::macro_to_component(input);
+    assert!(result.contains("{# Embed a YouTube video #}"));
+}
+
+#[test]
+fn test_macro_to_component_generic_endmacro() {
+    let input = r#"{% macro simple() %}
+<p>hello</p>
+{% endmacro %}"#;
+    let result = ShortcodeProcessor::macro_to_component(input);
+    assert!(result.contains("{% component simple() %}"));
+    assert!(result.contains("{% endcomponent %}"));
+    assert!(!result.contains("endmacro"));
+}
+
+#[test]
+fn test_macro_to_component_whitespace_trim_markers() {
+    let input = r#"{%- macro trimmed(x) -%}
+{{x}}
+{% endmacro trimmed %}"#;
+    let result = ShortcodeProcessor::macro_to_component(input);
+    assert!(result.contains("component trimmed(x)"));
+    assert!(!result.contains("macro"));
+}
+
+#[test]
+fn test_macro_to_component_multiple_defaults() {
+    let input = r#"{% macro gallery(path, ord="", width="100%", height="100%", name="", cover="") %}
+<div>gallery</div>
+{% endmacro gallery %}"#;
+    let result = ShortcodeProcessor::macro_to_component(input);
+    assert!(result.contains(
+        "component gallery(path, ord=\"\", width=\"100%\", height=\"100%\", name=\"\", cover=\"\")"
+    ));
+    assert!(result.contains("{% endcomponent %}"));
+}
+
+#[test]
+fn test_macro_to_component_real_youtube_shortcode() {
+    let input = r#"{# Embed a YouTube video #}
+{% macro youtube(id, width="560", height="315") %}
+{% if id is not starting_with("http") %}
+{% set id = "https://www.youtube.com/embed/" ~ id %}
+{% endif %}
+<p><iframe width="{{width}}" height="{{height}}" src="{{id}}" title="" frameBorder="0" allow="accelerometer;" allowFullScreen></iframe></p>
+{% endmacro youtube %}"#;
+    let result = ShortcodeProcessor::macro_to_component(input);
+    assert!(result.contains("{% component youtube(id, width=\"560\", height=\"315\") %}"));
+    assert!(result.contains("{% endcomponent %}"));
+    assert!(!result.contains("macro"));
+    assert!(!result.contains("endmacro"));
+    // Body preserved
+    assert!(result.contains("<p><iframe"));
+}
