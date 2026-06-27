@@ -44,7 +44,7 @@ pub static EMBEDDED_SHORTCODES: LazyLock<Vec<(String, Vec<u8>)>> = LazyLock::new
 /// - Strips `ignore missing` from `{% include %}` tags (not supported in Tera 2.0)
 /// - Converts dot-notation numeric indexing (`item.0`) to bracket notation (`item[0]`)
 /// - Converts positional test args to keyword args (e.g. `starting_with("x")` -> `starting_with(pat="x")`)
-pub fn strip_ignore_missing(content: &str) -> String {
+pub fn preprocess_template(content: &str) -> String {
     let re = Regex::new(r#"(\{%-?\s*include\s+['"][^'"]+['"]\s+)ignore\s+missing\s*(-?%\})"#)
         .expect("Invalid include ignore missing pattern");
     let result = re.replace_all(content, "$1$2");

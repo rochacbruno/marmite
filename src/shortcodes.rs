@@ -1,4 +1,4 @@
-use crate::embedded::{strip_ignore_missing, EMBEDDED_SHORTCODES};
+use crate::embedded::{preprocess_template, EMBEDDED_SHORTCODES};
 use crate::highlight::MarmiteHighlighter;
 use crate::re;
 use log::{debug, warn};
@@ -38,7 +38,7 @@ impl ShortcodeProcessor {
         for (name, shortcode) in &self.shortcodes {
             if shortcode.is_html {
                 let component_content = Self::macro_to_component(&shortcode.content);
-                let component_content = strip_ignore_missing(&component_content);
+                let component_content = preprocess_template(&component_content);
                 tera.add_raw_template(&format!("shortcodes/{name}"), &component_content)
                     .map_err(|e| format!("Failed to add shortcode template '{name}': {e}"))?;
             }

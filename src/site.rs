@@ -1,7 +1,7 @@
 use crate::config::{Author, Marmite};
 use crate::content::{check_for_duplicate_slugs, Content, ContentBuilder, GroupedContent, Kind};
 use crate::embedded::{
-    collect_ignore_missing_includes, generate_static, strip_ignore_missing, Templates,
+    collect_ignore_missing_includes, generate_static, preprocess_template, Templates,
     EMBEDDED_STATIC,
 };
 use crate::gallery::Gallery;
@@ -1210,7 +1210,7 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
     // Phase 3: Load all templates in one batch with preprocessing applied
     let processed_templates: Vec<(String, String)> = all_templates
         .iter()
-        .map(|(name, content)| (name.clone(), strip_ignore_missing(content)))
+        .map(|(name, content)| (name.clone(), preprocess_template(content)))
         .collect();
     let template_refs: Vec<(&str, &str)> = processed_templates
         .iter()
