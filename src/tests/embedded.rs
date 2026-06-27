@@ -28,9 +28,13 @@ fn test_generate_static() {
 }
 
 #[test]
-fn test_embedded_tera_initialization() {
-    let tera = &*EMBEDDED_TERA;
-    assert!(!tera.get_template_names().collect::<Vec<_>>().is_empty());
+fn test_embedded_templates_exist() {
+    let template_names: Vec<_> = Templates::iter().collect();
+    assert!(!template_names.is_empty());
+    for name in &template_names {
+        let template = Templates::get(name.as_ref());
+        assert!(template.is_some(), "Template {name} should exist");
+    }
 }
 
 #[test]

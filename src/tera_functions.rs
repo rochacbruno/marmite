@@ -1,7 +1,6 @@
 use indexmap::IndexMap;
 use serde::Serialize;
-use std::collections::HashMap;
-use tera::{to_value, Function, Result as TeraResult, Value};
+use tera::{Kwargs, State, TeraResult, Value};
 use url::Url;
 
 use crate::content::Content;
@@ -21,19 +20,13 @@ pub struct UrlFor {
     pub base_url: String,
 }
 
-impl Function for UrlFor {
-    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
-        // Extract the "path" argument
-        let mut path = args
-            .get("path")
-            .and_then(Value::as_str)
-            .ok_or_else(|| tera::Error::msg("Missing `path` argument"))?
-            .trim_start_matches("./")
-            .to_string();
+impl UrlFor {
+    pub fn resolve(&self, path: &str, abs: bool) -> String {
+        let mut path = path.trim_start_matches("./").to_string();
 
         let abs_prefixes = ["http", "https", "mailto"];
         if abs_prefixes.iter().any(|&prefix| path.starts_with(prefix)) {
-            return to_value(path).map_err(tera::Error::from);
+            return path;
         }
 
         // Ensure the path starts with "/" by adding it if necessary
@@ -57,11 +50,8 @@ impl Function for UrlFor {
                 .unwrap_or_default()
         };
 
-        // Check if the "abs" argument is provided and set to true
-        let abs = args.get("abs").and_then(Value::as_bool).unwrap_or(false);
-
         // Construct the URL based on the presence of base_url and abs flag
-        let url = if abs && !base_url.is_empty() {
+        if abs && !base_url.is_empty() {
             // Absolute URL with base_url
             format!("{}/{}", base_url, path.trim_start_matches('/'))
         } else if !base_path.is_empty() {
@@ -70,10 +60,16 @@ impl Function for UrlFor {
         } else {
             // Just the path if no base_url or base_path
             path
-        };
+        }
+    }
+}
 
-        // Return the URL as a Tera Value
-        to_value(url).map_err(tera::Error::from)
+impl tera::Function<TeraResult<Value>> for UrlFor {
+    fn call(&self, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+        let path: &str = kwargs.must_get("path")?;
+        let abs: bool = kwargs.get::<bool>("abs")?.unwrap_or(false);
+
+        Ok(Value::from(self.resolve(path, abs)))
     }
 }
 
@@ -87,23 +83,23 @@ pub struct Group {
 }
 
 #[allow(clippy::cast_possible_truncation)]
-impl Function for Group {
-    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
-        let kind = args
-            .get("kind")
-            .and_then(Value::as_str)
-            .ok_or_else(|| tera::Error::msg("Missing `kind` argument"))?;
-
-        let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
-
-        let items = args
-            .get("items")
-            .and_then(|v| match v {
-                Value::Number(n) => n.as_u64(),
-                Value::String(s) => s.parse::<u64>().ok(),
-                _ => None,
+impl tera::Function<TeraResult<Value>> for Group {
+    fn call(&self, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+        let kind: &str = kwargs.must_get("kind")?;
+        let ord: &str = kwargs.get::<&str>("ord")?.unwrap_or("desc");
+        let items: usize = kwargs
+            .get::<i64>("items")
+            .ok()
+            .flatten()
+            .map(|n| n as usize)
+            .or_else(|| {
+                kwargs
+                    .get::<&str>("items")
+                    .ok()
+                    .flatten()
+                    .and_then(|s| s.parse::<usize>().ok())
             })
-            .unwrap_or(0) as usize;
+            .unwrap_or(0);
 
         let grouped_content = match kind {
             "tag" => &self.site_data.tag,
@@ -111,7 +107,7 @@ impl Function for Group {
             "author" => &self.site_data.author,
             "stream" => &self.site_data.stream,
             "series" => &self.site_data.series,
-            _ => return Err(tera::Error::msg("Invalid `kind` argument")),
+            _ => return Err(tera::Error::message("Invalid `kind` argument")),
         };
 
         // Convert to vector for sorting.
@@ -167,10 +163,7 @@ impl Function for Group {
             ordered_map.insert(name, posts);
         }
 
-        let json_value = serde_json::to_value(&ordered_map)
-            .map_err(|e| tera::Error::msg(format!("Failed to convert to JSON: {e}")))?;
-
-        to_value(json_value).map_err(tera::Error::from)
+        Value::try_from_serializable(&ordered_map)
     }
 }
 
@@ -182,17 +175,15 @@ pub struct SourceLink {
     pub site_data: Data,
 }
 
-impl Function for SourceLink {
-    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
-        let content = args
-            .get("content")
-            .ok_or_else(|| tera::Error::msg("Missing `content` argument"))?;
+impl tera::Function<TeraResult<Value>> for SourceLink {
+    fn call(&self, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+        let content: &Value = kwargs.must_get("content")?;
 
         // Extract the source_path from the content
         let source_path = content
-            .get("source_path")
+            .get_from_path("source_path")
             .and_then(Value::as_str)
-            .ok_or_else(|| tera::Error::msg("Missing `source_path` in content"))?;
+            .ok_or_else(|| tera::Error::message("Missing `source_path` in content"))?;
 
         // If source_repository is configured, generate repository link
         if let Some(source_repository) = &self.site_data.site.source_repository {
@@ -203,7 +194,7 @@ impl Function for SourceLink {
                 .unwrap_or("unknown.md");
 
             let repo_url = format!("{}/{}", source_repository.trim_end_matches('/'), file_name);
-            return to_value(repo_url).map_err(tera::Error::from);
+            return Ok(Value::from(repo_url));
         }
 
         // If publish_md is true and no source_repository, generate local link
@@ -215,11 +206,11 @@ impl Function for SourceLink {
                 .unwrap_or("unknown.md");
 
             let local_url = format!("./{file_name}");
-            return to_value(local_url).map_err(tera::Error::from);
+            return Ok(Value::from(local_url));
         }
 
         // Return empty string if neither option is enabled
-        to_value("").map_err(tera::Error::from)
+        Ok(Value::from(""))
     }
 }
 
@@ -231,14 +222,8 @@ pub struct DisplayName {
     pub kind: String,
 }
 
-impl Function for DisplayName {
-    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
-        let name = args
-            .get(&self.kind)
-            .and_then(Value::as_str)
-            .ok_or_else(|| tera::Error::msg(format!("Missing `{}` argument", self.kind)))?;
-
-        // Check if there's a configured display name based on the kind
+impl DisplayName {
+    pub fn resolve(&self, name: &str) -> String {
         let display_name = match self.kind.as_str() {
             "stream" => self
                 .site_data
@@ -255,12 +240,14 @@ impl Function for DisplayName {
             _ => None,
         };
 
-        if let Some(display_name) = display_name {
-            to_value(display_name).map_err(tera::Error::from)
-        } else {
-            // Return the name itself if no display name is configured
-            to_value(name).map_err(tera::Error::from)
-        }
+        display_name.cloned().unwrap_or_else(|| name.to_string())
+    }
+}
+
+impl tera::Function<TeraResult<Value>> for DisplayName {
+    fn call(&self, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+        let name: &str = kwargs.must_get(&self.kind)?;
+        Ok(Value::from(self.resolve(name)))
     }
 }
 
@@ -271,18 +258,22 @@ pub struct GetPosts {
 }
 
 #[allow(clippy::cast_possible_truncation)]
-impl Function for GetPosts {
-    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
-        let ord = args.get("ord").and_then(Value::as_str).unwrap_or("desc");
-
-        let items = args
-            .get("items")
-            .and_then(|v| match v {
-                Value::Number(n) => n.as_u64(),
-                Value::String(s) => s.parse::<u64>().ok(),
-                _ => None,
+impl tera::Function<TeraResult<Value>> for GetPosts {
+    fn call(&self, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+        let ord: &str = kwargs.get::<&str>("ord")?.unwrap_or("desc");
+        let items: usize = kwargs
+            .get::<i64>("items")
+            .ok()
+            .flatten()
+            .map(|n| n as usize)
+            .or_else(|| {
+                kwargs
+                    .get::<&str>("items")
+                    .ok()
+                    .flatten()
+                    .and_then(|s| s.parse::<usize>().ok())
             })
-            .unwrap_or(0) as usize;
+            .unwrap_or(0);
 
         let mut posts = self.site_data.posts.clone();
 
@@ -296,7 +287,7 @@ impl Function for GetPosts {
             posts.truncate(items);
         }
 
-        to_value(posts).map_err(tera::Error::from)
+        Value::try_from_serializable(&posts)
     }
 }
 
@@ -306,36 +297,23 @@ pub struct GetDataBySlug {
     pub site_data: Data,
 }
 
-impl Function for GetDataBySlug {
+impl tera::Function<TeraResult<Value>> for GetDataBySlug {
     #[allow(clippy::too_many_lines)]
-    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
-        let slug = args
-            .get("slug")
-            .and_then(Value::as_str)
-            .ok_or_else(|| tera::Error::msg("Missing `slug` argument"))?;
+    fn call(&self, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+        let slug: &str = kwargs.must_get("slug")?;
 
         // Check what kind of content this slug refers to
         let slug_data = if slug.starts_with("series-") {
             // Series slug: series-{name}
             let series_name = slug
                 .strip_prefix("series-")
-                .ok_or_else(|| tera::Error::msg("Invalid series slug format"))?;
+                .ok_or_else(|| tera::Error::message("Invalid series slug format"))?;
             if let Some(series_contents) = self.site_data.series.map.get(series_name) {
                 let display_name_fn = DisplayName {
                     site_data: self.site_data.clone(),
                     kind: "series".to_string(),
                 };
-                let mut args = std::collections::HashMap::new();
-                args.insert(
-                    "series".to_string(),
-                    tera::Value::String(series_name.to_string()),
-                );
-                let title = display_name_fn
-                    .call(&args)
-                    .unwrap_or_else(|_| tera::Value::String(series_name.to_string()))
-                    .as_str()
-                    .unwrap_or(series_name)
-                    .to_string();
+                let title = display_name_fn.resolve(series_name);
 
                 let description = self
                     .site_data
@@ -360,30 +338,22 @@ impl Function for GetDataBySlug {
                     content_type: "series".to_string(),
                 }
             } else {
-                return Err(tera::Error::msg(format!("Series not found: {series_name}")));
+                return Err(tera::Error::message(format!(
+                    "Series not found: {series_name}"
+                )));
             }
         } else if slug.starts_with("stream-") {
             // Stream slug: stream-{name}
             // This is a special case, because streams are not prefixed with stream-
             let stream_name = slug
                 .strip_prefix("stream-")
-                .ok_or_else(|| tera::Error::msg("Invalid stream slug format"))?;
+                .ok_or_else(|| tera::Error::message("Invalid stream slug format"))?;
             if let Some(stream_contents) = self.site_data.stream.map.get(stream_name) {
                 let display_name_fn = DisplayName {
                     site_data: self.site_data.clone(),
                     kind: "stream".to_string(),
                 };
-                let mut args = std::collections::HashMap::new();
-                args.insert(
-                    "stream".to_string(),
-                    tera::Value::String(stream_name.to_string()),
-                );
-                let title = display_name_fn
-                    .call(&args)
-                    .unwrap_or_else(|_| tera::Value::String(stream_name.to_string()))
-                    .as_str()
-                    .unwrap_or(stream_name)
-                    .to_string();
+                let title = display_name_fn.resolve(stream_name);
 
                 let description = format!("{} posts", stream_contents.len());
 
@@ -401,13 +371,15 @@ impl Function for GetDataBySlug {
                     content_type: "stream".to_string(),
                 }
             } else {
-                return Err(tera::Error::msg(format!("Stream not found: {stream_name}")));
+                return Err(tera::Error::message(format!(
+                    "Stream not found: {stream_name}"
+                )));
             }
         } else if slug.starts_with("tag-") {
             // Tag slug: tag-{name}
             let tag_name = slug
                 .strip_prefix("tag-")
-                .ok_or_else(|| tera::Error::msg("Invalid tag slug format"))?;
+                .ok_or_else(|| tera::Error::message("Invalid tag slug format"))?;
             if let Some(tag_contents) = self.site_data.tag.map.get(tag_name) {
                 let image = tag_contents
                     .first()
@@ -423,13 +395,13 @@ impl Function for GetDataBySlug {
                     content_type: "tag".to_string(),
                 }
             } else {
-                return Err(tera::Error::msg(format!("Tag not found: {tag_name}")));
+                return Err(tera::Error::message(format!("Tag not found: {tag_name}")));
             }
         } else if slug.starts_with("author-") {
             // Author slug: author-{name}
             let author_name = slug
                 .strip_prefix("author-")
-                .ok_or_else(|| tera::Error::msg("Invalid author slug format"))?;
+                .ok_or_else(|| tera::Error::message("Invalid author slug format"))?;
             if let Some(author_contents) = self.site_data.author.map.get(author_name) {
                 let author_info = self.site_data.site.authors.get(author_name);
                 let title = author_info
@@ -449,13 +421,15 @@ impl Function for GetDataBySlug {
                     content_type: "author".to_string(),
                 }
             } else {
-                return Err(tera::Error::msg(format!("Author not found: {author_name}")));
+                return Err(tera::Error::message(format!(
+                    "Author not found: {author_name}"
+                )));
             }
         } else if slug.starts_with("archive-") {
             // Archive slug: archive-{year}
             let year = slug
                 .strip_prefix("archive-")
-                .ok_or_else(|| tera::Error::msg("Invalid archive slug format"))?;
+                .ok_or_else(|| tera::Error::message("Invalid archive slug format"))?;
             if let Some(archive_contents) = self.site_data.archive.map.get(year) {
                 let image = archive_contents
                     .first()
@@ -471,7 +445,9 @@ impl Function for GetDataBySlug {
                     content_type: "archive".to_string(),
                 }
             } else {
-                return Err(tera::Error::msg(format!("Archive year not found: {year}")));
+                return Err(tera::Error::message(format!(
+                    "Archive year not found: {year}"
+                )));
             }
         } else {
             // Check if it's a page
@@ -508,23 +484,13 @@ impl Function for GetDataBySlug {
                 let stream_name = slug;
                 let stream_contents =
                     self.site_data.stream.map.get(stream_name).ok_or_else(|| {
-                        tera::Error::msg(format!("Stream not found: {stream_name}"))
+                        tera::Error::message(format!("Stream not found: {stream_name}"))
                     })?;
                 let display_name_fn = DisplayName {
                     site_data: self.site_data.clone(),
                     kind: "stream".to_string(),
                 };
-                let mut args = std::collections::HashMap::new();
-                args.insert(
-                    "stream".to_string(),
-                    tera::Value::String(stream_name.to_string()),
-                );
-                let title = display_name_fn
-                    .call(&args)
-                    .unwrap_or_else(|_| tera::Value::String(stream_name.to_string()))
-                    .as_str()
-                    .unwrap_or(stream_name)
-                    .to_string();
+                let title = display_name_fn.resolve(stream_name);
                 SlugData {
                     image: stream_contents
                         .first()
@@ -537,13 +503,13 @@ impl Function for GetDataBySlug {
                     content_type: "stream".to_string(),
                 }
             } else {
-                return Err(tera::Error::msg(format!(
+                return Err(tera::Error::message(format!(
                     "Content not found for slug: {slug}"
                 )));
             }
         };
 
-        to_value(slug_data).map_err(tera::Error::from)
+        Value::try_from_serializable(&slug_data)
     }
 }
 
@@ -553,12 +519,9 @@ pub struct GetGallery {
     pub site_data: Data,
 }
 
-impl Function for GetGallery {
-    fn call(&self, args: &HashMap<String, Value>) -> TeraResult<Value> {
-        let path = args
-            .get("path")
-            .and_then(Value::as_str)
-            .ok_or_else(|| tera::Error::msg("Missing `path` argument"))?;
+impl tera::Function<TeraResult<Value>> for GetGallery {
+    fn call(&self, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+        let path: &str = kwargs.must_get("path")?;
 
         log::info!("GetGallery called with path: {path}");
         log::info!(
@@ -569,11 +532,11 @@ impl Function for GetGallery {
         // Get the gallery from site_data
         if let Some(gallery) = self.site_data.galleries.get(path) {
             log::info!("Gallery found for path: {path}");
-            to_value(gallery).map_err(tera::Error::from)
+            Ok(Value::try_from_serializable(gallery)?)
         } else {
             log::info!("Gallery not found for path: {path}");
             // Return null if gallery not found
-            Ok(Value::Null)
+            Ok(Value::none())
         }
     }
 }

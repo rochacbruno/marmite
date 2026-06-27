@@ -1,4 +1,4 @@
-use crate::embedded::EMBEDDED_SHORTCODES;
+use crate::embedded::{strip_ignore_missing, EMBEDDED_SHORTCODES};
 use crate::highlight::MarmiteHighlighter;
 use crate::re;
 use log::{debug, warn};
@@ -37,11 +37,40 @@ impl ShortcodeProcessor {
     pub fn add_shortcodes_to_tera(&self, tera: &mut Tera) -> Result<(), String> {
         for (name, shortcode) in &self.shortcodes {
             if shortcode.is_html {
-                tera.add_raw_template(&format!("shortcodes/{name}"), &shortcode.content)
+                let component_content = Self::macro_to_component(&shortcode.content);
+                let component_content = strip_ignore_missing(&component_content);
+                tera.add_raw_template(&format!("shortcodes/{name}"), &component_content)
                     .map_err(|e| format!("Failed to add shortcode template '{name}': {e}"))?;
             }
         }
         Ok(())
+    }
+
+    /// Convert Tera 1.x macro syntax to Tera 2.0 component syntax
+    fn macro_to_component(content: &str) -> String {
+        let mut result = content.to_string();
+        let macro_def =
+            Regex::new(r"\{%[-\s]*macro\s+(\w+)\s*\(").expect("Invalid macro def pattern");
+        for cap in macro_def.captures_iter(content) {
+            let name = &cap[1];
+            let old = cap[0].to_string();
+            let new = old
+                .replace("macro", "component")
+                .replace("-%}", "%}")
+                .replace("- %}", " %}");
+            result = result.replace(&old, &new);
+            let endmacro_re = Regex::new(&format!(r"\{{% *endmacro +{name} *%\}}"))
+                .expect("Invalid endmacro pattern");
+            result = endmacro_re
+                .replace_all(&result, "{% endcomponent %}")
+                .to_string();
+        }
+        let generic_endmacro =
+            Regex::new(r"\{%\s*endmacro\s*%\}").expect("Invalid endmacro pattern");
+        result = generic_endmacro
+            .replace_all(&result, "{% endcomponent %}")
+            .to_string();
+        result
     }
 
     /// Collect shortcodes from the `input_dir/shortcodes` directory
@@ -292,23 +321,26 @@ impl ShortcodeProcessor {
                 args.join(", ")
             };
 
-            // Render HTML shortcode using Tera macro
-            let shortcode_template = format!(
-                "{{% import \"shortcodes/{name}\" as sc -%}}\n{{{{ sc::{name}({macro_args}) }}}}"
-            );
+            // Render HTML shortcode using Tera component call
+            let component_attrs = if macro_args.is_empty() {
+                String::new()
+            } else {
+                format!(" {}", macro_args.replace(',', ""))
+            };
+            let shortcode_template = format!("{{{{ <{name}{component_attrs} /> }}}}");
 
             debug!("Rendering shortcode '{name}' with template: {shortcode_template}");
-            debug!("Shortcode params: '{params}' -> macro_args: '{macro_args}'");
+            debug!("Shortcode params: '{params}' -> component_attrs: '{component_attrs}'");
 
-            let mut tera_clone = tera.clone();
+            let tera_clone = tera.clone();
             tera_clone
-                .render_str(&shortcode_template, context)
+                .render_str(&shortcode_template, context, false)
                 .map_err(|e| format!("Failed to render shortcode '{name}': {e}"))
         } else {
             // Render markdown shortcode
-            let mut tera_clone = tera.clone();
+            let tera_clone = tera.clone();
             let rendered = tera_clone
-                .render_str(&shortcode.content, context)
+                .render_str(&shortcode.content, context, false)
                 .map_err(|e| format!("Failed to render markdown shortcode '{name}': {e}"))?;
 
             // Convert markdown to HTML
