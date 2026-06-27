@@ -122,7 +122,7 @@ jobs:
       - name: Deploy to GitHub Pages 🚀
         if: github.event_name == 'push' && steps.version.outputs.is_release == 'true'
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   coverage:
     name: coverage
