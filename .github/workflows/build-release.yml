@@ -97,7 +97,7 @@ jobs:
           shasum -a 256 * > SHA256SUMS
 
       - name: Publish Release
-        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b
         with:
           files: |
             ./build/*
