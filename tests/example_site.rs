@@ -314,9 +314,42 @@ fn test_example_site_shortcodes_render() {
     // shortcodes-demo.md uses various shortcodes
     if output_dir.join("shortcodes-demo.html").exists() {
         let content = fs::read_to_string(output_dir.join("shortcodes-demo.html")).unwrap();
+
+        // No shortcode error divs should be present
         assert!(
-            content.contains("<!DOCTYPE html>"),
-            "Shortcodes demo page should render"
+            !content.contains("shortcode-error"),
+            "Shortcodes demo should have no rendering errors"
+        );
+
+        // YouTube shortcode should render iframes
+        assert!(
+            content.contains("<iframe") || content.contains("youtube"),
+            "YouTube shortcode should render"
         );
     }
+}
+
+#[test]
+fn test_example_site_no_shortcode_errors() {
+    let (temp_dir, _) = build_example_site();
+    let output_dir = temp_dir.path().join("output");
+
+    // No page should contain shortcode-error divs
+    let pages_with_errors: Vec<String> = fs::read_dir(&output_dir)
+        .unwrap()
+        .filter_map(Result::ok)
+        .filter(|e| e.path().extension().is_some_and(|ext| ext == "html"))
+        .filter(|e| {
+            fs::read_to_string(e.path())
+                .unwrap_or_default()
+                .contains("shortcode-error")
+        })
+        .map(|e| e.file_name().to_string_lossy().to_string())
+        .collect();
+
+    assert!(
+        pages_with_errors.is_empty(),
+        "Pages with shortcode errors: {:?}",
+        pages_with_errors
+    );
 }

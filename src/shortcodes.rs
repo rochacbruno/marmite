@@ -27,6 +27,20 @@ pub struct Shortcode {
     pub params: Vec<MacroParam>,
 }
 
+fn insert_typed(context: &mut Context, key: String, value: &str) {
+    if let Ok(n) = value.parse::<i64>() {
+        context.insert(key, &n);
+    } else if let Ok(f) = value.parse::<f64>() {
+        context.insert(key, &f);
+    } else if value == "true" {
+        context.insert(key, &true);
+    } else if value == "false" {
+        context.insert(key, &false);
+    } else {
+        context.insert(key, value);
+    }
+}
+
 pub struct ShortcodeProcessor {
     pub shortcodes: HashMap<String, Shortcode>,
     pub pattern: Regex,
@@ -354,9 +368,9 @@ impl ShortcodeProcessor {
                 .collect();
             for (param_name, param_default) in param_defs {
                 if let Some(value) = caller_params.get(&param_name) {
-                    sc_context.insert(param_name, value);
+                    insert_typed(&mut sc_context, param_name, value);
                 } else if let Some(default) = param_default {
-                    sc_context.insert(param_name, &default);
+                    insert_typed(&mut sc_context, param_name, &default);
                 }
             }
 

@@ -393,3 +393,157 @@ Hello {{ name }}, welcome to {{ site_title }}!
     assert!(rendered.contains("Hello World"));
     assert!(rendered.contains("welcome to My Site"));
 }
+
+#[test]
+fn test_shortcode_renders_with_tera_functions() {
+    let mut processor = ShortcodeProcessor::new(None);
+    let shortcode_content = r#"{% macro link(path) %}
+<a href="{{ url_for(path=path) }}">{{ path }}</a>
+{% endmacro link %}"#;
+
+    processor.shortcodes.insert(
+        "link".to_string(),
+        Shortcode {
+            name: "link".to_string(),
+            content: shortcode_content.to_string(),
+            is_html: true,
+            description: None,
+            body: ShortcodeProcessor::extract_macro_body(shortcode_content, "link").map(|(b, _)| b),
+            params: ShortcodeProcessor::extract_macro_body(shortcode_content, "link")
+                .map(|(_, p)| p)
+                .unwrap_or_default(),
+        },
+    );
+
+    let mut tera = tera::Tera::default();
+    tera.register_function(
+        "url_for",
+        crate::tera_functions::UrlFor {
+            base_url: "https://example.com".to_string(),
+        },
+    );
+
+    let context = tera::Context::new();
+    let result = processor
+        .render_shortcode("link", "path=about.html", &context, &tera, None)
+        .unwrap();
+    assert!(
+        result.contains("/about.html"),
+        "Shortcode should access registered url_for function, got: {result}"
+    );
+    assert!(
+        result.contains("<a href="),
+        "Shortcode should render the link tag, got: {result}"
+    );
+}
+
+#[test]
+fn test_shortcode_applies_parameter_defaults() {
+    let mut processor = ShortcodeProcessor::new(None);
+    let shortcode_content = r#"{% macro box(title, color="blue", size="medium") %}
+<div class="{{ color }} {{ size }}">{{ title }}</div>
+{% endmacro box %}"#;
+
+    let (body, params) = ShortcodeProcessor::extract_macro_body(shortcode_content, "box").unwrap();
+    processor.shortcodes.insert(
+        "box".to_string(),
+        Shortcode {
+            name: "box".to_string(),
+            content: shortcode_content.to_string(),
+            is_html: true,
+            description: None,
+            body: Some(body),
+            params,
+        },
+    );
+
+    let tera = tera::Tera::default();
+    let context = tera::Context::new();
+
+    // Only pass title, color and size should use defaults
+    let result = processor
+        .render_shortcode("box", r#"title="Hello""#, &context, &tera, None)
+        .unwrap();
+    assert!(
+        result.contains("blue") && result.contains("medium"),
+        "Missing params should use defaults, got: {result}"
+    );
+
+    // Override one default
+    let result = processor
+        .render_shortcode("box", r#"title="Hello" color="red""#, &context, &tera, None)
+        .unwrap();
+    assert!(
+        result.contains("red") && result.contains("medium"),
+        "Caller should override defaults, got: {result}"
+    );
+}
+
+#[test]
+fn test_shortcode_accesses_context_and_params_together() {
+    let mut processor = ShortcodeProcessor::new(None);
+    let shortcode_content = r#"{% macro info(label) %}
+<span>{{ label }}: {{ site_name }}</span>
+{% endmacro info %}"#;
+
+    let (body, params) = ShortcodeProcessor::extract_macro_body(shortcode_content, "info").unwrap();
+    processor.shortcodes.insert(
+        "info".to_string(),
+        Shortcode {
+            name: "info".to_string(),
+            content: shortcode_content.to_string(),
+            is_html: true,
+            description: None,
+            body: Some(body),
+            params,
+        },
+    );
+
+    let tera = tera::Tera::default();
+    let mut context = tera::Context::new();
+    context.insert("site_name", "Marmite Blog");
+
+    let result = processor
+        .render_shortcode("info", r#"label="Site""#, &context, &tera, None)
+        .unwrap();
+    assert!(
+        result.contains("Site: Marmite Blog"),
+        "Shortcode should see both params and context vars, got: {result}"
+    );
+}
+
+#[test]
+fn test_shortcode_preprocessing_applied_to_body() {
+    let mut processor = ShortcodeProcessor::new(None);
+    // Uses starting_with with positional arg (Tera 1.x style)
+    let shortcode_content = r#"{% macro yt(id) %}
+{% if id is not starting_with("http") %}
+{% set id = "https://youtube.com/embed/" ~ id %}
+{% endif %}
+<iframe src="{{id}}"></iframe>
+{% endmacro yt %}"#;
+
+    let (body, params) = ShortcodeProcessor::extract_macro_body(shortcode_content, "yt").unwrap();
+    processor.shortcodes.insert(
+        "yt".to_string(),
+        Shortcode {
+            name: "yt".to_string(),
+            content: shortcode_content.to_string(),
+            is_html: true,
+            description: None,
+            body: Some(body),
+            params,
+        },
+    );
+
+    let tera = tera::Tera::default();
+    let context = tera::Context::new();
+
+    let result = processor
+        .render_shortcode("yt", "id=abc123", &context, &tera, None)
+        .unwrap();
+    assert!(
+        result.contains("https://youtube.com/embed/abc123"),
+        "Preprocessing should convert starting_with positional to keyword, got: {result}"
+    );
+}
