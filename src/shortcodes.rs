@@ -9,12 +9,22 @@ use std::fs;
 use std::path::Path;
 use tera::{Context, Tera};
 
+#[derive(Debug, Clone)]
+pub struct MacroParam {
+    pub name: String,
+    pub default: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Shortcode {
     pub name: String,
     pub content: String,
     pub is_html: bool,
     pub description: Option<String>,
+    #[serde(skip)]
+    pub body: Option<String>,
+    #[serde(skip)]
+    pub params: Vec<MacroParam>,
 }
 
 pub struct ShortcodeProcessor {
@@ -33,44 +43,41 @@ impl ShortcodeProcessor {
         }
     }
 
-    /// Add shortcodes to Tera instance
-    pub fn add_shortcodes_to_tera(&self, tera: &mut Tera) -> Result<(), String> {
-        for (name, shortcode) in &self.shortcodes {
-            if shortcode.is_html {
-                let component_content = Self::macro_to_component(&shortcode.content);
-                let component_content = preprocess_template(&component_content);
-                tera.add_raw_template(&format!("shortcodes/{name}"), &component_content)
-                    .map_err(|e| format!("Failed to add shortcode template '{name}': {e}"))?;
+    /// Extract the body and parameter list from a Tera 1.x macro definition.
+    /// Returns (body, params) where body is the template text between macro/endmacro
+    /// and params is a list of (name, optional_default) pairs.
+    fn extract_macro_body(content: &str, macro_name: &str) -> Option<(String, Vec<MacroParam>)> {
+        let header_re =
+            Regex::new(&format!(r"\{{% *macro +{macro_name}\s*\(([^)]*)\)\s*%\}}")).ok()?;
+
+        let header_match = header_re.captures(content)?;
+        let params_str = &header_match[1];
+        let header_end = header_match.get(0)?.end();
+
+        let end_re = Regex::new(&format!(r"\{{% *endmacro(?: +{macro_name})?\s*%\}}")).ok()?;
+        let end_match = end_re.find(&content[header_end..])?;
+        let body = content[header_end..header_end + end_match.start()].to_string();
+
+        let mut params = Vec::new();
+        if !params_str.trim().is_empty() {
+            for param in params_str.split(',') {
+                let param = param.trim();
+                if let Some((name, default)) = param.split_once('=') {
+                    let default = default.trim().trim_matches('"').trim_matches('\'');
+                    params.push(MacroParam {
+                        name: name.trim().to_string(),
+                        default: Some(default.to_string()),
+                    });
+                } else {
+                    params.push(MacroParam {
+                        name: param.to_string(),
+                        default: None,
+                    });
+                }
             }
         }
-        Ok(())
-    }
 
-    /// Convert Tera 1.x macro syntax to Tera 2.0 component syntax
-    fn macro_to_component(content: &str) -> String {
-        let mut result = content.to_string();
-        let macro_def =
-            Regex::new(r"\{%[-\s]*macro\s+(\w+)\s*\(").expect("Invalid macro def pattern");
-        for cap in macro_def.captures_iter(content) {
-            let name = &cap[1];
-            let old = cap[0].to_string();
-            let new = old
-                .replace("macro", "component")
-                .replace("-%}", "%}")
-                .replace("- %}", " %}");
-            result = result.replace(&old, &new);
-            let endmacro_re = Regex::new(&format!(r"\{{% *endmacro +{name} *%\}}"))
-                .expect("Invalid endmacro pattern");
-            result = endmacro_re
-                .replace_all(&result, "{% endcomponent %}")
-                .to_string();
-        }
-        let generic_endmacro =
-            Regex::new(r"\{%\s*endmacro\s*%\}").expect("Invalid endmacro pattern");
-        result = generic_endmacro
-            .replace_all(&result, "{% endcomponent %}")
-            .to_string();
-        result
+        Some((body, params))
     }
 
     /// Collect shortcodes from the `input_dir/shortcodes` directory
@@ -125,6 +132,9 @@ impl ShortcodeProcessor {
         // Extract description from Tera comment on first line
         let description = self.extract_description(&content);
 
+        let mut body = None;
+        let mut params = Vec::new();
+
         if is_html {
             // For HTML files, validate that they contain macros
             if !content.contains("{% macro") {
@@ -150,6 +160,11 @@ impl ShortcodeProcessor {
                     macro_names
                 ));
             }
+
+            if let Some((b, p)) = Self::extract_macro_body(&content, file_name) {
+                body = Some(b);
+                params = p;
+            }
         }
 
         let shortcode = Shortcode {
@@ -157,6 +172,8 @@ impl ShortcodeProcessor {
             content: content.clone(),
             is_html,
             description,
+            body,
+            params,
         };
 
         debug!("Loaded shortcode: {file_name}");
@@ -215,11 +232,22 @@ impl ShortcodeProcessor {
             // Extract description from content
             let description = self.extract_description(content);
 
+            let mut body = None;
+            let mut params = Vec::new();
+            if is_html {
+                if let Some((b, p)) = Self::extract_macro_body(content, shortcode_name) {
+                    body = Some(b);
+                    params = p;
+                }
+            }
+
             let shortcode = Shortcode {
                 name: shortcode_name.to_string(),
                 content: content.to_string(),
                 is_html,
                 description,
+                body,
+                params,
             };
 
             debug!("Loaded embedded shortcode: {shortcode_name}");
@@ -299,47 +327,48 @@ impl ShortcodeProcessor {
             .ok_or_else(|| format!("Shortcode '{name}' not found"))?;
 
         if shortcode.is_html {
-            // Parse parameters into macro arguments
-            let macro_args = if params.is_empty() {
-                String::new()
+            let body = shortcode
+                .body
+                .as_ref()
+                .ok_or_else(|| format!("Shortcode '{name}' has no extracted body"))?;
+
+            // Build context: clone caller's context, then inject shortcode parameters
+            let mut sc_context = context.clone();
+            let parsed_params = if params.is_empty() {
+                Vec::new()
             } else {
-                // Parse key=value pairs with proper quote handling
-                let mut args = Vec::new();
-                let parsed_params = Self::parse_parameters(params);
-                for (key, value) in parsed_params {
-                    // Ensure value is properly quoted for Tera
-                    let quoted_value = if value.starts_with('"') && value.ends_with('"') {
-                        value
-                    } else if value.starts_with('\'') && value.ends_with('\'') {
-                        // Convert single quotes to double quotes for Tera
-                        format!("\"{}\"", &value[1..value.len() - 1])
-                    } else {
-                        format!("\"{value}\"")
-                    };
-                    args.push(format!("{key}={quoted_value}"));
+                Self::parse_parameters(params)
+            };
+            let caller_params: HashMap<String, String> = parsed_params
+                .into_iter()
+                .map(|(k, v)| {
+                    let unquoted = v.trim_matches('"').trim_matches('\'').to_string();
+                    (k, unquoted)
+                })
+                .collect();
+
+            let param_defs: Vec<(String, Option<String>)> = shortcode
+                .params
+                .iter()
+                .map(|p| (p.name.clone(), p.default.clone()))
+                .collect();
+            for (param_name, param_default) in param_defs {
+                if let Some(value) = caller_params.get(&param_name) {
+                    sc_context.insert(param_name, value);
+                } else if let Some(default) = param_default {
+                    sc_context.insert(param_name, &default);
                 }
-                args.join(", ")
-            };
+            }
 
-            // Render HTML shortcode using Tera component call
-            let component_attrs = if macro_args.is_empty() {
-                String::new()
-            } else {
-                format!(" {}", macro_args.replace(',', ""))
-            };
-            let shortcode_template = format!("{{{{ <{name}{component_attrs} /> }}}}");
+            let preprocessed = preprocess_template(body);
 
-            debug!("Rendering shortcode '{name}' with template: {shortcode_template}");
-            debug!("Shortcode params: '{params}' -> component_attrs: '{component_attrs}'");
+            debug!("Rendering shortcode '{name}' body with context");
 
-            let tera_clone = tera.clone();
-            tera_clone
-                .render_str(&shortcode_template, context, false)
+            tera.render_str(&preprocessed, &sc_context, false)
                 .map_err(|e| format!("Failed to render shortcode '{name}': {e}"))
         } else {
             // Render markdown shortcode
-            let tera_clone = tera.clone();
-            let rendered = tera_clone
+            let rendered = tera
                 .render_str(&shortcode.content, context, false)
                 .map_err(|e| format!("Failed to render markdown shortcode '{name}': {e}"))?;
 

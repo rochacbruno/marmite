@@ -283,96 +283,113 @@ fn test_parse_parameters() {
     assert_eq!(params, vec![]);
 }
 
-// --- macro_to_component conversion tests ---
+// --- extract_macro_body tests ---
 
 #[test]
-fn test_macro_to_component_basic() {
+fn test_extract_macro_body_basic() {
     let input = r#"{% macro youtube(id, width="560") %}
 <iframe src="{{id}}" width="{{width}}"></iframe>
 {% endmacro youtube %}"#;
-    let result = ShortcodeProcessor::macro_to_component(input);
-    assert!(result.contains("{% component youtube(id, width=\"560\") %}"));
-    assert!(result.contains("{% endcomponent %}"));
-    assert!(!result.contains("macro"));
-    assert!(!result.contains("endmacro"));
+    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "youtube").unwrap();
+    assert!(body.contains("<iframe"));
+    assert_eq!(params.len(), 2);
+    assert_eq!(params[0].name, "id");
+    assert!(params[0].default.is_none());
+    assert_eq!(params[1].name, "width");
+    assert_eq!(params[1].default.as_deref(), Some("560"));
 }
 
 #[test]
-fn test_macro_to_component_no_args() {
+fn test_extract_macro_body_no_args() {
     let input = r#"{% macro toc() %}
 <nav>Table of contents</nav>
 {% endmacro toc %}"#;
-    let result = ShortcodeProcessor::macro_to_component(input);
-    assert!(result.contains("{% component toc() %}"));
-    assert!(result.contains("{% endcomponent %}"));
+    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "toc").unwrap();
+    assert!(body.contains("<nav>"));
+    assert!(params.is_empty());
 }
 
 #[test]
-fn test_macro_to_component_preserves_body() {
+fn test_extract_macro_body_preserves_body() {
     let input = r#"{% macro card(slug) %}
 <div class="card">{{ slug }}</div>
 {% endmacro card %}"#;
-    let result = ShortcodeProcessor::macro_to_component(input);
-    assert!(result.contains(r#"<div class="card">{{ slug }}</div>"#));
+    let (body, _) = ShortcodeProcessor::extract_macro_body(input, "card").unwrap();
+    assert!(body.contains(r#"<div class="card">{{ slug }}</div>"#));
 }
 
 #[test]
-fn test_macro_to_component_preserves_comments() {
-    let input = r#"{# Embed a YouTube video #}
-{% macro youtube(id) %}
-<iframe src="{{id}}"></iframe>
-{% endmacro youtube %}"#;
-    let result = ShortcodeProcessor::macro_to_component(input);
-    assert!(result.contains("{# Embed a YouTube video #}"));
-}
-
-#[test]
-fn test_macro_to_component_generic_endmacro() {
+fn test_extract_macro_body_generic_endmacro() {
     let input = r#"{% macro simple() %}
 <p>hello</p>
 {% endmacro %}"#;
-    let result = ShortcodeProcessor::macro_to_component(input);
-    assert!(result.contains("{% component simple() %}"));
-    assert!(result.contains("{% endcomponent %}"));
-    assert!(!result.contains("endmacro"));
+    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "simple").unwrap();
+    assert!(body.contains("<p>hello</p>"));
+    assert!(params.is_empty());
 }
 
 #[test]
-fn test_macro_to_component_whitespace_trim_markers() {
-    let input = r#"{%- macro trimmed(x) -%}
-{{x}}
-{% endmacro trimmed %}"#;
-    let result = ShortcodeProcessor::macro_to_component(input);
-    assert!(result.contains("component trimmed(x)"));
-    assert!(!result.contains("macro"));
-}
-
-#[test]
-fn test_macro_to_component_multiple_defaults() {
-    let input = r#"{% macro gallery(path, ord="", width="100%", height="100%", name="", cover="") %}
+fn test_extract_macro_body_multiple_defaults() {
+    let input = r#"{% macro gallery(path, ord="", width="100%", height="100%") %}
 <div>gallery</div>
 {% endmacro gallery %}"#;
-    let result = ShortcodeProcessor::macro_to_component(input);
-    assert!(result.contains(
-        "component gallery(path, ord=\"\", width=\"100%\", height=\"100%\", name=\"\", cover=\"\")"
-    ));
-    assert!(result.contains("{% endcomponent %}"));
+    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "gallery").unwrap();
+    assert!(body.contains("<div>gallery</div>"));
+    assert_eq!(params.len(), 4);
+    assert_eq!(params[0].name, "path");
+    assert!(params[0].default.is_none());
+    assert_eq!(params[1].name, "ord");
+    assert_eq!(params[1].default.as_deref(), Some(""));
+    assert_eq!(params[2].name, "width");
+    assert_eq!(params[2].default.as_deref(), Some("100%"));
+    assert_eq!(params[3].name, "height");
+    assert_eq!(params[3].default.as_deref(), Some("100%"));
 }
 
 #[test]
-fn test_macro_to_component_real_youtube_shortcode() {
+fn test_extract_macro_body_wrong_name_returns_none() {
+    let input = r#"{% macro youtube(id) %}
+<iframe></iframe>
+{% endmacro youtube %}"#;
+    assert!(ShortcodeProcessor::extract_macro_body(input, "gallery").is_none());
+}
+
+#[test]
+fn test_extract_macro_body_real_youtube() {
     let input = r#"{# Embed a YouTube video #}
 {% macro youtube(id, width="560", height="315") %}
 {% if id is not starting_with("http") %}
 {% set id = "https://www.youtube.com/embed/" ~ id %}
 {% endif %}
-<p><iframe width="{{width}}" height="{{height}}" src="{{id}}" title="" frameBorder="0" allow="accelerometer;" allowFullScreen></iframe></p>
+<p><iframe width="{{width}}" height="{{height}}" src="{{id}}"></iframe></p>
 {% endmacro youtube %}"#;
-    let result = ShortcodeProcessor::macro_to_component(input);
-    assert!(result.contains("{% component youtube(id, width=\"560\", height=\"315\") %}"));
-    assert!(result.contains("{% endcomponent %}"));
-    assert!(!result.contains("macro"));
-    assert!(!result.contains("endmacro"));
-    // Body preserved
-    assert!(result.contains("<p><iframe"));
+    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "youtube").unwrap();
+    assert!(body.contains("<p><iframe"));
+    assert!(body.contains("starting_with"));
+    assert_eq!(params.len(), 3);
+    assert_eq!(params[0].name, "id");
+    assert_eq!(params[1].default.as_deref(), Some("560"));
+    assert_eq!(params[2].default.as_deref(), Some("315"));
+}
+
+// --- shortcode rendering with context access ---
+
+#[test]
+fn test_shortcode_body_can_access_context_variables() {
+    let input = r#"{% macro greet(name) %}
+Hello {{ name }}, welcome to {{ site_title }}!
+{% endmacro greet %}"#;
+
+    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "greet").unwrap();
+    assert_eq!(params.len(), 1);
+    assert_eq!(params[0].name, "name");
+
+    let mut tera = tera::Tera::default();
+    let mut context = tera::Context::new();
+    context.insert("site_title", "My Site");
+    context.insert("name", "World");
+
+    let rendered = tera.render_str(&body, &context, false).unwrap();
+    assert!(rendered.contains("Hello World"));
+    assert!(rendered.contains("welcome to My Site"));
 }

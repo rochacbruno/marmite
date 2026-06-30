@@ -1226,10 +1226,6 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
         if let Err(e) = processor.collect_shortcodes(input_folder) {
             error!("Failed to collect shortcodes: {e}");
         }
-        // Add shortcodes to Tera
-        if let Err(e) = processor.add_shortcodes_to_tera(&mut tera) {
-            error!("Failed to add shortcodes to Tera: {e}");
-        }
         Some(processor)
     } else {
         None
