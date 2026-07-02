@@ -2725,6 +2725,7 @@ fn handle_redirect_aliases(site_data: &Data, output_dir: &Path) -> Result<(), St
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_content_pages(
     site_data: &Data,
     global_context: &Context,

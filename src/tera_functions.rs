@@ -82,7 +82,7 @@ pub struct Group {
     pub site_data: Data,
 }
 
-#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 impl tera::Function<TeraResult<Value>> for Group {
     fn call(&self, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
         let kind: &str = kwargs.must_get("kind")?;
@@ -257,7 +257,7 @@ pub struct GetPosts {
     pub site_data: Data,
 }
 
-#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 impl tera::Function<TeraResult<Value>> for GetPosts {
     fn call(&self, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
         let ord: &str = kwargs.get::<&str>("ord")?.unwrap_or("desc");

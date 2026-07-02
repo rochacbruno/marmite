@@ -106,7 +106,7 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Opti
         info!("Live reload WebSocket available at ws://{server_bind_address}{LIVE_RELOAD_WS_PATH}");
     }
 
-    info!("Server started at http://{server_bind_address}/ - Type ^C to stop.",);
+    info!("Server started at http://{server_bind_address}/ - Type ^C to stop.");
 
     for request in server.incoming_requests() {
         if let Some(live_reload_handler) = live_reload {

@@ -58,6 +58,7 @@ impl tera::Filter<&Value, TeraResult<Value>> for RemoveDraft {
 }
 
 /// Tera 1.x `date` filter - moved to tera-contrib in Tera 2.0
+#[allow(clippy::needless_pass_by_value)]
 pub fn date(val: &Value, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
     use chrono::TimeZone;
     let format: &str = kwargs.get::<&str>("format")?.unwrap_or("%Y-%m-%d");
@@ -85,6 +86,7 @@ pub fn striptags(val: &str, _: Kwargs, _: &State) -> String {
 }
 
 /// Tera 1.x `trim_start_matches` filter - renamed to `trim_start` in Tera 2.0
+#[allow(clippy::needless_pass_by_value)]
 pub fn trim_start_matches(val: &str, kwargs: Kwargs, _: &State) -> TeraResult<String> {
     if let Some(pat) = kwargs.get::<&str>("pat")? {
         Ok(val.trim_start_matches(pat).to_string())
@@ -94,6 +96,11 @@ pub fn trim_start_matches(val: &str, kwargs: Kwargs, _: &State) -> TeraResult<St
 }
 
 /// Tera 1.x `slice` filter - removed in Tera 2.0
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 pub fn slice(val: &Value, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
     let arr = val
         .as_array()
@@ -101,8 +108,7 @@ pub fn slice(val: &Value, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
     let start = kwargs.get::<i64>("start")?.unwrap_or(0).max(0) as usize;
     let end = kwargs
         .get::<i64>("end")?
-        .map(|e| e.max(0) as usize)
-        .unwrap_or(arr.len())
+        .map_or(arr.len(), |e| e.max(0) as usize)
         .min(arr.len());
     let sliced: Vec<Value> = arr[start..end].to_vec();
     Ok(Value::from_serializable(&sliced))

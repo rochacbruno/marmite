@@ -165,10 +165,10 @@ impl Content {
             get_html_with_options(&markdown_without_title, parser_options, highlighter)
         };
 
-        let html = if !is_fragment {
-            fix_at_media_refs(&html, &site.media_path, &slug)
-        } else {
+        let html = if is_fragment {
             html
+        } else {
+            fix_at_media_refs(&html, &site.media_path, &slug)
         };
 
         let description = get_description(&frontmatter);
