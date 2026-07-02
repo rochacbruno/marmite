@@ -7,7 +7,7 @@
     {% set gallery_name = name if name else gallery_data.name %}
     {% set cover_image = cover if cover else gallery_data.cover %}
     {% set sorted_files = gallery_data.files | reverse if ord == "desc" else gallery_data.files %}
-    {% set base_path = base_path %}
+    {% set base_path = site_data.site.media_path ~ '/' ~ site_data.site.gallery_path ~ '/' ~ path ~ '/' %}
 
     <div class="shortcode-gallery" id="gallery-{{ path }}" style="margin: 20px 0;">
         <h3 class="gallery-title">{{ gallery_name }}</h3>
