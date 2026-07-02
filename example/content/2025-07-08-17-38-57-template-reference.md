@@ -759,9 +759,71 @@ Tera 2.0 adds optional chaining with `?` for safe access to deeply nested values
 {% if site?.extra?.comments?.source is defined %}
 ```
 
+### Native array slicing
+
+Tera 2.0 supports native slice syntax on arrays, which is more concise than the `slice` filter.
+
+```html
+<!-- Old (still works via compatibility filter) -->
+{% for tag in content.tags | slice(end=3) %}
+
+<!-- New (recommended) -->
+{% for tag in content.tags[:3] %}
+
+<!-- More slicing examples -->
+{{ items[1:5] }}     <!-- elements 1 through 4 -->
+{{ items[::-1] }}    <!-- reversed copy -->
+```
+
+### Ternary expressions
+
+Inline conditional expressions replace simple if/else blocks for assigning or outputting values.
+
+```html
+<!-- Old (still works) -->
+{% if image %}
+  {% set banner = image %}
+{% else %}
+  {% set banner = "" %}
+{% endif %}
+
+<!-- New (recommended) -->
+{% set banner = image if image else "" %}
+
+<!-- Works directly in output -->
+<img src="{{ content.banner_image if content.banner_image else '/static/default.jpg' }}">
+```
+
+### Map literals and spread
+
+Tera 2.0 supports inline map construction and the spread operator for merging maps.
+
+```html
+<!-- Create a map -->
+{% set defaults = {"color": "blue", "size": "medium"} %}
+
+<!-- Spread: merge base map with overrides -->
+{% set config = {...defaults, "color": "red", "label": "Custom"} %}
+<!-- Result: {"color": "red", "size": "medium", "label": "Custom"} -->
+```
+
+This is useful in shortcodes where fetched data is merged with user-provided overrides. See the card shortcode for a practical example.
+
+### List comprehension
+
+Tera 2.0 supports list comprehensions for filtering and transforming arrays inline.
+
+```html
+<!-- Filter items inline -->
+{% set pinned = [post for post in content_list if post.pinned] %}
+
+<!-- Extract a field from each item -->
+{% set titles = [post.title for post in content_list if post.date] %}
+```
+
 ### Compatibility filters
 
-The filters `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core. Marmite provides these as built-in compatibility filters, so they continue to work without changes.
+The filters `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core. Marmite provides these as built-in compatibility filters, so they continue to work without changes. The `slice` filter works alongside native slicing syntax.
 
 ### Include templates
 

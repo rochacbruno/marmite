@@ -325,6 +325,23 @@ Marmite uses Tera 2.0. A backward-compatibility preprocessor auto-converts old T
 {% endcomponent form_input %}
 {{<form_input name="email" label="Email" required={true} />}}
 
+<!-- Native array slicing (Tera 2.0) -->
+{{ items[:3] }}                   <!-- first 3 elements -->
+{{ items[1:5] }}                  <!-- elements 1 through 4 -->
+{{ items[::-1] }}                 <!-- reversed -->
+
+<!-- Ternary expressions (Tera 2.0) -->
+{{ value if condition else "fallback" }}
+{{ image if image else "" }}
+
+<!-- Map literals and spread (Tera 2.0) -->
+{% set base = {"key": "val", "other": 42} %}
+{% set merged = {...base, "key": "override", "new": true} %}
+
+<!-- List comprehension (Tera 2.0) -->
+{% set filtered = [x for x in items if x.active] %}
+{% set titles = [item.title for item in posts if item.pinned] %}
+
 <!-- Set variables -->
 {% set myvar = "value" %}
 {% set_global myvar = "value" %}  <!-- persists outside of for loops -->
@@ -338,7 +355,8 @@ Marmite uses Tera 2.0. A backward-compatibility preprocessor auto-converts old T
 Marmite provides these compatibility features for templates written with Tera 1.x syntax:
 
 - **Auto-converted syntax:** Array dot indexing (`item.0`), test positional args (`is starting_with("http")`), and `ignore missing` on includes are automatically converted by the preprocessor.
-- **Compatibility filters:** `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core. Marmite provides them as built-in filters so they continue to work.
+- **Compatibility filters:** `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core. Marmite provides them as built-in filters so they continue to work. The `slice` filter works alongside native slicing syntax (`items[:3]`).
+- **Old conditionals:** Verbose `if/else` blocks and `and` guards still work. Tera 2.0 ternary expressions (`x if cond else y`) are preferred for new templates but not required.
 - **Shortcodes:** Shortcode files use `{% shortcode name() %}` syntax (recommended) or `{% macro name() %}` (backward compatible). Both are extracted by marmite's own parser, not by Tera.
 
 ## Common Template Patterns

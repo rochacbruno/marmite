@@ -107,7 +107,7 @@
             {# Tags with IndieWeb p-category #}
             {% if item.tags %}
             <div class="item-tags">
-                {% for tag in item.tags | slice(end=3) %}
+                {% for tag in item.tags[:3] %}
                 {% set slug = "tag-" ~ tag | trim | slugify %}
                 {% set link = slug ~ ".html"%}
                 <a href="{{url_for(path=link)}}" class="item-tag p-category">{{ tag }}</a>{% if not loop.last %} {% endif %}

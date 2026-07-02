@@ -221,7 +221,7 @@ Usage:
 
 ### Shortcode with Site Data Access
 
-HTML shortcodes have full access to the rendering context, including `site_data`, `site`, `content` (on content pages), and all registered Tera functions (`url_for`, `group`, `get_posts`, etc.).
+HTML shortcodes have full access to the rendering context, including `site_data`, `site`, `content` (on content pages), and all registered Tera functions (`url_for`, `group`, `get_posts`, etc.). Shortcodes can also use Tera 2.0 features like map literals, spread operators, and ternary expressions.
 
 ```html
 {% shortcode featured(count=3) %}
@@ -230,11 +230,31 @@ HTML shortcodes have full access to the rendering context, including `site_data`
   {% for post in posts %}
     <article>
       <h3><a href="{{ url_for(path=post.slug ~ '.html') }}">{{ post.title }}</a></h3>
-      {% if post.description %}<p>{{ post.description }}</p>{% endif %}
+      <p>{{ post.description if post.description else "" }}</p>
     </article>
   {% endfor %}
 </div>
 {% endshortcode featured %}
+```
+
+Shortcodes can use the spread operator to merge map data. For example, the built-in `card.html` shortcode uses spread to merge fetched data with user overrides:
+
+```html
+{% shortcode card(slug="", image="", title="", text="", content_type="") %}
+{% set data = get_data_by_slug(slug=slug) %}
+{% set card = {
+  ...data,
+  "image": image if image else data.image,
+  "title": title if title else data.title,
+  "text": text if text else data.text,
+  "content_type": content_type if content_type else data.content_type
+} %}
+<div class="card">
+  <img src="{{ card.image }}" alt="{{ card.title }}">
+  <h3>{{ card.title }}</h3>
+  <p>{{ card.text }}</p>
+</div>
+{% endshortcode card %}
 ```
 
 ### Overriding Built-in Shortcodes

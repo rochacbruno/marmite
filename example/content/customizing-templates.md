@@ -426,8 +426,12 @@ allowed, a markdown file can include for example embeds, scripts, etc..
 Marmite uses Tera 2.0, which changed some syntax from Tera 1.x. Old templates continue to work - marmite includes a preprocessor that auto-converts legacy syntax. Key changes:
 
 - **Array indexing:** Use `item[0]` instead of `item.0` (old syntax auto-converted)
+- **Native array slicing:** Use `items[:3]`, `items[1:5]`, `items[::-1]` for slicing arrays directly (the `slice` filter also still works)
+- **Ternary expressions:** Use `value if condition else fallback` for inline conditionals instead of if/else blocks
+- **Map literals and spread:** Use `{"key": val}` for inline maps and `{...base, "key": override}` to merge maps
 - **Test keyword args:** Use `is starting_with(pat="http")` instead of `is starting_with("http")` (old syntax auto-converted)
 - **Optional chaining:** Use `site?.extra?.comments` for safe access to values that may not exist
+- **List comprehension:** Use `[x for x in items if condition]` to filter or transform arrays inline
 - **Compatibility filters:** `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core but marmite provides them as built-in filters, so they continue to work
 - **Include templates:** `ignore missing` on includes is handled automatically by the preprocessor
 - **Shortcodes:** Use `{% shortcode name() %}` (recommended) or `{% macro name() %}` (backward compatible)
