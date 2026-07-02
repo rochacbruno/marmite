@@ -1,6 +1,9 @@
 use crate::config::{Author, Marmite};
 use crate::content::{check_for_duplicate_slugs, Content, ContentBuilder, GroupedContent, Kind};
-use crate::embedded::{generate_static, Templates, EMBEDDED_STATIC, EMBEDDED_TERA};
+use crate::embedded::{
+    collect_ignore_missing_includes, generate_static, preprocess_template, Templates,
+    EMBEDDED_STATIC,
+};
 use crate::gallery::Gallery;
 use crate::highlight::{self, MarmiteHighlighter};
 use crate::image_resize;
@@ -21,10 +24,9 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::Path;
-use std::vec;
 use std::{fs, process, sync::Arc, sync::Mutex};
+use tera::Value;
 use tera::{Context, Tera};
-use tera::{Function, Value};
 use walkdir::WalkDir;
 
 #[derive(Serialize, Clone, Debug, Default)]
@@ -850,7 +852,7 @@ fn collect_global_fragments(
             crate::parser::append_references(&fragment_content, &references_path);
         let rendered_fragment = tera
             .clone()
-            .render_str(&fragment_content, global_context)
+            .render_str(&fragment_content, global_context, false)
             .unwrap_or_else(|e| {
                 error!("Failed to render fragment {fragment}: {e}");
                 fragment_content.clone()
@@ -1077,7 +1079,7 @@ fn detect_slug_collision(site_data: &Data) {
 #[allow(clippy::too_many_lines)]
 fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<ShortcodeProcessor>) {
     let mut tera = Tera::default();
-    tera.autoescape_on(vec![]);
+    tera.autoescape_on(Vec::<&str>::new());
     tera.register_function(
         "url_for",
         UrlFor {
@@ -1136,42 +1138,18 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
     );
     tera.register_filter("remove_draft", tera_filter::RemoveDraft);
     tera.register_filter("slugify", tera_filter::Slugify);
+    tera.register_filter("striptags", tera_filter::striptags);
+    tera.register_filter("trim_start_matches", tera_filter::trim_start_matches);
+    tera.register_filter("slice", tera_filter::slice);
+    tera.register_filter("date", tera_filter::date);
 
     let templates_path = site_data.site.get_templates_path(input_folder);
     let mandatory_templates = ["base.html", "list.html", "group.html", "content.html"];
-    // Required because Tera needs base templates to be loaded before extending them
-    for template_name in &mandatory_templates {
-        let template_path = templates_path.join(template_name);
-        if template_path.exists() {
-            let template_content = fs::read_to_string(&template_path).unwrap_or_else(|e| {
-                error!("Failed to read template {template_name}: {e}");
-                String::new()
-            });
-            if let Err(e) = tera.add_raw_template(template_name, &template_content) {
-                error!("Failed to load template {template_name}: {e}");
-            }
-        } else {
-            Templates::get(template_name).map_or_else(
-                || {
-                    error!("Failed to load template: {template_name}");
-                    process::exit(1);
-                },
-                |template| {
-                    let template_str =
-                        std::str::from_utf8(template.data.as_ref()).unwrap_or_else(|e| {
-                            error!("Failed to parse template {template_name}: {e}");
-                            ""
-                        });
-                    if let Err(e) = tera.add_raw_template(template_name, template_str) {
-                        error!("Failed to load template {template_name}: {e}");
-                    }
-                },
-            );
-        }
-    }
 
-    // For every template file in the templates folder including subfolders
-    // we will load it into the tera instance one by one
+    // Phase 1: Collect all template content (user templates override embedded defaults)
+    let mut all_templates: Vec<(String, String)> = Vec::new();
+
+    // Load user templates from the templates directory
     for entry in WalkDir::new(&templates_path)
         .into_iter()
         .filter_map(Result::ok)
@@ -1184,21 +1162,62 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
             .to_str()
             .unwrap_or("")
             .to_string();
-        // windows compatibility
         let template_name = template_name.replace('\\', "/");
-        let template_name = template_name.trim_start_matches('/');
+        let template_name = template_name.trim_start_matches('/').to_string();
         let template_content = fs::read_to_string(template_path).unwrap_or_else(|e| {
             error!("Failed to read template {template_name}: {e}");
             String::new()
         });
-        if let Err(e) = tera.add_raw_template(template_name, &template_content) {
-            error!("Failed to load template {template_name}: {e}");
+        all_templates.push((template_name, template_content));
+    }
+
+    // Add embedded templates as defaults for any not provided by the user
+    let user_names: Vec<String> = all_templates.iter().map(|(n, _)| n.clone()).collect();
+    for name in Templates::iter() {
+        if user_names.iter().any(|n| n == name.as_ref()) {
+            continue;
+        }
+        if let Some(template) = Templates::get(name.as_ref()) {
+            if let Ok(template_str) = std::str::from_utf8(template.data.as_ref()) {
+                all_templates.push((name.to_string(), template_str.to_string()));
+            }
         }
     }
 
-    // Now extend the remaining templates from the embedded::Templates struct
-    if let Err(e) = tera.extend(&EMBEDDED_TERA) {
-        error!("Failed to extend with embedded templates: {e}");
+    // Verify mandatory templates exist
+    for tpl_name in &mandatory_templates {
+        if !all_templates.iter().any(|(n, _)| n == *tpl_name) {
+            error!("Failed to load template: {tpl_name}");
+            process::exit(1);
+        }
+    }
+
+    // Phase 2: Collect all optional includes and register empty templates for missing ones
+    let mut optional_includes: Vec<String> = Vec::new();
+    let all_names: Vec<&str> = all_templates.iter().map(|(n, _)| n.as_str()).collect();
+    for (_, content) in &all_templates {
+        optional_includes.extend(collect_ignore_missing_includes(content));
+    }
+    for name in &optional_includes {
+        if !all_names.contains(&name.as_str()) {
+            debug!("Registering empty template for optional include: {name}");
+            if let Err(e) = tera.add_raw_template(name, "") {
+                error!("Failed to register empty template '{name}': {e}");
+            }
+        }
+    }
+
+    // Phase 3: Load all templates in one batch with preprocessing applied
+    let processed_templates: Vec<(String, String)> = all_templates
+        .iter()
+        .map(|(name, content)| (name.clone(), preprocess_template(content)))
+        .collect();
+    let template_refs: Vec<(&str, &str)> = processed_templates
+        .iter()
+        .map(|(n, c)| (n.as_str(), c.as_str()))
+        .collect();
+    if let Err(e) = tera.add_raw_templates(template_refs) {
+        error!("Failed to load templates: {e}");
     }
 
     // Initialize shortcode processor if enabled
@@ -1206,10 +1225,6 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
         let mut processor = ShortcodeProcessor::new(site_data.site.shortcode_pattern.as_deref());
         if let Err(e) = processor.collect_shortcodes(input_folder) {
             error!("Failed to collect shortcodes: {e}");
-        }
-        // Add shortcodes to Tera
-        if let Err(e) = processor.add_shortcodes_to_tera(&mut tera) {
-            error!("Failed to add shortcodes to Tera: {e}");
         }
         Some(processor)
     } else {
@@ -2122,23 +2137,8 @@ fn generate_sitemap(site_data: &Data, tera: &Tera, output_path: &Path) {
 
     // Helper to generate URL using url_for
     let generate_url = |path: &str| -> String {
-        let mut args = HashMap::new();
-        args.insert("path".to_string(), Value::String(path.to_string()));
-
-        if site_data.site.url.is_empty() {
-            // Use relative URLs
-            match url_for.call(&args) {
-                Ok(Value::String(url)) => url,
-                _ => format!("/{path}"),
-            }
-        } else {
-            // Use absolute URLs
-            args.insert("abs".to_string(), Value::Bool(true));
-            match url_for.call(&args) {
-                Ok(Value::String(url)) => url,
-                _ => format!("{}/{}", site_data.site.url.trim_end_matches('/'), path),
-            }
-        }
+        let abs = !site_data.site.url.is_empty();
+        url_for.resolve(path, abs)
     };
 
     // Get all URLs from the shared collection and apply URL generation
@@ -2182,25 +2182,7 @@ fn create_urls_json(site_data: &Data) -> serde_json::Value {
     let use_abs = !site_data.site.url.is_empty();
 
     // Helper to generate URL using url_for
-    let generate_url = |path: &str| -> String {
-        let mut args = HashMap::new();
-        args.insert("path".to_string(), Value::String(path.to_string()));
-
-        if use_abs {
-            args.insert("abs".to_string(), Value::Bool(true));
-        }
-
-        match url_for.call(&args) {
-            Ok(Value::String(url)) => url,
-            _ => {
-                if use_abs {
-                    format!("{}/{}", site_data.site.url.trim_end_matches('/'), path)
-                } else {
-                    format!("/{path}")
-                }
-            }
-        }
-    };
+    let generate_url = |path: &str| -> String { url_for.resolve(path, use_abs) };
 
     // Convert URL collection to full URLs with proper formatting
     let mut output = serde_json::Map::new();
@@ -2569,11 +2551,7 @@ fn handle_list_page(
                     "next_page"
                 ]
                 .iter()
-                .map(|name| format!(
-                    "{}:{}",
-                    name,
-                    context.get(name).unwrap_or(&tera::Value::Null)
-                ))
+                .map(|name| format!("{}:{}", name, context.get(name).unwrap_or(&Value::none())))
                 .collect::<Vec<_>>()
             );
 
@@ -3011,7 +2989,7 @@ fn render_html_with_shortcodes(
     let templates = template.split(',').collect::<Vec<_>>();
     let template = templates
         .iter()
-        .find(|t| tera.get_template(t).is_ok())
+        .find(|t| tera.get_template_names().any(|n| n == **t))
         .unwrap_or(&templates[0]);
     let mut rendered = tera.render(template, context).map_err(|e| {
         error!("Error rendering template `{template}` -> {filename}: {e:#?}");

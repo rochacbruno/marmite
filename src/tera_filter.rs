@@ -1,60 +1,48 @@
 use std::str::FromStr;
 
-use tera::{to_value, Filter, Value};
+use tera::{Kwargs, State, TeraResult, Value};
 
 pub struct DefaultDateFormat {
     pub date_format: String,
 }
 
-impl Filter for DefaultDateFormat {
-    fn filter(
-        &self,
-        value: &tera::Value,
-        _: &std::collections::HashMap<String, tera::Value>,
-    ) -> tera::Result<tera::Value> {
+impl tera::Filter<&Value, TeraResult<Value>> for DefaultDateFormat {
+    fn call(&self, value: &Value, _: Kwargs, _: &State) -> TeraResult<Value> {
         let date_str = value
             .as_str()
-            .ok_or(tera::Error::msg("Missing date string"))?;
+            .ok_or(tera::Error::message("Missing date string"))?;
         let date = chrono::NaiveDateTime::from_str(date_str)
-            .map_err(|e| tera::Error::msg(e.to_string()))?;
+            .map_err(|e| tera::Error::message(e.to_string()))?;
         let formatted_date = date.format(self.date_format.as_str()).to_string();
 
-        to_value(formatted_date).map_err(tera::Error::from)
+        Ok(Value::from(formatted_date))
     }
 }
 
 pub struct Slugify;
 
-impl Filter for Slugify {
-    fn filter(
-        &self,
-        value: &Value,
-        _: &std::collections::HashMap<String, Value>,
-    ) -> tera::Result<Value> {
+impl tera::Filter<&Value, TeraResult<Value>> for Slugify {
+    fn call(&self, value: &Value, _: Kwargs, _: &State) -> TeraResult<Value> {
         let s = value
             .as_str()
-            .ok_or_else(|| tera::Error::msg("Expected a string for slugify filter"))?;
-        to_value(crate::slugify::slugify(s)).map_err(tera::Error::from)
+            .ok_or_else(|| tera::Error::message("Expected a string for slugify filter"))?;
+        Ok(Value::from(crate::slugify::slugify(s)))
     }
 }
 
 pub struct RemoveDraft;
 
-impl Filter for RemoveDraft {
-    fn filter(
-        &self,
-        value: &Value,
-        _: &std::collections::HashMap<String, Value>,
-    ) -> tera::Result<Value> {
+impl tera::Filter<&Value, TeraResult<Value>> for RemoveDraft {
+    fn call(&self, value: &Value, _: Kwargs, _: &State) -> TeraResult<Value> {
         let items = value
             .as_array()
-            .ok_or_else(|| tera::Error::msg("Expected an array"))?;
+            .ok_or_else(|| tera::Error::message("Expected an array"))?;
 
         let filtered: Vec<Value> = items
             .iter()
             .filter(|item| {
                 // Check if the item has a stream field that equals "draft"
-                if let Some(stream) = item.get("stream") {
+                if let Some(stream) = item.get_from_path("stream") {
                     if let Some(stream_str) = stream.as_str() {
                         return stream_str != "draft";
                     }
@@ -65,8 +53,59 @@ impl Filter for RemoveDraft {
             .cloned()
             .collect();
 
-        to_value(filtered).map_err(tera::Error::from)
+        Ok(Value::from_serializable(&filtered))
     }
+}
+
+/// Tera 1.x `date` filter - moved to tera-contrib in Tera 2.0
+pub fn date(val: &Value, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+    use chrono::TimeZone;
+    let format: &str = kwargs.get::<&str>("format")?.unwrap_or("%Y-%m-%d");
+    let date_str = val
+        .as_str()
+        .ok_or_else(|| tera::Error::message("date filter requires a string value"))?;
+    let parse_naive = |s: &str| -> Option<chrono::NaiveDateTime> {
+        chrono::NaiveDateTime::from_str(s).ok().or_else(|| {
+            chrono::NaiveDate::from_str(s)
+                .ok()
+                .and_then(|d| d.and_hms_opt(0, 0, 0))
+        })
+    };
+    if let Some(dt) = parse_naive(date_str) {
+        let utc = chrono::Utc.from_utc_datetime(&dt);
+        return Ok(Value::from(utc.format(format).to_string()));
+    }
+    Err(tera::Error::message(format!("Invalid date: '{date_str}'")))
+}
+
+/// Tera 1.x `striptags` filter - removed in Tera 2.0
+pub fn striptags(val: &str, _: Kwargs, _: &State) -> String {
+    let re = regex::Regex::new(r"<[^>]*>").expect("Invalid HTML tag pattern");
+    re.replace_all(val, "").to_string()
+}
+
+/// Tera 1.x `trim_start_matches` filter - renamed to `trim_start` in Tera 2.0
+pub fn trim_start_matches(val: &str, kwargs: Kwargs, _: &State) -> TeraResult<String> {
+    if let Some(pat) = kwargs.get::<&str>("pat")? {
+        Ok(val.trim_start_matches(pat).to_string())
+    } else {
+        Ok(val.trim_start().to_string())
+    }
+}
+
+/// Tera 1.x `slice` filter - removed in Tera 2.0
+pub fn slice(val: &Value, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+    let arr = val
+        .as_array()
+        .ok_or_else(|| tera::Error::message("slice filter requires an array"))?;
+    let start = kwargs.get::<i64>("start")?.unwrap_or(0).max(0) as usize;
+    let end = kwargs
+        .get::<i64>("end")?
+        .map(|e| e.max(0) as usize)
+        .unwrap_or(arr.len())
+        .min(arr.len());
+    let sliced: Vec<Value> = arr[start..end].to_vec();
+    Ok(Value::from_serializable(&sliced))
 }
 
 #[cfg(test)]
