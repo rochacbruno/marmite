@@ -649,6 +649,22 @@ pub fn generate(
             set_next_and_previous_links(&mut site_data);
             site_data.collect_all_urls();
 
+            if site_data.site.check_internal_links {
+                let broken = validate_internal_links(&site_data);
+                for (source, target) in &broken {
+                    warn!(
+                        "Broken internal link in \"{source}.html\": \"{target}.html\" does not exist"
+                    );
+                }
+                if !broken.is_empty() {
+                    warn!("Found {} broken internal link(s)", broken.len());
+                    if site_data.site.strict_internal_links {
+                        error!("Build failed due to broken internal links (strict_internal_links is enabled)");
+                        process::exit(1);
+                    }
+                }
+            }
+
             let site_path = site_data.site.site_path.clone();
             let output_path = moved_output_folder.join(site_path);
             if let Err(e) = fs::create_dir_all(&output_path) {
@@ -913,6 +929,31 @@ fn _collect_back_links(contents: &mut [Content], other_contents: &[Content]) {
             }
         }
     }
+}
+
+fn validate_internal_links(site_data: &Data) -> Vec<(String, String)> {
+    let mut valid_slugs: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    let all_urls = site_data.generated_urls.get_all_urls();
+    for url in &all_urls {
+        valid_slugs.insert(url.trim_end_matches(".html").to_string());
+    }
+    for url in &site_data.generated_urls.redirects {
+        valid_slugs.insert(url.trim_end_matches(".html").to_string());
+    }
+
+    let mut broken = Vec::new();
+    for content in site_data.posts.iter().chain(&site_data.pages) {
+        if let Some(ref links) = content.links_to {
+            for link in links {
+                let slug = link.split('#').next().unwrap_or(link);
+                if !valid_slugs.contains(slug) {
+                    broken.push((content.slug.clone(), slug.to_string()));
+                }
+            }
+        }
+    }
+    broken
 }
 
 #[allow(clippy::cast_possible_wrap)]

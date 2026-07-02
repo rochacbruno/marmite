@@ -82,6 +82,10 @@ publish_md: true
 # URLs JSON publishing (generates /urls.json)
 publish_urls_json: true
 
+# Internal link validation
+# check_internal_links: true
+# strict_internal_links: true
+
 # extra data for template customization
 extra:
   # banner_image_width: 124 # resize the banner images

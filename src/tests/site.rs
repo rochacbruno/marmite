@@ -452,3 +452,122 @@ fn test_get_content_folder() {
     let content_folder_fallback = get_content_folder(&config_nonexistent, input_folder);
     assert_eq!(content_folder_fallback, input_folder);
 }
+
+#[test]
+fn test_validate_internal_links_no_broken() {
+    let mut data = Data::new("", Path::new("test.yaml"));
+
+    let post = ContentBuilder::new()
+        .title("Post 1".to_string())
+        .slug("post-1".to_string())
+        .links_to(vec!["about".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    let page = ContentBuilder::new()
+        .title("About".to_string())
+        .slug("about".to_string())
+        .build();
+
+    data.push_content(post);
+    data.push_content(page);
+    data.collect_all_urls();
+
+    let broken = validate_internal_links(&data);
+    assert!(broken.is_empty());
+}
+
+#[test]
+fn test_validate_internal_links_broken() {
+    let mut data = Data::new("", Path::new("test.yaml"));
+
+    let post = ContentBuilder::new()
+        .title("Post 1".to_string())
+        .slug("post-1".to_string())
+        .links_to(vec!["nonexistent-page".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    data.push_content(post);
+    data.collect_all_urls();
+
+    let broken = validate_internal_links(&data);
+    assert_eq!(broken.len(), 1);
+    assert_eq!(broken[0].0, "post-1");
+    assert_eq!(broken[0].1, "nonexistent-page");
+}
+
+#[test]
+fn test_validate_internal_links_with_anchor() {
+    let mut data = Data::new("", Path::new("test.yaml"));
+
+    let post = ContentBuilder::new()
+        .title("Post 1".to_string())
+        .slug("post-1".to_string())
+        .links_to(vec!["about#section".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    let page = ContentBuilder::new()
+        .title("About".to_string())
+        .slug("about".to_string())
+        .build();
+
+    data.push_content(post);
+    data.push_content(page);
+    data.collect_all_urls();
+
+    let broken = validate_internal_links(&data);
+    assert!(
+        broken.is_empty(),
+        "Anchored links to valid slugs should not be broken"
+    );
+}
+
+#[test]
+fn test_validate_internal_links_alias_is_valid() {
+    let mut data = Data::new("", Path::new("test.yaml"));
+
+    let post = ContentBuilder::new()
+        .title("Post 1".to_string())
+        .slug("post-1".to_string())
+        .links_to(vec!["old-about-url".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    let page = ContentBuilder::new()
+        .title("About".to_string())
+        .slug("about".to_string())
+        .aliases(vec!["old-about-url".to_string()])
+        .build();
+
+    data.push_content(post);
+    data.push_content(page);
+    data.collect_all_urls();
+
+    let broken = validate_internal_links(&data);
+    assert!(
+        broken.is_empty(),
+        "Links to redirect aliases should be valid"
+    );
+}

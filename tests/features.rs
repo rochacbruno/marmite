@@ -544,3 +544,143 @@ aliases:
         "Sitemap should NOT contain redirect alias URLs"
     );
 }
+
+#[test]
+fn test_check_internal_links_warns_on_broken() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Site\ncheck_internal_links: true",
+    )
+    .unwrap();
+
+    let post = r"---
+title: Post With Broken Link
+date: 2024-01-01
+---
+# Post
+
+Check out [this page](nonexistent-page.html).
+";
+    fs::write(input_dir.join("content").join("post.md"), post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Build should succeed with warnings, not fail"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Broken internal link"),
+        "Should warn about broken internal link, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("nonexistent-page"),
+        "Warning should mention the broken target, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_strict_internal_links_fails_build() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Site\ncheck_internal_links: true\nstrict_internal_links: true",
+    )
+    .unwrap();
+
+    let post = r"---
+title: Post With Broken Link
+date: 2024-01-01
+---
+# Post
+
+Check out [this page](nonexistent-page.html).
+";
+    fs::write(input_dir.join("content").join("post.md"), post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        !output.status.success(),
+        "Build should fail with strict_internal_links enabled"
+    );
+}
+
+#[test]
+fn test_check_internal_links_passes_with_valid_links() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Site\ncheck_internal_links: true",
+    )
+    .unwrap();
+
+    let post = r"---
+title: My Post
+date: 2024-01-01
+---
+# My Post
+
+Check out [the about page](about.html).
+";
+    fs::write(input_dir.join("content").join("post.md"), post).unwrap();
+
+    let page = "# About\n\nThis is the about page.";
+    fs::write(input_dir.join("content").join("about.md"), page).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Build should succeed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        !stderr.contains("Broken internal link"),
+        "Should not warn about broken links when all links are valid, got: {stderr}"
+    );
+}
