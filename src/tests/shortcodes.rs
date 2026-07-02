@@ -109,7 +109,7 @@ fn test_html_shortcode_must_contain_macro_with_same_name() {
     assert!(result.is_err());
     assert!(result
         .unwrap_err()
-        .contains("must contain a macro named 'foo'"));
+        .contains("must contain a definition named 'foo'"));
 }
 
 #[test]
@@ -150,7 +150,7 @@ fn test_html_shortcode_without_any_macro() {
     assert!(result.is_err());
     assert!(result
         .unwrap_err()
-        .contains("must contain at least one macro"));
+        .contains("must contain a shortcode or macro definition"));
 }
 
 #[test]
@@ -283,14 +283,14 @@ fn test_parse_parameters() {
     assert_eq!(params, vec![]);
 }
 
-// --- extract_macro_body tests ---
+// --- extract_shortcode_body tests ---
 
 #[test]
-fn test_extract_macro_body_basic() {
+fn test_extract_shortcode_body_basic() {
     let input = r#"{% macro youtube(id, width="560") %}
 <iframe src="{{id}}" width="{{width}}"></iframe>
 {% endmacro youtube %}"#;
-    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "youtube").unwrap();
+    let (body, params) = ShortcodeProcessor::extract_shortcode_body(input, "youtube").unwrap();
     assert!(body.contains("<iframe"));
     assert_eq!(params.len(), 2);
     assert_eq!(params[0].name, "id");
@@ -300,40 +300,40 @@ fn test_extract_macro_body_basic() {
 }
 
 #[test]
-fn test_extract_macro_body_no_args() {
+fn test_extract_shortcode_body_no_args() {
     let input = r#"{% macro toc() %}
 <nav>Table of contents</nav>
 {% endmacro toc %}"#;
-    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "toc").unwrap();
+    let (body, params) = ShortcodeProcessor::extract_shortcode_body(input, "toc").unwrap();
     assert!(body.contains("<nav>"));
     assert!(params.is_empty());
 }
 
 #[test]
-fn test_extract_macro_body_preserves_body() {
+fn test_extract_shortcode_body_preserves_body() {
     let input = r#"{% macro card(slug) %}
 <div class="card">{{ slug }}</div>
 {% endmacro card %}"#;
-    let (body, _) = ShortcodeProcessor::extract_macro_body(input, "card").unwrap();
+    let (body, _) = ShortcodeProcessor::extract_shortcode_body(input, "card").unwrap();
     assert!(body.contains(r#"<div class="card">{{ slug }}</div>"#));
 }
 
 #[test]
-fn test_extract_macro_body_generic_endmacro() {
+fn test_extract_shortcode_body_generic_endmacro() {
     let input = r#"{% macro simple() %}
 <p>hello</p>
 {% endmacro %}"#;
-    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "simple").unwrap();
+    let (body, params) = ShortcodeProcessor::extract_shortcode_body(input, "simple").unwrap();
     assert!(body.contains("<p>hello</p>"));
     assert!(params.is_empty());
 }
 
 #[test]
-fn test_extract_macro_body_multiple_defaults() {
+fn test_extract_shortcode_body_multiple_defaults() {
     let input = r#"{% macro gallery(path, ord="", width="100%", height="100%") %}
 <div>gallery</div>
 {% endmacro gallery %}"#;
-    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "gallery").unwrap();
+    let (body, params) = ShortcodeProcessor::extract_shortcode_body(input, "gallery").unwrap();
     assert!(body.contains("<div>gallery</div>"));
     assert_eq!(params.len(), 4);
     assert_eq!(params[0].name, "path");
@@ -347,15 +347,15 @@ fn test_extract_macro_body_multiple_defaults() {
 }
 
 #[test]
-fn test_extract_macro_body_wrong_name_returns_none() {
+fn test_extract_shortcode_body_wrong_name_returns_none() {
     let input = r#"{% macro youtube(id) %}
 <iframe></iframe>
 {% endmacro youtube %}"#;
-    assert!(ShortcodeProcessor::extract_macro_body(input, "gallery").is_none());
+    assert!(ShortcodeProcessor::extract_shortcode_body(input, "gallery").is_none());
 }
 
 #[test]
-fn test_extract_macro_body_real_youtube() {
+fn test_extract_shortcode_body_real_youtube() {
     let input = r#"{# Embed a YouTube video #}
 {% macro youtube(id, width="560", height="315") %}
 {% if id is not starting_with("http") %}
@@ -363,13 +363,92 @@ fn test_extract_macro_body_real_youtube() {
 {% endif %}
 <p><iframe width="{{width}}" height="{{height}}" src="{{id}}"></iframe></p>
 {% endmacro youtube %}"#;
-    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "youtube").unwrap();
+    let (body, params) = ShortcodeProcessor::extract_shortcode_body(input, "youtube").unwrap();
     assert!(body.contains("<p><iframe"));
     assert!(body.contains("starting_with"));
     assert_eq!(params.len(), 3);
     assert_eq!(params[0].name, "id");
     assert_eq!(params[1].default.as_deref(), Some("560"));
     assert_eq!(params[2].default.as_deref(), Some("315"));
+}
+
+// --- {% shortcode %} syntax tests ---
+
+#[test]
+fn test_shortcode_syntax_basic() {
+    let input = r#"{% shortcode greeting(name, style="bold") %}
+<span class="{{ style }}">Hello {{ name }}</span>
+{% endshortcode greeting %}"#;
+    let (body, params) = ShortcodeProcessor::extract_shortcode_body(input, "greeting").unwrap();
+    assert!(body.contains("<span"));
+    assert_eq!(params.len(), 2);
+    assert_eq!(params[0].name, "name");
+    assert!(params[0].default.is_none());
+    assert_eq!(params[1].name, "style");
+    assert_eq!(params[1].default.as_deref(), Some("bold"));
+}
+
+#[test]
+fn test_shortcode_syntax_no_args() {
+    let input = r#"{% shortcode divider() %}
+<hr class="divider" />
+{% endshortcode %}"#;
+    let (body, params) = ShortcodeProcessor::extract_shortcode_body(input, "divider").unwrap();
+    assert!(body.contains("<hr"));
+    assert!(params.is_empty());
+}
+
+#[test]
+fn test_shortcode_syntax_generic_endshortcode() {
+    let input = r#"{% shortcode note(text) %}
+<div class="note">{{ text }}</div>
+{% endshortcode %}"#;
+    let (body, _) = ShortcodeProcessor::extract_shortcode_body(input, "note").unwrap();
+    assert!(body.contains("note"));
+}
+
+#[test]
+fn test_shortcode_syntax_with_description() {
+    let input = r#"{# A custom alert box #}
+{% shortcode alert(type="info", message="") %}
+<div class="alert alert-{{ type }}">{{ message }}</div>
+{% endshortcode alert %}"#;
+    let (body, params) = ShortcodeProcessor::extract_shortcode_body(input, "alert").unwrap();
+    assert!(body.contains("alert-{{ type }}"));
+    assert_eq!(params.len(), 2);
+}
+
+#[test]
+fn test_shortcode_syntax_loads_from_file() {
+    let temp_dir = TempDir::new().unwrap();
+    let shortcodes_dir = temp_dir.path().join("shortcodes");
+    fs::create_dir(&shortcodes_dir).unwrap();
+
+    let shortcode_content = r#"{# A banner shortcode #}
+{% shortcode banner(text, color="blue") %}
+<div class="banner" style="background: {{ color }}">{{ text }}</div>
+{% endshortcode banner %}"#;
+    fs::write(shortcodes_dir.join("banner.html"), shortcode_content).unwrap();
+
+    let mut processor = ShortcodeProcessor::new(None);
+    processor.collect_shortcodes(temp_dir.path()).unwrap();
+
+    let sc = processor.shortcodes.get("banner").unwrap();
+    assert!(sc.is_html);
+    assert!(sc.body.is_some());
+    assert_eq!(sc.params.len(), 2);
+    assert_eq!(sc.description.as_deref(), Some("A banner shortcode"));
+}
+
+#[test]
+fn test_macro_syntax_still_works() {
+    let input = r#"{% macro legacy(x) %}
+<p>{{ x }}</p>
+{% endmacro legacy %}"#;
+    let (body, params) = ShortcodeProcessor::extract_shortcode_body(input, "legacy").unwrap();
+    assert!(body.contains("<p>{{ x }}</p>"));
+    assert_eq!(params.len(), 1);
+    assert_eq!(params[0].name, "x");
 }
 
 // --- shortcode rendering with context access ---
@@ -380,7 +459,7 @@ fn test_shortcode_body_can_access_context_variables() {
 Hello {{ name }}, welcome to {{ site_title }}!
 {% endmacro greet %}"#;
 
-    let (body, params) = ShortcodeProcessor::extract_macro_body(input, "greet").unwrap();
+    let (body, params) = ShortcodeProcessor::extract_shortcode_body(input, "greet").unwrap();
     assert_eq!(params.len(), 1);
     assert_eq!(params[0].name, "name");
 
@@ -408,8 +487,9 @@ fn test_shortcode_renders_with_tera_functions() {
             content: shortcode_content.to_string(),
             is_html: true,
             description: None,
-            body: ShortcodeProcessor::extract_macro_body(shortcode_content, "link").map(|(b, _)| b),
-            params: ShortcodeProcessor::extract_macro_body(shortcode_content, "link")
+            body: ShortcodeProcessor::extract_shortcode_body(shortcode_content, "link")
+                .map(|(b, _)| b),
+            params: ShortcodeProcessor::extract_shortcode_body(shortcode_content, "link")
                 .map(|(_, p)| p)
                 .unwrap_or_default(),
         },
@@ -444,7 +524,8 @@ fn test_shortcode_applies_parameter_defaults() {
 <div class="{{ color }} {{ size }}">{{ title }}</div>
 {% endmacro box %}"#;
 
-    let (body, params) = ShortcodeProcessor::extract_macro_body(shortcode_content, "box").unwrap();
+    let (body, params) =
+        ShortcodeProcessor::extract_shortcode_body(shortcode_content, "box").unwrap();
     processor.shortcodes.insert(
         "box".to_string(),
         Shortcode {
@@ -486,7 +567,8 @@ fn test_shortcode_accesses_context_and_params_together() {
 <span>{{ label }}: {{ site_name }}</span>
 {% endmacro info %}"#;
 
-    let (body, params) = ShortcodeProcessor::extract_macro_body(shortcode_content, "info").unwrap();
+    let (body, params) =
+        ShortcodeProcessor::extract_shortcode_body(shortcode_content, "info").unwrap();
     processor.shortcodes.insert(
         "info".to_string(),
         Shortcode {
@@ -523,7 +605,8 @@ fn test_shortcode_preprocessing_applied_to_body() {
 <iframe src="{{id}}"></iframe>
 {% endmacro yt %}"#;
 
-    let (body, params) = ShortcodeProcessor::extract_macro_body(shortcode_content, "yt").unwrap();
+    let (body, params) =
+        ShortcodeProcessor::extract_shortcode_body(shortcode_content, "yt").unwrap();
     processor.shortcodes.insert(
         "yt".to_string(),
         Shortcode {
