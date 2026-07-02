@@ -1,5 +1,5 @@
 {# Display a list of recent posts. Params: ord=desc, items=10 #}
-{% macro posts(ord="desc", items=10) %}
+{% shortcode posts(ord="desc", items=10) %}
 {% set post_list = get_posts(ord=ord, items=items) %}
 <ul class="posts-list">
 {% for post in post_list %}
@@ -8,4 +8,4 @@
 <li>No posts found</li>
 {% endfor %}
 </ul>
-{% endmacro posts %}
+{% endshortcode posts %}

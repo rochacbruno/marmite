@@ -430,7 +430,7 @@ Marmite uses Tera 2.0, which changed some syntax from Tera 1.x. Old templates co
 - **Optional chaining:** Use `site?.extra?.comments` for safe access to values that may not exist
 - **Compatibility filters:** `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core but marmite provides them as built-in filters, so they continue to work
 - **Include templates:** `ignore missing` on includes is handled automatically by the preprocessor
-- **Shortcodes:** `{% macro %}` syntax in shortcode source files is preprocessed internally
+- **Shortcodes:** Use `{% shortcode name() %}` (recommended) or `{% macro name() %}` (backward compatible)
 
 ## Tera Object
 

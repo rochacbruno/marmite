@@ -1,5 +1,5 @@
 {# Display a list of all pages. Params: ord=asc, items=0 #}
-{% macro pages(ord="asc", items=0) %}
+{% shortcode pages(ord="asc", items=0) %}
 <ul class="pages-list">
 {% set page_list = site_data.pages %}
 {% if ord == "desc" %}
@@ -12,4 +12,4 @@
 <li><a href="{{ url_for(path=page.slug ~ '.html') }}">{{ page.title }}</a></li>
 {% endfor %}
 </ul>
-{% endmacro pages %}
+{% endshortcode pages %}

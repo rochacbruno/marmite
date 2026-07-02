@@ -339,7 +339,7 @@ Marmite provides these compatibility features for templates written with Tera 1.
 
 - **Auto-converted syntax:** Array dot indexing (`item.0`), test positional args (`is starting_with("http")`), and `ignore missing` on includes are automatically converted by the preprocessor.
 - **Compatibility filters:** `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core. Marmite provides them as built-in filters so they continue to work.
-- **Shortcode macros:** Shortcode source files use `{% macro %}` syntax which is preprocessed internally before Tera 2.0 processes the templates.
+- **Shortcodes:** Shortcode files use `{% shortcode name() %}` syntax (recommended) or `{% macro name() %}` (backward compatible). Both are extracted by marmite's own parser, not by Tera.
 
 ## Common Template Patterns
 

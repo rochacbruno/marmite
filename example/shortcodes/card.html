@@ -1,5 +1,5 @@
 {# Display a card for content based on slug with optional parameter overrides #}
-{% macro card(slug, image="", title="", text="", content_type="") %}
+{% shortcode card(slug, image="", title="", text="", content_type="") %}
 {% if slug is starting_with("http://") or slug is starting_with("https://") %}
     {# External URL - skip data lookup and use provided parameters #}
     {% if image %}
@@ -62,4 +62,4 @@
         </div>
     </a>
 </div>
-{% endmacro card %}
+{% endshortcode card %}

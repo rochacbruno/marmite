@@ -769,7 +769,7 @@ The `ignore missing` syntax on `{% include %}` tags is handled automatically by 
 
 ### Shortcodes
 
-Shortcode source files continue to use `{% macro %}` syntax. This is preprocessed internally before Tera 2.0 processes the templates.
+Shortcode files use `{% shortcode name() %}` syntax (recommended) or `{% macro name() %}` (backward compatible). Both are parsed by marmite's own extractor before Tera processes the template body.
 
 ## Best Practices
 
