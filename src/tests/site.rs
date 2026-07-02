@@ -571,3 +571,171 @@ fn test_validate_internal_links_alias_is_valid() {
         "Links to redirect aliases should be valid"
     );
 }
+
+#[test]
+fn test_generate_redirect_html() {
+    let html = generate_redirect_html("/my-post.html");
+    assert!(html.contains(r#"url=/my-post.html"#));
+    assert!(html.contains(r#"rel="canonical" href="/my-post.html""#));
+    assert!(html.contains(r#"window.location.href = "/my-post.html";"#));
+    assert!(html.contains("<title>Redirecting...</title>"));
+}
+
+#[test]
+fn test_handle_redirect_aliases_writes_files() {
+    use tempfile::TempDir;
+
+    let mut data = Data::new("", Path::new("test.yaml"));
+
+    let post = ContentBuilder::new()
+        .title("New Post".to_string())
+        .slug("new-post".to_string())
+        .aliases(vec!["old-post".to_string(), "legacy".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    data.push_content(post);
+
+    let temp_dir = TempDir::new().unwrap();
+    let result = handle_redirect_aliases(&data, temp_dir.path());
+    assert!(result.is_ok());
+
+    let old_post = fs::read_to_string(temp_dir.path().join("old-post.html")).unwrap();
+    assert!(old_post.contains("new-post.html"));
+
+    let legacy = fs::read_to_string(temp_dir.path().join("legacy.html")).unwrap();
+    assert!(legacy.contains("new-post.html"));
+}
+
+#[test]
+fn test_handle_redirect_aliases_skips_slug_conflict() {
+    use tempfile::TempDir;
+
+    let mut data = Data::new("", Path::new("test.yaml"));
+
+    let post = ContentBuilder::new()
+        .title("Post A".to_string())
+        .slug("post-a".to_string())
+        .aliases(vec!["about".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    let page = ContentBuilder::new()
+        .title("About".to_string())
+        .slug("about".to_string())
+        .build();
+
+    data.push_content(post);
+    data.push_content(page);
+
+    let temp_dir = TempDir::new().unwrap();
+    let result = handle_redirect_aliases(&data, temp_dir.path());
+    assert!(result.is_ok());
+
+    assert!(
+        !temp_dir.path().join("about.html").exists(),
+        "Alias conflicting with existing slug should not be written"
+    );
+}
+
+#[test]
+fn test_handle_redirect_aliases_skips_duplicate() {
+    use tempfile::TempDir;
+
+    let mut data = Data::new("", Path::new("test.yaml"));
+
+    let post1 = ContentBuilder::new()
+        .title("Post 1".to_string())
+        .slug("post-1".to_string())
+        .aliases(vec!["shared-alias".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    let post2 = ContentBuilder::new()
+        .title("Post 2".to_string())
+        .slug("post-2".to_string())
+        .aliases(vec!["shared-alias".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 2)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    data.push_content(post1);
+    data.push_content(post2);
+
+    let temp_dir = TempDir::new().unwrap();
+    let result = handle_redirect_aliases(&data, temp_dir.path());
+    assert!(result.is_ok());
+
+    let alias_html = fs::read_to_string(temp_dir.path().join("shared-alias.html")).unwrap();
+    assert!(
+        alias_html.contains("post-1.html") || alias_html.contains("post-2.html"),
+        "First alias should be written, duplicate skipped"
+    );
+}
+
+#[test]
+fn test_url_collection_redirects() {
+    let mut url_collection = UrlCollection::default();
+
+    url_collection.add_url("redirects", "old-post.html".to_string());
+    url_collection.add_url("posts", "new-post.html".to_string());
+
+    assert_eq!(url_collection.redirects.len(), 1);
+    assert!(url_collection
+        .redirects
+        .contains(&"old-post.html".to_string()));
+
+    let all_urls = url_collection.get_all_urls();
+    assert!(
+        !all_urls.contains(&"old-post.html".to_string()),
+        "Redirects should be excluded from get_all_urls"
+    );
+    assert!(all_urls.contains(&"new-post.html".to_string()));
+
+    assert_eq!(url_collection.total_count(), 2);
+}
+
+#[test]
+fn test_collect_all_urls_includes_aliases() {
+    let mut data = Data::new("", Path::new("test.yaml"));
+
+    let post = ContentBuilder::new()
+        .title("My Post".to_string())
+        .slug("my-post".to_string())
+        .aliases(vec!["old-url".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    data.push_content(post);
+    data.collect_all_urls();
+
+    assert!(data
+        .generated_urls
+        .redirects
+        .contains(&"old-url.html".to_string()));
+    assert_eq!(data.generated_urls.redirects.len(), 1);
+}
