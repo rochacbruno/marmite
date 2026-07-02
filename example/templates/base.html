@@ -21,7 +21,7 @@
     <link rel="me" href="{{site.extra.fediverse_verification}}">
     {% endif %}
     {% endblock %}
-    {% if site.atproto and site.atproto.publication_uri %}
+    {% if site?.atproto?.publication_uri %}
     <link rel="site.standard.publication" href="{{ site.atproto.publication_uri }}">
     {% endif %}
     {%- block head %}
@@ -72,13 +72,13 @@
 
                 <ul class="header-menu" id="header-menu">
                     {% for item in menu %}
-                      {% set name = item.0 %}
-                      {% set url = item.1 %}
+                      {% set name = item[0] %}
+                      {% set url = item[1] %}
                     <li>
                         {% if current_page and current_page == url %}
                         <button class="menu-item active selected">{{name | safe }}</button>
                         {% else %}
-                        <a class="menu-item secondary" {% if url is starting_with("http") %} href="{{url}}" target="_blank" {% else %} href="{{url_for(path=url)}}"{% endif %}>{{ name | safe }}</a>
+                        <a class="menu-item secondary" {% if url is starting_with(pat="http") %} href="{{url}}" target="_blank" {% else %} href="{{url_for(path=url)}}"{% endif %}>{{ name | safe }}</a>
                         {% endif %}
                     </li>
                     {% endfor %}

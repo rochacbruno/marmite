@@ -260,13 +260,26 @@ Filter an array of content to exclude items with `stream == "draft"`:
 
 ## Tera Syntax Quick Reference
 
+Marmite uses Tera 2.0. A backward-compatibility preprocessor auto-converts old Tera 1.x syntax, so existing templates continue to work. The examples below show Tera 2.0 syntax (recommended for new templates).
+
 ```html
 <!-- Variables -->
 {{ variable }}
 {{ object.field }}
 
+<!-- Array indexing (Tera 2.0 uses brackets, old dot syntax auto-converted) -->
+{{ menu[0] }}
+{{ link[1] }}
+
+<!-- Optional chaining (new in Tera 2.0, safe access to undefined values) -->
+{{ site?.extra?.comments?.source }}
+
 <!-- Conditionals -->
 {% if condition %}...{% elif other %}...{% else %}...{% endif %}
+
+<!-- Tests with keyword args (Tera 2.0 requires named args, old syntax auto-converted) -->
+{% if url is starting_with(pat="http") %}...{% endif %}
+{% if name is containing(pat="hello") %}...{% endif %}
 
 <!-- Loops -->
 {% for item in items %}
@@ -293,20 +306,58 @@ Filter an array of content to exclude items with `stream == "draft"`:
 <!-- Includes -->
 {% include "partial.html" %}
 
-<!-- Macros -->
-{% macro mycomponent(param1, param2="default") %}
-  <div>{{ param1 }} {{ param2 }}</div>
-{% endmacro mycomponent %}
+<!-- Components (replaced macros in Tera 2.0, registered globally, no imports needed) -->
+{% component my_button(label: string, variant: string = "primary") %}
+<button class="btn btn-{{ variant }}">{{ label }}</button>
+{% endcomponent my_button %}
 
-{{ self::mycomponent(param1="hello") }}
+<!-- Call a component (self-closing, no body) -->
+{{<my_button label="Click me" variant="secondary" />}}
+
+<!-- Call a component (with body content, accessible via {{ body }} inside) -->
+{% <info_card title="Hello"> %}
+  <p>This content is passed as the body variable</p>
+{% </info_card> %}
+
+<!-- Open component with spread (accepts extra kwargs) -->
+{% component form_input(name: string, label: string = "", ...rest) %}
+<label>{{ label }}<input name="{{ name }}" /></label>
+{% endcomponent form_input %}
+{{<form_input name="email" label="Email" required={true} />}}
+
+<!-- Native array slicing (Tera 2.0) -->
+{{ items[:3] }}                   <!-- first 3 elements -->
+{{ items[1:5] }}                  <!-- elements 1 through 4 -->
+{{ items[::-1] }}                 <!-- reversed -->
+
+<!-- Ternary expressions (Tera 2.0) -->
+{{ value if condition else "fallback" }}
+{{ image if image else "" }}
+
+<!-- Map literals and spread (Tera 2.0) -->
+{% set base = {"key": "val", "other": 42} %}
+{% set merged = {...base, "key": "override", "new": true} %}
+
+<!-- List comprehension (Tera 2.0) -->
+{% set filtered = [x for x in items if x.active] %}
+{% set titles = [item.title for item in posts if item.pinned] %}
 
 <!-- Set variables -->
 {% set myvar = "value" %}
-{% set_global myvar = "value" %}
+{% set_global myvar = "value" %}  <!-- persists outside of for loops -->
 
 <!-- Raw (no template processing) -->
 {% raw %}{{ this is not processed }}{% endraw %}
 ```
+
+### Tera 2.0 Backward Compatibility
+
+Marmite provides these compatibility features for templates written with Tera 1.x syntax:
+
+- **Auto-converted syntax:** Array dot indexing (`item.0`), test positional args (`is starting_with("http")`), and `ignore missing` on includes are automatically converted by the preprocessor.
+- **Compatibility filters:** `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core. Marmite provides them as built-in filters so they continue to work. The `slice` filter works alongside native slicing syntax (`items[:3]`).
+- **Old conditionals:** Verbose `if/else` blocks and `and` guards still work. Tera 2.0 ternary expressions (`x if cond else y`) are preferred for new templates but not required.
+- **Shortcodes:** Shortcode files use `{% shortcode name() %}` syntax (recommended) or `{% macro name() %}` (backward compatible). Both are extracted by marmite's own parser, not by Tera.
 
 ## Common Template Patterns
 

@@ -152,7 +152,7 @@ Those are templates that are not meant to be rendered directly, those are includ
   - Renders the author avatar image
   - included on `group.html` (if author is defined)
 
-When customizing the templates you can create new templates to use as `include` or `macro` but the 4 listed above are required.
+When customizing the templates you can create new templates to use as `include` or `component` but the 4 listed above are required.
 
 If you just want to customize some individual template you can add only it in the
 templates/ folder and the rest will be added by marmite.
@@ -239,7 +239,7 @@ Example of a custom index template.
                     {% if content.description %}
                     {{ content.description | replace(from='"', to="") | truncate(length=250, end=" ...") }}
                     {% else %}
-                    {{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=250, end=" ...") }}
+                    {{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=250, end="...") }}
                     {%- endif %}
                     <a class="secondary" href="./{{content.slug}}.html">read more &rarr;</a>
                 </p>
@@ -271,7 +271,7 @@ Example of a custom index template.
                 <p>{{author.bio}}</p>
                 <ul>
                     {% for link in author.links %}
-                    <li><a href="{{link.1}}">{{link.0}}</a></li>
+                    <li><a href="{{link[1]}}">{{link[0]}}</a></li>
                     {% endfor %}
                 </ul>
             </article>
@@ -420,6 +420,21 @@ then on template
 
 Tera is configured to allow raw html on markdown, so any html tag will be 
 allowed, a markdown file can include for example embeds, scripts, etc..
+
+## Tera 2.0 Compatibility
+
+Marmite uses Tera 2.0, which changed some syntax from Tera 1.x. Old templates continue to work - marmite includes a preprocessor that auto-converts legacy syntax. Key changes:
+
+- **Array indexing:** Use `item[0]` instead of `item.0` (old syntax auto-converted)
+- **Native array slicing:** Use `items[:3]`, `items[1:5]`, `items[::-1]` for slicing arrays directly (the `slice` filter also still works)
+- **Ternary expressions:** Use `value if condition else fallback` for inline conditionals instead of if/else blocks
+- **Map literals and spread:** Use `{"key": val}` for inline maps and `{...base, "key": override}` to merge maps
+- **Test keyword args:** Use `is starting_with(pat="http")` instead of `is starting_with("http")` (old syntax auto-converted)
+- **Optional chaining:** Use `site?.extra?.comments` for safe access to values that may not exist
+- **List comprehension:** Use `[x for x in items if condition]` to filter or transform arrays inline
+- **Compatibility filters:** `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core but marmite provides them as built-in filters, so they continue to work
+- **Include templates:** `ignore missing` on includes is handled automatically by the preprocessor
+- **Shortcodes:** Use `{% shortcode name() %}` (recommended) or `{% macro name() %}` (backward compatible)
 
 ## Tera Object
 

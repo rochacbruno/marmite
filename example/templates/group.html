@@ -10,7 +10,7 @@
             <details {%if loop.index == 1%}open{%endif%}>
                 <summary role="button" class="outline contrast {{kind}}-group-title">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% elif kind == "series" %}{{ series_display_name(series=name) }}{% else %}{{name}}{% endif %} <sup>{{items | remove_draft | length}}</sup></summary>
                 <ul>
-                {% for item in items | remove_draft | slice(end=10) %}
+                {% for item in (items | remove_draft)[:10] %}
                     <li class="h-entry">
                         <a href="{{url_for(path=item.slug ~ '.html')}}" class="u-url p-name">{{item.title}}</a>
                         <small><time class="dt-published" datetime="{{ item.date | date(format='%+') }}">{{item.date | date(format="%Y-%m-%d") }}</time></small>

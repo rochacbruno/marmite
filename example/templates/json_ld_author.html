@@ -10,7 +10,7 @@
       "sameAs": [
         {%- if author.links -%}
         {%- for link in author.links -%}
-        "{{link.1}}"{% if not loop.last %},{% endif %}
+        "{{link[1]}}"{% if not loop.last %},{% endif %}
         {%- endfor -%}
         {%- endif -%}
       ]  

@@ -52,7 +52,7 @@
             <div class="author-hero-links">
                 <ul>
                     {% for link in author.links %}
-                    <li><a href="{{ url_for(path=link.1) }}" {% if link.1 is starting_with("http") %}target="_blank"{% endif %} class="u-url">{{link.0}}</a></li>
+                    <li><a href="{{ url_for(path=link[1]) }}" {% if link[1] is starting_with(pat="http") %}target="_blank"{% endif %} class="u-url">{{link[0]}}</a></li>
                     {% endfor %}
                 </ul>
             </div>
@@ -87,7 +87,7 @@
             <span class="content-date"><a class="secondary" href="{{url_for(path=content.slug ~ '.html')}}">{{ content.date | default_date_format }}</a></span>
             {% if content.tags -%}
             <ul class="content-tags overflow-auto">
-                {% for tag in content.tags | slice(end=3) -%}
+                {% for tag in content.tags[:3] -%}
                 {% set slug = "tag-" ~ tag | trim | slugify %}
                 {% set link = slug ~ ".html"%}
                 <li><a href="{{url_for(path=link)}}" class="p-category">{{ tag }}</a></li>

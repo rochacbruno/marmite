@@ -23,7 +23,7 @@
         {%- endif -%}
     "author": {
         "@type": "Person",
-        "name": "{{author.name | default(value=username)}}",
+        "name": "{{author?.name | default(value=username)}}",
         "url": "{{url_for(path='author-' ~ username ~ '.html', abs=True)}}",
     },  
     {%- endif %}

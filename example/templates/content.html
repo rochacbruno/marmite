@@ -21,7 +21,7 @@
 <meta property="article:published_time" content="{{content.date | date(format=' %+')}}">
 {% endif %}
 {% if site.url and content.authors %}
-<meta property="article:author" content="{{url_for(path='author-' ~ content.authors.0 ~ '.html', abs=true)}}">
+<meta property="article:author" content="{{url_for(path='author-' ~ content.authors[0] ~ '.html', abs=true)}}">
 {% endif %}
 
 {% include "json_ld_content.html" ignore missing%}
@@ -120,7 +120,7 @@
 <article>
   Back-links
   <ul>
-    {% for item in content.back_links | slice(end=10) %}
+    {% for item in content.back_links[:10] %}
     <li><a href="{{url_for(path=item.slug ~ '.html')}}">{{item.title}}</a></li>
     {% endfor %}
   </ul>
@@ -136,7 +136,7 @@
   <article>
     Related {{tag}} content
     <ul>
-      {% for item in related_content | sort(attribute="date") | reverse | slice(end=5) %}
+      {% for item in (related_content | sort(attribute="date") | reverse)[:5] %}
       {% if item.slug == content.slug or item in content.back_links %}
       {% continue %}
       {% endif %}
@@ -163,7 +163,7 @@
 
 {% if comments is defined %}
     <article>{{ comments }}</article>
-{% elif site.extra.comments.source is defined and content.date %}
+{% elif site?.extra?.comments?.source is defined and content.date %}
     {%include "comments.html" ignore missing %}
 {% endif %}
 

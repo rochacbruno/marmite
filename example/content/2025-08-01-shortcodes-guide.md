@@ -132,7 +132,10 @@ Parameters:
 You can create your own shortcodes by adding files to the `shortcodes` directory in your input folder. Custom shortcodes will override built-in shortcodes with the same name.
 
 > [!IMPORTANT]
-> For HTML shortcodes, the macro name MUST match the filename. For example, a file named `alert.html` must contain `{% macro alert(...) %}`. This is the macro that will be called when the shortcode is used.
+> For HTML shortcodes, the definition name MUST match the filename. For example, a file named `alert.html` must contain `{% shortcode alert(...) %}`.
+
+> [!NOTE]
+> The older `{% macro %}` / `{% endmacro %}` syntax also works for backward compatibility.
 
 ### Adding Descriptions to Shortcodes
 
@@ -140,25 +143,25 @@ You can add descriptions to your shortcodes by including a Tera comment as the f
 
 ```html
 {# Display a custom alert box #}
-{% macro alert(type="info", message="") %}
+{% shortcode alert(type="info", message="") %}
 ...
-{% endmacro alert %}
+{% endshortcode alert %}
 ```
 
 These descriptions will be shown when you run `marmite --shortcodes`.
 
 ### HTML Shortcodes
 
-Create `.html` files with Tera macros:
+Create `.html` files with shortcode definitions:
 
 ```html
 {# shortcodes/alert.html #}
 {# Display a custom alert box #}
-{% macro alert(type="info", message="") %}
+{% shortcode alert(type="info", message="") %}
 <div class="alert alert-{{type}}">
   {{message}}
 </div>
-{% endmacro alert %}
+{% endshortcode alert %}
 ```
 
 Usage:
@@ -326,13 +329,13 @@ Your Jekyll-style tags like `{% include figure.html %}` syntax will be recognize
 Create `shortcodes/gallery.html`:
 
 ```html
-{% macro gallery(folder, columns="3") %}
+{% shortcode gallery(folder, columns="3") %}
 <div class="gallery cols-{{columns}}">
   {% for image in site_data.site.extra.galleries[folder] %}
   <img src="{{image.url}}" alt="{{image.alt}}">
   {% endfor %}
 </div>
-{% endmacro gallery %}
+{% endshortcode gallery %}
 ```
 
 Usage:
@@ -359,7 +362,7 @@ Usage:
 
 - **Shortcode not rendering**: Check that the shortcode file exists and has the correct extension
 - **Invalid parameters**: Ensure parameter values are properly quoted if they contain spaces
-- **HTML shortcodes**: Must contain at least one `{% macro %}` definition
+- **HTML shortcodes**: Must contain at least one `{% shortcode %}` (or `{% macro %}`) definition
 - **Context variables**: All template context variables (like `site_data`, `content`, etc.) are available in shortcodes
 
 With shortcodes, you can extend Marmite's functionality and create rich, dynamic content while keeping your markdown files clean and maintainable!

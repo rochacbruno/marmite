@@ -57,18 +57,26 @@ impl ShortcodeProcessor {
         }
     }
 
-    /// Extract the body and parameter list from a Tera 1.x macro definition.
-    /// Returns (body, params) where body is the template text between macro/endmacro
-    /// and params is a list of (name, optional_default) pairs.
-    fn extract_macro_body(content: &str, macro_name: &str) -> Option<(String, Vec<MacroParam>)> {
-        let header_re =
-            Regex::new(&format!(r"\{{% *macro +{macro_name}\s*\(([^)]*)\)\s*%\}}")).ok()?;
+    /// Extract the body and parameter list from a shortcode definition.
+    /// Supports both `{% shortcode name() %}...{% endshortcode %}` (recommended)
+    /// and `{% macro name() %}...{% endmacro %}` (backward compatible).
+    fn extract_shortcode_body(
+        content: &str,
+        shortcode_name: &str,
+    ) -> Option<(String, Vec<MacroParam>)> {
+        let header_re = Regex::new(&format!(
+            r"\{{% *(?:macro|shortcode) +{shortcode_name}\s*\(([^)]*)\)\s*%\}}"
+        ))
+        .ok()?;
 
         let header_match = header_re.captures(content)?;
         let params_str = &header_match[1];
         let header_end = header_match.get(0)?.end();
 
-        let end_re = Regex::new(&format!(r"\{{% *endmacro(?: +{macro_name})?\s*%\}}")).ok()?;
+        let end_re = Regex::new(&format!(
+            r"\{{% *(?:endmacro|endshortcode)(?: +{shortcode_name})?\s*%\}}"
+        ))
+        .ok()?;
         let end_match = end_re.find(&content[header_end..])?;
         let body = content[header_end..header_end + end_match.start()].to_string();
 
@@ -150,32 +158,30 @@ impl ShortcodeProcessor {
         let mut params = Vec::new();
 
         if is_html {
-            // For HTML files, validate that they contain macros
-            if !content.contains("{% macro") {
+            if !content.contains("{% macro") && !content.contains("{% shortcode") {
                 return Err(format!(
-                    "HTML shortcode file {} must contain at least one macro",
+                    "HTML shortcode file {} must contain a shortcode or macro definition",
                     path.display()
                 ));
             }
 
-            // Validate that the file contains a macro with the same name as the filename
-            let macro_pattern =
-                Regex::new(re::CAPTURE_TERA_MACRO_CALL).expect("Invalid macro pattern");
-            let macro_names: Vec<String> = macro_pattern
+            let def_pattern =
+                Regex::new(re::CAPTURE_SHORTCODE_DEF).expect("Invalid shortcode pattern");
+            let def_names: Vec<String> = def_pattern
                 .captures_iter(&content)
                 .map(|cap| cap[1].to_string())
                 .collect();
 
-            if !macro_names.contains(&file_name.to_string()) {
+            if !def_names.contains(&file_name.to_string()) {
                 return Err(format!(
-                    "HTML shortcode file {} must contain a macro named '{}'. Found macros: {:?}",
+                    "HTML shortcode file {} must contain a definition named '{}'. Found: {:?}",
                     path.display(),
                     file_name,
-                    macro_names
+                    def_names
                 ));
             }
 
-            if let Some((b, p)) = Self::extract_macro_body(&content, file_name) {
+            if let Some((b, p)) = Self::extract_shortcode_body(&content, file_name) {
                 body = Some(b);
                 params = p;
             }
@@ -249,7 +255,7 @@ impl ShortcodeProcessor {
             let mut body = None;
             let mut params = Vec::new();
             if is_html {
-                if let Some((b, p)) = Self::extract_macro_body(content, shortcode_name) {
+                if let Some((b, p)) = Self::extract_shortcode_body(content, shortcode_name) {
                     body = Some(b);
                     params = p;
                 }

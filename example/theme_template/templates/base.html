@@ -32,7 +32,7 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="{{site.name}}">
     {% endblock %}
-    {% if site.atproto and site.atproto.publication_uri %}
+    {% if site?.atproto?.publication_uri %}
     <link rel="site.standard.publication" href="{{ site.atproto.publication_uri }}">
     {% endif %}
     {% if site.extra.fediverse_verification %}
@@ -82,13 +82,13 @@
             <nav class="site-nav">
                 <ul>
                     {% for item in menu %}
-                    {% set name = item.0 %}
-                    {% set url = item.1 %}
+                    {% set name = item[0] %}
+                    {% set url = item[1] %}
                     <li>
                         {% if current_page and current_page == url %}
                         <span class="nav-item active">{{name}}</span>
                         {% else %}
-                        <a class="nav-item" {% if url is starting_with("http") %} href="{{url}}" target="_blank" {% else %} href="{{url_for(path=url)}}"{% endif %}>{{ name }}</a>
+                        <a class="nav-item" {% if url is starting_with(pat="http") %} href="{{url}}" target="_blank" {% else %} href="{{url_for(path=url)}}"{% endif %}>{{ name }}</a>
                         {% endif %}
                     </li>
                     {% endfor %}

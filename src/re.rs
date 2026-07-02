@@ -45,10 +45,10 @@ pub const CAPTURE_WIKILINK_HREF_AND_TITLE: &str =
 /// Used as the default shortcode pattern when none is specified
 pub const SHORTCODE_HTML_COMMENT: &str = r"<!-- \.(\w+)(?:\s+([^-][\s\S]*?))?\s*-->";
 
-/// Matches Tera macro calls in templates
-/// Captures: 1) macro name
-/// Used for detecting macro usage in templates
-pub const CAPTURE_TERA_MACRO_CALL: &str = r"\{%\s*macro\s+(\w+)\s*\(";
+/// Matches Tera macro or shortcode definitions in templates
+/// Captures: 1) name
+/// Used for detecting macro/shortcode definitions in shortcode files
+pub const CAPTURE_SHORTCODE_DEF: &str = r"\{%\s*(?:macro|shortcode)\s+(\w+)\s*\(";
 
 // === Date and Filename Patterns ===
 

@@ -37,7 +37,7 @@
             {% if author.links %}
             <div class="author-links">
                 {% for link in author.links %}
-                <a href="{{ url_for(path=link.1) }}" {% if link.1 is starting_with("http") %}target="_blank"{% endif %} class="author-link u-url">{{ link.0 }}</a>
+                <a href="{{ url_for(path=link[1]) }}" {% if link[1] is starting_with(pat="http") %}target="_blank"{% endif %} class="author-link u-url">{{ link[0] }}</a>
                 {% endfor %}
             </div>
             {% endif %}
@@ -107,7 +107,7 @@
             {# Tags with IndieWeb p-category #}
             {% if item.tags %}
             <div class="item-tags">
-                {% for tag in item.tags | slice(end=3) %}
+                {% for tag in item.tags[:3] %}
                 {% set slug = "tag-" ~ tag | trim | slugify %}
                 {% set link = slug ~ ".html"%}
                 <a href="{{url_for(path=link)}}" class="item-tag p-category">{{ tag }}</a>{% if not loop.last %} {% endif %}

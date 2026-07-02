@@ -21,7 +21,7 @@
 <meta property="article:published_time" content="{{content.date | date(format=' %+')}}">
 {% endif %}
 {% if site.url and content.authors %}
-<meta property="article:author" content="{{url_for(path='author-' ~ content.authors.0 ~ '.html', abs=true)}}">
+<meta property="article:author" content="{{url_for(path='author-' ~ content.authors[0] ~ '.html', abs=true)}}">
 {% endif %}
 
 {% include "json_ld_content.html" ignore missing%}
@@ -155,7 +155,7 @@
     <section class="related-content">
         <h3>Referenced by:</h3>
         <ul class="backlinks-list">
-            {% for item in content.back_links | slice(end=5) %}
+            {% for item in content.back_links[:5] %}
             <li><a href="{{url_for(path=item.slug ~ '.html')}}">{{item.title}}</a></li>
             {% endfor %}
         </ul>
@@ -171,7 +171,7 @@
     <section class="related-content">
         <h3>Related "{{ tag }}" content:</h3>
         <ul class="related-list">
-            {% for item in related_content | sort(attribute="date") | reverse | slice(end=5) %}
+            {% for item in (related_content | sort(attribute="date") | reverse)[:5] %}
             {% if item.slug == content.slug %}{% continue %}{% endif %}
             <li><a href="{{url_for(path=item.slug ~ '.html')}}">{{item.title}}</a></li>
             {% endfor %}
@@ -207,7 +207,7 @@
 <section class="content-comments">
     {{ comments }}
 </section>
-{% elif site.extra.comments.source is defined and content.date %}
+{% elif site?.extra?.comments?.source is defined and content.date %}
     {%include "comments.html" ignore missing %}
 {% endif %}
 

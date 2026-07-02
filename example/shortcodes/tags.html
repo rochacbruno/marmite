@@ -1,5 +1,5 @@
 {# Display a list of all tags with post counts. Params: ord=desc, items=0 #}
-{% macro tags(ord="desc", items=0) %}
+{% shortcode tags(ord="desc", items=0) %}
 {% set tag_map = group(kind="tag", ord=ord, items=items) %}
 <ul class="tags-list">
 {% for tag_name, posts in tag_map %}
@@ -7,4 +7,4 @@
 <li><a href="{{ url_for(path='tag-' ~ tag_slug ~ '.html') }}">{{ tag_name }}</a> ({{ posts | length }} posts)</li>
 {% endfor %}
 </ul>
-{% endmacro tags %}
+{% endshortcode tags %}

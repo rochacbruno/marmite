@@ -1,65 +1,28 @@
 {# Display a card for content based on slug with optional parameter overrides #}
-{% macro card(slug, image="", title="", text="", content_type="") %}
+{% shortcode card(slug, image="", title="", text="", content_type="") %}
 {% if slug is starting_with("http://") or slug is starting_with("https://") %}
-    {# External URL - skip data lookup and use provided parameters #}
-    {% if image %}
-        {% set final_image = image %}
-    {% else %}
-        {% set final_image = "" %}
-    {% endif %}
-    {% if title %}
-        {% set final_title = title %}
-    {% else %}
-        {% set final_title = "Link" %}
-    {% endif %}
-    {% if text %}
-        {% set final_text = text %}
-    {% else %}
-        {% set final_text = "External Link" %}
-    {% endif %}
-    {% if content_type %}
-        {% set final_content_type = content_type %}
-    {% else %}
-        {% set final_content_type = "Link" %}
-    {% endif %}
-    {% set final_url = slug %}
-    {% set target_blank = true %}
+    {% set card = {"image": "", "title": "Link", "text": "External Link", "content_type": "Link", "url": slug, "target_blank": true} %}
 {% else %}
-    {# Internal content - perform data lookup #}
     {% set data = get_data_by_slug(slug=slug) %}
-    {% if image %}
-        {% set final_image = image %}
-    {% else %}
-        {% set final_image = data.image %}
-    {% endif %}
-    {% if title %}
-        {% set final_title = title %}
-    {% else %}
-        {% set final_title = data.title %}
-    {% endif %}
-    {% if text %}
-        {% set final_text = text %}
-    {% else %}
-        {% set final_text = data.text %}
-    {% endif %}
-    {% if content_type %}
-        {% set final_content_type = content_type %}
-    {% else %}
-        {% set final_content_type = data.content_type %}
-    {% endif %}
-    {% set final_url = url_for(path=data.slug ~ ".html") %}
-    {% set target_blank = false %}
+    {% set card = {"image": data.image, "title": data.title, "text": data.text, "content_type": data.content_type, "url": url_for(path=data.slug ~ ".html"), "target_blank": false} %}
 {% endif %}
+{% set card = {
+    ...card,
+    "image": image if image else card.image,
+    "title": title if title else card.title,
+    "text": text if text else card.text,
+    "content_type": content_type if content_type else card.content_type
+} %}
 <div class="card" style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin: 16px 0; text-decoration: none; color: inherit;">
-    <a href="{{ final_url }}" {% if target_blank %}target="_blank"{% endif %} style="display: flex; align-items: center; text-decoration: none; color: inherit; width: 100%;">
+    <a href="{{ card.url }}" {% if card.target_blank %}target="_blank"{% endif %} style="display: flex; align-items: center; text-decoration: none; color: inherit; width: 100%;">
         <div class="card-image" style="flex-shrink: 0; margin-right: 16px;">
-            <img src="{{ final_image }}" alt="{{ final_title }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
+            <img src="{{ card.image }}" alt="{{ card.title }}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
         </div>
         <div class="card-content" style="flex: 1;">
-            <div class="card-type" style="font-size: 0.75em; color: #999; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">{{ final_content_type }}</div>
-            <div class="card-title" style="font-weight: bold; font-size: 1.1em; margin-bottom: 4px;">{{ final_title }}</div>
-            <div class="card-text" style="color: #666; font-size: 0.9em;">{{ final_text }}</div>
+            <div class="card-type" style="font-size: 0.75em; color: #999; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">{{ card.content_type }}</div>
+            <div class="card-title" style="font-weight: bold; font-size: 1.1em; margin-bottom: 4px;">{{ card.title }}</div>
+            <div class="card-text" style="color: #666; font-size: 0.9em;">{{ card.text }}</div>
         </div>
     </a>
 </div>
-{% endmacro card %}
+{% endshortcode card %}

@@ -177,15 +177,15 @@ Place shortcode files in the `shortcodes/` directory at the project root.
 
 ### HTML Shortcodes
 
-HTML shortcodes use Tera macros. The filename (without extension) becomes the shortcode name, and the file must contain a macro with the same name.
+HTML shortcodes use `{% shortcode %}` definitions. The filename (without extension) becomes the shortcode name, and the file must contain a definition with the same name. The older `{% macro %}` syntax also works for backward compatibility.
 
 Example: `shortcodes/alert.html`
 ```html
-{% macro alert(type="info", message="") %}
+{% shortcode alert(type="info", message="") %}
 <div class="alert alert-{{ type }}">
   <strong>{{ type | upper }}:</strong> {{ message }}
 </div>
-{% endmacro alert %}
+{% endshortcode alert %}
 ```
 
 Usage:
@@ -195,9 +195,9 @@ Usage:
 
 Example: `shortcodes/button.html`
 ```html
-{% macro button(url="#", label="Click", style="primary") %}
+{% shortcode button(url="#", label="Click", style="primary") %}
 <a href="{{ url }}" class="btn btn-{{ style }}">{{ label }}</a>
-{% endmacro button %}
+{% endshortcode button %}
 ```
 
 Usage:
@@ -221,20 +221,40 @@ Usage:
 
 ### Shortcode with Site Data Access
 
-HTML shortcodes have access to site data through Tera functions:
+HTML shortcodes have full access to the rendering context, including `site_data`, `site`, `content` (on content pages), and all registered Tera functions (`url_for`, `group`, `get_posts`, etc.). Shortcodes can also use Tera 2.0 features like map literals, spread operators, and ternary expressions.
 
 ```html
-{% macro featured(count=3) %}
+{% shortcode featured(count=3) %}
 {% set posts = get_posts(ord="desc", items=count) %}
 <div class="featured">
   {% for post in posts %}
     <article>
       <h3><a href="{{ url_for(path=post.slug ~ '.html') }}">{{ post.title }}</a></h3>
-      {% if post.description %}<p>{{ post.description }}</p>{% endif %}
+      <p>{{ post.description if post.description else "" }}</p>
     </article>
   {% endfor %}
 </div>
-{% endmacro featured %}
+{% endshortcode featured %}
+```
+
+Shortcodes can use the spread operator to merge map data. For example, the built-in `card.html` shortcode uses spread to merge fetched data with user overrides:
+
+```html
+{% shortcode card(slug="", image="", title="", text="", content_type="") %}
+{% set data = get_data_by_slug(slug=slug) %}
+{% set card = {
+  ...data,
+  "image": image if image else data.image,
+  "title": title if title else data.title,
+  "text": text if text else data.text,
+  "content_type": content_type if content_type else data.content_type
+} %}
+<div class="card">
+  <img src="{{ card.image }}" alt="{{ card.title }}">
+  <h3>{{ card.title }}</h3>
+  <p>{{ card.text }}</p>
+</div>
+{% endshortcode card %}
 ```
 
 ### Overriding Built-in Shortcodes
@@ -276,4 +296,4 @@ This shows all available shortcodes with their descriptions and usage examples.
 - String values do not need quotes: `message=Hello World` works
 - Boolean values: `enabled=true`
 - Numeric values: `count=5`
-- Default values are specified in the macro definition: `{% macro name(param="default") %}`
+- Default values are specified in the shortcode definition: `{% shortcode name(param="default") %}`
