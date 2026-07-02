@@ -306,16 +306,8 @@ Marmite uses Tera 2.0. A backward-compatibility preprocessor auto-converts old T
 <!-- Includes -->
 {% include "partial.html" %}
 
-<!-- Macros -->
-{% macro mycomponent(param1, param2="default") %}
-  <div>{{ param1 }} {{ param2 }}</div>
-{% endmacro mycomponent %}
-
-{{ self::mycomponent(param1="hello") }}
-
 <!-- Set variables -->
 {% set myvar = "value" %}
-{% set_global myvar = "value" %}
 
 <!-- Raw (no template processing) -->
 {% raw %}{{ this is not processed }}{% endraw %}

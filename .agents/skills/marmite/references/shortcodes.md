@@ -221,7 +221,7 @@ Usage:
 
 ### Shortcode with Site Data Access
 
-HTML shortcodes have access to site data through Tera functions:
+HTML shortcodes have full access to the rendering context, including `site_data`, `site`, `content` (on content pages), and all registered Tera functions (`url_for`, `group`, `get_posts`, etc.). Shortcode source files use `{% macro %}` syntax which is automatically preprocessed for Tera 2.0 compatibility - no changes needed when upgrading.
 
 ```html
 {% macro featured(count=3) %}
