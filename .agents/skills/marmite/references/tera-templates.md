@@ -321,6 +321,7 @@ Marmite uses Tera 2.0. A backward-compatibility preprocessor auto-converts old T
 
 <!-- Set variables -->
 {% set myvar = "value" %}
+{% set_global myvar = "value" %}  <!-- persists outside of for loops -->
 
 <!-- Raw (no template processing) -->
 {% raw %}{{ this is not processed }}{% endraw %}
