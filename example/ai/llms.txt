@@ -77,6 +77,7 @@ $ marmite myblog --serve
 - [Enabling Comments](https://marmite.blog/enabling-comments.html): Adding comment systems to your blog
 - [Draft Posts Guide](https://marmite.blog/how-to-use-draft-posts-in-marmite.html): Working with draft content and publishing workflow
 - [AT Protocol standard.site](https://marmite.blog/atproto-standard-site.html): Complete guide to publishing your Marmite blog posts to the decentralized AT Protocol
+- [Redirect Aliases](https://marmite.blog/redirect-aliases.html): Generate redirect pages for old URLs when content slugs change
 
 ### Deployment
 
@@ -126,6 +127,7 @@ $ marmite myblog --serve
 - **Related Content**: Configurable related content and backlinks between posts
 - **Markdown Alerts**: Support for GitHub-style callouts and alert boxes in markdown
 - **AT Protocol Publishing**: Native support for publishing blog posts to standard.site and the decentralized AT Protocol with automatic well-known verification
+- **Redirect Aliases**: Frontmatter `aliases` field generates redirect pages at old URLs when content slugs change, with meta refresh, canonical links, and conflict detection
 
 ## Agents
 

@@ -833,3 +833,69 @@ fn test_at_prefix_not_replaced_in_code_block() {
         result.html
     );
 }
+
+#[test]
+fn test_get_aliases_from_array() {
+    let mut frontmatter = Frontmatter::new();
+    frontmatter.insert(
+        "aliases".to_string(),
+        Value::Array(vec![
+            Value::String("old-url".to_string()),
+            Value::String("legacy-path".to_string()),
+        ]),
+    );
+
+    let aliases = get_aliases(&frontmatter);
+    assert_eq!(aliases, vec!["old-url", "legacy-path"]);
+}
+
+#[test]
+fn test_get_aliases_from_string() {
+    let mut frontmatter = Frontmatter::new();
+    frontmatter.insert(
+        "aliases".to_string(),
+        Value::String("old-url, legacy-path".to_string()),
+    );
+
+    let aliases = get_aliases(&frontmatter);
+    assert_eq!(aliases, vec!["old-url", "legacy-path"]);
+}
+
+#[test]
+fn test_get_aliases_empty() {
+    let frontmatter = Frontmatter::new();
+
+    let aliases = get_aliases(&frontmatter);
+    assert!(aliases.is_empty());
+}
+
+#[test]
+fn test_get_aliases_with_empty_string() {
+    let mut frontmatter = Frontmatter::new();
+    frontmatter.insert("aliases".to_string(), Value::String(String::new()));
+
+    let aliases = get_aliases(&frontmatter);
+    assert!(aliases.is_empty());
+}
+
+#[test]
+fn test_aliases_parsed_from_markdown() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("2024-01-01-my-post.md");
+    let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\naliases:\n  - old-post\n  - legacy-post\n---\n# Content\n";
+    fs::write(&path, content).unwrap();
+
+    let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
+    assert_eq!(result.aliases, vec!["old-post", "legacy-post"]);
+}
+
+#[test]
+fn test_aliases_empty_when_not_specified() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("2024-01-01-my-post.md");
+    let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n# Content\n";
+    fs::write(&path, content).unwrap();
+
+    let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
+    assert!(result.aliases.is_empty());
+}

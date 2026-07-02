@@ -3,6 +3,8 @@ title: Why to use Marmite?
 tags: docs
 authors: rochacbruno
 banner_image: media/why.jpg
+aliases:
+  - what-is-marmite-static-site-generator
 ---
 
 **Marmite** is a simple, easy and **opinionated** static site generator.

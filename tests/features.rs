@@ -422,3 +422,125 @@ file_mapping:
     // Verify mapped file exists at destination
     assert!(output_dir.join("about.html").exists());
 }
+
+#[test]
+fn test_redirect_aliases() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+
+    fs::write(input_dir.join("marmite.yaml"), "name: Site").unwrap();
+
+    let post = r"---
+title: My New Post
+slug: my-new-post
+date: 2024-01-01
+aliases:
+  - old-post-url
+  - legacy-path
+---
+# My New Post
+Content here.";
+    fs::write(input_dir.join("content").join("my-new-post.md"), post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Verify the original content page exists
+    assert!(output_dir.join("my-new-post.html").exists());
+
+    // Verify redirect alias pages were generated
+    assert!(
+        output_dir.join("old-post-url.html").exists(),
+        "Redirect alias old-post-url.html should exist"
+    );
+    assert!(
+        output_dir.join("legacy-path.html").exists(),
+        "Redirect alias legacy-path.html should exist"
+    );
+
+    // Verify redirect content points to the correct target
+    let redirect_content = fs::read_to_string(output_dir.join("old-post-url.html")).unwrap();
+    assert!(
+        redirect_content.contains("my-new-post.html"),
+        "Redirect should point to my-new-post.html, got: {redirect_content}"
+    );
+    assert!(
+        redirect_content.contains("meta http-equiv=\"refresh\""),
+        "Redirect should use meta refresh"
+    );
+    assert!(
+        redirect_content.contains("rel=\"canonical\""),
+        "Redirect should include canonical link"
+    );
+}
+
+#[test]
+fn test_redirect_aliases_not_in_sitemap() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Site\nbuild_sitemap: true\nurl: https://example.com",
+    )
+    .unwrap();
+
+    let post = r"---
+title: My Post
+slug: my-post
+date: 2024-01-01
+aliases:
+  - old-url
+---
+# My Post";
+    fs::write(input_dir.join("content").join("my-post.md"), post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let sitemap = fs::read_to_string(output_dir.join("sitemap.xml")).unwrap();
+    assert!(
+        sitemap.contains("my-post.html"),
+        "Sitemap should contain the real post URL"
+    );
+    assert!(
+        !sitemap.contains("old-url.html"),
+        "Sitemap should NOT contain redirect alias URLs"
+    );
+}

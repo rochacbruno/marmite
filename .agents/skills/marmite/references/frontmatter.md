@@ -207,6 +207,26 @@ banner_image: media/hero-banner.jpg
 
 If not specified, marmite may auto-detect an image from the content or use the `image_provider` config.
 
+### aliases
+
+- **Type:** String (comma-separated) or Array
+- **Default:** Empty
+- **Purpose:** Generate redirect pages at old URLs that point to this content. Useful when renaming slugs to preserve old links
+
+```yaml
+# Comma-separated string
+aliases: old-post-url, legacy-path
+
+# YAML array
+aliases:
+  - old-post-url
+  - legacy-path
+```
+
+Each alias generates a lightweight HTML file (e.g. `old-post-url.html`) with a `<meta http-equiv="refresh">` redirect, a `<link rel="canonical">` tag, and a JavaScript fallback pointing to the current content URL. Redirect pages are excluded from the sitemap, feeds, and search index.
+
+A warning is logged if an alias conflicts with an existing content slug or is defined by more than one content file.
+
 ### extra
 
 - **Type:** Object (key-value map)
