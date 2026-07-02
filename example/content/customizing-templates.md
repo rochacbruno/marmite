@@ -152,7 +152,7 @@ Those are templates that are not meant to be rendered directly, those are includ
   - Renders the author avatar image
   - included on `group.html` (if author is defined)
 
-When customizing the templates you can create new templates to use as `include` or `macro` but the 4 listed above are required.
+When customizing the templates you can create new templates to use as `include` or `component` but the 4 listed above are required.
 
 If you just want to customize some individual template you can add only it in the
 templates/ folder and the rest will be added by marmite.
