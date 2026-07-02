@@ -111,6 +111,7 @@ pub struct Content {
     pub previous: Option<Box<Content>>,
     pub source_path: Option<std::path::PathBuf>,
     pub at_uri: Option<String>,
+    pub aliases: Vec<String>,
 }
 
 impl Content {
@@ -212,6 +213,7 @@ impl Content {
         let series = determine_series(&frontmatter);
 
         let comments = get_comments(&frontmatter);
+        let aliases = get_aliases(&frontmatter);
         let content = Content {
             title,
             description,
@@ -235,6 +237,7 @@ impl Content {
             previous: None,
             source_path: Some(path.to_path_buf()),
             at_uri: None,
+            aliases,
         };
         Ok(content)
     }
@@ -262,6 +265,7 @@ pub struct ContentBuilder {
     comments: Option<bool>,
     source_path: Option<std::path::PathBuf>,
     at_uri: Option<String>,
+    aliases: Option<Vec<String>>,
 }
 
 #[allow(dead_code)]
@@ -365,6 +369,11 @@ impl ContentBuilder {
         self
     }
 
+    pub fn aliases(mut self, aliases: Vec<String>) -> Self {
+        self.aliases = Some(aliases);
+        self
+    }
+
     pub fn build(self) -> Content {
         Content {
             title: self.title.unwrap_or_default(),
@@ -389,6 +398,7 @@ impl ContentBuilder {
             previous: None,
             source_path: self.source_path,
             at_uri: self.at_uri,
+            aliases: self.aliases.unwrap_or_default(),
         }
     }
 }
@@ -618,6 +628,27 @@ pub fn get_authors(frontmatter: &Frontmatter, default_author: Option<String>) ->
         }
     }
     authors
+}
+
+pub fn get_aliases(frontmatter: &Frontmatter) -> Vec<String> {
+    let aliases: Vec<String> = match frontmatter.get("aliases") {
+        Some(Value::Array(aliases)) => aliases
+            .iter()
+            .map(Value::to_string)
+            .map(|t| t.trim_matches('"').to_string())
+            .collect(),
+        Some(Value::String(aliases)) => aliases
+            .split(',')
+            .map(str::trim)
+            .map(String::from)
+            .collect(),
+        _ => Vec::new(),
+    };
+    aliases
+        .iter()
+        .filter(|alias| !alias.is_empty())
+        .map(|a| a.trim().to_string())
+        .collect()
 }
 
 /// Tries to get `date` from the front-matter metadata, else from filename

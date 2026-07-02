@@ -41,6 +41,7 @@ pub struct UrlCollection {
     pub feeds: Vec<String>,
     pub pagination: Vec<String>,
     pub file_mappings: Vec<String>,
+    pub redirects: Vec<String>,
     pub misc: Vec<String>, // For other generated files
 }
 
@@ -468,6 +469,14 @@ impl Data {
                 mapping.dest.clone()
             };
             self.generated_urls.add_url("file_mappings", destination);
+        }
+
+        // Add redirect aliases
+        for content in self.posts.iter().chain(&self.pages) {
+            for alias in &content.aliases {
+                self.generated_urls
+                    .add_url("redirects", format!("{alias}.html"));
+            }
         }
     }
 }
@@ -1305,6 +1314,8 @@ fn render_templates(
         shortcode_processor,
         highlighter,
     )?;
+
+    handle_redirect_aliases(&site_data, output_dir)?;
 
     Ok(())
 }
@@ -2356,6 +2367,23 @@ fn create_urls_json(site_data: &Data) -> serde_json::Value {
         ),
     );
 
+    // Add redirects
+    let redirects: Vec<String> = site_data
+        .generated_urls
+        .redirects
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "redirects".to_string(),
+        serde_json::Value::Array(
+            redirects
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
     // Add misc
     let misc: Vec<String> = site_data
         .generated_urls
@@ -2413,6 +2441,10 @@ fn create_urls_json(site_data: &Data) -> serde_json::Value {
     summary.insert(
         "file_mappings".to_string(),
         serde_json::Value::Number(serde_json::Number::from(file_mappings.len())),
+    );
+    summary.insert(
+        "redirects".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(redirects.len())),
     );
     summary.insert(
         "misc".to_string(),
@@ -2586,6 +2618,72 @@ fn handle_list_page(
 }
 
 #[allow(clippy::too_many_arguments)]
+fn generate_redirect_html(target_url: &str) -> String {
+    format!(
+        r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Redirecting...</title>
+<meta http-equiv="refresh" content="0; url={target_url}">
+<link rel="canonical" href="{target_url}">
+</head>
+<body>
+<p>This page has moved to <a href="{target_url}">{target_url}</a>.</p>
+<script>window.location.href = "{target_url}";</script>
+</body>
+</html>
+"#
+    )
+}
+
+fn handle_redirect_aliases(site_data: &Data, output_dir: &Path) -> Result<(), String> {
+    let url_for = UrlFor {
+        base_url: site_data.site.url.clone(),
+    };
+
+    let all_slugs: std::collections::HashSet<String> = site_data
+        .posts
+        .iter()
+        .chain(&site_data.pages)
+        .map(|c| c.slug.clone())
+        .collect();
+
+    let mut seen_aliases: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
+
+    for content in site_data.posts.iter().chain(&site_data.pages) {
+        for alias in &content.aliases {
+            if all_slugs.contains(alias) {
+                warn!(
+                    "Redirect alias \"{}\" in \"{}\" conflicts with an existing content slug, skipping",
+                    alias, content.slug
+                );
+                continue;
+            }
+
+            if let Some(other_slug) = seen_aliases.get(alias) {
+                warn!(
+                    "Duplicate redirect alias \"{}\" defined in \"{}\" and \"{}\", skipping duplicate",
+                    alias, other_slug, content.slug
+                );
+                continue;
+            }
+
+            seen_aliases.insert(alias.clone(), content.slug.clone());
+
+            let target_url = url_for.resolve(&format!("{}.html", content.slug), false);
+            let redirect_html = generate_redirect_html(&target_url);
+            let output_file = output_dir.join(format!("{alias}.html"));
+            fs::write(&output_file, redirect_html)
+                .map_err(|e| format!("Failed to write redirect alias {alias}.html: {e}"))?;
+            info!("Generated redirect: {alias}.html -> {}.html", content.slug);
+        }
+    }
+
+    Ok(())
+}
+
 fn handle_content_pages(
     site_data: &Data,
     global_context: &Context,
@@ -2919,6 +3017,7 @@ impl UrlCollection {
             "feeds" => self.feeds.push(url),
             "pagination" => self.pagination.push(url),
             "file_mappings" => self.file_mappings.push(url),
+            "redirects" => self.redirects.push(url),
             _ => self.misc.push(url),
         }
     }
@@ -2936,6 +3035,8 @@ impl UrlCollection {
         all_urls.extend(self.pagination.iter().cloned());
         all_urls.extend(self.file_mappings.iter().cloned());
         all_urls.extend(self.misc.iter().cloned());
+        // Redirects are intentionally excluded from get_all_urls
+        // so they don't appear in the sitemap (redirect pages should not be indexed)
         all_urls
     }
 
@@ -2950,6 +3051,7 @@ impl UrlCollection {
             + self.feeds.len()
             + self.pagination.len()
             + self.file_mappings.len()
+            + self.redirects.len()
             + self.misc.len()
     }
 }

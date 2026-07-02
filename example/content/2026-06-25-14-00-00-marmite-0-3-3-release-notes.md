@@ -39,6 +39,24 @@ Marmite replaces `@/` with `media/{slug}/` in the rendered HTML. The replacement
 
 See the [Media Organization](media-organization.html) guide for details.
 
+### Redirect Aliases (#472)
+
+Content can now define redirect aliases in frontmatter. When a post or page slug changes, the old URL can be preserved as a redirect:
+
+```yaml
+---
+title: My Renamed Post
+slug: my-renamed-post
+aliases:
+  - old-post-url
+  - another-old-url
+---
+```
+
+For each alias, marmite generates a lightweight HTML file with a `<meta http-equiv="refresh">` redirect, a `<link rel="canonical">` tag, and a JavaScript fallback. Redirect pages are excluded from the sitemap, feeds, and search index to avoid duplicate content issues.
+
+Marmite warns at build time if an alias conflicts with an existing content slug or is defined by more than one content file.
+
 ### Tera 2.0 Migration
 
 Marmite now uses Tera 2.0.0 (upgraded from 1.20.1). This is a major version bump of the template engine with new syntax features, better error messages, and 2-4x faster rendering.
