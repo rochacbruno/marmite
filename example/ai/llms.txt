@@ -78,6 +78,7 @@ $ marmite myblog --serve
 - [Draft Posts Guide](https://marmite.blog/how-to-use-draft-posts-in-marmite.html): Working with draft content and publishing workflow
 - [AT Protocol standard.site](https://marmite.blog/atproto-standard-site.html): Complete guide to publishing your Marmite blog posts to the decentralized AT Protocol
 - [Redirect Aliases](https://marmite.blog/redirect-aliases.html): Generate redirect pages for old URLs when content slugs change
+- [Internal Link Validation](https://marmite.blog/internal-link-validation.html): Build-time validation of internal links with warning and strict failure modes
 
 ### Deployment
 
@@ -128,6 +129,7 @@ $ marmite myblog --serve
 - **Markdown Alerts**: Support for GitHub-style callouts and alert boxes in markdown
 - **AT Protocol Publishing**: Native support for publishing blog posts to standard.site and the decentralized AT Protocol with automatic well-known verification
 - **Redirect Aliases**: Frontmatter `aliases` field generates redirect pages at old URLs when content slugs change, with meta refresh, canonical links, and conflict detection
+- **Internal Link Validation**: Build-time checking of internal links with configurable warning or strict failure mode via `check_internal_links` and `strict_internal_links` options
 
 ## Agents
 

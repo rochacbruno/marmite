@@ -623,6 +623,10 @@ Options:
       --skip-image-resize <SKIP_IMAGE_RESIZE>
           Skip image resizing during build [default: false or from config file] Use this for faster
           development builds when image optimization is not needed [possible values: true, false]
+      --check-internal-links <CHECK_INTERNAL_LINKS>
+          Check internal links during build [default: false or from config file] [possible values: true, false]
+      --strict-internal-links <STRICT_INTERNAL_LINKS>
+          Fail the build on broken internal links [default: false or from config file] [possible values: true, false]
   -h, --help
           Print help
   -V, --version

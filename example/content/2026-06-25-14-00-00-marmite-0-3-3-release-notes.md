@@ -10,6 +10,19 @@ date: 2026-06-25 14:00:00
 
 ## New Features
 
+### Build-time Internal Link Validation (#473)
+
+Marmite can now check internal links at build time and warn about broken ones. Enable with:
+
+```yaml
+check_internal_links: true
+strict_internal_links: false  # set to true to fail the build on broken links
+```
+
+When enabled, marmite compares all internal links found in content against the known output URLs after processing. Broken links are reported as warnings. With `strict_internal_links: true`, the build fails if any broken links are found.
+
+Both options are also available as CLI flags: `--check-internal-links true` and `--strict-internal-links true`.
+
 ### Media Organization with Slug-Based Subfolders (#149)
 
 Media files can now be organized in subfolders named after the content's slug. Marmite automatically discovers `banner.{ext}` and `card.{ext}` files inside `media/{slug}/` directories.

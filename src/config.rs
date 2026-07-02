@@ -302,6 +302,14 @@ pub struct Marmite {
     #[serde(default)]
     pub skip_image_resize: bool,
 
+    /// Check internal links during build and warn about broken ones
+    #[serde(default)]
+    pub check_internal_links: bool,
+
+    /// Fail the build when broken internal links are found
+    #[serde(default)]
+    pub strict_internal_links: bool,
+
     /// atproto standard.site publishing configuration
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub atproto: Option<AtprotoConfig>,
@@ -472,6 +480,12 @@ impl Marmite {
         }
         if let Some(skip_image_resize) = cli_args.configuration.skip_image_resize {
             self.skip_image_resize = skip_image_resize;
+        }
+        if let Some(check_internal_links) = cli_args.configuration.check_internal_links {
+            self.check_internal_links = check_internal_links;
+        }
+        if let Some(strict_internal_links) = cli_args.configuration.strict_internal_links {
+            self.strict_internal_links = strict_internal_links;
         }
     }
 }

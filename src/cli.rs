@@ -273,4 +273,12 @@ pub struct Configuration {
     /// Use this for faster development builds when image optimization is not needed
     #[arg(long)]
     pub skip_image_resize: Option<bool>,
+
+    /// Check internal links during build [default: false or from config file]
+    #[arg(long)]
+    pub check_internal_links: Option<bool>,
+
+    /// Fail the build on broken internal links [default: false or from config file]
+    #[arg(long)]
+    pub strict_internal_links: Option<bool>,
 }

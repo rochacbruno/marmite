@@ -78,6 +78,13 @@ Default menu includes Tags, Archive, and Authors links.
 
 RSS feeds (`index.rss`, per-tag, per-stream, per-series) are always generated.
 
+## Link Checking
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `check_internal_links` | bool | `false` | Validate internal links at build time and warn about broken ones |
+| `strict_internal_links` | bool | `false` | Fail the build when broken internal links are found (requires `check_internal_links: true`) |
+
 ## Shortcodes
 
 | Field | Type | Default | Description |
