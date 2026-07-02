@@ -306,18 +306,24 @@ Marmite uses Tera 2.0. A backward-compatibility preprocessor auto-converts old T
 <!-- Includes -->
 {% include "partial.html" %}
 
-<!-- Components (replaced macros in Tera 2.0) -->
-{% component Button(label, variant="primary") %}
-<button class="{{ variant }}">{{ label }}</button>
-{% endcomponent %}
+<!-- Components (replaced macros in Tera 2.0, registered globally, no imports needed) -->
+{% component Button(label: string, variant: string = "primary") %}
+<button class="btn btn-{{ variant }}">{{ label }}</button>
+{% endcomponent Button %}
 
-<!-- Call a component (self-closing) -->
-{{ <Button label="Click me" /> }}
+<!-- Call a component (self-closing, no body) -->
+{{<Button label="Click me" variant="secondary" />}}
 
-<!-- Call a component (with body content) -->
+<!-- Call a component (with body content, accessible via {{ body }} inside) -->
 {% <Card title="Hello"> %}
-  <p>Body content accessible via {{ body }} inside the component</p>
+  <p>This content is passed as the body variable</p>
 {% </Card> %}
+
+<!-- Open component with spread (accepts extra kwargs) -->
+{% component Input(name: string, label: string = "", ...rest) %}
+<label>{{ label }}<input name="{{ name }}" /></label>
+{% endcomponent Input %}
+{{<Input name="email" label="Email" required={true} />}}
 
 <!-- Set variables -->
 {% set myvar = "value" %}
