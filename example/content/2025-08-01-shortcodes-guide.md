@@ -134,6 +134,9 @@ You can create your own shortcodes by adding files to the `shortcodes` directory
 > [!IMPORTANT]
 > For HTML shortcodes, the macro name MUST match the filename. For example, a file named `alert.html` must contain `{% macro alert(...) %}`. This is the macro that will be called when the shortcode is used.
 
+> [!NOTE]
+> Shortcode source files use the traditional `{% macro %}` / `{% endmacro %}` Tera syntax. Marmite automatically preprocesses shortcode content for Tera 2.0 compatibility at load time, so you do not need to update your shortcode files when upgrading.
+
 ### Adding Descriptions to Shortcodes
 
 You can add descriptions to your shortcodes by including a Tera comment as the first line of the file:

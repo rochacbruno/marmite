@@ -447,7 +447,7 @@ Filter out draft content from arrays:
 ```
 
 ### Built-in Tera Filters
-Marmite includes all standard Tera filters:
+Marmite includes all standard Tera filters plus compatibility filters (`striptags`, `slice`, `trim_start_matches`, `date`) that were removed from Tera 2.0 core. These continue to work in Marmite without changes.
 
 ```html
 <!-- String filters -->
@@ -716,6 +716,60 @@ Common template errors and solutions:
 - **Filter not found**: Check filter name spelling
 - **Template not found**: Verify template file exists
 - **Syntax error**: Check bracket matching and syntax
+
+## Tera 2.0 Compatibility
+
+Marmite uses Tera 2.0, which introduced some syntax changes from Tera 1.x. Marmite includes a backward-compatibility preprocessor that automatically converts old syntax, so existing templates continue to work. However, the new syntax is recommended for new templates.
+
+### Array indexing
+
+Tera 2.0 uses bracket syntax for array indexing instead of dot syntax.
+
+```html
+<!-- Old (still works, auto-converted) -->
+{{ menu.0 }}
+{{ link.1 }}
+
+<!-- New (recommended) -->
+{{ menu[0] }}
+{{ link[1] }}
+```
+
+### Test keyword arguments
+
+Tests now require named keyword arguments.
+
+```html
+<!-- Old (still works, auto-converted) -->
+{% if url is starting_with("http") %}
+
+<!-- New (recommended) -->
+{% if url is starting_with(pat="http") %}
+```
+
+### Optional chaining
+
+Tera 2.0 adds optional chaining with `?` for safe access to deeply nested values that may not exist.
+
+```html
+<!-- Old (works but verbose) -->
+{% if site.extra is defined and site.extra.comments is defined and site.extra.comments.source is defined %}
+
+<!-- New (recommended) -->
+{% if site?.extra?.comments?.source is defined %}
+```
+
+### Compatibility filters
+
+The filters `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core. Marmite provides these as built-in compatibility filters, so they continue to work without changes.
+
+### Include templates
+
+The `ignore missing` syntax on `{% include %}` tags is handled automatically by the preprocessor. Templates using this pattern will continue to work.
+
+### Shortcodes
+
+Shortcode source files continue to use `{% macro %}` syntax. This is preprocessed internally before Tera 2.0 processes the templates.
 
 ## Best Practices
 

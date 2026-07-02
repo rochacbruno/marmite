@@ -37,7 +37,7 @@
             {% if author.links %}
             <div class="author-links">
                 {% for link in author.links %}
-                <a href="{{ url_for(path=link.1) }}" {% if link.1 is starting_with("http") %}target="_blank"{% endif %} class="author-link u-url">{{ link.0 }}</a>
+                <a href="{{ url_for(path=link[1]) }}" {% if link[1] is starting_with(pat="http") %}target="_blank"{% endif %} class="author-link u-url">{{ link[0] }}</a>
                 {% endfor %}
             </div>
             {% endif %}

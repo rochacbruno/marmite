@@ -239,7 +239,7 @@ Example of a custom index template.
                     {% if content.description %}
                     {{ content.description | replace(from='"', to="") | truncate(length=250, end=" ...") }}
                     {% else %}
-                    {{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=250, end=" ...") }}
+                    {{ content.html | striptags | trim_start_matches(pat=content.title) | truncate(length=250, end="...") }}
                     {%- endif %}
                     <a class="secondary" href="./{{content.slug}}.html">read more &rarr;</a>
                 </p>
@@ -271,7 +271,7 @@ Example of a custom index template.
                 <p>{{author.bio}}</p>
                 <ul>
                     {% for link in author.links %}
-                    <li><a href="{{link.1}}">{{link.0}}</a></li>
+                    <li><a href="{{link[1]}}">{{link[0]}}</a></li>
                     {% endfor %}
                 </ul>
             </article>
@@ -420,6 +420,17 @@ then on template
 
 Tera is configured to allow raw html on markdown, so any html tag will be 
 allowed, a markdown file can include for example embeds, scripts, etc..
+
+## Tera 2.0 Compatibility
+
+Marmite uses Tera 2.0, which changed some syntax from Tera 1.x. Old templates continue to work - marmite includes a preprocessor that auto-converts legacy syntax. Key changes:
+
+- **Array indexing:** Use `item[0]` instead of `item.0` (old syntax auto-converted)
+- **Test keyword args:** Use `is starting_with(pat="http")` instead of `is starting_with("http")` (old syntax auto-converted)
+- **Optional chaining:** Use `site?.extra?.comments` for safe access to values that may not exist
+- **Compatibility filters:** `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core but marmite provides them as built-in filters, so they continue to work
+- **Include templates:** `ignore missing` on includes is handled automatically by the preprocessor
+- **Shortcodes:** `{% macro %}` syntax in shortcode source files is preprocessed internally
 
 ## Tera Object
 

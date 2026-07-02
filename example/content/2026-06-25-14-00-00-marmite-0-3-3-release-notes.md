@@ -38,3 +38,15 @@ Use `@/` in markdown image and link syntax to reference files in the content's m
 Marmite replaces `@/` with `media/{slug}/` in the rendered HTML. The replacement only targets `src` and `href` attributes, so `@/` in plain text, code blocks, and fragment files is left untouched.
 
 See the [Media Organization](media-organization.html) guide for details.
+
+### Tera 2.0 Migration
+
+Marmite now uses Tera 2.0.0 (upgraded from 1.20.1). This is a major version bump of the template engine that brings several improvements:
+
+- **Bracket indexing** - Access map and array values with `value["key"]` and `value[0]` syntax
+- **Keyword test arguments** - Tests like `is defined` now accept keyword arguments
+- **Optional chaining** - Use `value?.nested?.field` to safely access nested values without errors
+
+**Backward compatibility:** Existing templates continue to work without changes. Marmite preprocesses templates at load time, automatically converting old Tera 1.x syntax to the Tera 2.0 equivalents. Shortcode files are also preprocessed transparently.
+
+**Compatibility filters:** Tera 2.0 removed or renamed some built-in filters. Marmite provides drop-in replacements for `striptags`, `slice`, `trim_start_matches`, and `date`, so templates using these filters work as before.

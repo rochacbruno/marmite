@@ -52,7 +52,7 @@
             <div class="author-hero-links">
                 <ul>
                     {% for link in author.links %}
-                    <li><a href="{{ url_for(path=link.1) }}" {% if link.1 is starting_with("http") %}target="_blank"{% endif %} class="u-url">{{link.0}}</a></li>
+                    <li><a href="{{ url_for(path=link[1]) }}" {% if link[1] is starting_with(pat="http") %}target="_blank"{% endif %} class="u-url">{{link[0]}}</a></li>
                     {% endfor %}
                 </ul>
             </div>

@@ -260,13 +260,26 @@ Filter an array of content to exclude items with `stream == "draft"`:
 
 ## Tera Syntax Quick Reference
 
+Marmite uses Tera 2.0. A backward-compatibility preprocessor auto-converts old Tera 1.x syntax, so existing templates continue to work. The examples below show Tera 2.0 syntax (recommended for new templates).
+
 ```html
 <!-- Variables -->
 {{ variable }}
 {{ object.field }}
 
+<!-- Array indexing (Tera 2.0 uses brackets, old dot syntax auto-converted) -->
+{{ menu[0] }}
+{{ link[1] }}
+
+<!-- Optional chaining (new in Tera 2.0, safe access to undefined values) -->
+{{ site?.extra?.comments?.source }}
+
 <!-- Conditionals -->
 {% if condition %}...{% elif other %}...{% else %}...{% endif %}
+
+<!-- Tests with keyword args (Tera 2.0 requires named args, old syntax auto-converted) -->
+{% if url is starting_with(pat="http") %}...{% endif %}
+{% if name is containing(pat="hello") %}...{% endif %}
 
 <!-- Loops -->
 {% for item in items %}
@@ -307,6 +320,14 @@ Filter an array of content to exclude items with `stream == "draft"`:
 <!-- Raw (no template processing) -->
 {% raw %}{{ this is not processed }}{% endraw %}
 ```
+
+### Tera 2.0 Backward Compatibility
+
+Marmite provides these compatibility features for templates written with Tera 1.x syntax:
+
+- **Auto-converted syntax:** Array dot indexing (`item.0`), test positional args (`is starting_with("http")`), and `ignore missing` on includes are automatically converted by the preprocessor.
+- **Compatibility filters:** `striptags`, `slice`, `trim_start_matches`, and `date` were removed from Tera 2.0 core. Marmite provides them as built-in filters so they continue to work.
+- **Shortcode macros:** Shortcode source files use `{% macro %}` syntax which is preprocessed internally before Tera 2.0 processes the templates.
 
 ## Common Template Patterns
 
