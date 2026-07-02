@@ -47,10 +47,14 @@ fn save_state(input_folder: &Path, state: &PublishState) -> Result<(), Box<dyn s
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
     let mut hasher = Sha256::new();
     hasher.update(bytes);
     let result = hasher.finalize();
-    result.iter().map(|b| format!("{b:02x}")).collect()
+    result.iter().fold(String::new(), |mut output, b| {
+        let _ = write!(output, "{b:02x}");
+        output
+    })
 }
 
 fn strip_html(html: &str) -> String {

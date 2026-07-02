@@ -108,7 +108,7 @@ pub fn initialize_theme(input_folder: &Path, theme_name: &str) {
         theme_name,
         theme_path.display()
     );
-    info!("To use this theme, add 'theme: {theme_name}' to your marmite.yaml config file",);
+    info!("To use this theme, add 'theme: {theme_name}' to your marmite.yaml config file");
 }
 
 #[cfg(test)]

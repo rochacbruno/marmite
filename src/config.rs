@@ -380,6 +380,7 @@ impl Marmite {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn override_from_cli_args(&mut self, cli_args: &Arc<Cli>) {
         if let Some(name) = &cli_args.configuration.name {
             self.name.clone_from(name);

@@ -54,7 +54,7 @@ pub fn preprocess_template(content: &str) -> String {
         r#"is (not\s+)?(starting_with|ending_with|containing|matching)\(("[^"]*"|'[^']*')\)"#,
     )
     .expect("Invalid test positional pattern");
-    let result = test_positional.replace_all(&result, r#"is ${1}${2}(pat=${3})"#);
+    let result = test_positional.replace_all(&result, r"is ${1}${2}(pat=${3})");
     // Convert chained property access in `is defined` / `is not defined` checks
     // to use optional chaining: `a.b.c is defined` -> `a?.b?.c is defined`
     let defined_check =
