@@ -130,6 +130,7 @@ $ marmite myblog --serve
 - **AT Protocol Publishing**: Native support for publishing blog posts to standard.site and the decentralized AT Protocol with automatic well-known verification
 - **Redirect Aliases**: Frontmatter `aliases` field generates redirect pages at old URLs when content slugs change, with meta refresh, canonical links, and conflict detection
 - **Internal Link Validation**: Build-time checking of internal links with configurable warning or strict failure mode via `check_internal_links` and `strict_internal_links` options
+- **Language Streams (i18n)**: Multilingual content support via language streams. Configure `languages` in marmite.yaml, organize translations in subfolders for auto-discovery, or link manually via frontmatter `translations` field. Each language gets its own stream page and RSS feed. Translation links and hreflang SEO tags are added automatically. Flat HTML output preserved.
 
 ## Agents
 

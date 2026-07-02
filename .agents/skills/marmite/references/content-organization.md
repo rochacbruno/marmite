@@ -504,6 +504,56 @@ Marmite generates several discovery mechanisms automatically:
 
 Per-taxonomy feeds: `/tag-{name}.rss`, `/author-{name}.rss`, `/{stream}.rss`, `/serie-{name}.rss`.
 
+## Multilingual Content (Language Streams)
+
+Configure available languages in `marmite.yaml`:
+
+```yaml
+language: pt
+languages:
+  pt:
+    name: "Portugues"
+  en:
+    name: "English"
+```
+
+### Subfolder auto-discovery
+
+Group translations in subfolders. Files prefixed with a configured language code are auto-detected:
+
+```
+content/hello/
+  hello.md              # Default language (pt), slug: hello, stream: index
+  en-hello-world.md     # English, slug: en-hello-world, stream: en
+  es-hola-mundo.md      # Spanish, slug: es-hola-mundo, stream: es
+```
+
+### Mixed flat + subfolder
+
+Add translations to an existing flat site without moving the original file:
+
+```
+content/
+  hello.md              # Existing file, slug: hello
+  hello/
+    pt-ola.md           # Translation, auto-linked to hello
+```
+
+### Flat file patterns
+
+Use existing stream markers or frontmatter. Manual `translations` frontmatter needed:
+
+```
+content/
+  hello.md              # translations: [pt-ola]
+  pt-S-ola.md           # stream: pt via -S- pattern
+```
+
+### Output
+
+All output stays flat: `hello.html`, `en-hello-world.html`, `pt.html` (stream listing).
+Translation links and hreflang tags are added automatically to content pages.
+
 ## Best Practices
 
 1. **Use dates in filenames** for posts - makes the content directory scannable at a glance

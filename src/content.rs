@@ -88,6 +88,14 @@ impl GroupedContent {
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize, Default)]
+pub struct TranslationRef {
+    pub lang: String,
+    pub name: String,
+    pub slug: String,
+    pub title: String,
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize, Default)]
 pub struct Content {
     pub title: String,
     pub description: Option<String>,
@@ -112,6 +120,8 @@ pub struct Content {
     pub source_path: Option<std::path::PathBuf>,
     pub at_uri: Option<String>,
     pub aliases: Vec<String>,
+    pub language: Option<String>,
+    pub translations: Vec<TranslationRef>,
 }
 
 impl Content {
@@ -214,6 +224,8 @@ impl Content {
 
         let comments = get_comments(&frontmatter);
         let aliases = get_aliases(&frontmatter);
+        let language = get_language(&frontmatter);
+        let frontmatter_translations = get_frontmatter_translations(&frontmatter);
         let content = Content {
             title,
             description,
@@ -238,6 +250,8 @@ impl Content {
             source_path: Some(path.to_path_buf()),
             at_uri: None,
             aliases,
+            language,
+            translations: frontmatter_translations,
         };
         Ok(content)
     }
@@ -266,6 +280,8 @@ pub struct ContentBuilder {
     source_path: Option<std::path::PathBuf>,
     at_uri: Option<String>,
     aliases: Option<Vec<String>>,
+    language: Option<String>,
+    translations: Option<Vec<TranslationRef>>,
 }
 
 #[allow(dead_code)]
@@ -374,6 +390,16 @@ impl ContentBuilder {
         self
     }
 
+    pub fn language(mut self, language: String) -> Self {
+        self.language = Some(language);
+        self
+    }
+
+    pub fn translations(mut self, translations: Vec<TranslationRef>) -> Self {
+        self.translations = Some(translations);
+        self
+    }
+
     pub fn build(self) -> Content {
         Content {
             title: self.title.unwrap_or_default(),
@@ -399,6 +425,8 @@ impl ContentBuilder {
             source_path: self.source_path,
             at_uri: self.at_uri,
             aliases: self.aliases.unwrap_or_default(),
+            language: self.language,
+            translations: self.translations.unwrap_or_default(),
         }
     }
 }
@@ -546,6 +574,38 @@ pub fn get_stream_from_filename(path: &Path) -> Option<String> {
     None
 }
 
+/// Detect language from a file in a content subfolder.
+/// Only applies when the file is inside a subfolder AND the filename
+/// starts with a configured language code followed by a hyphen.
+/// Returns the language code if detected.
+pub fn detect_language_from_path(
+    path: &Path,
+    content_dir: &Path,
+    languages: &std::collections::HashMap<String, crate::config::LanguageConfig>,
+) -> Option<String> {
+    if languages.is_empty() {
+        return None;
+    }
+
+    let relative = path.strip_prefix(content_dir).ok()?;
+    let components: Vec<_> = relative.components().collect();
+
+    if components.len() < 2 {
+        return None;
+    }
+
+    let filename_stem = path.file_stem()?.to_str()?;
+
+    for lang_code in languages.keys() {
+        let prefix = format!("{lang_code}-");
+        if filename_stem.starts_with(&prefix) {
+            return Some(lang_code.clone());
+        }
+    }
+
+    None
+}
+
 /// Extract stream from filename pattern: {stream}-{date}-{slug}
 /// Only accepts single word before date (no hyphens allowed in stream name)
 fn extract_stream_from_date_pattern(filename: &str) -> Option<String> {
@@ -648,6 +708,39 @@ pub fn get_aliases(frontmatter: &Frontmatter) -> Vec<String> {
         .iter()
         .filter(|alias| !alias.is_empty())
         .map(|a| a.trim().to_string())
+        .collect()
+}
+
+fn get_language(frontmatter: &Frontmatter) -> Option<String> {
+    frontmatter
+        .get("language")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim_matches('"').to_string())
+}
+
+fn get_frontmatter_translations(frontmatter: &Frontmatter) -> Vec<TranslationRef> {
+    let slugs: Vec<String> = match frontmatter.get("translations") {
+        Some(Value::Array(items)) => items
+            .iter()
+            .filter_map(|v| v.as_str().map(|s| s.trim_matches('"').to_string()))
+            .filter(|s| !s.is_empty())
+            .collect(),
+        Some(Value::String(items)) => items
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+            .collect(),
+        _ => Vec::new(),
+    };
+    slugs
+        .into_iter()
+        .map(|slug| TranslationRef {
+            slug,
+            lang: String::new(),
+            name: String::new(),
+            title: String::new(),
+        })
         .collect()
 }
 

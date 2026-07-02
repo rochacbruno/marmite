@@ -110,6 +110,8 @@ Available in `content.html` when rendering a single post or page:
 | `content.previous` | Object | Previous post in series/stream (null if none) |
 | `content.source_path` | String | Path to source markdown file |
 | `content.comments` | bool | Whether comments are enabled |
+| `content.language` | String | Language code (null if not set or no i18n) |
+| `content.translations` | Array | Translation references (empty if none) |
 
 ## List Page Variables
 

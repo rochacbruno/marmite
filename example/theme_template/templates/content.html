@@ -106,6 +106,17 @@
     </div>
     {% endif %}
 
+    {# Translation links (if content has translations) #}
+    {% if content.translations | length > 0 %}
+    <div class="content-translations">
+        <p><small>Also available in:
+        {% for t in content.translations %}
+          <a href="{{ url_for(path=t.slug ~ '.html') }}" hreflang="{{ t.lang }}">{{ t.name }}</a>{% if not loop.last %}, {% endif %}
+        {% endfor %}
+        </small></p>
+    </div>
+    {% endif %}
+
     {# Table of Contents (if enabled and available) #}
     {% if content.toc %}
     <div class="content-toc">

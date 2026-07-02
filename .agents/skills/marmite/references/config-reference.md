@@ -149,6 +149,25 @@ streams:
 
 Each stream key maps to the `stream` frontmatter value. The `display_name` is shown in navigation and headings.
 
+## Languages
+
+Configure available languages for multilingual sites:
+
+```yaml
+language: pt            # Default/primary language (existing field, defaults to "en")
+languages:
+  pt:
+    name: "Portugues"
+  en:
+    name: "English"
+  es:
+    name: "Espanol"
+```
+
+The `language` field determines which language's content stays on `index.html`. Other languages become their own stream pages (`en.html`, `es.html`). When a stream name matches a configured language code, its display name is automatically set from the language's `name` field.
+
+When `languages` is not set (the default), all i18n features are disabled and existing sites are unaffected.
+
 ## Series
 
 ```yaml

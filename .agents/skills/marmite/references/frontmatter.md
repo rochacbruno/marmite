@@ -227,6 +227,32 @@ Each alias generates a lightweight HTML file (e.g. `old-post-url.html`) with a `
 
 A warning is logged if an alias conflicts with an existing content slug or is defined by more than one content file.
 
+### language
+
+- **Type:** String
+- **Purpose:** Explicitly set the content's language code (e.g., `en`, `pt`)
+
+```yaml
+language: pt
+```
+
+When set, overrides automatic language detection. Used with the `languages` config to enable multilingual features (translation links, hreflang SEO tags). If not set, the language is inferred from the stream name when it matches a configured language code.
+
+### translations
+
+- **Type:** Array of strings (slugs)
+- **Purpose:** Manually link content to its translations in other languages
+
+```yaml
+translations:
+  - en-hello-world
+  - es-hola-mundo
+```
+
+Each entry is the slug of a translated version of this content. Marmite resolves the slug to the actual content, fills in the language code and display name from the `languages` config, and creates bidirectional links (if A lists B, B also gets A). Translation links appear in templates as "Also available in: ..." and as `<link rel="alternate" hreflang="...">` tags.
+
+When using subfolder-based content organization, translations are auto-discovered and this field is not needed.
+
 ### extra
 
 - **Type:** Object (key-value map)

@@ -230,7 +230,14 @@ impl DisplayName {
                 .site
                 .streams
                 .get(name)
-                .map(|config| &config.display_name),
+                .map(|config| &config.display_name)
+                .or_else(|| {
+                    self.site_data
+                        .site
+                        .languages
+                        .get(name)
+                        .map(|config| &config.name)
+                }),
             "series" => self
                 .site_data
                 .site

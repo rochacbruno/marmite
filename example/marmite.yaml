@@ -69,6 +69,15 @@ streams:
   guide:
     display_name: "User Guides"
 
+# Language streams for multilingual content
+# languages:
+#   en:
+#     name: "English"
+#   pt:
+#     name: "Portugues"
+#   es:
+#     name: "Espanol"
+
 # Series display name mappings
 series:
   python-tutorial:
