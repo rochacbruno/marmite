@@ -130,6 +130,7 @@ impl Content {
     /// if the file is a fragment, the markdown content will be modified to include the references
     /// if is a regular content then content will be modified to include the `markdown_header`
     /// and `markdown_footer` and references
+    #[allow(clippy::too_many_lines)]
     pub fn from_markdown(
         path: &Path,
         fragments: Option<&HashMap<String, String>>,

@@ -729,6 +729,7 @@ pub(crate) fn build_site_with_config(
     Ok(site_data)
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn generate(
     config_path: &Arc<std::path::PathBuf>,
     input_folder: &Arc<std::path::PathBuf>,
@@ -1226,7 +1227,7 @@ fn set_next_and_previous_links(site_data: &mut Data) {
     }
 }
 
-#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_wrap, clippy::too_many_lines)]
 pub(crate) fn collect_content(
     content_dir: &std::path::PathBuf,
     site_data: &mut Data,
@@ -1344,7 +1345,15 @@ pub(crate) fn collect_content(
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn discover_translations(site_data: &mut Data, content_dir: &Path) {
+    struct ContentInfo {
+        title: String,
+        lang: String,
+        idx: usize,
+        is_post: bool,
+    }
+
     let default_language = &site_data.site.language;
     let languages = &site_data.site.languages;
 
@@ -1491,16 +1500,15 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
             .collect();
 
         // For each member, build TranslationRef entries for all other members
-        for (idx, is_post, lang, _slug, _title) in &members {
+        for (idx, is_post, lang, member_slug, _title) in &members {
             let mut refs: Vec<TranslationRef> = Vec::new();
             for (_, _, other_lang, other_slug, other_title) in &members {
-                if other_lang == lang && other_slug == _slug {
+                if other_lang == lang && other_slug == member_slug {
                     continue;
                 }
                 let lang_name = languages
                     .get(other_lang.as_str())
-                    .map(|c| c.name.clone())
-                    .unwrap_or_else(|| other_lang.clone());
+                    .map_or_else(|| other_lang.clone(), |c| c.name.clone());
                 refs.push(TranslationRef {
                     lang: other_lang.clone(),
                     name: lang_name,
@@ -1534,12 +1542,6 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
 
     // Pass 4: Resolve frontmatter-based translations (bidirectional)
     // Build a slug->(title, lang, location) index from all content
-    struct ContentInfo {
-        title: String,
-        lang: String,
-        idx: usize,
-        is_post: bool,
-    }
     let mut slug_index: HashMap<String, ContentInfo> = HashMap::new();
     for (i, post) in site_data.posts.iter().enumerate() {
         let lang = post
@@ -1607,8 +1609,7 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
                     };
                     let resolved_name = languages
                         .get(resolved_lang.as_str())
-                        .map(|c| c.name.clone())
-                        .unwrap_or_else(|| resolved_lang.clone());
+                        .map_or_else(|| resolved_lang.clone(), |c| c.name.clone());
                     let resolved_title = if tr.title.is_empty() {
                         target_info.title.clone()
                     } else {
@@ -1631,8 +1632,7 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
                         .unwrap_or_else(|| default_language.clone());
                     let src_lang_name = languages
                         .get(src_lang.as_str())
-                        .map(|c| c.name.clone())
-                        .unwrap_or_else(|| src_lang.clone());
+                        .map_or_else(|| src_lang.clone(), |c| c.name.clone());
                     bidirectional_adds.push((
                         target_info.idx,
                         target_info.is_post,
