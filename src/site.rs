@@ -1139,6 +1139,18 @@ fn collect_content(
                             }
                         }
                     }
+
+                    // Infer language from stream so tag/archive group clones
+                    // carry the language field for same-language filtering
+                    if content.language.is_none() {
+                        if let Some(ref stream) = content.stream {
+                            if site_data.site.languages.contains_key(stream.as_str()) {
+                                content.language = Some(stream.clone());
+                            } else if stream == "index" {
+                                content.language = Some(site_data.site.language.clone());
+                            }
+                        }
+                    }
                 }
                 site_data.push_content(content);
             }

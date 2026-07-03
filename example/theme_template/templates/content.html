@@ -182,10 +182,8 @@
     <section class="related-content">
         <h3>Related "{{ tag }}" content:</h3>
         <ul class="related-list">
-            {% set_global translation_slugs = "" %}
-            {% for t in content.translations %}{% set_global translation_slugs = translation_slugs ~ "," ~ t.slug ~ "," %}{% endfor %}
             {% for item in (related_content | sort(attribute="date") | reverse)[:5] %}
-            {% if item.slug == content.slug or translation_slugs is containing(pat=item.slug) %}{% continue %}{% endif %}
+            {% if item.slug == content.slug or item.language != content.language %}{% continue %}{% endif %}
             <li><a href="{{url_for(path=item.slug ~ '.html')}}">{{item.title}}</a></li>
             {% endfor %}
         </ul>
