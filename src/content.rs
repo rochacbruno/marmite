@@ -980,6 +980,23 @@ fn find_matching_file(
             }
         }
     }
+
+    // Fallback: generic {kind}.{ext} in subfolder media (shared by all files in the subfolder)
+    // e.g., content/language-streams/media/banner.jpg matches for any .md in that subfolder
+    if media_path.is_dir() {
+        if let Some(subfolder_name) = parent_path.file_name().and_then(|n| n.to_str()) {
+            for ext in exts {
+                let generic_filename = format!("{kind}.{ext}");
+                let file_path = media_path.join(&generic_filename);
+                if file_path.exists() {
+                    return Some(format!(
+                        "{media_folder_name}/{subfolder_name}/{generic_filename}"
+                    ));
+                }
+            }
+        }
+    }
+
     None
 }
 
