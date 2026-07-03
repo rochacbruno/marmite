@@ -63,7 +63,31 @@ marmite <folder> --new "Post Title" -e
 
 # Combine all options
 marmite <folder> --new "Tutorial: Getting Started" -t "tutorial,beginner" -e
+
+# In workspace mode, specify the target site
+marmite <workspace> --new "Post Title" --site blog
 ```
+
+### Workspace (Multi-Site)
+
+```bash
+# Build all sites in a workspace (detected by marmite-workspace.yaml)
+marmite <workspace> <output>
+
+# Show URLs from all sites
+marmite <workspace> --show-urls
+
+# List shortcodes from all sites
+marmite <workspace> --shortcodes
+
+# Build and serve with live reload
+marmite <workspace> <output> --serve --watch
+
+# Create content in a specific site
+marmite <workspace> --new "Post Title" --site blog
+```
+
+Workspace mode is activated when `marmite-workspace.yaml` is found in the input folder. Theme commands and `--init-site` are not supported in workspace mode - run them on individual sites.
 
 ### Templates and Themes
 

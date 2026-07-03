@@ -79,6 +79,13 @@ myblog/content/2024-11-26-12-34-27-my-first-post.md
 Pass `-p` to create a page instead of a post.  
 Pass `-e` to immediately open the file on the `$EDITOR`
 
+In workspace mode, use `--site` to specify the target site:
+
+```console
+$ marmite myworkspace --new "My first post" --site blog
+myworkspace/blog/content/2024-11-26-12-34-27-my-first-post.md
+```
+
 
 ## Generate the site
 
@@ -449,6 +456,21 @@ This command is useful for:
 > [!TIP]
 > Use `--show-urls` as a dry run to check how your site will be structured without actually generating any files. The JSON output makes it easy to integrate with scripts and automation tools.
 
+## Workspace - Multi-Site Builds
+
+When pointing marmite at a directory containing a `marmite-workspace.yaml` file, it enters workspace mode and builds all sites defined in the workspace:
+
+```console
+$ marmite myworkspace output -v
+Workspace mode: 2 site(s) detected
+Building site 'blog' -> output
+Building site 'photos' -> output/photos
+```
+
+The default site renders at the output root. Other sites render to subdirectories. See the [Workspace documentation](workspace-multi-site.html) for full details on configuration, cross-site references, and behavior.
+
+Commands that are not supported in workspace mode (theme commands, `--init-site`) will display an error asking you to run them on individual sites.
+
 ## Agent Skills
 
 Marmite ships with an embedded [Agent Skill](https://agentskills.io) that lets AI coding agents build, configure, and manage marmite sites with full context.
@@ -551,6 +573,8 @@ Options:
           Set the new content as a page
   -t <TAGS>
           Set the tags for the new content tags are comma separated
+      --site <SITE>
+          Target site within a workspace
       --name <NAME>
           Site name [default: "Home" or value from config file]
       --tagline <TAGLINE>

@@ -547,6 +547,183 @@ impl BuildInfo {
 }
 
 #[allow(clippy::too_many_lines)]
+pub(crate) fn build_site_with_config(
+    site_config: Marmite,
+    input_folder: &Path,
+    output_folder: &Path,
+    cli_args: &Arc<crate::cli::Cli>,
+    cross_site_data: Option<&crate::workspace::CrossSiteData>,
+) -> Result<Data, Box<dyn std::error::Error>> {
+    let start_time = std::time::Instant::now();
+
+    let config_str = serde_yaml::to_string(&site_config).unwrap_or_default();
+    let config_path = input_folder.join(&cli_args.config);
+    let mut site_data = Data::new(&config_str, &config_path);
+    let content_folder = get_content_folder(&site_data.site, input_folder);
+
+    let build_info_path = output_folder.join("marmite.json");
+    let latest_build_info = get_latest_build_info(&build_info_path)?;
+    if let Some(build_info) = &latest_build_info {
+        site_data.latest_timestamp = Some(build_info.timestamp);
+    }
+    if cli_args.force {
+        site_data.force_render = true;
+    }
+
+    let highlighter = build_code_highlighter(&site_data.site);
+
+    let fragments = collect_content_fragments(&content_folder);
+    collect_content(
+        &content_folder,
+        &mut site_data,
+        &fragments,
+        highlighter.as_deref(),
+    );
+
+    if !site_data.site.languages.is_empty() {
+        discover_translations(&mut site_data, &content_folder);
+    }
+
+    let state_path = input_folder.join(".marmite-atproto-state.json");
+    if state_path.exists() {
+        if let Ok(state_str) = fs::read_to_string(&state_path) {
+            if let Ok(state_json) = serde_json::from_str::<serde_json::Value>(&state_str) {
+                if let Some(posts_obj) = state_json.get("posts").and_then(|p| p.as_object()) {
+                    for post in &mut site_data.posts {
+                        if let Some(entry) = posts_obj.get(&post.slug) {
+                            if let Some(at_uri) = entry.get("at_uri").and_then(|u| u.as_str()) {
+                                post.at_uri = Some(at_uri.to_string());
+                            }
+                        }
+                    }
+                    for page in &mut site_data.pages {
+                        if let Some(entry) = posts_obj.get(&page.slug) {
+                            if let Some(at_uri) = entry.get("at_uri").and_then(|u| u.as_str()) {
+                                page.at_uri = Some(at_uri.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let media_path = content_folder.join(&site_data.site.media_path);
+    site_data.galleries = crate::gallery::process_galleries(
+        &media_path,
+        &site_data.site.gallery_path,
+        site_data.site.gallery_create_thumbnails,
+        site_data.site.gallery_thumb_size,
+    );
+
+    site_data.sort_all();
+    detect_slug_collision(&site_data);
+    collect_back_links(&mut site_data);
+    set_next_and_previous_links(&mut site_data);
+    site_data.collect_all_urls();
+
+    if site_data.site.check_internal_links {
+        let broken = validate_internal_links(&site_data);
+        for (source, target) in &broken {
+            warn!("Broken internal link in \"{source}.html\": \"{target}.html\" does not exist");
+        }
+        if !broken.is_empty() {
+            warn!("Found {} broken internal link(s)", broken.len());
+            if site_data.site.strict_internal_links {
+                error!(
+                    "Build failed due to broken internal links (strict_internal_links is enabled)"
+                );
+                process::exit(1);
+            }
+        }
+    }
+
+    let site_path = site_data.site.site_path.clone();
+    let output_path = output_folder.join(site_path);
+    if let Err(e) = fs::create_dir_all(&output_path) {
+        error!("Unable to create output directory: {e:?}");
+        process::exit(1);
+    }
+
+    let input_folder_arc = Arc::new(input_folder.to_path_buf());
+    let output_folder_arc = Arc::new(output_folder.to_path_buf());
+
+    [
+        "render_templates",
+        "handle_static_artifacts",
+        "generate_search_index",
+        "copy_markdown_sources",
+    ]
+    .par_iter()
+    .for_each(|step| match *step {
+        "render_templates" => {
+            let (tera, shortcode_processor) =
+                initialize_tera(input_folder_arc.as_path(), &site_data);
+            if let Err(e) = render_templates(
+                &content_folder,
+                &site_data,
+                &tera,
+                &output_path,
+                input_folder_arc.as_path(),
+                &fragments,
+                latest_build_info.as_ref(),
+                shortcode_processor.as_ref(),
+                highlighter.as_deref(),
+                cross_site_data,
+            ) {
+                error!("Failed to render templates: {e:?}");
+                process::exit(1);
+            }
+        }
+        "handle_static_artifacts" => {
+            handle_static_artifacts(
+                input_folder_arc.as_path(),
+                &site_data,
+                &output_folder_arc,
+                &content_folder,
+            );
+        }
+        "generate_search_index" => {
+            if site_data.site.enable_search {
+                generate_search_index(&site_data, &output_folder_arc);
+            }
+        }
+        "copy_markdown_sources" if site_data.site.publish_md => {
+            copy_markdown_sources(&site_data, &content_folder, &output_path);
+        }
+        _ => {}
+    });
+
+    let (tera, _) = initialize_tera(input_folder, &site_data);
+    generate_sitemap(&site_data, &tera, &output_path);
+
+    if site_data.site.publish_urls_json {
+        generate_urls_json(&site_data, &output_path);
+    }
+
+    if let Some(atproto) = &site_data.site.atproto {
+        if let Some(pub_uri) = &atproto.publication_uri {
+            let wk_dir = output_path.join(".well-known");
+            if let Err(e) = fs::create_dir_all(&wk_dir) {
+                error!("Failed to create .well-known directory: {e:?}");
+            } else {
+                let wk_file = wk_dir.join("site.standard.publication");
+                if let Err(e) = fs::write(&wk_file, pub_uri) {
+                    error!("Failed to write site.standard.publication verification file: {e:?}");
+                } else {
+                    info!("Generated /.well-known/site.standard.publication verification file");
+                }
+            }
+        }
+    }
+
+    let end_time = start_time.elapsed().as_secs_f64();
+    write_build_info(&output_path, &site_data, input_folder, end_time);
+    debug!("Site generated in {end_time:.2}s");
+    info!("Site generated at: {}/", output_folder.display());
+    Ok(site_data)
+}
+
 pub fn generate(
     config_path: &Arc<std::path::PathBuf>,
     input_folder: &Arc<std::path::PathBuf>,
@@ -700,6 +877,7 @@ pub fn generate(
                         latest_build_info.as_ref(),
                         shortcode_processor.as_ref(),
                         highlighter.as_deref(),
+                        None,
                     ) {
                         error!("Failed to render templates: {e:?}");
                         process::exit(1);
@@ -835,7 +1013,7 @@ pub fn get_content_folder(config: &Marmite, input_folder: &Path) -> std::path::P
 
 /// Collect markdown fragments that will merge into the content markdown before processing
 /// These are static parts of text that will just be merged to the content
-fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
+pub(crate) fn collect_content_fragments(content_dir: &Path) -> HashMap<String, String> {
     let markdown_fragments: HashMap<String, String> =
         ["markdown_header", "markdown_footer", "references"]
             .iter()
@@ -907,7 +1085,7 @@ fn collect_global_fragments(
 }
 
 #[allow(clippy::used_underscore_items)]
-fn collect_back_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
+fn collect_back_links(site_data: &mut Data) {
     let other_contents = site_data
         .posts
         .clone()
@@ -964,7 +1142,7 @@ fn validate_internal_links(site_data: &Data) -> Vec<(String, String)> {
 }
 
 #[allow(clippy::cast_possible_wrap)]
-fn set_next_and_previous_links(site_data: &mut std::sync::MutexGuard<'_, Data>) {
+fn set_next_and_previous_links(site_data: &mut Data) {
     // First, handle series navigation (takes precedence over stream navigation)
     let mut series_posts: HashMap<String, Vec<Content>> = HashMap::new();
     for post in &site_data.posts {
@@ -1044,7 +1222,7 @@ fn set_next_and_previous_links(site_data: &mut std::sync::MutexGuard<'_, Data>) 
 }
 
 #[allow(clippy::cast_possible_wrap)]
-fn collect_content(
+pub(crate) fn collect_content(
     content_dir: &std::path::PathBuf,
     site_data: &mut Data,
     fragments: &HashMap<String, String>,
@@ -1694,6 +1872,7 @@ fn render_templates(
     latest_build_info: Option<&BuildInfo>,
     shortcode_processor: Option<&ShortcodeProcessor>,
     highlighter: Option<&MarmiteHighlighter>,
+    cross_site_data: Option<&crate::workspace::CrossSiteData>,
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
@@ -1753,6 +1932,7 @@ fn render_templates(
         latest_build_info,
         shortcode_processor,
         highlighter,
+        cross_site_data,
     )?;
 
     handle_redirect_aliases(&site_data, output_dir)?;
@@ -2566,12 +2746,7 @@ fn copy_markdown_sources(site_data: &Data, content_folder: &Path, output_path: &
         });
 }
 
-fn write_build_info(
-    output_path: &Path,
-    site_data: &std::sync::MutexGuard<'_, Data>,
-    input_folder: &Path,
-    end_time: f64,
-) {
+fn write_build_info(output_path: &Path, site_data: &Data, input_folder: &Path, end_time: f64) {
     let shortcodes = if site_data.site.enable_shortcodes {
         let mut processor = ShortcodeProcessor::new(site_data.site.shortcode_pattern.as_deref());
         let _ = processor.collect_shortcodes(input_folder);
@@ -3099,7 +3274,7 @@ fn handle_list_page(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn generate_redirect_html(target_url: &str) -> String {
+pub(crate) fn generate_redirect_html(target_url: &str) -> String {
     format!(
         r#"<!DOCTYPE html>
 <html lang="en">
@@ -3176,6 +3351,7 @@ fn handle_content_pages(
     latest_build_info: Option<&BuildInfo>,
     shortcode_processor: Option<&ShortcodeProcessor>,
     highlighter: Option<&MarmiteHighlighter>,
+    cross_site_data: Option<&crate::workspace::CrossSiteData>,
 ) -> Result<(), String> {
     let last_build = site_data.latest_timestamp.unwrap_or(0);
     let force_render = should_force_render(
@@ -3227,6 +3403,7 @@ fn handle_content_pages(
                     shortcode_processor,
                     site_data: Some(site_data),
                     highlighter,
+                    cross_site_data,
                 },
             )
         })
@@ -3546,6 +3723,7 @@ struct PostProcessors<'a> {
     shortcode_processor: Option<&'a ShortcodeProcessor>,
     site_data: Option<&'a Data>,
     highlighter: Option<&'a MarmiteHighlighter>,
+    cross_site_data: Option<&'a crate::workspace::CrossSiteData>,
 }
 
 fn render_html(
@@ -3593,6 +3771,11 @@ fn render_html_with_shortcodes(
     if let Some(data) = processors.site_data {
         debug!("Processing wikilinks for {filename}");
         rendered = fix_wikilinks(&rendered, data);
+    }
+
+    if let Some(cross_site) = processors.cross_site_data {
+        debug!("Resolving cross-site references for {filename}");
+        rendered = crate::workspace::resolve_cross_site_refs(&rendered, cross_site);
     }
 
     let output_file = output_dir.join(filename);

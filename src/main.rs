@@ -26,6 +26,7 @@ mod templates;
 mod tera_filter;
 mod tera_functions;
 mod theme_manager;
+mod workspace;
 
 fn setup_logging(verbose: u8, debug: bool) -> Result<(), SetLoggerError> {
     let env = Env::default().default_filter_or(match verbose {
@@ -134,6 +135,17 @@ fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
         return Err(format!("Input folder does not exist: {input_folder:?}").into());
     }
 
+    if let Some(ws_config_path) = workspace::detect_workspace(&input_folder) {
+        return handle_workspace_mode(
+            &ws_config_path,
+            &input_folder,
+            &cloned_args,
+            serve,
+            watch,
+            bind_address,
+        );
+    }
+
     if let Some(title) = args.create.new {
         content::new(&input_folder, &title, &cloned_args, &config_path);
         return Ok(());
@@ -200,6 +212,67 @@ fn main() {
         error!("{e}");
         std::process::exit(1);
     }
+}
+
+fn handle_workspace_mode(
+    ws_config_path: &Path,
+    input_folder: &Arc<PathBuf>,
+    cli_args: &Arc<cli::Cli>,
+    serve: bool,
+    watch: bool,
+    bind_address: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let ws_config = workspace::load_workspace_config(ws_config_path)?;
+
+    if cli_args.init_site
+        || cli_args.init_templates
+        || cli_args.start_theme.is_some()
+        || cli_args.set_theme.is_some()
+        || cli_args.generate_config
+    {
+        return Err(
+            "This command is not supported in workspace mode. Run it on individual sites instead."
+                .into(),
+        );
+    }
+
+    if let Some(title) = &cli_args.create.new {
+        let site_name =
+            cli_args.create.site.as_deref().ok_or(
+                "In workspace mode, --new requires --site <name> to specify the target site.",
+            )?;
+        let site_input = Arc::new(input_folder.join(site_name));
+        if !site_input.exists() {
+            return Err(format!("Site directory does not exist: {site_input:?}").into());
+        }
+        let config_path = Arc::new(site_input.join(&cli_args.config));
+        content::new(&site_input, title, cli_args, &config_path);
+        return Ok(());
+    }
+
+    if cli_args.shortcodes {
+        return workspace::show_shortcodes_workspace(&ws_config, input_folder, cli_args);
+    }
+
+    if cli_args.show_urls {
+        workspace::show_urls_workspace(&ws_config, input_folder, cli_args);
+        return Ok(());
+    }
+
+    let output_folder = cli_args
+        .output_folder
+        .clone()
+        .unwrap_or_else(|| input_folder.join("site"));
+
+    workspace::run_workspace(
+        ws_config_path,
+        input_folder,
+        Some(output_folder),
+        watch,
+        serve,
+        bind_address,
+        cli_args,
+    )
 }
 
 /// Handle the --shortcodes command to display available shortcodes

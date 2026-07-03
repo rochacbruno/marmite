@@ -145,6 +145,9 @@ pub struct Create {
     /// tags are comma separated
     #[arg(short, requires = "new")]
     pub tags: Option<String>,
+    /// Target site within a workspace
+    #[arg(long, requires = "new")]
+    pub site: Option<String>,
 }
 
 /// Gather configuration values from CLI arguments

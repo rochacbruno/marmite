@@ -76,6 +76,7 @@ $ marmite myblog --serve
 - [Link Checker with Lychee](https://marmite.blog/how-to-run-a-link-checker-on-your-marmite-website.html): Checking for broken links
 - [Enabling Comments](https://marmite.blog/enabling-comments.html): Adding comment systems to your blog
 - [Draft Posts Guide](https://marmite.blog/how-to-use-draft-posts-in-marmite.html): Working with draft content and publishing workflow
+- [Workspace Multi-Site](https://marmite.blog/workspace-multi-site.html): Build and manage multiple sites from a single workspace with cross-site references, shared config, and unified builds
 - [AT Protocol standard.site](https://marmite.blog/atproto-standard-site.html): Complete guide to publishing your Marmite blog posts to the decentralized AT Protocol
 - [Redirect Aliases](https://marmite.blog/redirect-aliases.html): Generate redirect pages for old URLs when content slugs change
 - [Internal Link Validation](https://marmite.blog/internal-link-validation.html): Build-time validation of internal links with warning and strict failure modes
@@ -131,6 +132,7 @@ $ marmite myblog --serve
 - **Redirect Aliases**: Frontmatter `aliases` field generates redirect pages at old URLs when content slugs change, with meta refresh, canonical links, and conflict detection
 - **Internal Link Validation**: Build-time checking of internal links with configurable warning or strict failure mode via `check_internal_links` and `strict_internal_links` options
 - **Language Streams (i18n)**: Multilingual content support via language streams. Configure `languages` in marmite.yaml, organize translations in subfolders for auto-discovery, or link manually via frontmatter `translations` field. Each language gets its own stream page and RSS feed. Translation links and hreflang SEO tags are added automatically. Flat HTML output preserved.
+- **Workspace Multi-Site**: Build multiple independent sites from a single workspace directory. A `marmite-workspace.yaml` defines sites, shared defaults, and cross-site reference rules. The default site renders at the root, others in subdirectories. Cross-site links use `site::path` syntax (e.g., `photos::gallery.html` becomes `/photos/gallery.html`). Config inheritance lets workspace defaults flow to all sites with per-site overrides. Watch mode and live reload cover all sites. `--show-urls` and `--shortcodes` aggregate across sites. `--new --site name` creates content in a specific site.
 
 ## Agents
 

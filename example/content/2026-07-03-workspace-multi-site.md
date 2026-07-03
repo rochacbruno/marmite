@@ -1,0 +1,201 @@
+---
+title: Workspace - Multi-Site Support
+description: Build and manage multiple marmite sites from a single workspace with cross-site references, shared configuration, and unified builds.
+tags: [docs, workspace, multi-site, features]
+date: 2026-07-03 15:00:00
+---
+
+Marmite now supports **workspaces** - a way to manage multiple independent sites from a single project directory and build them all with one command.
+
+## Project Structure
+
+A workspace is a directory containing multiple marmite sites, identified by a `marmite-workspace.yaml` file at the root:
+
+```
+myproject/
+  blog/
+    content/
+    marmite.yaml
+  photos/
+    content/
+    marmite.yaml
+  marmite-workspace.yaml
+```
+
+Each subfolder (`blog/`, `photos/`) is a regular marmite site that can also be built independently with `marmite myproject/blog output`.
+
+## Workspace Configuration
+
+Create a `marmite-workspace.yaml` at the project root:
+
+```yaml
+# List of sites in build order (required)
+sites:
+  - name: blog
+  - name: photos
+
+# Which site serves at "/" (default: first in list)
+default_site: blog
+
+# If true, root "/" gets a redirect instead of the default site content
+redirect: false
+
+# Shared configuration defaults inherited by all sites
+defaults:
+  language: en
+  pagination: 10
+  enable_search: true
+
+# Separator for cross-site references (default: "::")
+separator: "::"
+```
+
+### Site Entry Options
+
+Each entry in `sites` accepts:
+
+- `name` (required) - the directory name
+- `output_path` (optional) - custom output subdirectory name, defaults to the directory name
+
+```yaml
+sites:
+  - name: blog
+    output_path: b    # renders to output/b/ instead of output/blog/
+  - name: photos
+```
+
+## Building a Workspace
+
+```console
+$ marmite myproject output -v
+Workspace mode: 2 site(s) detected
+Building site 'blog' -> output
+Building site 'photos' -> output/photos
+Workspace generated at: output/
+```
+
+The default site renders directly at the output root. Other sites render to subdirectories.
+
+## Root Site Behavior
+
+By default, the first site (or the one specified by `default_site`) renders at the root of the output directory. Other sites render as subdirectories.
+
+With `redirect: true`, all sites render to their own subdirectories and the root `index.html` is a meta-refresh redirect to the default site:
+
+```yaml
+default_site: blog
+redirect: true
+```
+
+This generates `output/blog/`, `output/photos/`, and an `output/index.html` that redirects to `/blog/`.
+
+## Configuration Inheritance
+
+The `defaults` section in `marmite-workspace.yaml` provides base configuration values for all sites. Each site's own `marmite.yaml` overrides these defaults. Fields not specified in the site config inherit from the workspace defaults.
+
+```yaml
+# marmite-workspace.yaml
+defaults:
+  language: en
+  pagination: 10
+  enable_search: true
+
+# blog/marmite.yaml - overrides name but inherits everything else
+name: My Blog
+tagline: A personal blog
+```
+
+CLI-passed configuration flags (like `--pagination 5`) apply only to the workspace-level defaults, not to values explicitly set in individual site configs.
+
+## Cross-Site References
+
+Sites in a workspace can link to each other using the `::` separator (configurable via `separator` in the workspace config):
+
+### Links
+
+```markdown
+Check out the [photo gallery](photos::gallery.html).
+```
+
+This renders as a link to `/photos/gallery.html`.
+
+### Media
+
+```markdown
+![Banner](photos::media/sunset.jpg)
+```
+
+This renders as an image source pointing to `/photos/media/sunset.jpg`.
+
+## CLI Commands in Workspace Mode
+
+Most commands work with workspaces:
+
+### Creating Content
+
+Use `--site` to specify which site to create content in:
+
+```console
+$ marmite myproject --new "My Post" --site blog
+```
+
+Without `--site`, workspace mode will prompt you to specify the target site.
+
+### Show URLs
+
+Aggregates URLs from all sites:
+
+```console
+$ marmite myproject --show-urls
+```
+
+Output is grouped by site name with prefixed paths.
+
+### Shortcodes
+
+Lists shortcodes from all sites:
+
+```console
+$ marmite myproject --shortcodes
+```
+
+### Unsupported Commands
+
+Theme commands (`--init-templates`, `--start-theme`, `--set-theme`) and `--init-site` are not supported in workspace mode. Run them on individual sites instead:
+
+```console
+$ marmite myproject/blog --set-theme my-theme
+```
+
+## Watch Mode and Live Reload
+
+Workspace watch mode monitors all site directories and the workspace config file. Any change triggers a full workspace rebuild with live reload:
+
+```console
+$ marmite myproject output --serve --watch
+```
+
+The built-in server serves the combined output directory, so `localhost:8000/` shows the default site and `localhost:8000/photos/` shows the photos site.
+
+## Output Structure
+
+A `sites.json` file is generated at the output root listing all sites:
+
+```json
+[
+  {"name": "blog", "path": "/blog/"},
+  {"name": "photos", "path": "/photos/"}
+]
+```
+
+Each site gets its own complete output with static assets, media, feeds, sitemap, and search index.
+
+## Independent Site Builds
+
+Each subfolder remains a fully independent marmite site. You can always build a single site directly:
+
+```console
+$ marmite myproject/blog output/blog
+```
+
+The workspace feature is purely additive - existing single-site functionality is completely unaffected.
