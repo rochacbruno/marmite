@@ -70,13 +70,15 @@ streams:
     display_name: "User Guides"
 
 # Language streams for multilingual content
-# languages:
-#   en:
-#     name: "English"
-#   pt:
-#     name: "Portugues"
-#   es:
-#     name: "Espanol"
+languages:
+  en:
+    name: "English"
+  pt:
+    name: "Portugues"
+  es:
+    name: "Espanol"
+  it:
+    name: "Italiano"
 
 # Series display name mappings
 series:
