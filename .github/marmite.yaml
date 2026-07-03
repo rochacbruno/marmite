@@ -8,13 +8,13 @@ toc: true
 json_feed: true
 sitemap: true
 menu:
-  - ['Contributors', 'contributors.html']
+  - ["Contributors", "contributors.html"]
   - ["Showcase", "showcase.html"]
-  - ['Tags', 'tags.html']
-  - ['Archive', 'archive.html']
-  - ['Authors', 'authors.html']
+  - ["Tags", "tags.html"]
+  - ["Archive", "archive.html"]
+  - ["Authors", "authors.html"]
   # - ['Streams', 'streams.html']
-  - ['Github', 'https://github.com/rochacbruno/marmite/']
+  - ["Github", "https://github.com/rochacbruno/marmite/"]
 card_image: ./media/og_image.jpg
 # banner_image: media/og_image.jpg
 default_date_format: "%A, %d %B %Y"
@@ -77,3 +77,14 @@ series:
   python-tutorial:
     display_name: "Python Tutorial"
     description: "A comprehensive Python programming tutorial series"
+
+# Language streams for multilingual content
+languages:
+  en:
+    name: "English"
+  pt:
+    name: "Portugues"
+  es:
+    name: "Espanol"
+  it:
+    name: "Italiano"

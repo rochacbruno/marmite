@@ -19,6 +19,14 @@
     {% endif %}
     <!-- Custom CSS - Add custom.css in your site root to override theme styles -->
     <link rel="stylesheet" type="text/css" href="{{url_for(path='static/custom.css')}}">
+    {% if content is defined and content.translations | length > 0 %}
+    {% for t in content.translations %}
+    <link rel="alternate" hreflang="{{ t.lang }}" href="{{ url_for(path=t.slug ~ '.html', abs=true) }}">
+    {% endfor %}
+    {% if content.language %}
+    <link rel="alternate" hreflang="{{ content.language }}" href="{{ url_for(path=content.slug ~ '.html', abs=true) }}">
+    {% endif %}
+    {% endif %}
     {%- endblock %}
 
     <!-- SEO and OpenGraph Meta Tags -->

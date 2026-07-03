@@ -88,6 +88,14 @@ impl GroupedContent {
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize, Default)]
+pub struct TranslationRef {
+    pub lang: String,
+    pub name: String,
+    pub slug: String,
+    pub title: String,
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize, Default)]
 pub struct Content {
     pub title: String,
     pub description: Option<String>,
@@ -112,6 +120,8 @@ pub struct Content {
     pub source_path: Option<std::path::PathBuf>,
     pub at_uri: Option<String>,
     pub aliases: Vec<String>,
+    pub language: Option<String>,
+    pub translations: Vec<TranslationRef>,
 }
 
 impl Content {
@@ -214,6 +224,8 @@ impl Content {
 
         let comments = get_comments(&frontmatter);
         let aliases = get_aliases(&frontmatter);
+        let language = get_language(&frontmatter);
+        let frontmatter_translations = get_frontmatter_translations(&frontmatter);
         let content = Content {
             title,
             description,
@@ -238,6 +250,8 @@ impl Content {
             source_path: Some(path.to_path_buf()),
             at_uri: None,
             aliases,
+            language,
+            translations: frontmatter_translations,
         };
         Ok(content)
     }
@@ -266,6 +280,8 @@ pub struct ContentBuilder {
     source_path: Option<std::path::PathBuf>,
     at_uri: Option<String>,
     aliases: Option<Vec<String>>,
+    language: Option<String>,
+    translations: Option<Vec<TranslationRef>>,
 }
 
 #[allow(dead_code)]
@@ -374,6 +390,16 @@ impl ContentBuilder {
         self
     }
 
+    pub fn language(mut self, language: String) -> Self {
+        self.language = Some(language);
+        self
+    }
+
+    pub fn translations(mut self, translations: Vec<TranslationRef>) -> Self {
+        self.translations = Some(translations);
+        self
+    }
+
     pub fn build(self) -> Content {
         Content {
             title: self.title.unwrap_or_default(),
@@ -399,6 +425,8 @@ impl ContentBuilder {
             source_path: self.source_path,
             at_uri: self.at_uri,
             aliases: self.aliases.unwrap_or_default(),
+            language: self.language,
+            translations: self.translations.unwrap_or_default(),
         }
     }
 }
@@ -546,6 +574,38 @@ pub fn get_stream_from_filename(path: &Path) -> Option<String> {
     None
 }
 
+/// Detect language from a file in a content subfolder.
+/// Only applies when the file is inside a subfolder AND the filename
+/// starts with a configured language code followed by a hyphen.
+/// Returns the language code if detected.
+pub fn detect_language_from_path(
+    path: &Path,
+    content_dir: &Path,
+    languages: &std::collections::HashMap<String, crate::config::LanguageConfig>,
+) -> Option<String> {
+    if languages.is_empty() {
+        return None;
+    }
+
+    let relative = path.strip_prefix(content_dir).ok()?;
+    let components: Vec<_> = relative.components().collect();
+
+    if components.len() < 2 {
+        return None;
+    }
+
+    let filename_stem = path.file_stem()?.to_str()?;
+
+    for lang_code in languages.keys() {
+        let prefix = format!("{lang_code}-");
+        if filename_stem.starts_with(&prefix) {
+            return Some(lang_code.clone());
+        }
+    }
+
+    None
+}
+
 /// Extract stream from filename pattern: {stream}-{date}-{slug}
 /// Only accepts single word before date (no hyphens allowed in stream name)
 fn extract_stream_from_date_pattern(filename: &str) -> Option<String> {
@@ -651,6 +711,39 @@ pub fn get_aliases(frontmatter: &Frontmatter) -> Vec<String> {
         .collect()
 }
 
+fn get_language(frontmatter: &Frontmatter) -> Option<String> {
+    frontmatter
+        .get("language")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim_matches('"').to_string())
+}
+
+fn get_frontmatter_translations(frontmatter: &Frontmatter) -> Vec<TranslationRef> {
+    let slugs: Vec<String> = match frontmatter.get("translations") {
+        Some(Value::Array(items)) => items
+            .iter()
+            .filter_map(|v| v.as_str().map(|s| s.trim_matches('"').to_string()))
+            .filter(|s| !s.is_empty())
+            .collect(),
+        Some(Value::String(items)) => items
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(String::from)
+            .collect(),
+        _ => Vec::new(),
+    };
+    slugs
+        .into_iter()
+        .map(|slug| TranslationRef {
+            slug,
+            lang: String::new(),
+            name: String::new(),
+            title: String::new(),
+        })
+        .collect()
+}
+
 /// Tries to get `date` from the front-matter metadata, else from filename
 /// Input examples:
 ///   frontmatter = Frontmatter {date: Value("2024-10-10")}
@@ -702,6 +795,7 @@ fn try_to_parse_date(input: &str) -> Result<NaiveDateTime, chrono::ParseError> {
 
 /// Use regex to extract date from filename `2024-01-01-myfile.md` or `2024-01-01-15-30-myfile.md`
 /// Also handles stream prefixes like `news-2024-01-15-site-update.md`
+/// Falls back to extracting date from parent directory name (e.g., `2024-01-01-my-post/`)
 fn extract_date_from_filename(path: &Path) -> Option<NaiveDateTime> {
     if let Some(filename) = path.file_stem().and_then(|stem| stem.to_str()) {
         // First try direct date parsing (existing behavior for backward compatibility)
@@ -720,6 +814,18 @@ fn extract_date_from_filename(path: &Path) -> Option<NaiveDateTime> {
             }
         }
     }
+
+    // Fallback: try extracting date from parent directory name
+    if let Some(parent_name) = path
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str())
+    {
+        if let Ok(date) = try_to_parse_date(parent_name) {
+            return Some(date);
+        }
+    }
+
     None
 }
 
@@ -851,6 +957,19 @@ fn find_matching_file(
                 return Some(image_filename.clone());
             }
         }
+        // Content subfolder media: {parent}/{slug}/media/{kind}.{ext}
+        // e.g., content/language-streams/media/banner.png
+        let content_subfolder_media = parent_path.join(slug).join(media_folder_name);
+        if content_subfolder_media.is_dir() {
+            for subfolder_filename in [format!("{kind}.{ext}"), format!("{slug}.{ext}")] {
+                let file_path = content_subfolder_media.join(&subfolder_filename);
+                if file_path.exists() {
+                    return Some(format!("{media_folder_name}/{slug}/{subfolder_filename}"));
+                }
+            }
+        }
+        // Global media subfolder: {parent}/media/{slug}/{kind}.{ext}
+        // e.g., content/media/language-streams/banner.png
         let slug_subfolder = media_path.join(slug);
         if slug_subfolder.is_dir() {
             for subfolder_filename in [format!("{kind}.{ext}"), format!("{slug}.{ext}")] {
@@ -861,6 +980,23 @@ fn find_matching_file(
             }
         }
     }
+
+    // Fallback: generic {kind}.{ext} in subfolder media (shared by all files in the subfolder)
+    // e.g., content/language-streams/media/banner.jpg matches for any .md in that subfolder
+    if media_path.is_dir() {
+        if let Some(subfolder_name) = parent_path.file_name().and_then(|n| n.to_str()) {
+            for ext in exts {
+                let generic_filename = format!("{kind}.{ext}");
+                let file_path = media_path.join(&generic_filename);
+                if file_path.exists() {
+                    return Some(format!(
+                        "{media_folder_name}/{subfolder_name}/{generic_filename}"
+                    ));
+                }
+            }
+        }
+    }
+
     None
 }
 

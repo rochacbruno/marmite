@@ -312,7 +312,20 @@ content/
   2024-01-15-my-post.md
 ```
 
-Marmite checks `media/{slug}/banner.{ext}` and `media/{slug}/card.{ext}` for automatic image discovery. Flat files (`media/{slug}.banner.{ext}`) take precedence over subfolder files for backward compatibility.
+Media can also live inside content subfolders, alongside the markdown files:
+
+```
+content/
+  my-post/
+    my-post.md
+    pt-meu-post.md     # Translation inherits banner.jpg
+    media/
+      banner.jpg       # Shared by all files in the subfolder
+```
+
+Content subfolder media (`content/{slug}/media/`) takes precedence over global media (`content/media/{slug}/`). A generic `banner.{ext}` or `card.{ext}` without a slug prefix is shared by all `.md` files in the subfolder, so translations automatically inherit the base content's images.
+
+Flat files (`media/{slug}.banner.{ext}`) take precedence over subfolder files for backward compatibility.
 
 #### The `@/` shorthand
 
@@ -503,6 +516,72 @@ Marmite generates several discovery mechanisms automatically:
 | `/index.json` | Main JSON feed (when enabled) |
 
 Per-taxonomy feeds: `/tag-{name}.rss`, `/author-{name}.rss`, `/{stream}.rss`, `/serie-{name}.rss`.
+
+## Multilingual Content (Language Streams)
+
+Configure available languages in `marmite.yaml`:
+
+```yaml
+language: pt
+languages:
+  pt:
+    name: "Portugues"
+  en:
+    name: "English"
+```
+
+### Subfolder auto-discovery
+
+Group translations in subfolders. Files prefixed with a configured language code are auto-detected:
+
+```
+content/hello/
+  hello.md              # Default language, slug: hello, stream: index
+  pt-ola-mundo.md       # Portuguese, slug: pt-ola-mundo, stream: pt
+  es-hola-mundo.md      # Spanish, slug: es-hola-mundo, stream: es
+```
+
+The subfolder can also have a date prefix (e.g., `content/2026-07-02-hello/`) so files inside inherit the date without needing it in frontmatter.
+
+Subfolder names must match the original post's resolved slug (not the filename) to be automatically linked.
+
+### Mixed flat + subfolder
+
+Add translations to an existing flat site without moving the original file:
+
+```
+content/
+  hello.md              # Existing file, slug: hello
+  hello/
+    pt-ola.md           # Translation, auto-linked to hello
+```
+
+### Stream markers
+
+Use existing stream markers or frontmatter `stream` field. Manual `translations` frontmatter needed:
+
+```
+content/
+  hello.md              # translations: [pt-ola]
+  pt-S-ola.md           # stream: pt via -S- pattern
+```
+
+### Frontmatter translation link
+
+Set `language` and `translations` in frontmatter:
+
+```yaml
+language: pt
+translations:
+  - hello
+```
+
+When `language` is set without `stream`, the post is automatically assigned to the language's stream. An explicit `stream` always takes precedence.
+
+### Output
+
+All output stays flat: `hello.html`, `pt-ola-mundo.html`, `pt.html` (stream listing).
+Translation links and hreflang tags are added automatically to content pages.
 
 ## Best Practices
 

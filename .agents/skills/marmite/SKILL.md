@@ -199,6 +199,19 @@ streams:
     display_name: "Tutorials"
 ```
 
+**Language Streams** - multilingual content:
+```yaml
+language: en
+languages:
+  en:
+    name: "English"
+  pt:
+    name: "Portugues"
+```
+Organize translations in subfolders for auto-discovery, or link manually via `language` and `translations` frontmatter fields. Each language gets its own stream page and RSS feed. Translation links and hreflang SEO tags are added automatically.
+
+See `references/content-organization.md` for all content organization modes.
+
 **Series** - multi-part ordered content:
 ```yaml
 series: python-tutorial
@@ -480,16 +493,32 @@ content/
   2024-06-15-my-post.md
 ```
 
+Media can also live inside content subfolders, alongside the markdown files:
+
+```
+content/
+  my-post/
+    my-post.md
+    pt-meu-post.md                  # Translation
+    media/
+      banner.jpg                    # Shared by all files in the subfolder
+      card.png
+```
+
+Content subfolder media (`content/{slug}/media/`) is copied to `output/media/{slug}/` and takes precedence over global media (`content/media/{slug}/`).
+
 ### Automatic Banner and Card Discovery
 
 Marmite looks for banner and card images in this order:
 
 1. Explicit `banner_image` / `card_image` in frontmatter (always wins)
 2. Flat file: `media/{slug}.banner.{ext}` or `media/{slug}.{ext}`
-3. Subfolder: `media/{slug}/banner.{ext}` or `media/{slug}/card.{ext}`
-4. First `<img>` in the rendered HTML (card image fallback)
+3. Content subfolder media: `content/{slug}/media/banner.{ext}`
+4. Global media subfolder: `content/media/{slug}/banner.{ext}`
+5. Generic subfolder media: `content/{subfolder}/media/banner.{ext}` (shared by all files in the subfolder)
+6. First `<img>` in the rendered HTML (card image fallback)
 
-Flat files take precedence over subfolder files, so existing sites are unaffected by the subfolder feature.
+Flat files take precedence over subfolder files, so existing sites are unaffected. A generic `banner.jpg` in a content subfolder's media directory is inherited by all `.md` files in that subfolder (useful for translations).
 
 ### The `@/` Shorthand
 

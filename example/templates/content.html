@@ -71,6 +71,15 @@
     <p><small>Published as part of '<a href="{{ url_for(path='series-' ~ content.series ~ '.html') }}">{{ series_display_name(series=content.series) }}</a>' series.</small></p>
   </div>
   {% endif %}
+  {% if content.translations | length > 0 %}
+  <div class="content-translations">
+    <p><small>Also available in:
+    {% for t in content.translations %}
+      <a href="{{ url_for(path=t.slug ~ '.html') }}" hreflang="{{ t.lang }}">{{ t.name }}</a>{% if not loop.last %}, {% endif %}
+    {% endfor %}
+    </small></p>
+  </div>
+  {% endif %}
   {% if content.toc %}
   <div class="content-toc">
     <a href="#" id="toc"></a>
@@ -137,7 +146,7 @@
     Related {{tag}} content
     <ul>
       {% for item in (related_content | sort(attribute="date") | reverse)[:5] %}
-      {% if item.slug == content.slug or item in content.back_links %}
+      {% if item.slug == content.slug or item in content.back_links or item.language != content.language %}
       {% continue %}
       {% endif %}
       <li><a href="{{url_for(path=item.slug ~ '.html')}}">{{item.title}}</a></li>

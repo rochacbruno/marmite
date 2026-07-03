@@ -245,6 +245,9 @@ pub struct Marmite {
     pub streams: HashMap<String, StreamConfig>,
 
     #[serde(default)]
+    pub languages: HashMap<String, LanguageConfig>,
+
+    #[serde(default)]
     pub series: HashMap<String, SeriesConfig>,
 
     #[serde(default)]
@@ -508,6 +511,11 @@ pub struct StreamConfig {
 pub struct SeriesConfig {
     pub display_name: String,
     pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+pub struct LanguageConfig {
+    pub name: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]

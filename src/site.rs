@@ -1,5 +1,8 @@
 use crate::config::{Author, Marmite};
-use crate::content::{check_for_duplicate_slugs, Content, ContentBuilder, GroupedContent, Kind};
+use crate::content::{
+    check_for_duplicate_slugs, detect_language_from_path, Content, ContentBuilder, GroupedContent,
+    Kind, TranslationRef,
+};
 use crate::embedded::{
     collect_ignore_missing_includes, generate_static, preprocess_template, Templates,
     EMBEDDED_STATIC,
@@ -604,6 +607,10 @@ pub fn generate(
                 highlighter.as_deref(),
             );
 
+            if !site_data.site.languages.is_empty() {
+                discover_translations(&mut site_data, &content_folder);
+            }
+
             // Load atproto state to populate at_uri on matching posts/pages
             let state_path = moved_input_folder.join(".marmite-atproto-state.json");
             if state_path.exists() {
@@ -1099,12 +1106,403 @@ fn collect_content(
         .collect::<Vec<_>>();
     for content in contents {
         match content {
-            Ok(content) => {
+            Ok(mut content) => {
+                if !site_data.site.languages.is_empty() {
+                    if let Some(lang) = detect_language_from_path(
+                        content.source_path.as_deref().unwrap_or(Path::new("")),
+                        content_dir,
+                        &site_data.site.languages,
+                    ) {
+                        if content.stream.is_some() {
+                            content.stream = Some(lang.clone());
+                        }
+                        if content.language.is_none() {
+                            content.language = Some(lang.clone());
+                        }
+                        let prefix = format!("{lang}-");
+                        if !content.slug.starts_with(&prefix) {
+                            content.slug = format!("{lang}-{}", content.slug);
+                        }
+                    }
+
+                    // language frontmatter implies stream when no explicit stream was set
+                    // and the language is not the site default
+                    if let Some(ref lang) = content.language {
+                        if site_data.site.languages.contains_key(lang.as_str())
+                            && content.stream.as_deref() == Some("index")
+                            && *lang != site_data.site.language
+                        {
+                            content.stream = Some(lang.clone());
+                            let prefix = format!("{lang}-");
+                            if !content.slug.starts_with(&prefix) {
+                                content.slug = format!("{lang}-{}", content.slug);
+                            }
+                        }
+                    }
+
+                    // Infer language from stream so tag/archive group clones
+                    // carry the language field for same-language filtering
+                    if content.language.is_none() {
+                        if let Some(ref stream) = content.stream {
+                            if site_data.site.languages.contains_key(stream.as_str()) {
+                                content.language = Some(stream.clone());
+                            } else if stream == "index" {
+                                content.language = Some(site_data.site.language.clone());
+                            }
+                        }
+                    }
+                }
                 site_data.push_content(content);
             }
             Err(e) => {
                 error!("Failed to process content: {e:?}");
             }
+        }
+    }
+}
+
+fn discover_translations(site_data: &mut Data, content_dir: &Path) {
+    let default_language = &site_data.site.language;
+    let languages = &site_data.site.languages;
+
+    // Pass 1: Infer language from stream for posts
+    for post in &mut site_data.posts {
+        if post.language.is_none() {
+            if let Some(ref stream) = post.stream {
+                if languages.contains_key(stream.as_str()) {
+                    post.language = Some(stream.clone());
+                } else if stream == "index" {
+                    post.language = Some(default_language.clone());
+                }
+            }
+        }
+    }
+
+    // Infer language for pages from filename patterns (pages don't have streams)
+    for page in &mut site_data.pages {
+        if page.language.is_none() {
+            if let Some(ref source_path) = page.source_path {
+                if let Some(filename) = source_path.file_stem().and_then(|s| s.to_str()) {
+                    for lang_code in languages.keys() {
+                        let prefix = format!("{lang_code}-");
+                        if filename.starts_with(&prefix) {
+                            page.language = Some(lang_code.clone());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Pass 2: Build translation groups from subfolders
+    // Group key = subfolder name relative to content_dir
+    let mut subfolder_groups: HashMap<String, Vec<(usize, bool)>> = HashMap::new(); // group -> [(index, is_post)]
+
+    for (i, post) in site_data.posts.iter().enumerate() {
+        if let Some(ref source_path) = post.source_path {
+            if let Ok(relative) = source_path.strip_prefix(content_dir) {
+                let components: Vec<_> = relative.components().collect();
+                if components.len() >= 2 {
+                    if let Some(group_name) = components[0].as_os_str().to_str() {
+                        subfolder_groups
+                            .entry(group_name.to_string())
+                            .or_default()
+                            .push((i, true));
+                    }
+                }
+            }
+        }
+    }
+
+    for (i, page) in site_data.pages.iter().enumerate() {
+        if let Some(ref source_path) = page.source_path {
+            if let Ok(relative) = source_path.strip_prefix(content_dir) {
+                let components: Vec<_> = relative.components().collect();
+                if components.len() >= 2 {
+                    if let Some(group_name) = components[0].as_os_str().to_str() {
+                        subfolder_groups
+                            .entry(group_name.to_string())
+                            .or_default()
+                            .push((i, false));
+                    }
+                }
+            }
+        }
+    }
+
+    // Check for mixed flat+subfolder case: flat file slugs matching subfolder names
+    for (i, post) in site_data.posts.iter().enumerate() {
+        if let Some(ref source_path) = post.source_path {
+            if let Ok(relative) = source_path.strip_prefix(content_dir) {
+                let components: Vec<_> = relative.components().collect();
+                // Flat file (1 component) whose slug matches a subfolder group name
+                if components.len() == 1 && subfolder_groups.contains_key(&post.slug) {
+                    let group = subfolder_groups.get_mut(&post.slug).unwrap();
+                    if !group.iter().any(|&(idx, is_post)| is_post && idx == i) {
+                        group.push((i, true));
+                    }
+                }
+            }
+        }
+    }
+
+    for (i, page) in site_data.pages.iter().enumerate() {
+        if let Some(ref source_path) = page.source_path {
+            if let Ok(relative) = source_path.strip_prefix(content_dir) {
+                let components: Vec<_> = relative.components().collect();
+                if components.len() == 1 && subfolder_groups.contains_key(&page.slug) {
+                    let group = subfolder_groups.get_mut(&page.slug).unwrap();
+                    if !group.iter().any(|&(idx, is_post)| !is_post && idx == i) {
+                        group.push((i, false));
+                    }
+                }
+            }
+        }
+    }
+
+    // Set default language for base content in subfolder groups
+    for group in subfolder_groups.values() {
+        for &(idx, is_post) in group {
+            let content = if is_post {
+                &mut site_data.posts[idx]
+            } else {
+                &mut site_data.pages[idx]
+            };
+            if content.language.is_none() {
+                content.language = Some(default_language.clone());
+            }
+        }
+    }
+
+    // Pass 3: Cross-link translations within each subfolder group
+    // First collect all the info we need (to avoid borrow issues)
+    let mut translation_links: Vec<(usize, bool, Vec<TranslationRef>)> = Vec::new();
+
+    for group in subfolder_groups.values() {
+        if group.len() < 2 {
+            continue;
+        }
+
+        // Collect info about each member of the group
+        let members: Vec<(usize, bool, String, String, String)> = group
+            .iter()
+            .map(|&(idx, is_post)| {
+                let content = if is_post {
+                    &site_data.posts[idx]
+                } else {
+                    &site_data.pages[idx]
+                };
+                let lang = content
+                    .language
+                    .clone()
+                    .unwrap_or_else(|| default_language.clone());
+                (
+                    idx,
+                    is_post,
+                    lang,
+                    content.slug.clone(),
+                    content.title.clone(),
+                )
+            })
+            .collect();
+
+        // For each member, build TranslationRef entries for all other members
+        for (idx, is_post, lang, _slug, _title) in &members {
+            let mut refs: Vec<TranslationRef> = Vec::new();
+            for (_, _, other_lang, other_slug, other_title) in &members {
+                if other_lang == lang && other_slug == _slug {
+                    continue;
+                }
+                let lang_name = languages
+                    .get(other_lang.as_str())
+                    .map(|c| c.name.clone())
+                    .unwrap_or_else(|| other_lang.clone());
+                refs.push(TranslationRef {
+                    lang: other_lang.clone(),
+                    name: lang_name,
+                    slug: other_slug.clone(),
+                    title: other_title.clone(),
+                });
+            }
+            if !refs.is_empty() {
+                translation_links.push((*idx, *is_post, refs));
+            }
+        }
+    }
+
+    // Apply subfolder-based translation links
+    for (idx, is_post, refs) in translation_links {
+        let content = if is_post {
+            &mut site_data.posts[idx]
+        } else {
+            &mut site_data.pages[idx]
+        };
+        for tr in refs {
+            if !content
+                .translations
+                .iter()
+                .any(|existing| existing.slug == tr.slug)
+            {
+                content.translations.push(tr);
+            }
+        }
+    }
+
+    // Pass 4: Resolve frontmatter-based translations (bidirectional)
+    // Build a slug->(title, lang, location) index from all content
+    struct ContentInfo {
+        title: String,
+        lang: String,
+        idx: usize,
+        is_post: bool,
+    }
+    let mut slug_index: HashMap<String, ContentInfo> = HashMap::new();
+    for (i, post) in site_data.posts.iter().enumerate() {
+        let lang = post
+            .language
+            .clone()
+            .or_else(|| {
+                post.stream
+                    .clone()
+                    .filter(|s| languages.contains_key(s.as_str()))
+            })
+            .unwrap_or_else(|| default_language.clone());
+        slug_index.insert(
+            post.slug.clone(),
+            ContentInfo {
+                title: post.title.clone(),
+                lang,
+                idx: i,
+                is_post: true,
+            },
+        );
+    }
+    for (i, page) in site_data.pages.iter().enumerate() {
+        let lang = page
+            .language
+            .clone()
+            .unwrap_or_else(|| default_language.clone());
+        slug_index.insert(
+            page.slug.clone(),
+            ContentInfo {
+                title: page.title.clone(),
+                lang,
+                idx: i,
+                is_post: false,
+            },
+        );
+    }
+
+    // Collect resolution updates and bidirectional adds (read-only pass)
+    // Updates: (src_idx, src_is_post, tr_slug, resolved_lang, resolved_name, resolved_title)
+    let mut updates: Vec<(usize, bool, String, String, String, String)> = Vec::new();
+    let mut bidirectional_adds: Vec<(usize, bool, TranslationRef)> = Vec::new();
+
+    let all_contents: Vec<(usize, bool, &Content)> = site_data
+        .posts
+        .iter()
+        .enumerate()
+        .map(|(i, c)| (i, true, c))
+        .chain(
+            site_data
+                .pages
+                .iter()
+                .enumerate()
+                .map(|(i, c)| (i, false, c)),
+        )
+        .collect();
+
+    for &(src_idx, src_is_post, content) in &all_contents {
+        for tr in &content.translations {
+            if tr.lang.is_empty() || tr.title.is_empty() {
+                if let Some(target_info) = slug_index.get(&tr.slug) {
+                    let resolved_lang = if tr.lang.is_empty() {
+                        target_info.lang.clone()
+                    } else {
+                        tr.lang.clone()
+                    };
+                    let resolved_name = languages
+                        .get(resolved_lang.as_str())
+                        .map(|c| c.name.clone())
+                        .unwrap_or_else(|| resolved_lang.clone());
+                    let resolved_title = if tr.title.is_empty() {
+                        target_info.title.clone()
+                    } else {
+                        tr.title.clone()
+                    };
+
+                    updates.push((
+                        src_idx,
+                        src_is_post,
+                        tr.slug.clone(),
+                        resolved_lang,
+                        resolved_name,
+                        resolved_title,
+                    ));
+
+                    // Schedule bidirectional link
+                    let src_lang = content
+                        .language
+                        .clone()
+                        .unwrap_or_else(|| default_language.clone());
+                    let src_lang_name = languages
+                        .get(src_lang.as_str())
+                        .map(|c| c.name.clone())
+                        .unwrap_or_else(|| src_lang.clone());
+                    bidirectional_adds.push((
+                        target_info.idx,
+                        target_info.is_post,
+                        TranslationRef {
+                            lang: src_lang,
+                            name: src_lang_name,
+                            slug: content.slug.clone(),
+                            title: content.title.clone(),
+                        },
+                    ));
+                } else {
+                    warn!(
+                        "Translation reference '{}' in '{}' not found",
+                        tr.slug, content.slug
+                    );
+                }
+            }
+        }
+    }
+
+    // Apply resolution updates
+    for (idx, is_post, tr_slug, lang, name, title) in updates {
+        let content = if is_post {
+            &mut site_data.posts[idx]
+        } else {
+            &mut site_data.pages[idx]
+        };
+        if let Some(tr) = content.translations.iter_mut().find(|t| t.slug == tr_slug) {
+            if tr.lang.is_empty() {
+                tr.lang = lang;
+            }
+            if tr.name.is_empty() {
+                tr.name = name;
+            }
+            if tr.title.is_empty() {
+                tr.title = title;
+            }
+        }
+    }
+
+    // Apply bidirectional links
+    for (idx, is_post, tr) in bidirectional_adds {
+        let content = if is_post {
+            &mut site_data.posts[idx]
+        } else {
+            &mut site_data.pages[idx]
+        };
+        if !content
+            .translations
+            .iter()
+            .any(|existing| existing.slug == tr.slug)
+        {
+            content.translations.push(tr);
         }
     }
 }
@@ -1306,6 +1704,7 @@ fn render_templates(
     global_context.insert("site", &site_data.site);
     global_context.insert("menu", &site_data.site.menu);
     global_context.insert("language", &site_data.site.language);
+    global_context.insert("languages", &site_data.site.languages);
     debug!("Global Context site: {:?}", &site_data.site);
     debug!("Site data galleries count: {}", site_data.galleries.len());
     collect_global_fragments(
@@ -1957,8 +2356,49 @@ fn handle_static_artifacts(
             &media_source.display(),
             &output_folder.display()
         );
+    }
 
-        // Process image resizing if configured in extra (and not skipped)
+    // Copy media from content subfolders (content/{name}/media/ -> output/media/{name}/)
+    // These take precedence over global media since they're copied after
+    let media_folder_name = &site_data.site.media_path;
+    if let Ok(entries) = fs::read_dir(content_dir) {
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let dir_name = match path.file_name().and_then(|n| n.to_str()) {
+                Some(name) => name.to_string(),
+                None => continue,
+            };
+            if dir_name == *media_folder_name {
+                continue;
+            }
+            let subfolder_media = path.join(media_folder_name);
+            if subfolder_media.is_dir() {
+                let dest = output_folder.join(media_folder_name).join(&dir_name);
+                if let Err(e) = fs::create_dir_all(&dest) {
+                    error!("Failed to create media subfolder directory: {e:?}");
+                    continue;
+                }
+                let mut options = CopyOptions::new();
+                options.overwrite = true;
+                options.content_only = true;
+                if let Err(e) = dircopy(&subfolder_media, &dest, &options) {
+                    error!("Failed to copy subfolder media: {e:?}");
+                    continue;
+                }
+                debug!(
+                    "Copied content subfolder media '{}' to '{}'",
+                    subfolder_media.display(),
+                    dest.display()
+                );
+            }
+        }
+    }
+
+    // Process image resizing if configured in extra (and not skipped)
+    if media_source.is_dir() {
         if site_data.site.skip_image_resize {
             debug!("Image resizing skipped (--skip-image-resize flag)");
         } else if let Some(extra) = &site_data.site.extra {
@@ -2761,6 +3201,9 @@ fn handle_content_pages(
             content_context.insert("title", &content.title);
             content_context.insert("content", &content);
             content_context.insert("current_page", &format!("{}.html", &content.slug));
+            if let Some(ref lang) = content.language {
+                content_context.insert("language", lang);
+            }
             debug!(
                 "{} context: {:?}",
                 &content.slug,
