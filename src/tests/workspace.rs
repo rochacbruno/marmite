@@ -146,17 +146,18 @@ fn test_deep_merge_yaml_nested() {
         .is_some());
 }
 
+fn make_site_data(name: &str, output_path: &str) -> SiteData {
+    SiteData {
+        name: name.to_string(),
+        output_path: output_path.to_string(),
+        data: crate::site::Data::new("", &std::path::PathBuf::from("test.yaml")),
+    }
+}
+
 #[test]
 fn test_resolve_cross_site_refs_href() {
     let mut sites = std::collections::HashMap::new();
-    sites.insert(
-        "blog".to_string(),
-        SiteSummary {
-            name: "blog".to_string(),
-            output_path: "blog".to_string(),
-            ..Default::default()
-        },
-    );
+    sites.insert("blog".to_string(), make_site_data("blog", "blog"));
     let cross_site = CrossSiteData {
         sites,
         separator: "::".to_string(),
@@ -170,14 +171,7 @@ fn test_resolve_cross_site_refs_href() {
 #[test]
 fn test_resolve_cross_site_refs_src() {
     let mut sites = std::collections::HashMap::new();
-    sites.insert(
-        "photos".to_string(),
-        SiteSummary {
-            name: "photos".to_string(),
-            output_path: "photos".to_string(),
-            ..Default::default()
-        },
-    );
+    sites.insert("photos".to_string(), make_site_data("photos", "photos"));
     let cross_site = CrossSiteData {
         sites,
         separator: "::".to_string(),

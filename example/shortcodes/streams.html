@@ -1,6 +1,6 @@
-{# Display a list of all content streams with post counts. Params: ord=desc, items=0 #}
-{% shortcode streams(ord="desc", items=0) %}
-{% set stream_map = group(kind="stream", ord=ord, items=items) %}
+{# Display a list of all content streams with post counts. Params: ord=desc, items=0, site="" (workspace cross-site) #}
+{% shortcode streams(ord="desc", items=0, site="") %}
+{% set stream_map = group(kind="stream", ord=ord, items=items, site=site) %}
 <ul class="streams-list">
 {% for stream_name, posts in stream_map %}
 <li><a href="{{ url_for(path=stream_name ~ '.html') }}">{{ stream_name }}</a> ({{ posts | length }} posts)</li>

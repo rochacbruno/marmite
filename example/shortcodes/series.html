@@ -1,6 +1,6 @@
-{# Display a list of all content series with post counts. Params: ord=desc, items=0 #}
-{% shortcode series(ord="desc", items=0) %}
-{% set series_map = group(kind="series", ord=ord, items=items) %}
+{# Display a list of all content series with post counts. Params: ord=desc, items=0, site="" (workspace cross-site) #}
+{% shortcode series(ord="desc", items=0, site="") %}
+{% set series_map = group(kind="series", ord=ord, items=items, site=site) %}
 <ul class="series-list">
 {% for series_name, posts in series_map %}
 {% set series_slug = series_name | slugify %}

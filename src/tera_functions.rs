@@ -5,6 +5,56 @@ use url::Url;
 
 use crate::content::Content;
 use crate::site::Data;
+use crate::workspace::CrossSiteData;
+
+fn parse_site_param(kwargs: &Kwargs) -> Option<String> {
+    kwargs
+        .get::<&str>("site")
+        .ok()
+        .flatten()
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+}
+
+fn collect_cross_site_posts(site_param: &str, cross_site_data: &CrossSiteData) -> Vec<Content> {
+    let site_names: Vec<&str> = if site_param == "all" {
+        cross_site_data.sites.keys().map(String::as_str).collect()
+    } else {
+        site_param.split(',').map(str::trim).collect()
+    };
+
+    let mut posts = Vec::new();
+    for name in site_names {
+        if let Some(site_data) = cross_site_data.sites.get(name) {
+            for post in &site_data.data.posts {
+                let mut prefixed = post.clone();
+                prefixed.slug = format!("{}/{}", site_data.output_path, post.slug);
+                posts.push(prefixed);
+            }
+        }
+    }
+    posts
+}
+
+fn collect_cross_site_pages(site_param: &str, cross_site_data: &CrossSiteData) -> Vec<Content> {
+    let site_names: Vec<&str> = if site_param == "all" {
+        cross_site_data.sites.keys().map(String::as_str).collect()
+    } else {
+        site_param.split(',').map(str::trim).collect()
+    };
+
+    let mut pages = Vec::new();
+    for name in site_names {
+        if let Some(site_data) = cross_site_data.sites.get(name) {
+            for page in &site_data.data.pages {
+                let mut prefixed = page.clone();
+                prefixed.slug = format!("{}/{}", site_data.output_path, page.slug);
+                pages.push(prefixed);
+            }
+        }
+    }
+    pages
+}
 
 #[derive(Serialize)]
 pub struct SlugData {
@@ -80,6 +130,68 @@ impl tera::Function<TeraResult<Value>> for UrlFor {
 /// determined by the iter on `GroupedContent`.
 pub struct Group {
     pub site_data: Data,
+    pub cross_site_data: Option<CrossSiteData>,
+}
+
+fn get_grouped_content_from_data<'a>(
+    data: &'a Data,
+    kind: &str,
+) -> Option<&'a crate::content::GroupedContent> {
+    match kind {
+        "tag" => Some(&data.tag),
+        "archive" => Some(&data.archive),
+        "author" => Some(&data.author),
+        "stream" => Some(&data.stream),
+        "series" => Some(&data.series),
+        _ => None,
+    }
+}
+
+fn sort_group_list(group_list: &mut [(String, Vec<Content>)], kind: &str, ord: &str) {
+    match kind {
+        "archive" => {
+            if ord == "asc" {
+                group_list.reverse();
+            }
+        }
+        _ => {
+            if ord == "asc" {
+                group_list.sort_by(|a, b| a.0.cmp(&b.0));
+            } else {
+                group_list.sort_by_key(|a| std::cmp::Reverse(a.1.len()));
+            }
+        }
+    }
+}
+
+fn merge_grouped_content(
+    site_param: &str,
+    kind: &str,
+    cross_site_data: &CrossSiteData,
+) -> std::collections::HashMap<String, Vec<Content>> {
+    let site_names: Vec<&str> = if site_param == "all" {
+        cross_site_data.sites.keys().map(String::as_str).collect()
+    } else {
+        site_param.split(',').map(str::trim).collect()
+    };
+
+    let mut merged: std::collections::HashMap<String, Vec<Content>> =
+        std::collections::HashMap::new();
+    for name in site_names {
+        if let Some(site_data) = cross_site_data.sites.get(name) {
+            if let Some(grouped) = get_grouped_content_from_data(&site_data.data, kind) {
+                for (key, posts) in grouped.iter() {
+                    let entry = merged.entry(key.clone()).or_default();
+                    for post in posts {
+                        let mut prefixed = post.clone();
+                        prefixed.slug = format!("{}/{}", site_data.output_path, post.slug);
+                        entry.push(prefixed);
+                    }
+                }
+            }
+        }
+    }
+    merged
 }
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -100,6 +212,22 @@ impl tera::Function<TeraResult<Value>> for Group {
                     .and_then(|s| s.parse::<usize>().ok())
             })
             .unwrap_or(0);
+
+        let site_param = parse_site_param(&kwargs);
+
+        if let (Some(ref site_param), Some(ref csd)) = (&site_param, &self.cross_site_data) {
+            let merged = merge_grouped_content(site_param, kind, csd);
+            let mut group_list: Vec<(String, Vec<Content>)> = merged.into_iter().collect();
+            sort_group_list(&mut group_list, kind, ord);
+            if items > 0 && items < group_list.len() {
+                group_list.truncate(items);
+            }
+            let mut ordered_map = IndexMap::new();
+            for (name, posts) in group_list {
+                ordered_map.insert(name, posts);
+            }
+            return Value::try_from_serializable(&ordered_map);
+        }
 
         let grouped_content = match kind {
             "tag" => &self.site_data.tag,
@@ -134,25 +262,8 @@ impl tera::Function<TeraResult<Value>> for Group {
             })
             .collect();
 
-        // Sort based on kind and ord parameter
-        match kind {
-            "archive" => {
-                // Archive is already sorted by year, just reverse if needed
-                if ord == "asc" {
-                    group_list.reverse();
-                }
-            }
-            _ => {
-                // For tag, author, stream, series - sort by post count (desc) or alphabetically by name (asc)
-                if ord == "asc" {
-                    group_list.sort_by(|a, b| a.0.cmp(&b.0));
-                } else {
-                    group_list.sort_by_key(|a| std::cmp::Reverse(a.1.len()));
-                }
-            }
-        }
+        sort_group_list(&mut group_list, kind, ord);
 
-        // Limit items if specified
         if items > 0 && items < group_list.len() {
             group_list.truncate(items);
         }
@@ -259,9 +370,11 @@ impl tera::Function<TeraResult<Value>> for DisplayName {
 }
 
 /// Tera function to get filtered and sorted posts
-/// Args: ord (optional, default="desc"), items (optional, default=0 for all)
+/// Args: ord (optional, default="desc"), items (optional, default=0 for all),
+///       site (optional, workspace cross-site query)
 pub struct GetPosts {
     pub site_data: Data,
+    pub cross_site_data: Option<CrossSiteData>,
 }
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -282,14 +395,16 @@ impl tera::Function<TeraResult<Value>> for GetPosts {
             })
             .unwrap_or(0);
 
-        let mut posts = self.site_data.posts.clone();
+        let mut posts = match (parse_site_param(&kwargs), &self.cross_site_data) {
+            (Some(site_param), Some(csd)) => collect_cross_site_posts(&site_param, csd),
+            _ => self.site_data.posts.clone(),
+        };
 
-        // Sort posts
+        posts.sort_by_key(|a| std::cmp::Reverse(a.date));
         if ord == "asc" {
             posts.reverse();
         }
 
-        // Limit items if specified
         if items > 0 && items < posts.len() {
             posts.truncate(items);
         }
@@ -298,16 +413,129 @@ impl tera::Function<TeraResult<Value>> for GetPosts {
     }
 }
 
+/// Tera function to get filtered and sorted pages
+/// Args: ord (optional, default="asc"), items (optional, default=0 for all),
+///       site (optional, workspace cross-site query)
+pub struct GetPages {
+    pub site_data: Data,
+    pub cross_site_data: Option<CrossSiteData>,
+}
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+impl tera::Function<TeraResult<Value>> for GetPages {
+    fn call(&self, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+        let ord: &str = kwargs.get::<&str>("ord")?.unwrap_or("asc");
+        let items: usize = kwargs
+            .get::<i64>("items")
+            .ok()
+            .flatten()
+            .map(|n| n as usize)
+            .or_else(|| {
+                kwargs
+                    .get::<&str>("items")
+                    .ok()
+                    .flatten()
+                    .and_then(|s| s.parse::<usize>().ok())
+            })
+            .unwrap_or(0);
+
+        let mut pages = match (parse_site_param(&kwargs), &self.cross_site_data) {
+            (Some(site_param), Some(csd)) => collect_cross_site_pages(&site_param, csd),
+            _ => self.site_data.pages.clone(),
+        };
+
+        pages.sort_by(|a, b| a.title.cmp(&b.title));
+        if ord == "desc" {
+            pages.reverse();
+        }
+
+        if items > 0 && items < pages.len() {
+            pages.truncate(items);
+        }
+
+        Value::try_from_serializable(&pages)
+    }
+}
+
+fn resolve_slug_in_data(slug: &str, data: &Data) -> Option<SlugData> {
+    if let Some(page) = data.pages.iter().find(|p| p.slug == slug) {
+        return Some(SlugData {
+            image: page
+                .banner_image
+                .as_ref()
+                .unwrap_or(&data.site.banner_image)
+                .clone(),
+            slug: slug.to_string(),
+            title: page.title.clone(),
+            text: page.description.as_ref().unwrap_or(&String::new()).clone(),
+            content_type: "page".to_string(),
+        });
+    }
+    if let Some(post) = data.posts.iter().find(|p| p.slug == slug) {
+        return Some(SlugData {
+            image: post
+                .banner_image
+                .as_ref()
+                .unwrap_or(&data.site.banner_image)
+                .clone(),
+            slug: slug.to_string(),
+            title: post.title.clone(),
+            text: post
+                .date
+                .map_or_else(String::new, |d| d.format("%Y-%m-%d").to_string()),
+            content_type: "post".to_string(),
+        });
+    }
+    None
+}
+
 /// Tera function to get data by slug for card display
 /// Takes a slug and resolves which content type it refers to, returning `SlugData`
 pub struct GetDataBySlug {
     pub site_data: Data,
+    pub cross_site_data: Option<CrossSiteData>,
 }
 
 impl tera::Function<TeraResult<Value>> for GetDataBySlug {
     #[allow(clippy::too_many_lines)]
     fn call(&self, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
-        let slug: &str = kwargs.must_get("slug")?;
+        let raw_slug: &str = kwargs.must_get("slug")?;
+        let site_param = parse_site_param(&kwargs);
+
+        if let Some(ref csd) = self.cross_site_data {
+            let sep = &csd.separator;
+            if let Some(sep_pos) = raw_slug.find(sep.as_str()) {
+                let site_name = &raw_slug[..sep_pos];
+                let inner_slug = &raw_slug[sep_pos + sep.len()..];
+                if let Some(sd) = csd.sites.get(site_name) {
+                    let target_data = &sd.data;
+                    let slug_data = resolve_slug_in_data(inner_slug, target_data);
+                    if let Some(mut sd_result) = slug_data {
+                        sd_result.slug = format!("{}/{}", sd.output_path, sd_result.slug);
+                        return Value::try_from_serializable(&sd_result);
+                    }
+                    return Err(tera::Error::message(format!(
+                        "Content not found for slug: {raw_slug}"
+                    )));
+                }
+            }
+
+            if let Some(ref site_name) = site_param {
+                if let Some(sd) = csd.sites.get(site_name.as_str()) {
+                    let target_data = &sd.data;
+                    let slug_data = resolve_slug_in_data(raw_slug, target_data);
+                    if let Some(mut sd_result) = slug_data {
+                        sd_result.slug = format!("{}/{}", sd.output_path, sd_result.slug);
+                        return Value::try_from_serializable(&sd_result);
+                    }
+                    return Err(tera::Error::message(format!(
+                        "Content not found for slug: {raw_slug} in site: {site_name}"
+                    )));
+                }
+            }
+        }
+
+        let slug = raw_slug;
 
         // Check what kind of content this slug refers to
         let slug_data = if slug.starts_with("series-") {

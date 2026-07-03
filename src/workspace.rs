@@ -7,8 +7,7 @@ use std::{fs, process};
 
 use crate::cli::Cli;
 use crate::config::Marmite;
-use crate::content::Content;
-use crate::site::{self, Data, UrlCollection};
+use crate::site::{self, Data};
 
 pub const WORKSPACE_CONFIG_FILENAME: &str = "marmite-workspace.yaml";
 
@@ -50,21 +49,17 @@ impl WorkspaceConfig {
     }
 }
 
-#[allow(dead_code)]
-#[derive(Debug, Clone, Default, Serialize)]
-pub struct SiteSummary {
+#[derive(Debug, Clone)]
+pub struct SiteData {
+    #[allow(dead_code)]
     pub name: String,
     pub output_path: String,
-    #[serde(skip)]
-    pub posts: Vec<Content>,
-    #[serde(skip)]
-    pub pages: Vec<Content>,
-    pub generated_urls: UrlCollection,
+    pub data: Data,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct CrossSiteData {
-    pub sites: HashMap<String, SiteSummary>,
+    pub sites: HashMap<String, SiteData>,
     pub separator: String,
 }
 
@@ -169,12 +164,10 @@ fn preprocess_all_sites(
 
         cross_site.sites.insert(
             site_entry.name.clone(),
-            SiteSummary {
+            SiteData {
                 name: site_entry.name.clone(),
                 output_path,
-                posts: site_data.posts,
-                pages: site_data.pages,
-                generated_urls: site_data.generated_urls,
+                data: site_data,
             },
         );
     }
@@ -330,9 +323,9 @@ pub fn show_urls_workspace(
 
     let mut all_urls = serde_json::Map::new();
     for site_entry in &ws_config.sites {
-        if let Some(summary) = cross_site.sites.get(&site_entry.name) {
-            let urls = summary.generated_urls.get_all_urls();
-            let prefix = &summary.output_path;
+        if let Some(site_data) = cross_site.sites.get(&site_entry.name) {
+            let urls = site_data.data.generated_urls.get_all_urls();
+            let prefix = &site_data.output_path;
             let prefixed: Vec<String> = urls
                 .iter()
                 .map(|u| {
@@ -410,8 +403,8 @@ pub fn resolve_cross_site_refs(html: &str, cross_site_data: &CrossSiteData) -> S
         let path = &caps[3];
         let suffix = &caps[4];
 
-        if let Some(summary) = cross_site_data.sites.get(site_name) {
-            format!("{prefix}/{}/{path}{suffix}", summary.output_path)
+        if let Some(site_data) = cross_site_data.sites.get(site_name) {
+            format!("{prefix}/{}/{path}{suffix}", site_data.output_path)
         } else {
             caps[0].to_string()
         }

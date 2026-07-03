@@ -1,9 +1,9 @@
 {# Display a card for content based on slug with optional parameter overrides #}
-{% shortcode card(slug, image="", title="", text="", content_type="") %}
+{% shortcode card(slug, image="", title="", text="", content_type="", site="") %}
 {% if slug is starting_with("http://") or slug is starting_with("https://") %}
     {% set card = {"image": "", "title": "Link", "text": "External Link", "content_type": "Link", "url": slug, "target_blank": true} %}
 {% else %}
-    {% set data = get_data_by_slug(slug=slug) %}
+    {% set data = get_data_by_slug(slug=slug, site=site) %}
     {% set card = {"image": data.image, "title": data.title, "text": data.text, "content_type": data.content_type, "url": url_for(path=data.slug ~ ".html"), "target_blank": false} %}
 {% endif %}
 {% set card = {

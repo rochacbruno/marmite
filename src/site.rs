@@ -13,7 +13,7 @@ use crate::image_resize;
 use crate::parser::fix_wikilinks;
 use crate::shortcodes::ShortcodeProcessor;
 use crate::tera_functions::{
-    DisplayName, GetDataBySlug, GetGallery, GetPosts, Group, SourceLink, UrlFor,
+    DisplayName, GetDataBySlug, GetGallery, GetPages, GetPosts, Group, SourceLink, UrlFor,
 };
 use crate::{re, server, tera_filter};
 use chrono::Datelike;
@@ -658,7 +658,7 @@ pub(crate) fn build_site_with_config(
     .for_each(|step| match *step {
         "render_templates" => {
             let (tera, shortcode_processor) =
-                initialize_tera(input_folder_arc.as_path(), &site_data);
+                initialize_tera(input_folder_arc.as_path(), &site_data, cross_site_data);
             if let Err(e) = render_templates(
                 &content_folder,
                 &site_data,
@@ -694,7 +694,7 @@ pub(crate) fn build_site_with_config(
         _ => {}
     });
 
-    let (tera, _) = initialize_tera(input_folder, &site_data);
+    let (tera, _) = initialize_tera(input_folder, &site_data, cross_site_data);
     generate_sitemap(&site_data, &tera, &output_path);
 
     if site_data.site.publish_urls_json {
@@ -866,7 +866,7 @@ pub fn generate(
             .for_each(|step| match *step {
                 "render_templates" => {
                     let (tera, shortcode_processor) =
-                        initialize_tera(&moved_input_folder, &site_data);
+                        initialize_tera(&moved_input_folder, &site_data, None);
                     if let Err(e) = render_templates(
                         &content_folder,
                         &site_data,
@@ -903,7 +903,7 @@ pub fn generate(
             });
 
             // Generate sitemap after all templates are rendered
-            let (tera, _) = initialize_tera(&moved_input_folder, &site_data);
+            let (tera, _) = initialize_tera(&moved_input_folder, &site_data, None);
             generate_sitemap(&site_data, &tera, &output_path);
 
             // Generate urls.json if enabled
@@ -1703,7 +1703,11 @@ fn detect_slug_collision(site_data: &Data) {
 }
 
 #[allow(clippy::too_many_lines)]
-fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<ShortcodeProcessor>) {
+fn initialize_tera(
+    input_folder: &Path,
+    site_data: &Data,
+    cross_site_data: Option<&crate::workspace::CrossSiteData>,
+) -> (Tera, Option<ShortcodeProcessor>) {
     let mut tera = Tera::default();
     tera.autoescape_on(Vec::<&str>::new());
     tera.register_function(
@@ -1712,10 +1716,12 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
             base_url: site_data.site.url.clone(),
         },
     );
+    let csd = cross_site_data.cloned();
     tera.register_function(
         "group",
         Group {
             site_data: site_data.clone(),
+            cross_site_data: csd.clone(),
         },
     );
     tera.register_function(
@@ -1742,12 +1748,21 @@ fn initialize_tera(input_folder: &Path, site_data: &Data) -> (Tera, Option<Short
         "get_posts",
         GetPosts {
             site_data: site_data.clone(),
+            cross_site_data: csd.clone(),
+        },
+    );
+    tera.register_function(
+        "get_pages",
+        GetPages {
+            site_data: site_data.clone(),
+            cross_site_data: csd.clone(),
         },
     );
     tera.register_function(
         "get_data_by_slug",
         GetDataBySlug {
             site_data: site_data.clone(),
+            cross_site_data: csd,
         },
     );
     tera.register_function(

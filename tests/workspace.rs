@@ -254,3 +254,62 @@ defaults:
     assert_eq!(info["config"]["name"], "Site One");
     assert_eq!(info["config"]["tagline"], "Workspace Tagline");
 }
+
+#[test]
+fn test_workspace_cross_site_shortcodes() {
+    let temp = TempDir::new().unwrap();
+    let ws_dir = temp.path().join("workspace");
+    fs::create_dir_all(ws_dir.join("blog/content")).unwrap();
+    fs::create_dir_all(ws_dir.join("photos/content")).unwrap();
+
+    fs::write(
+        ws_dir.join("marmite-workspace.yaml"),
+        "sites:\n  - name: blog\n  - name: photos\ndefault_site: blog\n",
+    )
+    .unwrap();
+    fs::write(ws_dir.join("blog/marmite.yaml"), "name: Blog\n").unwrap();
+    fs::write(ws_dir.join("photos/marmite.yaml"), "name: Photos\n").unwrap();
+
+    fs::write(
+        ws_dir.join("blog/content/2024-01-01-post.md"),
+        "---\ntitle: Blog Post\ntags: [intro]\n---\n\n<!-- .posts site=\"photos\" -->\n\n<!-- .tags site=\"photos\" -->\n",
+    )
+    .unwrap();
+
+    fs::write(
+        ws_dir.join("photos/content/2024-02-01-sunset.md"),
+        "---\ntitle: Sunset\ntags: [nature]\n---\nA photo.\n",
+    )
+    .unwrap();
+    fs::write(
+        ws_dir.join("photos/content/2024-03-01-mountain.md"),
+        "---\ntitle: Mountain\ntags: [nature, landscape]\n---\nAnother photo.\n",
+    )
+    .unwrap();
+
+    let output_dir = temp.path().join("output");
+    let result = run_marmite(&[ws_dir.to_str().unwrap(), output_dir.to_str().unwrap()]);
+    assert!(
+        result.status.success(),
+        "Build failed: {}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+
+    let blog_post = fs::read_to_string(output_dir.join("blog-post.html")).unwrap();
+
+    // Cross-site posts shortcode should render photos site posts with correct URLs
+    assert!(
+        blog_post.contains("/photos/mountain.html"),
+        "Should contain cross-site link to photos/mountain.html. Content:\n{blog_post}"
+    );
+    assert!(
+        blog_post.contains("/photos/sunset.html"),
+        "Should contain cross-site link to photos/sunset.html"
+    );
+
+    // Cross-site tags shortcode should render photos site tags
+    assert!(
+        blog_post.contains("nature"),
+        "Should contain the 'nature' tag from photos site"
+    );
+}
