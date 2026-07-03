@@ -844,6 +844,8 @@ const configCancel = $("#config-cancel");
 const configSave = $("#config-save");
 const cfgMenuList = $("#cfg-menu-list");
 const cfgMenuAdd = $("#cfg-menu-add");
+const cfgLanguagesList = $("#cfg-languages-list");
+const cfgLanguagesAdd = $("#cfg-languages-add");
 
 const CONFIG_FILE = "marmite.yaml";
 
@@ -943,6 +945,12 @@ function populateConfigForm(cfg) {
   for (const item of menu) {
     addMenuRow(item[0] || "", item[1] || "");
   }
+
+  cfgLanguagesList.innerHTML = "";
+  const languages = cfg.languages || {};
+  for (const [code, lang] of Object.entries(languages)) {
+    addLanguageRow(code, lang.name || "");
+  }
 }
 
 function addMenuRow(label, url) {
@@ -956,6 +964,18 @@ function addMenuRow(label, url) {
 }
 
 cfgMenuAdd.addEventListener("click", () => addMenuRow("", ""));
+
+function addLanguageRow(code, name) {
+  const row = document.createElement("div");
+  row.className = "cfg-menu-row";
+  row.innerHTML = `<input type="text" placeholder="Code (en, pt, es...)" value="${code.replace(/"/g, "&quot;")}" style="max-width:120px">` +
+    `<input type="text" placeholder="Display Name" value="${name.replace(/"/g, "&quot;")}">` +
+    `<button class="cfg-menu-del" title="Remove">&times;</button>`;
+  row.querySelector(".cfg-menu-del").addEventListener("click", () => row.remove());
+  cfgLanguagesList.appendChild(row);
+}
+
+cfgLanguagesAdd.addEventListener("click", () => addLanguageRow("", ""));
 
 function collectConfigForm(original) {
   const cfg = {};
@@ -998,6 +1018,17 @@ function collectConfigForm(original) {
       const label = inputs[0].value.trim();
       const url = inputs[1].value.trim();
       if (label || url) cfg.menu.push([label, url]);
+    });
+  }
+
+  const langRows = cfgLanguagesList.querySelectorAll(".cfg-menu-row");
+  if (langRows.length > 0) {
+    cfg.languages = {};
+    langRows.forEach((row) => {
+      const inputs = row.querySelectorAll("input");
+      const code = inputs[0].value.trim();
+      const name = inputs[1].value.trim();
+      if (code) cfg.languages[code] = { name };
     });
   }
 

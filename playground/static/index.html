@@ -132,6 +132,7 @@
         <button class="config-tab" data-tab="appearance">Appearance</button>
         <button class="config-tab" data-tab="images">Images</button>
         <button class="config-tab" data-tab="menu">Menu</button>
+        <button class="config-tab" data-tab="languages">Languages</button>
       </div>
       <div class="config-body">
         <div class="config-pane active" data-tab="site">
@@ -318,6 +319,11 @@
           <p class="cfg-hint" style="margin-bottom:12px">Navigation links shown in the site header. Each item has a label and URL.</p>
           <div id="cfg-menu-list"></div>
           <button id="cfg-menu-add" class="cfg-menu-add-btn">+ Add Menu Item</button>
+        </div>
+        <div class="config-pane" data-tab="languages">
+          <p class="cfg-hint" style="margin-bottom:12px">Language streams for multilingual content. Each language has a code (e.g., en, pt, es) and a display name. Content is assigned to a language using the stream prefix (e.g., <code>en-2024-01-01-hello.md</code>). <a href="https://marmite.blog/i18n-language-streams.html" target="_blank">Learn more</a></p>
+          <div id="cfg-languages-list"></div>
+          <button id="cfg-languages-add" class="cfg-menu-add-btn">+ Add Language</button>
         </div>
       </div>
       <div class="config-footer">
