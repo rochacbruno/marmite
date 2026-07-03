@@ -44,6 +44,12 @@ Four content organization modes are supported:
 
 Default language content stays on `index.html`. Sites without `languages` configured are completely unaffected.
 
+### Content Subfolder Media
+
+Media files can now live inside content subfolders (`content/{slug}/media/`) as an alternative to the global `content/media/{slug}/` location. Content subfolder media takes precedence and is automatically copied to the output.
+
+A generic `banner.jpg` or `card.png` in a content subfolder's media directory is shared by all `.md` files in that subfolder. This is particularly useful with language streams - all translations in a group inherit the same banner image without separate copies or frontmatter overrides.
+
 ### Build-time Internal Link Validation (#473)
 
 Marmite can now check internal links at build time and warn about broken ones. Enable with:

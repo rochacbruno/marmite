@@ -312,7 +312,20 @@ content/
   2024-01-15-my-post.md
 ```
 
-Marmite checks `media/{slug}/banner.{ext}` and `media/{slug}/card.{ext}` for automatic image discovery. Flat files (`media/{slug}.banner.{ext}`) take precedence over subfolder files for backward compatibility.
+Media can also live inside content subfolders, alongside the markdown files:
+
+```
+content/
+  my-post/
+    my-post.md
+    pt-meu-post.md     # Translation inherits banner.jpg
+    media/
+      banner.jpg       # Shared by all files in the subfolder
+```
+
+Content subfolder media (`content/{slug}/media/`) takes precedence over global media (`content/media/{slug}/`). A generic `banner.{ext}` or `card.{ext}` without a slug prefix is shared by all `.md` files in the subfolder, so translations automatically inherit the base content's images.
+
+Flat files (`media/{slug}.banner.{ext}`) take precedence over subfolder files for backward compatibility.
 
 #### The `@/` shorthand
 

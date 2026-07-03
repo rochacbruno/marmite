@@ -11,7 +11,7 @@ Marmite supports organizing media files in subfolders named after your content's
 
 ## Media Subfolder Discovery
 
-Previously, banner and card images had to live as flat files in `media/` with the slug as a filename prefix (e.g., `media/my-post.banner.jpg`). Now you can also place them in a subfolder named after the slug:
+Banner and card images can live as flat files in `media/` with the slug as a filename prefix (e.g., `media/my-post.banner.jpg`), in a subfolder named after the slug inside `media/`, or in a `media/` directory inside a content subfolder:
 
 ```
 content/
@@ -24,10 +24,26 @@ content/
   2024-01-15-my-post.md
 ```
 
-Marmite checks the subfolder for `banner.{ext}` and `card.{ext}` files automatically. The lookup order is:
+Or, when using content subfolders (e.g., for translations), media can live alongside the content:
 
-1. `media/{slug}.banner.{ext}` (flat file - existing behavior, takes precedence)
-2. `media/{slug}/{kind}.{ext}` (subfolder - new)
+```
+content/
+  my-post/
+    my-post.md
+    pt-meu-post.md
+    media/
+      banner.jpg          # Shared by all files in the subfolder
+      card.png
+```
+
+Marmite checks for `banner.{ext}` and `card.{ext}` files automatically. The lookup order is:
+
+1. `media/{slug}.banner.{ext}` (flat file in global media)
+2. `content/{slug}/media/banner.{ext}` (content subfolder media - takes precedence over global)
+3. `content/media/{slug}/banner.{ext}` (global media subfolder)
+4. `content/{subfolder}/media/banner.{ext}` (generic fallback - shared by all files in the subfolder)
+
+Content subfolder media takes precedence over global media. A generic `banner.jpg` in a content subfolder's media directory is shared by all `.md` files in that subfolder, so translations automatically inherit the base content's banner without needing their own copy.
 
 Existing sites using flat files are unaffected.
 
@@ -94,3 +110,25 @@ Marmite will:
 - Automatically discover `media/travel-photos/card.png` as the card image
 - Replace `@/photo1.jpg` with `media/travel-photos/photo1.jpg` in the rendered HTML
 - Copy the entire `media/travel-photos/` folder to the output directory
+
+## Media with Content Subfolders
+
+When using content subfolders (for example, for multilingual content), you can place a `media/` directory inside the content subfolder instead of using the global `content/media/` folder:
+
+```
+content/
+  travel-photos/
+    travel-photos.md
+    pt-fotos-de-viagem.md
+    es-fotos-de-viaje.md
+    media/
+      banner.jpg
+      card.png
+      photo1.jpg
+```
+
+This keeps media files close to the content that uses them. The `media/` directory inside a content subfolder is automatically copied to `output/media/{subfolder_name}/` during the build.
+
+A generic `banner.jpg` or `card.png` (without a slug prefix) in the subfolder's media directory is shared by all `.md` files in that subfolder. This is useful for translations - all language versions of a post inherit the same banner image without needing separate copies or frontmatter overrides.
+
+Any individual file can still override the shared media by setting `banner_image` or `card_image` in its own frontmatter, or by having a slug-specific file like `media/{slug}.banner.jpg`.
