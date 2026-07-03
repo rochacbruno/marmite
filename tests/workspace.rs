@@ -250,18 +250,17 @@ defaults:
     let result = run_marmite(&[ws_dir.to_str().unwrap(), output_dir.to_str().unwrap()]);
     assert!(result.status.success());
 
-    // Root marmite.json is workspace-level
-    let root_info: serde_json::Value = serde_json::from_str(
-        &fs::read_to_string(output_dir.join("marmite.json")).unwrap(),
+    // Workspace-level JSON at root
+    let ws_info: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(output_dir.join("marmite-workspace.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(root_info["workspace"], true);
+    assert_eq!(ws_info["workspace"], true);
 
     // Site-specific marmite.json has merged config
-    let site_info: serde_json::Value = serde_json::from_str(
-        &fs::read_to_string(output_dir.join("site1/marmite.json")).unwrap(),
-    )
-    .unwrap();
+    let site_info: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(output_dir.join("site1/marmite.json")).unwrap())
+            .unwrap();
     assert_eq!(site_info["config"]["name"], "Site One");
     assert_eq!(site_info["config"]["tagline"], "Workspace Tagline");
 }

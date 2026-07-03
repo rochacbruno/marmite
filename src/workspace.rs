@@ -358,8 +358,8 @@ fn write_workspace_build_info(
     });
 
     let json = serde_json::to_string_pretty(&build_info)?;
-    fs::write(output_root.join("marmite.json"), json)?;
-    info!("Generated workspace marmite.json");
+    fs::write(output_root.join("marmite-workspace.json"), json)?;
+    info!("Generated marmite-workspace.json");
     Ok(())
 }
 
@@ -386,8 +386,8 @@ fn write_workspace_urls_json(
     }
 
     let json = serde_json::to_string_pretty(&serde_json::Value::Object(merged))?;
-    fs::write(output_root.join("urls.json"), json)?;
-    info!("Generated workspace urls.json");
+    fs::write(output_root.join("urls-workspace.json"), json)?;
+    info!("Generated urls-workspace.json");
     Ok(())
 }
 
