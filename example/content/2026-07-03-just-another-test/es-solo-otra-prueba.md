@@ -1,6 +1,5 @@
 ---
 title: Solo Otra Prueba
-tags: testing
 ---
 
 Este es solo otro post de prueba para verificar que el auto-descubrimiento

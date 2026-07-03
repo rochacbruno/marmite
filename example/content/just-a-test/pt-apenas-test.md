@@ -1,7 +1,6 @@
 ---
 title: Apenas um Teste
 date: 2026-07-03
-tags: testing
 ---
 
 Este e apenas um post de teste para verificar que a auto-descoberta

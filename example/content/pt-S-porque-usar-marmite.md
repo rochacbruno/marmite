@@ -1,7 +1,7 @@
 ---
 title: Porque usar o Marmite?
 date: 2024-10-21
-tags: docs
+tags: documentação
 authors: rochacbruno
 banner_image: media/why.jpg
 translations:

@@ -1,7 +1,7 @@
 ---
 title: Marmite 0.3.3 Release Notes
 slug: marmite-0-3-3-release-notes
-description: "Marmite 0.3.3 adds slug-based media subfolders, @/ shorthand for media files, and migrates to Tera 2.0 with new template features."
+description: "Marmite 0.3.3 adds multilingual content support via language streams, content subfolder media, internal link validation, redirect aliases, and migrates to Tera 2.0."
 tags: [release-notes, marmite, features, announcement]
 author: rochacbruno
 stream: draft
@@ -29,9 +29,9 @@ Content can be organized in subfolder groups for auto-discovery:
 
 ```
 content/hello/
-  hello.md              # Default language (pt), stays on index.html
-  en-hello-world.md     # English, generates en-hello-world.html
-  es-hola-mundo.md      # Spanish, generates es-hola-mundo.html
+  hello.md              # Default language (en), stays on index.html
+  pt-ola-mundo.md       # Portuguese, generates pt-ola-mundo.html, shows on pt.html
+  es-hola-mundo.md      # Spanish, generates es-hola-mundo.html, shows on es.html
 ```
 
 Each language gets its own stream listing page (`en.html`, `es.html`) and RSS feed. Translation links ("Also available in: English, Espanol") appear automatically on content pages, and `<link rel="alternate" hreflang="...">` tags are added for SEO.
@@ -49,6 +49,10 @@ Default language content stays on `index.html`. Sites without `languages` config
 Media files can now live inside content subfolders (`content/{slug}/media/`) as an alternative to the global `content/media/{slug}/` location. Content subfolder media takes precedence and is automatically copied to the output.
 
 A generic `banner.jpg` or `card.png` in a content subfolder's media directory is shared by all `.md` files in that subfolder. This is particularly useful with language streams - all translations in a group inherit the same banner image without separate copies or frontmatter overrides.
+
+### Date Extraction from Parent Folder
+
+Content files inside dated subfolders (e.g., `content/2026-07-03-my-post/my-post.md`) now automatically inherit the date from the folder name when no date is set in frontmatter or the filename. This is useful with content subfolders for translations - all files in the folder share the same date without repeating it in every frontmatter.
 
 ### Build-time Internal Link Validation (#473)
 

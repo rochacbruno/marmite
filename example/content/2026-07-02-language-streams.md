@@ -12,7 +12,7 @@ Marmite supports multilingual sites through language streams. Each language beco
 Declare available languages in `marmite.yaml`:
 
 ```yaml
-language: pt
+language: en
 languages:
   pt:
     name: "Portugues"
@@ -36,17 +36,20 @@ Group translations in a subfolder named after the base content's slug. Files pre
 
 ```
 content/hello/
-  hello.md              # Default language (pt)
-  en-hello-world.md     # English translation
+  hello.md              # Default language (en)
+  pt-ola-mundo.md       # Portuguese translation
   es-hola-mundo.md      # Spanish translation
 ```
 
 This generates:
-- `hello.html` - Portuguese post, listed on `index.html`
-- `en-hello-world.html` - English post, listed on `en.html`
+- `hello.html` - English post, listed on `index.html`
+- `pt-ola-mundo.html` - Portuguese post, listed on `pt.html`
 - `es-hola-mundo.html` - Spanish post, listed on `es.html`
 
 All three pages automatically show "Also available in" links to each other.
+
+> [!TIP]
+> The subfolder can also have the date in it, e.g. `content/2026-07-02-hello/` this way you don't have to specify date on each translation frontmatter.
 
 ### Option 2: Mixed Flat + Subfolder
 
@@ -61,7 +64,10 @@ content/
 
 Marmite detects that the subfolder name `hello` matches the flat file's slug and links them as translations.
 
-### Option 3: Flat Files with Stream Markers
+> [!IMPORTANT]
+> Subfolder names must match the original post's slug (not the filename, but the resolved slug, sometimes taken from the title) to be automatically linked as translations.
+
+### Option 3: Stream Markers
 
 Use the existing `-S-` stream marker pattern for flat file organization:
 
@@ -71,18 +77,31 @@ content/
   pt-S-ola.md           # Portuguese, stream: pt
 ```
 
+Or setting the language stream directly in the frontmatter:
+
+```yaml
+---
+title: ola mundo 
+date: 2024-01-01
+stream: pt
+translations:
+  - en-hello
+---
+```
+
 With this pattern, you need to manually link translations using the `translations` frontmatter field (see below).
 
-### Option 4: Frontmatter Only
+### Option 4: Frontmatter Translation Link
 
-Set the stream and translations explicitly in frontmatter:
+Set the language and translations explicitly in frontmatter:
 
 ```yaml
 ---
 title: Hello World
 date: 2024-01-01
+language: en # can omit because it's the default language
 translations:
-  - pt-ola
+  - pt-ola  # then you write a post with slug `ola` and language: set to `pt`
   - es-hola
 ---
 ```
@@ -102,6 +121,8 @@ language: pt
 ```
 
 Usually not needed - the language is inferred from the stream name or subfolder detection. Use this when you need to override automatic detection.
+
+When language is set, but no stream is set, them marmite assumes the stream is the same as language, meaning this post will be published to pt.html stream.
 
 ### `translations`
 

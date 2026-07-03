@@ -1,5 +1,5 @@
 ---
-tags: docs, features, i18n, multilingual
+tags: documentação
 description: Escreva conteudo em multiplos idiomas com links de traducao automaticos, paginas de stream por idioma e tags hreflang para SEO usando o recurso de language streams do marmite.
 date: 2026-07-02
 title: Language Streams - Conteudo Multilingual

@@ -2,7 +2,6 @@
 title: Just a Test
 date: 2026-07-03
 stream: test
-tags: testing
 ---
 
 This is just a test post to verify that language auto-discovery works
