@@ -32,6 +32,8 @@ There are four ways to organize multilingual content. All produce flat HTML outp
 
 ### Option 1: Subfolder Grouping (Auto-Discovery)
 
+> **RECOMMENDED**
+
 Group translations in a subfolder named after the base content's slug. Files prefixed with a configured language code are automatically detected and cross-linked:
 
 ```
@@ -52,6 +54,8 @@ All three pages automatically show "Also available in" links to each other.
 > The subfolder can also have the date in it, e.g. `content/2026-07-02-hello/` this way you don't have to specify date on each translation frontmatter.
 
 ### Option 2: Mixed Flat + Subfolder
+
+> **RECOMMENDED**
 
 If you have an existing flat site and want to add translations without moving original files, create a subfolder matching the existing content's slug:
 
@@ -107,6 +111,10 @@ translations:
 ```
 
 The `translations` field accepts a list of slugs. Marmite resolves each slug to the actual content, fills in the language code and display name from the `languages` config, and creates bidirectional links. If post A lists post B as a translation, post B automatically gets a link back to post A.
+
+
+> [!IMPORTANT]
+> Prefer the options 1 and 2 for auto discovery, using manual markers and setting language will require you to keep all the different translations linked as marmite will not automatically discover cross content translations.
 
 ## Frontmatter Fields
 
