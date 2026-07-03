@@ -224,7 +224,7 @@ fn test_merge_site_config_empty_site() {
         ..Default::default()
     };
     let cli_args = std::sync::Arc::new(test_cli());
-    let merged = merge_site_config(&Some(defaults), &site_config, &cli_args);
+    let merged = merge_site_config(Some(&defaults), &site_config, &cli_args);
     assert_eq!(merged.language, "pt");
     assert_eq!(merged.pagination, 5);
 }
@@ -241,7 +241,7 @@ fn test_merge_site_config_override() {
         ..Default::default()
     };
     let cli_args = std::sync::Arc::new(test_cli());
-    let merged = merge_site_config(&Some(defaults), &site_config, &cli_args);
+    let merged = merge_site_config(Some(&defaults), &site_config, &cli_args);
     assert_eq!(merged.language, "fr");
     assert_eq!(merged.pagination, 5);
 }

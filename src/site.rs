@@ -548,7 +548,7 @@ impl BuildInfo {
 
 #[allow(clippy::too_many_lines)]
 pub(crate) fn build_site_with_config(
-    site_config: Marmite,
+    site_config: &Marmite,
     input_folder: &Path,
     output_folder: &Path,
     cli_args: &Arc<crate::cli::Cli>,

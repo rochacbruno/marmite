@@ -251,7 +251,8 @@ fn handle_workspace_mode(
     }
 
     if cli_args.shortcodes {
-        return workspace::show_shortcodes_workspace(&ws_config, input_folder, cli_args);
+        workspace::show_shortcodes_workspace(&ws_config, input_folder, cli_args);
+        return Ok(());
     }
 
     if cli_args.show_urls {

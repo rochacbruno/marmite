@@ -106,13 +106,11 @@ fn deep_merge_yaml(base: serde_yaml::Value, overlay: serde_yaml::Value) -> serde
 }
 
 pub fn merge_site_config(
-    workspace_defaults: &Option<Marmite>,
+    workspace_defaults: Option<&Marmite>,
     site_config_path: &Path,
     cli_args: &Arc<Cli>,
 ) -> Marmite {
-    // Marmite::new() uses serde defaults (pagination=10 etc.), not derived Default (all zeros)
-    #[allow(clippy::unwrap_or_default)]
-    let mut base = workspace_defaults.clone().unwrap_or_else(Marmite::new);
+    let mut base = workspace_defaults.cloned().unwrap_or_else(Marmite::new);
     base.override_from_cli_args(cli_args);
 
     let site_str = fs::read_to_string(site_config_path).unwrap_or_default();
@@ -131,9 +129,8 @@ pub fn merge_site_config(
         }
     };
 
-    let base_value = match serde_yaml::to_value(&base) {
-        Ok(v) => v,
-        Err(_) => return base,
+    let Ok(base_value) = serde_yaml::to_value(&base) else {
+        return base;
     };
 
     let merged_value = deep_merge_yaml(base_value, site_value);
@@ -157,7 +154,8 @@ fn preprocess_all_sites(
         }
 
         let site_config_path = site_input.join(&cli_args.config);
-        let merged_config = merge_site_config(&ws_config.defaults, &site_config_path, cli_args);
+        let merged_config =
+            merge_site_config(ws_config.defaults.as_ref(), &site_config_path, cli_args);
 
         let config_str = serde_yaml::to_string(&merged_config).unwrap_or_default();
         let mut site_data = Data::new(&config_str, &site_config_path);
@@ -205,7 +203,8 @@ pub fn run_workspace(
     for site_entry in &ws_config.sites {
         let site_input = workspace_root.join(&site_entry.name);
         let site_config_path = site_input.join(&cli_args.config);
-        let mut merged_config = merge_site_config(&ws_config.defaults, &site_config_path, cli_args);
+        let mut merged_config =
+            merge_site_config(ws_config.defaults.as_ref(), &site_config_path, cli_args);
 
         let is_default = default_site_name.as_deref() == Some(&site_entry.name);
         let site_output = if is_default && !ws_config.redirect {
@@ -232,7 +231,7 @@ pub fn run_workspace(
         );
 
         site::build_site_with_config(
-            merged_config,
+            &merged_config,
             &site_input,
             &site_output,
             cli_args,
@@ -246,8 +245,10 @@ pub fn run_workspace(
                 .sites
                 .iter()
                 .find(|s| s.name == *default_name)
-                .map(|s| s.resolved_output_path())
-                .unwrap_or(default_name.as_str());
+                .map_or(
+                    default_name.as_str(),
+                    WorkspaceSiteEntry::resolved_output_path,
+                );
             let redirect_html = site::generate_redirect_html(&format!("/{default_path}/"));
             if let Err(e) = fs::create_dir_all(&output_root) {
                 error!(
@@ -275,7 +276,7 @@ pub fn run_workspace(
             serve,
             bind_address,
             cli_args,
-        )?;
+        );
     }
 
     Ok(())
@@ -364,11 +365,12 @@ pub fn show_shortcodes_workspace(
     ws_config: &WorkspaceConfig,
     workspace_root: &Path,
     cli_args: &Arc<Cli>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) {
     for site_entry in &ws_config.sites {
         let site_input = workspace_root.join(&site_entry.name);
         let site_config_path = site_input.join(&cli_args.config);
-        let merged_config = merge_site_config(&ws_config.defaults, &site_config_path, cli_args);
+        let merged_config =
+            merge_site_config(ws_config.defaults.as_ref(), &site_config_path, cli_args);
 
         println!("\n=== Site: {} ===", site_entry.name);
 
@@ -391,7 +393,6 @@ pub fn show_shortcodes_workspace(
             }
         }
     }
-    Ok(())
 }
 
 pub fn resolve_cross_site_refs(html: &str, cross_site_data: &CrossSiteData) -> String {
@@ -399,9 +400,8 @@ pub fn resolve_cross_site_refs(html: &str, cross_site_data: &CrossSiteData) -> S
     let escaped_sep = regex::escape(sep);
 
     let pattern = format!(r#"((?:href|src)=["'])(\w+){escaped_sep}([^"']+)(["'])"#);
-    let re = match regex::Regex::new(&pattern) {
-        Ok(r) => r,
-        Err(_) => return html.to_string(),
+    let Ok(re) = regex::Regex::new(&pattern) else {
+        return html.to_string();
     };
 
     re.replace_all(html, |caps: &regex::Captures| {
@@ -419,6 +419,90 @@ pub fn resolve_cross_site_refs(html: &str, cross_site_data: &CrossSiteData) -> S
     .to_string()
 }
 
+fn make_rebuild_fn(
+    ws_config: &WorkspaceConfig,
+    workspace_root: &Path,
+    output_root: &Path,
+    cli_args: &Arc<Cli>,
+    live_reload: Option<crate::server::LiveReload>,
+) -> Arc<std::sync::Mutex<impl Fn()>> {
+    let ws_config_clone = ws_config.clone();
+    let workspace_root_owned = workspace_root.to_path_buf();
+    let output_root_owned = output_root.to_path_buf();
+    let cli_clone = Arc::clone(cli_args);
+
+    Arc::new(std::sync::Mutex::new(move || {
+        info!("Change detected. Rebuilding workspace...");
+        let cross_site_data =
+            match preprocess_all_sites(&ws_config_clone, &workspace_root_owned, &cli_clone) {
+                Ok(data) => data,
+                Err(e) => {
+                    error!("Failed to preprocess workspace: {e}");
+                    return;
+                }
+            };
+
+        let default_site_name = ws_config_clone.resolved_default_site().map(String::from);
+
+        for site_entry in &ws_config_clone.sites {
+            let site_input = workspace_root_owned.join(&site_entry.name);
+            let site_config_path = site_input.join(&cli_clone.config);
+            let mut merged_config = merge_site_config(
+                ws_config_clone.defaults.as_ref(),
+                &site_config_path,
+                &cli_clone,
+            );
+
+            let is_default = default_site_name.as_deref() == Some(&site_entry.name);
+            let site_output = if is_default && !ws_config_clone.redirect {
+                output_root_owned.clone()
+            } else {
+                output_root_owned.join(site_entry.resolved_output_path())
+            };
+
+            if is_default && !ws_config_clone.redirect {
+                if let Some(url) = resolve_site_url(&merged_config.url, "") {
+                    merged_config.url = url;
+                }
+            } else {
+                let path = site_entry.resolved_output_path();
+                if let Some(url) = resolve_site_url(&merged_config.url, path) {
+                    merged_config.url = url;
+                }
+            }
+
+            if let Err(e) = site::build_site_with_config(
+                &merged_config,
+                &site_input,
+                &site_output,
+                &cli_clone,
+                Some(&cross_site_data),
+            ) {
+                error!("Failed to rebuild site '{}': {e}", site_entry.name);
+            }
+        }
+
+        if ws_config_clone.redirect {
+            if let Some(default_name) = &default_site_name {
+                let default_path = ws_config_clone
+                    .sites
+                    .iter()
+                    .find(|s| s.name == *default_name)
+                    .map_or(
+                        default_name.as_str(),
+                        WorkspaceSiteEntry::resolved_output_path,
+                    );
+                let redirect_html = site::generate_redirect_html(&format!("/{default_path}/"));
+                let _ = fs::write(output_root_owned.join("index.html"), redirect_html);
+            }
+        }
+
+        if let Some(lr) = &live_reload {
+            lr.notify_reload();
+        }
+    }))
+}
+
 #[allow(clippy::too_many_arguments)]
 fn handle_workspace_watch_serve(
     ws_config: &WorkspaceConfig,
@@ -429,7 +513,7 @@ fn handle_workspace_watch_serve(
     serve: bool,
     bind_address: &str,
     cli_args: &Arc<Cli>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) {
     let live_reload = if watch && serve {
         Some(crate::server::LiveReload::new())
     } else {
@@ -441,83 +525,17 @@ fn handle_workspace_watch_serve(
             Ok(hw) => hw,
             Err(e) => {
                 error!("Failed to initialize hotwatch: {e}");
-                return Ok(());
+                return;
             }
         };
 
-        let ws_config_clone = ws_config.clone();
-        let workspace_root_owned = workspace_root.to_path_buf();
-        let output_root_owned = output_root.to_path_buf();
-        let cli_clone = Arc::clone(cli_args);
-        let live_reload_watch = live_reload.clone();
-
-        let rebuild = move || {
-            info!("Change detected. Rebuilding workspace...");
-            let cross_site_data =
-                match preprocess_all_sites(&ws_config_clone, &workspace_root_owned, &cli_clone) {
-                    Ok(data) => data,
-                    Err(e) => {
-                        error!("Failed to preprocess workspace: {e}");
-                        return;
-                    }
-                };
-
-            let default_site_name = ws_config_clone.resolved_default_site().map(String::from);
-
-            for site_entry in &ws_config_clone.sites {
-                let site_input = workspace_root_owned.join(&site_entry.name);
-                let site_config_path = site_input.join(&cli_clone.config);
-                let mut merged_config =
-                    merge_site_config(&ws_config_clone.defaults, &site_config_path, &cli_clone);
-
-                let is_default = default_site_name.as_deref() == Some(&site_entry.name);
-                let site_output = if is_default && !ws_config_clone.redirect {
-                    output_root_owned.clone()
-                } else {
-                    output_root_owned.join(site_entry.resolved_output_path())
-                };
-
-                if is_default && !ws_config_clone.redirect {
-                    if let Some(url) = resolve_site_url(&merged_config.url, "") {
-                        merged_config.url = url;
-                    }
-                } else {
-                    let path = site_entry.resolved_output_path();
-                    if let Some(url) = resolve_site_url(&merged_config.url, path) {
-                        merged_config.url = url;
-                    }
-                }
-
-                if let Err(e) = site::build_site_with_config(
-                    merged_config,
-                    &site_input,
-                    &site_output,
-                    &cli_clone,
-                    Some(&cross_site_data),
-                ) {
-                    error!("Failed to rebuild site '{}': {e}", site_entry.name);
-                }
-            }
-
-            if ws_config_clone.redirect {
-                if let Some(default_name) = &default_site_name {
-                    let default_path = ws_config_clone
-                        .sites
-                        .iter()
-                        .find(|s| s.name == *default_name)
-                        .map(|s| s.resolved_output_path())
-                        .unwrap_or(default_name.as_str());
-                    let redirect_html = site::generate_redirect_html(&format!("/{default_path}/"));
-                    let _ = fs::write(output_root_owned.join("index.html"), redirect_html);
-                }
-            }
-
-            if let Some(lr) = &live_reload_watch {
-                lr.notify_reload();
-            }
-        };
-
-        let rebuild = Arc::new(std::sync::Mutex::new(rebuild));
+        let rebuild = make_rebuild_fn(
+            ws_config,
+            workspace_root,
+            output_root,
+            cli_args,
+            live_reload.clone(),
+        );
 
         for site_entry in &ws_config.sites {
             let site_input = workspace_root.join(&site_entry.name);
@@ -588,8 +606,6 @@ fn handle_workspace_watch_serve(
         info!("Starting built-in HTTP server...");
         crate::server::start(bind_address, &Arc::new(output_root.to_path_buf()), None);
     }
-
-    Ok(())
 }
 
 #[cfg(test)]
