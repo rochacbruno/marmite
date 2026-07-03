@@ -5,6 +5,7 @@ use serde_json::json;
 fn test_url_for_basic_path() {
     let url_for = UrlFor {
         base_url: String::new(),
+        ..Default::default()
     };
     let result = url_for.resolve("about.html", false);
     assert_eq!(result, "/about.html");
@@ -14,6 +15,7 @@ fn test_url_for_basic_path() {
 fn test_url_for_absolute_path() {
     let url_for = UrlFor {
         base_url: "https://example.com".to_string(),
+        ..Default::default()
     };
     let result = url_for.resolve("about.html", true);
     assert_eq!(result, "https://example.com/about.html");
@@ -23,6 +25,7 @@ fn test_url_for_absolute_path() {
 fn test_url_for_external_url() {
     let url_for = UrlFor {
         base_url: String::new(),
+        ..Default::default()
     };
     let result = url_for.resolve("https://external.com", false);
     assert_eq!(result, "https://external.com");
@@ -35,6 +38,7 @@ fn test_url_for_missing_path() {
         "url_for",
         UrlFor {
             base_url: String::new(),
+            ..Default::default()
         },
     );
     tera.add_raw_template("test", r#"{{ url_for() }}"#).unwrap();

@@ -142,6 +142,8 @@ fn preprocess_all_sites(
         separator: ws_config.separator.clone(),
     };
 
+    let default_site_name = ws_config.resolved_default_site();
+
     for site_entry in &ws_config.sites {
         let site_input = workspace_root.join(&site_entry.name);
         if !site_input.exists() {
@@ -160,7 +162,12 @@ fn preprocess_all_sites(
         site_data.sort_all();
         site_data.collect_all_urls();
 
-        let output_path = site_entry.resolved_output_path().to_string();
+        let is_default = default_site_name == Some(site_entry.name.as_str());
+        let output_path = if is_default && !ws_config.redirect {
+            String::new()
+        } else {
+            site_entry.resolved_output_path().to_string()
+        };
 
         cross_site.sites.insert(
             site_entry.name.clone(),
@@ -217,6 +224,12 @@ pub fn run_workspace(
             }
         }
 
+        let path_prefix = if is_default && !ws_config.redirect {
+            ""
+        } else {
+            site_entry.resolved_output_path()
+        };
+
         info!(
             "Building site '{}' -> {}",
             site_entry.name,
@@ -229,6 +242,7 @@ pub fn run_workspace(
             &site_output,
             cli_args,
             Some(&cross_site_data),
+            path_prefix,
         )?;
     }
 
@@ -404,7 +418,11 @@ pub fn resolve_cross_site_refs(html: &str, cross_site_data: &CrossSiteData) -> S
         let suffix = &caps[4];
 
         if let Some(site_data) = cross_site_data.sites.get(site_name) {
-            format!("{prefix}/{}/{path}{suffix}", site_data.output_path)
+            if site_data.output_path.is_empty() {
+                format!("{prefix}/{path}{suffix}")
+            } else {
+                format!("{prefix}/{}/{path}{suffix}", site_data.output_path)
+            }
         } else {
             caps[0].to_string()
         }
@@ -464,12 +482,19 @@ fn make_rebuild_fn(
                 }
             }
 
+            let path_prefix = if is_default && !ws_config_clone.redirect {
+                ""
+            } else {
+                site_entry.resolved_output_path()
+            };
+
             if let Err(e) = site::build_site_with_config(
                 &merged_config,
                 &site_input,
                 &site_output,
                 &cli_clone,
                 Some(&cross_site_data),
+                path_prefix,
             ) {
                 error!("Failed to rebuild site '{}': {e}", site_entry.name);
             }

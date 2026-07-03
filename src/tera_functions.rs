@@ -16,6 +16,14 @@ fn parse_site_param(kwargs: &Kwargs) -> Option<String> {
         .map(|s| s.to_string())
 }
 
+fn prefix_slug(slug: &str, output_path: &str) -> String {
+    if output_path.is_empty() {
+        slug.to_string()
+    } else {
+        format!("{output_path}/{slug}")
+    }
+}
+
 fn collect_cross_site_posts(site_param: &str, cross_site_data: &CrossSiteData) -> Vec<Content> {
     let site_names: Vec<&str> = if site_param == "all" {
         cross_site_data.sites.keys().map(String::as_str).collect()
@@ -28,7 +36,7 @@ fn collect_cross_site_posts(site_param: &str, cross_site_data: &CrossSiteData) -
         if let Some(site_data) = cross_site_data.sites.get(name) {
             for post in &site_data.data.posts {
                 let mut prefixed = post.clone();
-                prefixed.slug = format!("{}/{}", site_data.output_path, post.slug);
+                prefixed.slug = prefix_slug(&post.slug, &site_data.output_path);
                 posts.push(prefixed);
             }
         }
@@ -48,7 +56,7 @@ fn collect_cross_site_pages(site_param: &str, cross_site_data: &CrossSiteData) -
         if let Some(site_data) = cross_site_data.sites.get(name) {
             for page in &site_data.data.pages {
                 let mut prefixed = page.clone();
-                prefixed.slug = format!("{}/{}", site_data.output_path, page.slug);
+                prefixed.slug = prefix_slug(&page.slug, &site_data.output_path);
                 pages.push(prefixed);
             }
         }
@@ -68,6 +76,7 @@ pub struct SlugData {
 #[derive(Default)]
 pub struct UrlFor {
     pub base_url: String,
+    pub path_prefix: String,
 }
 
 impl UrlFor {
@@ -82,6 +91,11 @@ impl UrlFor {
         // Ensure the path starts with "/" by adding it if necessary
         if !path.starts_with('/') {
             path = format!("/{path}");
+        }
+
+        // Apply workspace path prefix for non-root sites
+        if !self.path_prefix.is_empty() && !path.starts_with(&format!("/{}/", self.path_prefix)) {
+            path = format!("/{}{path}", self.path_prefix);
         }
 
         // Trim trailing slashes from base_url if it's not empty
@@ -184,7 +198,7 @@ fn merge_grouped_content(
                     let entry = merged.entry(key.clone()).or_default();
                     for post in posts {
                         let mut prefixed = post.clone();
-                        prefixed.slug = format!("{}/{}", site_data.output_path, post.slug);
+                        prefixed.slug = prefix_slug(&post.slug, &site_data.output_path);
                         entry.push(prefixed);
                     }
                 }
@@ -511,7 +525,7 @@ impl tera::Function<TeraResult<Value>> for GetDataBySlug {
                     let target_data = &sd.data;
                     let slug_data = resolve_slug_in_data(inner_slug, target_data);
                     if let Some(mut sd_result) = slug_data {
-                        sd_result.slug = format!("{}/{}", sd.output_path, sd_result.slug);
+                        sd_result.slug = prefix_slug(&sd_result.slug, &sd.output_path);
                         return Value::try_from_serializable(&sd_result);
                     }
                     return Err(tera::Error::message(format!(
@@ -525,7 +539,7 @@ impl tera::Function<TeraResult<Value>> for GetDataBySlug {
                     let target_data = &sd.data;
                     let slug_data = resolve_slug_in_data(raw_slug, target_data);
                     if let Some(mut sd_result) = slug_data {
-                        sd_result.slug = format!("{}/{}", sd.output_path, sd_result.slug);
+                        sd_result.slug = prefix_slug(&sd_result.slug, &sd.output_path);
                         return Value::try_from_serializable(&sd_result);
                     }
                     return Err(tera::Error::message(format!(

@@ -114,11 +114,11 @@ fn test_workspace_cross_site_links() {
         "Blog post should have cross-site link to photos. Content: {blog_post}"
     );
 
-    // Photos post should link to /blog/hello.html
+    // Photos post should link to /hello.html (blog is the default site at root)
     let photos_post = fs::read_to_string(output_dir.join("photos/sunset.html")).unwrap();
     assert!(
-        photos_post.contains("href=\"/blog/hello.html\""),
-        "Photos post should have cross-site link to blog. Content: {photos_post}"
+        photos_post.contains("href=\"/hello.html\""),
+        "Photos post should have cross-site link to blog at root. Content: {photos_post}"
     );
 }
 
@@ -168,7 +168,8 @@ fn test_workspace_show_urls() {
     let stdout = String::from_utf8_lossy(&result.stdout);
     assert!(stdout.contains("\"blog\""));
     assert!(stdout.contains("\"photos\""));
-    assert!(stdout.contains("/blog/"));
+    // Blog is default site at root, so its URLs have no /blog/ prefix
+    assert!(stdout.contains("/hello.html"));
     assert!(stdout.contains("/photos/"));
 }
 

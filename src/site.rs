@@ -553,6 +553,7 @@ pub(crate) fn build_site_with_config(
     output_folder: &Path,
     cli_args: &Arc<crate::cli::Cli>,
     cross_site_data: Option<&crate::workspace::CrossSiteData>,
+    path_prefix: &str,
 ) -> Result<Data, Box<dyn std::error::Error>> {
     let start_time = std::time::Instant::now();
 
@@ -657,8 +658,12 @@ pub(crate) fn build_site_with_config(
     .par_iter()
     .for_each(|step| match *step {
         "render_templates" => {
-            let (tera, shortcode_processor) =
-                initialize_tera(input_folder_arc.as_path(), &site_data, cross_site_data);
+            let (tera, shortcode_processor) = initialize_tera(
+                input_folder_arc.as_path(),
+                &site_data,
+                cross_site_data,
+                path_prefix,
+            );
             if let Err(e) = render_templates(
                 &content_folder,
                 &site_data,
@@ -694,7 +699,7 @@ pub(crate) fn build_site_with_config(
         _ => {}
     });
 
-    let (tera, _) = initialize_tera(input_folder, &site_data, cross_site_data);
+    let (tera, _) = initialize_tera(input_folder, &site_data, cross_site_data, path_prefix);
     generate_sitemap(&site_data, &tera, &output_path);
 
     if site_data.site.publish_urls_json {
@@ -866,7 +871,7 @@ pub fn generate(
             .for_each(|step| match *step {
                 "render_templates" => {
                     let (tera, shortcode_processor) =
-                        initialize_tera(&moved_input_folder, &site_data, None);
+                        initialize_tera(&moved_input_folder, &site_data, None, "");
                     if let Err(e) = render_templates(
                         &content_folder,
                         &site_data,
@@ -903,7 +908,7 @@ pub fn generate(
             });
 
             // Generate sitemap after all templates are rendered
-            let (tera, _) = initialize_tera(&moved_input_folder, &site_data, None);
+            let (tera, _) = initialize_tera(&moved_input_folder, &site_data, None, "");
             generate_sitemap(&site_data, &tera, &output_path);
 
             // Generate urls.json if enabled
@@ -1707,6 +1712,7 @@ fn initialize_tera(
     input_folder: &Path,
     site_data: &Data,
     cross_site_data: Option<&crate::workspace::CrossSiteData>,
+    path_prefix: &str,
 ) -> (Tera, Option<ShortcodeProcessor>) {
     let mut tera = Tera::default();
     tera.autoescape_on(Vec::<&str>::new());
@@ -1714,6 +1720,7 @@ fn initialize_tera(
         "url_for",
         UrlFor {
             base_url: site_data.site.url.clone(),
+            path_prefix: path_prefix.to_string(),
         },
     );
     let csd = cross_site_data.cloned();
@@ -2815,6 +2822,7 @@ fn generate_sitemap(site_data: &Data, tera: &Tera, output_path: &Path) {
     // Create UrlFor function instance
     let url_for = UrlFor {
         base_url: site_data.site.url.clone(),
+        ..Default::default()
     };
 
     // Helper to generate URL using url_for
@@ -2858,6 +2866,7 @@ fn create_urls_json(site_data: &Data) -> serde_json::Value {
     // Create UrlFor function instance
     let url_for = UrlFor {
         base_url: site_data.site.url.clone(),
+        ..Default::default()
     };
 
     // Determine if we should use absolute URLs
@@ -3311,6 +3320,7 @@ pub(crate) fn generate_redirect_html(target_url: &str) -> String {
 fn handle_redirect_aliases(site_data: &Data, output_dir: &Path) -> Result<(), String> {
     let url_for = UrlFor {
         base_url: site_data.site.url.clone(),
+        ..Default::default()
     };
 
     let all_slugs: std::collections::HashSet<String> = site_data
