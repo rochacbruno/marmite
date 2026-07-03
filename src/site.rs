@@ -1716,11 +1716,20 @@ fn initialize_tera(
 ) -> (Tera, Option<ShortcodeProcessor>) {
     let mut tera = Tera::default();
     tera.autoescape_on(Vec::<&str>::new());
+    let all_site_prefixes = cross_site_data
+        .map(|csd| {
+            csd.sites
+                .values()
+                .map(|sd| sd.output_path.clone())
+                .collect()
+        })
+        .unwrap_or_default();
     tera.register_function(
         "url_for",
         UrlFor {
             base_url: site_data.site.url.clone(),
             path_prefix: path_prefix.to_string(),
+            all_site_prefixes,
         },
     );
     let csd = cross_site_data.cloned();

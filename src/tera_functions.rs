@@ -77,9 +77,17 @@ pub struct SlugData {
 pub struct UrlFor {
     pub base_url: String,
     pub path_prefix: String,
+    pub all_site_prefixes: Vec<String>,
 }
 
 impl UrlFor {
+    fn has_site_prefix(&self, path: &str) -> bool {
+        self.all_site_prefixes
+            .iter()
+            .filter(|p| !p.is_empty())
+            .any(|p| path.starts_with(&format!("/{p}/")))
+    }
+
     pub fn resolve(&self, path: &str, abs: bool) -> String {
         let mut path = path.trim_start_matches("./").to_string();
 
@@ -93,8 +101,12 @@ impl UrlFor {
             path = format!("/{path}");
         }
 
-        // Apply workspace path prefix for non-root sites
-        if !self.path_prefix.is_empty() && !path.starts_with(&format!("/{}/", self.path_prefix)) {
+        // Apply workspace path prefix for non-root sites,
+        // but skip if the path already belongs to another site
+        if !self.path_prefix.is_empty()
+            && !path.starts_with(&format!("/{}/", self.path_prefix))
+            && !self.has_site_prefix(&path)
+        {
             path = format!("/{}{path}", self.path_prefix);
         }
 
