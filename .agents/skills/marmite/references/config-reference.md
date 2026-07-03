@@ -320,3 +320,37 @@ marmite <folder> --name "My Site" --pagination 20 --enable-search true --toc tru
 ```
 
 CLI flags take precedence over `marmite.yaml` values.
+
+## Workspace Configuration
+
+For multi-site projects, create `marmite-workspace.yaml` at the workspace root (not `marmite.yaml`).
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `sites` | list | (required) | Ordered list of site entries to build |
+| `default_site` | string | first in list | Which site renders at the output root |
+| `redirect` | bool | `false` | If true, root gets a redirect page instead of the default site content |
+| `defaults` | Marmite | (empty) | Shared Marmite config inherited by all sites |
+| `separator` | string | `"::"` | Separator for cross-site references |
+
+Each entry in `sites` has:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | (required) | Directory name of the site |
+| `output_path` | string | same as `name` | Custom output subdirectory name |
+
+```yaml
+sites:
+  - name: blog
+  - name: photos
+    output_path: gallery
+default_site: blog
+redirect: false
+defaults:
+  language: en
+  pagination: 10
+separator: "::"
+```
+
+The `defaults` section accepts any field from the standard `marmite.yaml` config. Each site's own `marmite.yaml` overrides these defaults. CLI flags only affect the workspace-level defaults.

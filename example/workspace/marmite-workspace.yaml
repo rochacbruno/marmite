@@ -1,0 +1,10 @@
+sites:
+  - name: blog
+  - name: photos
+
+default_site: blog
+redirect: false
+
+defaults:
+  language: en
+  pagination: 10

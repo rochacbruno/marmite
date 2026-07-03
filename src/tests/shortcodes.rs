@@ -500,6 +500,7 @@ fn test_shortcode_renders_with_tera_functions() {
         "url_for",
         crate::tera_functions::UrlFor {
             base_url: "https://example.com".to_string(),
+            ..Default::default()
         },
     );
 

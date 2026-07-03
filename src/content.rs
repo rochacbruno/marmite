@@ -130,6 +130,7 @@ impl Content {
     /// if the file is a fragment, the markdown content will be modified to include the references
     /// if is a regular content then content will be modified to include the `markdown_header`
     /// and `markdown_footer` and references
+    #[allow(clippy::too_many_lines)]
     pub fn from_markdown(
         path: &Path,
         fragments: Option<&HashMap<String, String>>,
@@ -983,15 +984,22 @@ fn find_matching_file(
 
     // Fallback: generic {kind}.{ext} in subfolder media (shared by all files in the subfolder)
     // e.g., content/language-streams/media/banner.jpg matches for any .md in that subfolder
+    // Only applies when the content is in a real subfolder, not the content root itself.
+    // The parent must have its own parent with a media folder for this to be a subfolder.
     if media_path.is_dir() {
-        if let Some(subfolder_name) = parent_path.file_name().and_then(|n| n.to_str()) {
-            for ext in exts {
-                let generic_filename = format!("{kind}.{ext}");
-                let file_path = media_path.join(&generic_filename);
-                if file_path.exists() {
-                    return Some(format!(
-                        "{media_folder_name}/{subfolder_name}/{generic_filename}"
-                    ));
+        let is_subfolder = parent_path
+            .parent()
+            .is_some_and(|gp| gp.join(media_folder_name).is_dir());
+        if is_subfolder {
+            if let Some(subfolder_name) = parent_path.file_name().and_then(|n| n.to_str()) {
+                for ext in exts {
+                    let generic_filename = format!("{kind}.{ext}");
+                    let file_path = media_path.join(&generic_filename);
+                    if file_path.exists() {
+                        return Some(format!(
+                            "{media_folder_name}/{subfolder_name}/{generic_filename}"
+                        ));
+                    }
                 }
             }
         }

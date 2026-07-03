@@ -1,7 +1,7 @@
 ---
 title: Marmite 0.3.3 Release Notes
 slug: marmite-0-3-3-release-notes
-description: "Marmite 0.3.3 adds multilingual content support via language streams, content subfolder media, internal link validation, redirect aliases, and migrates to Tera 2.0."
+description: "Marmite 0.3.3 adds workspace multi-site support, multilingual content via language streams, content subfolder media, internal link validation, redirect aliases, and migrates to Tera 2.0."
 tags: [release-notes, marmite, features, announcement]
 author: rochacbruno
 stream: draft
@@ -113,6 +113,29 @@ aliases:
 For each alias, marmite generates a lightweight HTML file with a `<meta http-equiv="refresh">` redirect, a `<link rel="canonical">` tag, and a JavaScript fallback. Redirect pages are excluded from the sitemap, feeds, and search index to avoid duplicate content issues.
 
 Marmite warns at build time if an alias conflicts with an existing content slug or is defined by more than one content file.
+
+### Workspace Multi-Site Support (#329)
+
+Marmite now supports workspaces for managing multiple sites from a single project directory. A `marmite-workspace.yaml` file at the root identifies a workspace:
+
+```yaml
+sites:
+  - name: blog
+  - name: photos
+default_site: blog
+defaults:
+  language: en
+  pagination: 10
+```
+
+Key capabilities:
+- **Single command builds** - `marmite myworkspace output` builds all sites
+- **Configuration inheritance** - workspace defaults flow to all sites, each site's `marmite.yaml` can override
+- **Cross-site references** - link between sites using `site::path` syntax (e.g., `photos::gallery.html` resolves to `/photos/gallery.html`)
+- **Flexible root handling** - default site renders at root, or use `redirect: true` for a redirect page
+- **Watch mode** - monitors all site directories with live reload
+- **CLI integration** - `--show-urls` and `--shortcodes` aggregate across sites, `--new --site blog` creates content in a specific site
+- **Independent sites** - each subfolder remains a fully independent marmite site that can be built on its own
 
 ### Tera 2.0 Migration
 
