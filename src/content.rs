@@ -795,6 +795,7 @@ fn try_to_parse_date(input: &str) -> Result<NaiveDateTime, chrono::ParseError> {
 
 /// Use regex to extract date from filename `2024-01-01-myfile.md` or `2024-01-01-15-30-myfile.md`
 /// Also handles stream prefixes like `news-2024-01-15-site-update.md`
+/// Falls back to extracting date from parent directory name (e.g., `2024-01-01-my-post/`)
 fn extract_date_from_filename(path: &Path) -> Option<NaiveDateTime> {
     if let Some(filename) = path.file_stem().and_then(|stem| stem.to_str()) {
         // First try direct date parsing (existing behavior for backward compatibility)
@@ -813,6 +814,18 @@ fn extract_date_from_filename(path: &Path) -> Option<NaiveDateTime> {
             }
         }
     }
+
+    // Fallback: try extracting date from parent directory name
+    if let Some(parent_name) = path
+        .parent()
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str())
+    {
+        if let Ok(date) = try_to_parse_date(parent_name) {
+            return Some(date);
+        }
+    }
+
     None
 }
 
