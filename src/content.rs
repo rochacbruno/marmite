@@ -957,6 +957,19 @@ fn find_matching_file(
                 return Some(image_filename.clone());
             }
         }
+        // Content subfolder media: {parent}/{slug}/media/{kind}.{ext}
+        // e.g., content/language-streams/media/banner.png
+        let content_subfolder_media = parent_path.join(slug).join(media_folder_name);
+        if content_subfolder_media.is_dir() {
+            for subfolder_filename in [format!("{kind}.{ext}"), format!("{slug}.{ext}")] {
+                let file_path = content_subfolder_media.join(&subfolder_filename);
+                if file_path.exists() {
+                    return Some(format!("{media_folder_name}/{slug}/{subfolder_filename}"));
+                }
+            }
+        }
+        // Global media subfolder: {parent}/media/{slug}/{kind}.{ext}
+        // e.g., content/media/language-streams/banner.png
         let slug_subfolder = media_path.join(slug);
         if slug_subfolder.is_dir() {
             for subfolder_filename in [format!("{kind}.{ext}"), format!("{slug}.{ext}")] {

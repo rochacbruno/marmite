@@ -2356,8 +2356,49 @@ fn handle_static_artifacts(
             &media_source.display(),
             &output_folder.display()
         );
+    }
 
-        // Process image resizing if configured in extra (and not skipped)
+    // Copy media from content subfolders (content/{name}/media/ -> output/media/{name}/)
+    // These take precedence over global media since they're copied after
+    let media_folder_name = &site_data.site.media_path;
+    if let Ok(entries) = fs::read_dir(content_dir) {
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let dir_name = match path.file_name().and_then(|n| n.to_str()) {
+                Some(name) => name.to_string(),
+                None => continue,
+            };
+            if dir_name == *media_folder_name {
+                continue;
+            }
+            let subfolder_media = path.join(media_folder_name);
+            if subfolder_media.is_dir() {
+                let dest = output_folder.join(media_folder_name).join(&dir_name);
+                if let Err(e) = fs::create_dir_all(&dest) {
+                    error!("Failed to create media subfolder directory: {e:?}");
+                    continue;
+                }
+                let mut options = CopyOptions::new();
+                options.overwrite = true;
+                options.content_only = true;
+                if let Err(e) = dircopy(&subfolder_media, &dest, &options) {
+                    error!("Failed to copy subfolder media: {e:?}");
+                    continue;
+                }
+                debug!(
+                    "Copied content subfolder media '{}' to '{}'",
+                    subfolder_media.display(),
+                    dest.display()
+                );
+            }
+        }
+    }
+
+    // Process image resizing if configured in extra (and not skipped)
+    if media_source.is_dir() {
         if site_data.site.skip_image_resize {
             debug!("Image resizing skipped (--skip-image-resize flag)");
         } else if let Some(extra) = &site_data.site.extra {
