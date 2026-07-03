@@ -199,6 +199,19 @@ streams:
     display_name: "Tutorials"
 ```
 
+**Language Streams** - multilingual content:
+```yaml
+language: en
+languages:
+  en:
+    name: "English"
+  pt:
+    name: "Portugues"
+```
+Organize translations in subfolders for auto-discovery, or link manually via `language` and `translations` frontmatter fields. Each language gets its own stream page and RSS feed. Translation links and hreflang SEO tags are added automatically.
+
+See `references/content-organization.md` for all content organization modes.
+
 **Series** - multi-part ordered content:
 ```yaml
 series: python-tutorial

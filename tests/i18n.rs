@@ -259,6 +259,175 @@ languages:
 }
 
 #[test]
+fn test_language_frontmatter_implies_stream() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+
+    let config = r#"
+name: Test Blog
+language: en
+languages:
+  en:
+    name: "English"
+  pt:
+    name: "Portugues"
+"#;
+    fs::write(input_dir.join("marmite.yaml"), config).unwrap();
+
+    // Post with language: pt but no stream - should go to pt.html
+    let pt_post =
+        "---\ndate: 2024-01-01\ntitle: Conteudo\nlanguage: pt\n---\n# Conteudo em Portugues\n";
+    fs::write(input_dir.join("content").join("conteudo.md"), pt_post).unwrap();
+
+    // Default language post stays on index
+    let en_post = "---\ndate: 2024-01-01\ntitle: Content\n---\n# English Content\n";
+    fs::write(input_dir.join("content").join("content.md"), en_post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Portuguese post should be on pt.html, not index
+    assert!(
+        output_dir.join("pt-conteudo.html").exists(),
+        "pt-conteudo.html should exist (language implies stream prefix)"
+    );
+    assert!(
+        output_dir.join("pt.html").exists(),
+        "pt.html stream page should exist"
+    );
+
+    let pt_stream = fs::read_to_string(output_dir.join("pt.html")).unwrap();
+    assert!(
+        pt_stream.contains("Conteudo"),
+        "Portuguese post should be listed on pt.html"
+    );
+
+    let index = fs::read_to_string(output_dir.join("index.html")).unwrap();
+    assert!(
+        !index.contains("pt-conteudo"),
+        "Portuguese post should NOT be on index.html"
+    );
+    assert!(
+        index.contains("Content"),
+        "English post should be on index.html"
+    );
+
+    // HTML lang attribute should be correct
+    let pt_html = fs::read_to_string(output_dir.join("pt-conteudo.html")).unwrap();
+    assert!(
+        pt_html.contains("lang=\"pt\""),
+        "Portuguese page should have lang=pt"
+    );
+}
+
+#[test]
+fn test_dated_subfolder_extracts_date() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::create_dir_all(
+        input_dir
+            .join("content")
+            .join("2024-06-15-dated-folder-test"),
+    )
+    .unwrap();
+
+    let config = r#"
+name: Test Blog
+language: en
+languages:
+  en:
+    name: "English"
+  pt:
+    name: "Portugues"
+"#;
+    fs::write(input_dir.join("marmite.yaml"), config).unwrap();
+
+    // Base post - no date in frontmatter, should get it from folder
+    let base = "---\ntitle: Dated Folder Test\n---\n# Test\n";
+    fs::write(
+        input_dir
+            .join("content")
+            .join("2024-06-15-dated-folder-test")
+            .join("dated-folder-test.md"),
+        base,
+    )
+    .unwrap();
+
+    // Translation - also gets date from folder
+    let pt = "---\ntitle: Teste de Pasta com Data\n---\n# Teste\n";
+    fs::write(
+        input_dir
+            .join("content")
+            .join("2024-06-15-dated-folder-test")
+            .join("pt-teste-pasta-data.md"),
+        pt,
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Both should be posts (have dates from folder) and thus generate HTML
+    assert!(
+        output_dir.join("dated-folder-test.html").exists(),
+        "Base post should exist"
+    );
+    assert!(
+        output_dir.join("pt-teste-de-pasta-com-data.html").exists()
+            || output_dir.join("pt-teste-pasta-data.html").exists(),
+        "Portuguese translation should exist"
+    );
+
+    // Base should have date rendered (confirming date extraction worked)
+    let base_html = fs::read_to_string(output_dir.join("dated-folder-test.html")).unwrap();
+    assert!(
+        base_html.contains("2024"),
+        "Date from folder should appear in rendered content"
+    );
+
+    // Should have translation links (both are in the same subfolder)
+    assert!(
+        base_html.contains("Portugues"),
+        "Base should link to Portuguese translation"
+    );
+}
+
+#[test]
 fn test_no_languages_backward_compat() {
     let temp_dir = TempDir::new().unwrap();
     let input_dir = temp_dir.path().join("input");

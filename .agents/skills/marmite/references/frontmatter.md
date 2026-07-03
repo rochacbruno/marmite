@@ -238,6 +238,8 @@ language: pt
 
 When set, overrides automatic language detection. Used with the `languages` config to enable multilingual features (translation links, hreflang SEO tags). If not set, the language is inferred from the stream name when it matches a configured language code.
 
+When `language` is set but no `stream` is specified, marmite automatically assigns the post to the language's stream. A post with `language: pt` (and no `stream`) will appear on `pt.html` with a `pt-` slug prefix. An explicit `stream` always takes precedence.
+
 ### translations
 
 - **Type:** Array of strings (slugs)

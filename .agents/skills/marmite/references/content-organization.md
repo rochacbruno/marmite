@@ -523,10 +523,14 @@ Group translations in subfolders. Files prefixed with a configured language code
 
 ```
 content/hello/
-  hello.md              # Default language (pt), slug: hello, stream: index
-  en-hello-world.md     # English, slug: en-hello-world, stream: en
+  hello.md              # Default language, slug: hello, stream: index
+  pt-ola-mundo.md       # Portuguese, slug: pt-ola-mundo, stream: pt
   es-hola-mundo.md      # Spanish, slug: es-hola-mundo, stream: es
 ```
+
+The subfolder can also have a date prefix (e.g., `content/2026-07-02-hello/`) so files inside inherit the date without needing it in frontmatter.
+
+Subfolder names must match the original post's resolved slug (not the filename) to be automatically linked.
 
 ### Mixed flat + subfolder
 
@@ -539,9 +543,9 @@ content/
     pt-ola.md           # Translation, auto-linked to hello
 ```
 
-### Flat file patterns
+### Stream markers
 
-Use existing stream markers or frontmatter. Manual `translations` frontmatter needed:
+Use existing stream markers or frontmatter `stream` field. Manual `translations` frontmatter needed:
 
 ```
 content/
@@ -549,9 +553,21 @@ content/
   pt-S-ola.md           # stream: pt via -S- pattern
 ```
 
+### Frontmatter translation link
+
+Set `language` and `translations` in frontmatter:
+
+```yaml
+language: pt
+translations:
+  - hello
+```
+
+When `language` is set without `stream`, the post is automatically assigned to the language's stream. An explicit `stream` always takes precedence.
+
 ### Output
 
-All output stays flat: `hello.html`, `en-hello-world.html`, `pt.html` (stream listing).
+All output stays flat: `hello.html`, `pt-ola-mundo.html`, `pt.html` (stream listing).
 Translation links and hreflang tags are added automatically to content pages.
 
 ## Best Practices

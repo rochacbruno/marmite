@@ -12,7 +12,7 @@ O marmite suporta sites multilingues atraves de language streams. Cada idioma se
 Declare os idiomas disponiveis no `marmite.yaml`:
 
 ```yaml
-language: pt
+language: en
 languages:
   pt:
     name: "Portugues"
@@ -22,7 +22,7 @@ languages:
     name: "Espanol"
 ```
 
-O campo `language` (que ja existe e tem o padrao `en`) determina o idioma padrao. O conteudo no idioma padrao fica no `index.html`. Outros idiomas recebem suas proprias paginas de stream (`en.html`, `es.html`) e feeds RSS (`en.rss`, `es.rss`).
+O campo `language` (que ja existe e tem o padrao `en`) determina o idioma padrao. O conteudo no idioma padrao fica no `index.html`. Outros idiomas recebem suas proprias paginas de stream (`pt.html`, `es.html`) e feeds RSS (`pt.rss`, `es.rss`).
 
 Quando `languages` nao esta configurado, todos os recursos de i18n ficam desabilitados e sites existentes funcionam exatamente como antes.
 
@@ -36,17 +36,20 @@ Agrupe traducoes em uma subpasta com o nome do slug do conteudo base. Arquivos c
 
 ```
 content/hello/
-  hello.md              # Idioma padrao (pt)
-  en-hello-world.md     # Traducao em ingles
+  hello.md              # Idioma padrao (en)
+  pt-ola-mundo.md       # Traducao em portugues
   es-hola-mundo.md      # Traducao em espanhol
 ```
 
 Isso gera:
-- `hello.html` - Post em portugues, listado no `index.html`
-- `en-hello-world.html` - Post em ingles, listado no `en.html`
+- `hello.html` - Post em ingles, listado no `index.html`
+- `pt-ola-mundo.html` - Post em portugues, listado no `pt.html`
 - `es-hola-mundo.html` - Post em espanhol, listado no `es.html`
 
 Todas as tres paginas mostram automaticamente links "Tambem disponivel em" para as outras.
+
+> [!TIP]
+> A subpasta tambem pode ter a data nela, por exemplo `content/2026-07-02-hello/`, assim voce nao precisa especificar a data no frontmatter de cada traducao.
 
 ### Opcao 2: Misto Arquivo Plano + Subpasta
 
@@ -61,7 +64,10 @@ content/
 
 O marmite detecta que o nome da subpasta `hello` corresponde ao slug do arquivo plano e os vincula como traducoes.
 
-### Opcao 3: Arquivos Planos com Marcadores de Stream
+> [!IMPORTANT]
+> Os nomes das subpastas devem corresponder ao slug do post original (nao o nome do arquivo, mas o slug resolvido, as vezes retirado do titulo) para serem automaticamente vinculados como traducoes.
+
+### Opcao 3: Marcadores de Stream
 
 Use o padrao de marcador `-S-` existente para organizacao plana:
 
@@ -71,23 +77,36 @@ content/
   pt-S-ola.md           # Portugues, stream: pt
 ```
 
-Com este padrao, voce precisa vincular traducoes manualmente usando o campo `translations` no frontmatter.
+Ou definindo a language stream diretamente no frontmatter:
 
-### Opcao 4: Apenas Frontmatter
+```yaml
+---
+title: ola mundo
+date: 2024-01-01
+stream: pt
+translations:
+  - en-hello
+---
+```
 
-Defina a stream e as traducoes explicitamente no frontmatter:
+Com este padrao, voce precisa vincular traducoes manualmente usando o campo `translations` no frontmatter (veja abaixo).
+
+### Opcao 4: Link de Traducao via Frontmatter
+
+Defina o idioma e as traducoes explicitamente no frontmatter:
 
 ```yaml
 ---
 title: Hello World
 date: 2024-01-01
+language: en # pode omitir porque e o idioma padrao
 translations:
-  - pt-ola
+  - pt-ola  # entao voce escreve um post com slug `ola` e language: pt
   - es-hola
 ---
 ```
 
-O campo `translations` aceita uma lista de slugs. O marmite resolve cada slug para o conteudo real, preenche o codigo do idioma e o nome de exibicao a partir da configuracao `languages`, e cria links bidirecionais.
+O campo `translations` aceita uma lista de slugs. O marmite resolve cada slug para o conteudo real, preenche o codigo do idioma e o nome de exibicao a partir da configuracao `languages`, e cria links bidirecionais. Se o post A lista o post B como traducao, o post B automaticamente recebe um link de volta para o post A.
 
 ## Campos de Frontmatter
 
@@ -100,6 +119,8 @@ language: pt
 ```
 
 Normalmente nao e necessario - o idioma e inferido do nome da stream ou da deteccao por subpasta.
+
+Quando `language` e definido, mas nenhuma stream e definida, o marmite assume que a stream e a mesma que o idioma, ou seja, este post sera publicado na stream pt.html.
 
 ### `translations`
 
@@ -116,6 +137,7 @@ Nao e necessario ao usar auto-descoberta por subpasta (Opcoes 1 e 2), pois as tr
 ## Notas de Compatibilidade
 
 - O conteudo do idioma padrao usa a stream `index` e aparece na pagina principal `index.html`
-- A deteccao de idioma por prefixo de nome de arquivo so funciona dentro de subpastas, nunca para arquivos planos na raiz do conteudo
+- A deteccao de idioma por prefixo de nome de arquivo so funciona dentro de subpastas, nunca para arquivos planos na raiz do conteudo (evitando falsos positivos como `essential-guide.md` sendo detectado como idioma `es`)
 - Um post pode ter tanto uma `series` quanto uma language stream - funcionam independentemente
-- Sites sem `languages` configurado nao sao afetados de forma alguma
+- Colisoes de slug entre idiomas sao evitadas pelo prefixo da stream nos slugs (`en-hello` vs `es-hola`)
+- Paginas (conteudo sem datas) podem ter `language` e `translations` para exibicao no template, mas nao aparecem em paginas de listagem de stream
