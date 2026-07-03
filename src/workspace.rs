@@ -270,6 +270,8 @@ pub fn run_workspace(
     }
 
     write_sites_json(&ws_config, &output_root)?;
+    write_workspace_build_info(&ws_config, &cross_site_data, &output_root)?;
+    write_workspace_urls_json(&cross_site_data, &output_root)?;
 
     info!("Workspace generated at: {}/", output_root.display());
 
@@ -319,6 +321,73 @@ fn write_sites_json(
     let json = serde_json::to_string_pretty(&sites_info)?;
     fs::write(output_root.join("sites.json"), json)?;
     info!("Generated sites.json");
+    Ok(())
+}
+
+fn write_workspace_build_info(
+    ws_config: &WorkspaceConfig,
+    cross_site_data: &CrossSiteData,
+    output_root: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut total_posts = 0;
+    let mut total_pages = 0;
+    let mut sites = Vec::new();
+
+    for site_entry in &ws_config.sites {
+        if let Some(sd) = cross_site_data.sites.get(&site_entry.name) {
+            let post_count = sd.data.posts.len();
+            let page_count = sd.data.pages.len();
+            total_posts += post_count;
+            total_pages += page_count;
+            sites.push(serde_json::json!({
+                "name": site_entry.name,
+                "output_path": sd.output_path,
+                "posts": post_count,
+                "pages": page_count,
+            }));
+        }
+    }
+
+    let build_info = serde_json::json!({
+        "workspace": true,
+        "marmite_version": env!("CARGO_PKG_VERSION"),
+        "generated_at": chrono::Local::now().to_string(),
+        "sites": sites,
+        "total_posts": total_posts,
+        "total_pages": total_pages,
+    });
+
+    let json = serde_json::to_string_pretty(&build_info)?;
+    fs::write(output_root.join("marmite.json"), json)?;
+    info!("Generated workspace marmite.json");
+    Ok(())
+}
+
+fn write_workspace_urls_json(
+    cross_site_data: &CrossSiteData,
+    output_root: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut merged = serde_json::Map::new();
+
+    for sd in cross_site_data.sites.values() {
+        let site_json = site::create_urls_json(&sd.data, &sd.output_path);
+        if let serde_json::Value::Object(map) = site_json {
+            for (category, urls) in map {
+                let entry = merged
+                    .entry(category)
+                    .or_insert_with(|| serde_json::Value::Array(Vec::new()));
+                if let (serde_json::Value::Array(existing), serde_json::Value::Array(new)) =
+                    (entry, urls)
+                {
+                    existing.extend(new);
+                }
+            }
+        }
+    }
+
+    let json = serde_json::to_string_pretty(&serde_json::Value::Object(merged))?;
+    fs::write(output_root.join("urls.json"), json)?;
+    info!("Generated workspace urls.json");
     Ok(())
 }
 

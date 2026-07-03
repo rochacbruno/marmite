@@ -703,7 +703,7 @@ pub(crate) fn build_site_with_config(
     generate_sitemap(&site_data, &tera, &output_path);
 
     if site_data.site.publish_urls_json {
-        generate_urls_json(&site_data, &output_path);
+        generate_urls_json(&site_data, &output_path, path_prefix);
     }
 
     if let Some(atproto) = &site_data.site.atproto {
@@ -914,7 +914,7 @@ pub fn generate(
 
             // Generate urls.json if enabled
             if site_data.site.publish_urls_json {
-                generate_urls_json(&site_data, &output_path);
+                generate_urls_json(&site_data, &output_path, "");
             }
 
             // Generate standard.site verification file if configured
@@ -2871,10 +2871,10 @@ fn generate_sitemap(site_data: &Data, tera: &Tera, output_path: &Path) {
 }
 
 #[allow(clippy::too_many_lines)]
-fn create_urls_json(site_data: &Data) -> serde_json::Value {
-    // Create UrlFor function instance
+pub(crate) fn create_urls_json(site_data: &Data, path_prefix: &str) -> serde_json::Value {
     let url_for = UrlFor {
         base_url: site_data.site.url.clone(),
+        path_prefix: path_prefix.to_string(),
         ..Default::default()
     };
 
@@ -3163,12 +3163,12 @@ fn create_urls_json(site_data: &Data) -> serde_json::Value {
     serde_json::Value::Object(output)
 }
 
-fn generate_urls_json(site_data: &Data, output_path: &Path) {
+fn generate_urls_json(site_data: &Data, output_path: &Path, path_prefix: &str) {
     if !site_data.site.publish_urls_json {
         return;
     }
 
-    let json = create_urls_json(site_data);
+    let json = create_urls_json(site_data, path_prefix);
 
     // Write JSON to file
     let urls_file = output_path.join("urls.json");
@@ -4013,7 +4013,7 @@ pub fn show_urls(
     site_data.collect_all_urls();
 
     // Generate JSON using the shared function
-    let json = create_urls_json(&site_data);
+    let json = create_urls_json(&site_data, "");
 
     // Output JSON
     match serde_json::to_string_pretty(&json) {

@@ -230,6 +230,7 @@ fn test_workspace_config_inheritance() {
         r#"
 sites:
   - name: site1
+redirect: true
 defaults:
   name: Workspace Default Name
   tagline: Workspace Tagline
@@ -249,11 +250,20 @@ defaults:
     let result = run_marmite(&[ws_dir.to_str().unwrap(), output_dir.to_str().unwrap()]);
     assert!(result.status.success());
 
-    // Check marmite.json for the merged config
-    let build_info = fs::read_to_string(output_dir.join("marmite.json")).unwrap();
-    let info: serde_json::Value = serde_json::from_str(&build_info).unwrap();
-    assert_eq!(info["config"]["name"], "Site One");
-    assert_eq!(info["config"]["tagline"], "Workspace Tagline");
+    // Root marmite.json is workspace-level
+    let root_info: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(output_dir.join("marmite.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(root_info["workspace"], true);
+
+    // Site-specific marmite.json has merged config
+    let site_info: serde_json::Value = serde_json::from_str(
+        &fs::read_to_string(output_dir.join("site1/marmite.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(site_info["config"]["name"], "Site One");
+    assert_eq!(site_info["config"]["tagline"], "Workspace Tagline");
 }
 
 #[test]
