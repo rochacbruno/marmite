@@ -157,11 +157,12 @@ fn handle_request(
     }
 
     let request_path = match decoded_url.as_str() {
-        "/" => "index.html",
-        url => &url[1..], // Remove the leading '/'
+        "/" => "index.html".to_string(),
+        url if url.ends_with('/') => format!("{}index.html", &url[1..]),
+        url => url[1..].to_string(),
     };
 
-    let file_path = output_folder.join(request_path);
+    let file_path = output_folder.join(&request_path);
     let error_path = output_folder.join("404.html");
 
     if file_path.is_file() {
@@ -193,7 +194,7 @@ fn handle_request(
                     request.http_version()
                 );
                 let mut resp = Response::from_data(buffer);
-                if let Some(content_type) = content_type_for(request_path) {
+                if let Some(content_type) = content_type_for(&request_path) {
                     match Header::from_bytes("Content-Type", content_type) {
                         Ok(header) => resp.add_header(header),
                         Err(e) => error!("Failed to create Content-Type header: {e:?}"),

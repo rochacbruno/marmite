@@ -13,7 +13,7 @@ fn parse_site_param(kwargs: &Kwargs) -> Option<String> {
         .ok()
         .flatten()
         .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
+        .map(ToString::to_string)
 }
 
 fn prefix_slug(slug: &str, output_path: &str) -> String {
