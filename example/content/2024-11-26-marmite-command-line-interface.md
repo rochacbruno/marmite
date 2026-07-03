@@ -467,7 +467,7 @@ Building site 'blog' -> output
 Building site 'photos' -> output/photos
 ```
 
-The default site renders at the output root. Other sites render to subdirectories. See the [Workspace documentation](workspace-multi-site.html) for full details on configuration, cross-site references, and behavior.
+The default site renders at the output root. Other sites render to subdirectories. See the [Workspace documentation](workspace-multi-site-support.html) for full details on configuration, cross-site references, and behavior.
 
 Commands that are not supported in workspace mode (theme commands, `--init-site`) will display an error asking you to run them on individual sites.
 
