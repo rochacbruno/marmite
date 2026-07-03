@@ -108,3 +108,7 @@ pub const CAPTURE_DATE_PREFIX_FROM_TEXT: &str = r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2
 pub const REPLACE_AT_MEDIA_REF_IN_HTML: &str = r#"(?P<attr>src|href)="@/"#;
 
 // === Text Processing Patterns ===
+
+#[cfg(test)]
+#[path = "tests/re.rs"]
+mod tests;

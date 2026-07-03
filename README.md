@@ -32,43 +32,62 @@ It also handles generating or copying `static/` and `media/` to the `output` dir
 
 1. Marmite is meant to be simple, don't expect complex features
 2. Marmite is for **bloggers**, so writing and publishing articles in chronological order is the main use case.
-3. The generated static site is a **flat** HTML site, no subpaths, all content is published in extension ending URLS ex: `./{name}.html|rss|json`
-4. There are only 2 taxonomies `tags:` (to group similar content together) and `stream:` (to separate content in a different listing) 
+3. The generated static site is **flat** HTML by default (`./{name}.html|rss|json`). Workspaces can produce subdirectory-based multi-site layouts.
+4. Taxonomies: `tags:`, `stream:`, `series:`, `authors:`, and `languages:` (i18n)
 5. Marmite uses the `date:` attribute to differentiate `posts` from `pages`
 
 ## Features
 
 - Everything embedded in a single binary.
 - Zero-Config to get started.
-  - optionally fully configurable
+  - Optionally fully configurable via `marmite.yaml`
+  - Configurable markdown parser (CommonMark extensions, rendering options)
 - Common-mark + Github Flavoured Markdown + Extensions.
 - Raw HTML allowed.
 - Emojis `:smile:`, spoiler `||secret||`.
 - Wikilinks `[[name|url]]` and Obsidian links `[[page]]`.
-- Backlinks.
+- Markdown alerts (GitHub-style callouts).
+- Backlinks and related content.
 - Tags.
-- Multi authors.
-  - Author profile page
-- Multi streams.
-  - Separate content in different listing
+- Multi authors with profile pages.
+- Multi streams (separate content in different listings).
+- Series support (ordered, chronological content groups with navigation).
+- Language streams / i18n (multilingual content with auto-discovery, translation links, hreflang SEO tags).
+- Draft content management (filtered from feeds and search).
 - Pagination.
-- Static Search Index.
-- RSS Feeds.
-  - Multiple feeds (index, tags, authors, streams)
-- Built-in HTTP server.
+- Static search index with inline match previews.
+- RSS Feeds (index, tags, authors, streams, languages).
+- Next/previous post navigation (stream-aware).
+- Built-in HTTP server with WebSocket live reload.
 - Auto rebuild when content changes.
-- Built-in theme 
+- Shortcodes (YouTube, Spotify, cards, galleries, table of contents, custom templates).
+- Image gallery with automatic thumbnail generation.
+- Automatic image resizing (parallel processing, incremental builds, configurable quality).
+- Media organization (slug-based subfolders, `@/` shorthand, content subfolder media).
+- Automatic sitemap generation.
+- `--show-urls` dry run to preview all site URLs without building.
+- File mappings (copy arbitrary files during site generation).
+- Redirect aliases (frontmatter `aliases` field generates redirect pages for old URLs).
+- Internal link validation (build-time checking, optional strict failure mode).
+- IndieWeb compliance (microformats, semantic HTML).
+- Markdown source publishing alongside HTML.
+- Built-in theme
   - Light and Dark modes.
-  - Multiple colorschemes
-  - Fully responsive
-  - Spotlight Search.
-  - Easy to replace the index page and add custom CSS/JS
-  - Easy to customize the templates
+  - Multiple colorschemes.
+  - Fully responsive.
+  - Spotlight search.
+  - Easy to replace the index page and add custom CSS/JS.
+  - Easy to customize Tera templates.
   - Math and Mermaid diagrams.
   - Build-time syntax highlighting via [arborium](https://arborium.bearcove.eu/).
   - Commenting system integration.
   - Banner images and `og:` tags.
-- CLI to start a new theme from scratch
+- Theme system with remote theme installation.
+- CLI to start a new theme from scratch.
+- Workspace multi-site support (single command builds, config inheritance, cross-site references).
+- AT Protocol / standard.site integration (publish posts to the decentralized social web).
+- Embedded AI agent skills for AI-assisted site management.
+- Available via cargo, pip/uvx, Homebrew, AUR, FreeBSD, Docker, and install script.
 
 
 ## Installation
@@ -149,33 +168,56 @@ Site generated at path_to_generated_site/
 CLI
 
 ```console
-❯ marmite --help
+$ marmite --help
 Marmite is the easiest static site generator.
 
-Usage: marmite [OPTIONS] <INPUT_FOLDER> <OUTPUT_FOLDER>
+Usage: marmite [OPTIONS] [INPUT_FOLDER] [OUTPUT_FOLDER] [COMMAND]
+
+Commands:
+  atproto  Manage atproto / standard.site integration
+  help     Print this message or the help of the given subcommand(s)
 
 Arguments:
-  <INPUT_FOLDER>   Input folder containing markdown files
-  <OUTPUT_FOLDER>  Output folder to generate the site
+  [INPUT_FOLDER]   Input folder containing markdown files
+  [OUTPUT_FOLDER]  Output folder to generate the site [default: `input_folder/site`]
 
 Options:
-      --serve            Serve the site with a built-in HTTP server
-      --watch            Detect changes and rebuild the site automatically
-      --bind <BIND>      Address to bind the server [default: localhost:8000]
-      --config <CONFIG>  Path to custom configuration file [default: marmite.yaml]
-      --debug            Print debug messages Deprecated: Use -vv for debug messages
-      --init-templates   Initialize templates in the project
-      --start-theme      Initialize a theme with templates and static assets
-      --generate-config  Generate the configuration file
-  -v, --verbose...       Verbosity level (0-4) [default: 0 warn] options: -v: info,-vv: debug,-vvv: trace,-vvvv: trace all
-  -h, --help             Print help
-  -V, --version          Print version
-
+  -v, --verbose...            Verbosity level (0-4) [default: 0 warn]
+  -w, --watch                 Detect changes and rebuild the site automatically
+      --serve                 Serve the site with a built-in HTTP server
+      --bind <BIND>           Address to bind the server [default: 0.0.0.0:8000]
+  -c, --config <CONFIG>       Path to custom configuration file [default: marmite.yaml]
+      --init-templates        Initialize templates in the project
+      --start-theme <NAME>    Initialize a theme with templates and static assets
+      --set-theme <THEME>     Download and set a theme from a remote URL or local folder
+      --generate-config       Generate the configuration file
+      --init-site             Init a new site with sample content and default configuration
+      --force                 Force the rebuild of the site even if no changes detected
+      --shortcodes            List all available shortcodes
+      --show-urls             Show all site URLs organized by content type
+      --skill                 Print the embedded agent skill document (SKILL.md) to stdout
+      --skill-install         Install the skill into .agents/skills/
+      --skill-install-claude  Install the skill into .claude/skills/ for Claude Code
+      --new <TITLE>           Create a new post with the given title
+  -e                          Edit the file in the default editor
+  -p                          Set the new content as a page
+  -t <TAGS>                   Set the tags for the new content (comma separated)
+      --site <SITE>           Target site within a workspace
+      --skip-image-resize     Skip image resizing during build
+      --check-internal-links  Check internal links during build
+      --strict-internal-links Fail the build on broken internal links
+  -h, --help                  Print help
+  -V, --version               Print version
 ```
+
+> Run `marmite --help` for the full list of options including site metadata overrides,
+> search, pagination, and other configuration flags.
 
 ### Live reload in development
 
-When running with `--serve --watch`, Marmite exposes a WebSocket-based live reload helper. Add this snippet to your base template so the browser refreshes after each rebuild:
+When running with `--serve --watch` (or `--serve -w`), Marmite automatically rebuilds
+on file changes and refreshes the browser via WebSocket. The default theme includes
+live reload out of the box. For custom themes, add this snippet to your base template:
 
 ```html
 <script src="/__marmite__/livereload.js"></script>

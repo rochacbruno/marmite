@@ -759,3 +759,7 @@ fn default_code_highlight_light_theme() -> String {
 fn default_code_highlight_dark_theme() -> String {
     "github-dark".to_string()
 }
+
+#[cfg(test)]
+#[path = "tests/config.rs"]
+mod tests;

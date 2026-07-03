@@ -304,3 +304,267 @@ fn test_cli() -> crate::cli::Cli {
         subcommand: None,
     }
 }
+
+// === resolve_site_url tests ===
+
+#[test]
+fn test_resolve_site_url_empty_base() {
+    assert_eq!(resolve_site_url("", "blog"), None);
+}
+
+#[test]
+fn test_resolve_site_url_base_only() {
+    assert_eq!(
+        resolve_site_url("https://example.com", ""),
+        Some("https://example.com".to_string())
+    );
+}
+
+#[test]
+fn test_resolve_site_url_with_subpath() {
+    assert_eq!(
+        resolve_site_url("https://example.com", "blog"),
+        Some("https://example.com/blog".to_string())
+    );
+}
+
+#[test]
+fn test_resolve_site_url_trailing_slash() {
+    assert_eq!(
+        resolve_site_url("https://example.com/", ""),
+        Some("https://example.com".to_string())
+    );
+    assert_eq!(
+        resolve_site_url("https://example.com/", "blog"),
+        Some("https://example.com/blog".to_string())
+    );
+}
+
+// === write_sites_json tests ===
+
+#[test]
+fn test_write_sites_json() {
+    let dir = TempDir::new().unwrap();
+    let ws_config = WorkspaceConfig {
+        sites: vec![
+            WorkspaceSiteEntry {
+                name: "blog".into(),
+                output_path: Some("b".into()),
+            },
+            WorkspaceSiteEntry {
+                name: "photos".into(),
+                output_path: None,
+            },
+        ],
+        default_site: None,
+        redirect: false,
+        defaults: None,
+        separator: "::".into(),
+    };
+
+    write_sites_json(&ws_config, dir.path()).unwrap();
+
+    let content = fs::read_to_string(dir.path().join("sites.json")).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
+    let sites = parsed.as_array().unwrap();
+    assert_eq!(sites.len(), 2);
+    assert_eq!(sites[0]["name"], "blog");
+    assert_eq!(sites[0]["path"], "/b/");
+    assert_eq!(sites[1]["name"], "photos");
+    assert_eq!(sites[1]["path"], "/photos/");
+}
+
+// === write_workspace_build_info tests ===
+
+#[test]
+fn test_write_workspace_build_info() {
+    let dir = TempDir::new().unwrap();
+    let ws_config = WorkspaceConfig {
+        sites: vec![
+            WorkspaceSiteEntry {
+                name: "blog".into(),
+                output_path: None,
+            },
+            WorkspaceSiteEntry {
+                name: "docs".into(),
+                output_path: None,
+            },
+        ],
+        default_site: None,
+        redirect: false,
+        defaults: None,
+        separator: "::".into(),
+    };
+
+    let mut sites_map = std::collections::HashMap::new();
+    let mut blog_data = crate::site::Data::new("", &std::path::PathBuf::from("test.yaml"));
+    blog_data.posts.push(crate::content::Content::default());
+    blog_data.posts.push(crate::content::Content::default());
+    blog_data.pages.push(crate::content::Content::default());
+    sites_map.insert(
+        "blog".to_string(),
+        SiteData {
+            name: "blog".to_string(),
+            output_path: "blog".to_string(),
+            data: blog_data,
+        },
+    );
+
+    let mut docs_data = crate::site::Data::new("", &std::path::PathBuf::from("test.yaml"));
+    docs_data.pages.push(crate::content::Content::default());
+    sites_map.insert(
+        "docs".to_string(),
+        SiteData {
+            name: "docs".to_string(),
+            output_path: "docs".to_string(),
+            data: docs_data,
+        },
+    );
+
+    let cross_site = CrossSiteData {
+        sites: sites_map,
+        separator: "::".to_string(),
+    };
+
+    write_workspace_build_info(&ws_config, &cross_site, dir.path()).unwrap();
+
+    let content = fs::read_to_string(dir.path().join("marmite-workspace.json")).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
+    assert_eq!(parsed["workspace"], true);
+    assert_eq!(parsed["total_posts"], 2);
+    assert_eq!(parsed["total_pages"], 2);
+    assert!(parsed["marmite_version"].is_string());
+    assert!(parsed["generated_at"].is_string());
+    let sites = parsed["sites"].as_array().unwrap();
+    assert_eq!(sites.len(), 2);
+}
+
+// === write_workspace_urls_json tests ===
+
+#[test]
+fn test_write_workspace_urls_json() {
+    let dir = TempDir::new().unwrap();
+
+    let mut sites_map = std::collections::HashMap::new();
+    let blog_data = crate::site::Data::new("", &std::path::PathBuf::from("test.yaml"));
+    sites_map.insert(
+        "blog".to_string(),
+        SiteData {
+            name: "blog".to_string(),
+            output_path: "blog".to_string(),
+            data: blog_data,
+        },
+    );
+
+    let docs_data = crate::site::Data::new("", &std::path::PathBuf::from("test.yaml"));
+    sites_map.insert(
+        "docs".to_string(),
+        SiteData {
+            name: "docs".to_string(),
+            output_path: "docs".to_string(),
+            data: docs_data,
+        },
+    );
+
+    let cross_site = CrossSiteData {
+        sites: sites_map,
+        separator: "::".to_string(),
+    };
+
+    write_workspace_urls_json(&cross_site, dir.path()).unwrap();
+
+    let content = fs::read_to_string(dir.path().join("urls-workspace.json")).unwrap();
+    let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
+    assert!(parsed.is_object());
+}
+
+// === resolve_cross_site_refs edge case ===
+
+#[test]
+fn test_resolve_cross_site_refs_empty_output_path() {
+    let mut sites = std::collections::HashMap::new();
+    sites.insert("main".to_string(), make_site_data("main", ""));
+    let cross_site = CrossSiteData {
+        sites,
+        separator: "::".to_string(),
+    };
+
+    let html = r#"<a href="main::my-page.html">link</a>"#;
+    let result = resolve_cross_site_refs(html, &cross_site);
+    assert_eq!(result, r#"<a href="/my-page.html">link</a>"#);
+}
+
+#[test]
+fn test_resolve_cross_site_refs_multiple_refs() {
+    let mut sites = std::collections::HashMap::new();
+    sites.insert("blog".to_string(), make_site_data("blog", "blog"));
+    sites.insert("docs".to_string(), make_site_data("docs", "docs"));
+    let cross_site = CrossSiteData {
+        sites,
+        separator: "::".to_string(),
+    };
+
+    let html = r#"<a href="blog::post.html">post</a> and <img src="docs::media/img.png" />"#;
+    let result = resolve_cross_site_refs(html, &cross_site);
+    assert!(result.contains(r#"href="/blog/post.html""#));
+    assert!(result.contains(r#"src="/docs/media/img.png""#));
+}
+
+// === merge_site_config edge cases ===
+
+#[test]
+fn test_merge_site_config_no_defaults() {
+    let dir = TempDir::new().unwrap();
+    let site_config = dir.path().join("marmite.yaml");
+    fs::write(&site_config, "language: fr\npagination: 20\n").unwrap();
+
+    let cli_args = std::sync::Arc::new(test_cli());
+    let merged = merge_site_config(None, &site_config, &cli_args);
+    assert_eq!(merged.language, "fr");
+    assert_eq!(merged.pagination, 20);
+}
+
+#[test]
+fn test_merge_site_config_missing_file() {
+    let dir = TempDir::new().unwrap();
+    let site_config = dir.path().join("nonexistent.yaml");
+
+    let defaults = crate::config::Marmite {
+        language: "pt".to_string(),
+        ..Default::default()
+    };
+    let cli_args = std::sync::Arc::new(test_cli());
+    let merged = merge_site_config(Some(&defaults), &site_config, &cli_args);
+    assert_eq!(merged.language, "pt");
+}
+
+// === deep_merge_yaml edge case ===
+
+#[test]
+fn test_deep_merge_yaml_overlay_replaces_mapping() {
+    let base: serde_yaml::Value = serde_yaml::from_str("top:\n  a: 1\n  b: 2").unwrap();
+    let overlay: serde_yaml::Value = serde_yaml::from_str("top: replaced").unwrap();
+    let merged = deep_merge_yaml(base, overlay);
+    let top = merged
+        .as_mapping()
+        .unwrap()
+        .get(serde_yaml::Value::String("top".into()))
+        .unwrap();
+    assert_eq!(top.as_str(), Some("replaced"));
+}
+
+#[test]
+fn test_deep_merge_yaml_empty_base() {
+    let base: serde_yaml::Value = serde_yaml::from_str("{}").unwrap();
+    let overlay: serde_yaml::Value = serde_yaml::from_str("a: 1\nb: 2").unwrap();
+    let merged = deep_merge_yaml(base, overlay);
+    let map = merged.as_mapping().unwrap();
+    assert_eq!(
+        map.get(serde_yaml::Value::String("a".into())),
+        Some(&serde_yaml::Value::Number(1.into()))
+    );
+    assert_eq!(
+        map.get(serde_yaml::Value::String("b".into())),
+        Some(&serde_yaml::Value::Number(2.into()))
+    );
+}
