@@ -1151,8 +1151,22 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
         }
     }
 
-    // Infer language for pages with explicit language frontmatter already set (no stream inference)
-    // Pages don't have streams, but they can have language set via frontmatter (handled in from_markdown)
+    // Infer language for pages from filename patterns (pages don't have streams)
+    for page in &mut site_data.pages {
+        if page.language.is_none() {
+            if let Some(ref source_path) = page.source_path {
+                if let Some(filename) = source_path.file_stem().and_then(|s| s.to_str()) {
+                    for lang_code in languages.keys() {
+                        let prefix = format!("{lang_code}-");
+                        if filename.starts_with(&prefix) {
+                            page.language = Some(lang_code.clone());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // Pass 2: Build translation groups from subfolders
     // Group key = subfolder name relative to content_dir
