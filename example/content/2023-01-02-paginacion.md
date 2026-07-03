@@ -1,7 +1,6 @@
 ---
 tags: docs
 language: es
-stream: es
 translations:
   - pagination
 ---
