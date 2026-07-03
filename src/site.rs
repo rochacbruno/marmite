@@ -1124,6 +1124,21 @@ fn collect_content(
                             content.slug = format!("{lang}-{}", content.slug);
                         }
                     }
+
+                    // language frontmatter implies stream when no explicit stream was set
+                    // and the language is not the site default
+                    if let Some(ref lang) = content.language {
+                        if site_data.site.languages.contains_key(lang.as_str())
+                            && content.stream.as_deref() == Some("index")
+                            && *lang != site_data.site.language
+                        {
+                            content.stream = Some(lang.clone());
+                            let prefix = format!("{lang}-");
+                            if !content.slug.starts_with(&prefix) {
+                                content.slug = format!("{lang}-{}", content.slug);
+                            }
+                        }
+                    }
                 }
                 site_data.push_content(content);
             }
