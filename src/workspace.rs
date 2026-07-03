@@ -343,7 +343,13 @@ pub fn show_urls_workspace(
             let prefixed: Vec<String> = urls
                 .iter()
                 .map(|u| {
-                    if u.starts_with('/') {
+                    if prefix.is_empty() {
+                        if u.starts_with('/') {
+                            u.clone()
+                        } else {
+                            format!("/{u}")
+                        }
+                    } else if u.starts_with('/') {
                         format!("/{prefix}{u}")
                     } else {
                         format!("/{prefix}/{u}")
