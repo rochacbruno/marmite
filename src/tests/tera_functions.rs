@@ -406,6 +406,54 @@ fn test_url_for_has_site_prefix_empty_filtered() {
     assert!(url_for.has_site_prefix("/blog/post.html"));
 }
 
+// === UrlFor workspace path_prefix + base_url tests (issue #480) ===
+
+#[test]
+fn test_url_for_workspace_no_double_prefix_relative() {
+    let url_for = UrlFor {
+        base_url: "https://example.com/en".to_string(),
+        path_prefix: "en".to_string(),
+        all_site_prefixes: vec!["en".to_string()],
+    };
+    let result = url_for.resolve("static/favicon.ico", false);
+    assert_eq!(result, "/en/static/favicon.ico");
+}
+
+#[test]
+fn test_url_for_workspace_no_double_prefix_absolute() {
+    let url_for = UrlFor {
+        base_url: "https://example.com/en".to_string(),
+        path_prefix: "en".to_string(),
+        all_site_prefixes: vec!["en".to_string()],
+    };
+    let result = url_for.resolve("about.html", true);
+    assert_eq!(result, "https://example.com/en/about.html");
+}
+
+#[test]
+fn test_url_for_workspace_absolute_preserves_port() {
+    let url_for = UrlFor {
+        base_url: "http://localhost:8000/en".to_string(),
+        path_prefix: "en".to_string(),
+        all_site_prefixes: vec!["en".to_string()],
+    };
+    let result = url_for.resolve("static/style.css", true);
+    assert_eq!(result, "http://localhost:8000/en/static/style.css");
+}
+
+#[test]
+fn test_url_for_workspace_default_site_unchanged() {
+    let url_for = UrlFor {
+        base_url: "https://example.com".to_string(),
+        path_prefix: String::new(),
+        all_site_prefixes: vec![String::new(), "en".to_string()],
+    };
+    let result = url_for.resolve("about.html", false);
+    assert_eq!(result, "/about.html");
+    let result_abs = url_for.resolve("about.html", true);
+    assert_eq!(result_abs, "https://example.com/about.html");
+}
+
 // === collect_cross_site_posts/pages tests ===
 
 fn make_cross_site_data() -> crate::workspace::CrossSiteData {
