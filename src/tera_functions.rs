@@ -121,9 +121,7 @@ impl UrlFor {
         // When path_prefix is set (workspace non-default site), the base_url
         // already contains the prefix path (e.g. https://example.com/en),
         // so we must NOT also use it as base_path to avoid double-prefixing.
-        let base_path = if !self.path_prefix.is_empty() {
-            String::new()
-        } else if base_url.is_empty() {
+        let base_path = if !self.path_prefix.is_empty() || base_url.is_empty() {
             String::new()
         } else {
             Url::parse(&base_url)
