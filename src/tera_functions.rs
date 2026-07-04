@@ -134,9 +134,12 @@ impl UrlFor {
             // Absolute URL with base_url.
             // When path_prefix is set, strip the path part from base_url since
             // path_prefix is already included in the resolved path.
-            let abs_base = if !self.path_prefix.is_empty() {
-                Url::parse(&base_url)
-                    .map(|parsed_url| {
+            let abs_base = if self.path_prefix.is_empty() {
+                base_url.clone()
+            } else {
+                Url::parse(&base_url).map_or_else(
+                    |_| base_url.clone(),
+                    |parsed_url| {
                         let host = parsed_url.host_str().unwrap_or("");
                         let scheme = parsed_url.scheme();
                         if let Some(port) = parsed_url.port() {
@@ -144,10 +147,8 @@ impl UrlFor {
                         } else {
                             format!("{scheme}://{host}")
                         }
-                    })
-                    .unwrap_or_else(|_| base_url.clone())
-            } else {
-                base_url.clone()
+                    },
+                )
             };
             format!("{}/{}", abs_base, path.trim_start_matches('/'))
         } else if !base_path.is_empty() {

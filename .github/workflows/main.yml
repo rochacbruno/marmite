@@ -14,6 +14,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  pull-requests: write
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
@@ -144,3 +145,121 @@ jobs:
         with:
           token: ${{secrets.CODECOV_TOKEN}}
           fail_ci_if_error: false
+
+  pedantic:
+    name: Pedantic Clippy
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run pedantic clippy
+        continue-on-error: true
+        run: |
+          cargo clippy -- -W clippy::pedantic 2>&1 | tee clippy_output.txt
+          echo "CLIPPY_EXIT_CODE=${PIPESTATUS[0]}" >> $GITHUB_ENV
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('clippy_output.txt', 'utf8');
+            const marker = '<!-- pedantic-clippy -->';
+
+            const warnings = output
+              .split('\n')
+              .filter(line => line.startsWith('warning:') && !line.includes('generated'));
+
+            let body;
+            if (warnings.length === 0) {
+              body = `${marker}\n### Pedantic Clippy\n\nNo pedantic warnings found.`;
+            } else {
+              body = `${marker}\n### Pedantic Clippy\n\nFound **${warnings.length}** pedantic warning(s).\n\n<details>\n<summary>Show details</summary>\n\n\`\`\`\n${output}\n\`\`\`\n\n</details>`;
+            }
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+  pr-coverage:
+    name: PR Coverage
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:develop-nightly
+      options: --security-opt seccomp=unconfined
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Generate code coverage
+        continue-on-error: true
+        run: |
+          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 2>&1 | tee coverage_output.txt
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('coverage_output.txt', 'utf8');
+            const marker = '<!-- pr-coverage -->';
+
+            const coverageMatch = output.match(/(\d+\.\d+)% coverage/);
+            const percentage = coverageMatch ? coverageMatch[1] : null;
+
+            let body;
+            if (percentage) {
+              body = `${marker}\n### Code Coverage\n\nOverall coverage: **${percentage}%**\n\n<details>\n<summary>Show full report</summary>\n\n\`\`\`\n${output.slice(-10000)}\n\`\`\`\n\n</details>`;
+            } else {
+              body = `${marker}\n### Code Coverage\n\nCoverage report could not be generated.\n\n<details>\n<summary>Show output</summary>\n\n\`\`\`\n${output.slice(-10000)}\n\`\`\`\n\n</details>`;
+            }
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body.includes(marker));
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
