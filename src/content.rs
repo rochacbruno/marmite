@@ -122,6 +122,7 @@ pub struct Content {
     pub aliases: Vec<String>,
     pub language: Option<String>,
     pub translations: Vec<TranslationRef>,
+    pub translates: Option<String>,
 }
 
 impl Content {
@@ -226,6 +227,7 @@ impl Content {
         let comments = get_comments(&frontmatter);
         let aliases = get_aliases(&frontmatter);
         let language = get_language(&frontmatter);
+        let translates = get_translates(&frontmatter);
         let frontmatter_translations = get_frontmatter_translations(&frontmatter);
         let content = Content {
             title,
@@ -253,6 +255,7 @@ impl Content {
             aliases,
             language,
             translations: frontmatter_translations,
+            translates,
         };
         Ok(content)
     }
@@ -283,6 +286,7 @@ pub struct ContentBuilder {
     aliases: Option<Vec<String>>,
     language: Option<String>,
     translations: Option<Vec<TranslationRef>>,
+    translates: Option<String>,
 }
 
 #[allow(dead_code)]
@@ -401,6 +405,11 @@ impl ContentBuilder {
         self
     }
 
+    pub fn translates(mut self, translates: String) -> Self {
+        self.translates = Some(translates);
+        self
+    }
+
     pub fn build(self) -> Content {
         Content {
             title: self.title.unwrap_or_default(),
@@ -428,6 +437,7 @@ impl ContentBuilder {
             aliases: self.aliases.unwrap_or_default(),
             language: self.language,
             translations: self.translations.unwrap_or_default(),
+            translates: self.translates,
         }
     }
 }
@@ -575,19 +585,30 @@ pub fn get_stream_from_filename(path: &Path) -> Option<String> {
     None
 }
 
+pub const ISO_639_1_CODES: &[&str] = &[
+    "aa", "ab", "af", "ak", "am", "an", "ar", "as", "av", "ay", "az", "ba", "be", "bg", "bh", "bi",
+    "bm", "bn", "bo", "br", "bs", "ca", "ce", "ch", "co", "cr", "cs", "cu", "cv", "cy", "da", "de",
+    "dv", "dz", "ee", "el", "en", "eo", "es", "et", "eu", "fa", "ff", "fi", "fj", "fo", "fr", "fy",
+    "ga", "gd", "gl", "gn", "gu", "gv", "ha", "he", "hi", "ho", "hr", "ht", "hu", "hy", "hz", "ia",
+    "id", "ie", "ig", "ii", "ik", "io", "is", "it", "iu", "ja", "jv", "ka", "kg", "ki", "kj", "kk",
+    "kl", "km", "kn", "ko", "kr", "ks", "ku", "kv", "kw", "ky", "la", "lb", "lg", "li", "ln", "lo",
+    "lt", "lu", "lv", "mg", "mh", "mi", "mk", "ml", "mn", "mr", "ms", "mt", "my", "na", "nb", "nd",
+    "ne", "ng", "nl", "nn", "no", "nr", "nv", "ny", "oc", "oj", "om", "or", "os", "pa", "pi", "pl",
+    "ps", "pt", "qu", "rm", "rn", "ro", "ru", "rw", "sa", "sc", "sd", "se", "sg", "si", "sk", "sl",
+    "sm", "sn", "so", "sq", "sr", "ss", "st", "su", "sv", "sw", "ta", "te", "tg", "th", "ti", "tk",
+    "tl", "tn", "to", "tr", "ts", "tt", "tw", "ty", "ug", "uk", "ur", "uz", "ve", "vi", "vo", "wa",
+    "wo", "xh", "yi", "yo", "za", "zh", "zu",
+];
+
+pub fn is_iso_639_1_code(code: &str) -> bool {
+    ISO_639_1_CODES.contains(&code)
+}
+
 /// Detect language from a file in a content subfolder.
 /// Only applies when the file is inside a subfolder AND the filename
-/// starts with a configured language code followed by a hyphen.
+/// starts with an ISO 639-1 language code followed by a hyphen.
 /// Returns the language code if detected.
-pub fn detect_language_from_path(
-    path: &Path,
-    content_dir: &Path,
-    languages: &std::collections::HashMap<String, crate::config::LanguageConfig>,
-) -> Option<String> {
-    if languages.is_empty() {
-        return None;
-    }
-
+pub fn detect_language_from_path(path: &Path, content_dir: &Path) -> Option<String> {
     let relative = path.strip_prefix(content_dir).ok()?;
     let components: Vec<_> = relative.components().collect();
 
@@ -597,10 +618,10 @@ pub fn detect_language_from_path(
 
     let filename_stem = path.file_stem()?.to_str()?;
 
-    for lang_code in languages.keys() {
+    for &lang_code in ISO_639_1_CODES {
         let prefix = format!("{lang_code}-");
         if filename_stem.starts_with(&prefix) {
-            return Some(lang_code.clone());
+            return Some(lang_code.to_string());
         }
     }
 
@@ -715,6 +736,13 @@ pub fn get_aliases(frontmatter: &Frontmatter) -> Vec<String> {
 fn get_language(frontmatter: &Frontmatter) -> Option<String> {
     frontmatter
         .get("language")
+        .and_then(|v| v.as_str())
+        .map(|s| s.trim_matches('"').to_string())
+}
+
+fn get_translates(frontmatter: &Frontmatter) -> Option<String> {
+    frontmatter
+        .get("translates")
         .and_then(|v| v.as_str())
         .map(|s| s.trim_matches('"').to_string())
 }

@@ -393,7 +393,7 @@ impl DisplayName {
                         .site
                         .languages
                         .get(name)
-                        .map(|config| &config.name)
+                        .map(|config| &config.display_name)
                 }),
             "series" => self
                 .site_data

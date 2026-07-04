@@ -199,16 +199,16 @@ streams:
     display_name: "Tutorials"
 ```
 
-**Language Streams** - multilingual content:
+**Language Streams** - multilingual content (auto-detected from content, config optional):
 ```yaml
 language: en
 languages:
   en:
-    name: "English"
+    display_name: "English"
   pt:
-    name: "Portugues"
+    display_name: "Portugues"
 ```
-Organize translations in subfolders for auto-discovery, or link manually via `language` and `translations` frontmatter fields. Each language gets its own stream page and RSS feed. Translation links and hreflang SEO tags are added automatically.
+Set `language: xx` in frontmatter or use subfolder naming conventions. Link translations via subfolder auto-discovery, `translations:` list, or `translates:` pointer. Each language gets its own stream page and RSS feed. Translation links and hreflang SEO tags are added automatically.
 
 See `references/content-organization.md` for all content organization modes.
 

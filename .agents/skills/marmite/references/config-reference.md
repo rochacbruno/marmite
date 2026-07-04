@@ -151,22 +151,26 @@ Each stream key maps to the `stream` frontmatter value. The `display_name` is sh
 
 ## Languages
 
-Configure available languages for multilingual sites:
+Languages are auto-detected from content. When any content has a `language` frontmatter field (or a stream name matching a language code), marmite automatically registers that language and enables multilingual features. The `languages` config is optional and only needed to set custom display names.
 
 ```yaml
 language: pt            # Default/primary language (existing field, defaults to "en")
+
+# Optional - only needed to set custom display names
 languages:
   pt:
-    name: "Portugues"
+    display_name: "Portugues"
   en:
-    name: "English"
+    display_name: "English"
   es:
-    name: "Espanol"
+    display_name: "Espanol"
 ```
 
-The `language` field determines which language's content stays on `index.html`. Other languages become their own stream pages (`en.html`, `es.html`). When a stream name matches a configured language code, its display name is automatically set from the language's `name` field.
+For backward compatibility, `name` still works as an alias for `display_name` in the language config.
 
-When `languages` is not set (the default), all i18n features are disabled and existing sites are unaffected.
+The `language` field determines which language's content stays on `index.html`. Other languages become their own stream pages (`en.html`, `es.html`). When a stream name matches a language code, its display name is automatically set from the language's `display_name` field.
+
+If no `languages` config is provided but content with `language` frontmatter exists, marmite auto-registers those languages using the language code as the display name. You can then add a `languages` section to override the display names as needed.
 
 ## Series
 

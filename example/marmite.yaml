@@ -69,16 +69,16 @@ streams:
   guide:
     display_name: "User Guides"
 
-# Language streams for multilingual content
+# Optional: set display names for language streams (auto-detected from content)
 languages:
   en:
-    name: "English"
+    display_name: "English"
   pt:
-    name: "Portugues"
+    display_name: "Portugues"
   es:
-    name: "Espanol"
+    display_name: "Espanol"
   it:
-    name: "Italiano"
+    display_name: "Italiano"
 
 # Series display name mappings
 series:

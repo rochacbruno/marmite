@@ -10,19 +10,19 @@ date: 2026-06-25 14:00:00
 
 ## New Features
 
-### Language Streams - Multilingual Content (#154)
+### Language Streams - Multilingual Content (#154, #486)
 
-Marmite now supports multilingual sites through language streams. Configure available languages in `marmite.yaml`:
+Marmite supports multilingual sites through language streams. Languages are auto-detected from content - no configuration required. Just set `language: pt` in your frontmatter and marmite handles the rest.
+
+Optionally, set display names in `marmite.yaml`:
 
 ```yaml
-language: pt
+language: en
 languages:
   pt:
-    name: "Portugues"
-  en:
-    name: "English"
+    display_name: "Portugues"
   es:
-    name: "Espanol"
+    display_name: "Espanol"
 ```
 
 Content can be organized in subfolder groups for auto-discovery:
@@ -34,15 +34,17 @@ content/hello/
   es-hola-mundo.md      # Spanish, generates es-hola-mundo.html, shows on es.html
 ```
 
-Each language gets its own stream listing page (`en.html`, `es.html`) and RSS feed. Translation links ("Also available in: English, Espanol") appear automatically on content pages, and `<link rel="alternate" hreflang="...">` tags are added for SEO.
+Each language gets its own stream listing page (`en.html`, `es.html`) and RSS feed. Translation links ("Also available in: Portugues, Espanol") appear automatically on content pages, and `<link rel="alternate" hreflang="...">` tags are added for SEO.
 
 Four content organization modes are supported:
 - Subfolder grouping with auto-discovery
 - Mixed flat file + subfolder (existing sites can add translations incrementally)
-- Flat files with existing stream markers (`pt-S-ola.md`)
-- Frontmatter-only (`translations: [slug1, slug2]`)
+- Frontmatter `translates:` pointer (`translates: original-slug`) - each translation points to the original, marmite builds bidirectional links automatically
+- Frontmatter `translations:` list (`translations: [slug1, slug2]`)
 
-Default language content stays on `index.html`. Sites without `languages` configured are completely unaffected.
+Default language content stays on `index.html`. Sites without any language content are completely unaffected.
+
+The `languages:` config key `name` has been renamed to `display_name` (matching `streams:` and `series:` patterns). The old `name` key is still accepted for backward compatibility.
 
 ### Content Subfolder Media
 

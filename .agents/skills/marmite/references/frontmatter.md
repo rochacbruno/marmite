@@ -255,6 +255,19 @@ Each entry is the slug of a translated version of this content. Marmite resolves
 
 When using subfolder-based content organization, translations are auto-discovered and this field is not needed.
 
+### translates
+
+- **Type:** String (a slug)
+- **Purpose:** Points to the slug of the "original" content that this item translates. Marmite automatically creates bidirectional translation links between the source and target.
+
+```yaml
+translates: hello
+```
+
+This is an alternative to listing all translations in the `translations` field. Instead of maintaining a full list of translated slugs on every content file, you only set `translates` on each translation to point back to the original. Marmite then builds the complete cross-link network automatically.
+
+For example, given an English post with slug `hello` and a Portuguese translation with `language: pt` and `translates: hello`, marmite will link both posts to each other as translations - the English post will show a link to the Portuguese version and vice versa.
+
 ### extra
 
 - **Type:** Object (key-value map)

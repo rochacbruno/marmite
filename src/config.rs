@@ -515,7 +515,8 @@ pub struct SeriesConfig {
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct LanguageConfig {
-    pub name: String,
+    #[serde(alias = "name")]
+    pub display_name: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
