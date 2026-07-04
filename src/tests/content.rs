@@ -585,7 +585,7 @@ date: "2023-01-01"
 This is a test content.
 "#;
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None, None).unwrap();
+    let result = Content::from_markdown(path, None, &Marmite::default(), None, None, None).unwrap();
     assert_eq!(result.title, "Test Title");
     assert_eq!(result.description, Some("\"Test Description\"".to_string()));
     assert_eq!(result.slug, "test-title");
@@ -611,7 +611,7 @@ extra: "extra content"
 This is a test content.
 "#;
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None, None);
+    let result = Content::from_markdown(path, None, &Marmite::default(), None, None, None);
     assert!(result.is_err());
     fs::remove_file(path).unwrap();
 }
@@ -624,7 +624,7 @@ fn test_get_content_without_frontmatter() {
 This is a test content.
 ";
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None, None).unwrap();
+    let result = Content::from_markdown(path, None, &Marmite::default(), None, None, None).unwrap();
     assert_eq!(result.title, "Test Content".to_string());
     assert_eq!(result.description, None);
     assert_eq!(result.slug, "test_get_content_without_frontmatter");
@@ -640,7 +640,7 @@ fn test_get_content_with_empty_file() {
     let path = Path::new("test_get_content_with_empty_file.md");
     let content = "";
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None, None).unwrap();
+    let result = Content::from_markdown(path, None, &Marmite::default(), None, None, None).unwrap();
     assert_eq!(result.slug, "test_get_content_with_empty_file".to_string());
     fs::remove_file(path).unwrap();
 }
@@ -736,7 +736,7 @@ fn test_at_prefix_replacement_in_content() {
     let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n![](@/photo.png)\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None).unwrap();
+    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None, None).unwrap();
     assert!(
         result.html.contains("media/my-post/photo.png"),
         "Expected @/ to be replaced with media/my-post/, got: {}",
@@ -752,7 +752,7 @@ fn test_at_prefix_replacement_multiple_occurrences() {
         "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n![](@/a.png)\n\n[PDF](@/doc.pdf)\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None).unwrap();
+    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None, None).unwrap();
     assert!(
         result.html.contains("media/my-post/a.png"),
         "got: {}",
@@ -772,7 +772,7 @@ fn test_at_prefix_no_replacement_in_fragments() {
     let content = "---\ntitle: Fragment\n---\n![](@/should-stay.png)\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None).unwrap();
+    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None, None).unwrap();
     assert!(
         result.html.contains("@/should-stay.png"),
         "Fragments should not have @/ replaced, got: {}",
@@ -790,7 +790,7 @@ fn test_at_prefix_with_custom_media_path() {
     let mut config = Marmite::new();
     config.media_path = "assets".to_string();
 
-    let result = Content::from_markdown(&path, None, &config, None, None).unwrap();
+    let result = Content::from_markdown(&path, None, &config, None, None, None).unwrap();
     assert!(
         result.html.contains("assets/my-post/photo.png"),
         "Expected @/ to use custom media_path 'assets', got: {}",
@@ -806,7 +806,7 @@ fn test_at_prefix_not_replaced_in_plain_text() {
         "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\nHello, this is my symbol @/ and should not be replaced\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None).unwrap();
+    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None, None).unwrap();
     assert!(
         result.html.contains("@/"),
         "Plain text @/ should not be replaced, got: {}",
@@ -826,7 +826,7 @@ fn test_at_prefix_not_replaced_in_code_block() {
     let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\nHere is how you use it:\n\n```markdown\n![](@/foo.png)\n```\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None).unwrap();
+    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None, None).unwrap();
     assert!(
         !result.html.contains("media/my-post/foo.png"),
         "Code block @/ should not be replaced, got: {}",
@@ -885,7 +885,8 @@ fn test_aliases_parsed_from_markdown() {
     let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\naliases:\n  - old-post\n  - legacy-post\n---\n# Content\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
     assert_eq!(result.aliases, vec!["old-post", "legacy-post"]);
 }
 
@@ -896,7 +897,8 @@ fn test_aliases_empty_when_not_specified() {
     let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n# Content\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
     assert!(result.aliases.is_empty());
 }
 
@@ -958,7 +960,8 @@ fn test_language_frontmatter_parsed() {
     let content = "---\ntitle: Hello\nlanguage: en\n---\n# Hello\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
     assert_eq!(result.language, Some("en".to_string()));
 }
 
@@ -969,7 +972,8 @@ fn test_translations_frontmatter_parsed() {
     let content = "---\ntitle: Hello\ndate: 2024-01-01\ntranslations:\n  - pt-ola\n  - es-hola\n---\n# Hello\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
     assert_eq!(result.translations.len(), 2);
     assert_eq!(result.translations[0].slug, "pt-ola");
     assert_eq!(result.translations[1].slug, "es-hola");
@@ -982,7 +986,8 @@ fn test_translations_frontmatter_empty_when_not_specified() {
     let content = "---\ntitle: Hello\n---\n# Hello\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
     assert!(result.translations.is_empty());
 }
 
@@ -993,7 +998,8 @@ fn test_translates_frontmatter_parsed() {
     let content = "---\ntitle: Ola\nlanguage: pt\ntranslates: hello\n---\n# Ola\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
     assert_eq!(result.translates, Some("hello".to_string()));
     assert_eq!(result.language, Some("pt".to_string()));
 }
@@ -1005,7 +1011,8 @@ fn test_translates_frontmatter_empty_when_not_specified() {
     let content = "---\ntitle: Hello\n---\n# Hello\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
     assert!(result.translates.is_none());
 }
 
@@ -1020,4 +1027,135 @@ fn test_is_iso_639_1_code() {
     assert!(!is_iso_639_1_code("xyz"));
     assert!(!is_iso_639_1_code("english"));
     assert!(!is_iso_639_1_code(""));
+}
+
+#[test]
+fn test_merge_frontmatter_inherits_defaults() {
+    let mut defaults = Frontmatter::new();
+    defaults.insert("stream".to_string(), Value::String("python".to_string()));
+    defaults.insert(
+        "tags".to_string(),
+        Value::Array(vec![Value::String("python".to_string())]),
+    );
+
+    let mut file_fm = Frontmatter::new();
+    merge_frontmatter(&defaults, &mut file_fm);
+
+    assert_eq!(
+        file_fm.get("stream").and_then(|v| v.as_str()),
+        Some("python")
+    );
+    assert!(file_fm.get("tags").is_some());
+}
+
+#[test]
+fn test_merge_frontmatter_file_overrides() {
+    let mut defaults = Frontmatter::new();
+    defaults.insert("stream".to_string(), Value::String("python".to_string()));
+
+    let mut file_fm = Frontmatter::new();
+    file_fm.insert("stream".to_string(), Value::String("rust".to_string()));
+
+    merge_frontmatter(&defaults, &mut file_fm);
+
+    assert_eq!(file_fm.get("stream").and_then(|v| v.as_str()), Some("rust"));
+}
+
+#[test]
+fn test_merge_frontmatter_title_slug_excluded() {
+    let mut defaults = Frontmatter::new();
+    defaults.insert("title".to_string(), Value::String("Default".to_string()));
+    defaults.insert("slug".to_string(), Value::String("default".to_string()));
+    defaults.insert("stream".to_string(), Value::String("python".to_string()));
+
+    let mut file_fm = Frontmatter::new();
+    merge_frontmatter(&defaults, &mut file_fm);
+
+    assert!(file_fm.get("title").is_none());
+    assert!(file_fm.get("slug").is_none());
+    assert_eq!(
+        file_fm.get("stream").and_then(|v| v.as_str()),
+        Some("python")
+    );
+}
+
+#[test]
+fn test_merge_frontmatter_empty_defaults() {
+    let defaults = Frontmatter::new();
+    let mut file_fm = Frontmatter::new();
+    file_fm.insert("stream".to_string(), Value::String("rust".to_string()));
+
+    merge_frontmatter(&defaults, &mut file_fm);
+
+    assert_eq!(file_fm.get("stream").and_then(|v| v.as_str()), Some("rust"));
+}
+
+#[test]
+fn test_merge_frontmatter_multiple_keys() {
+    let mut defaults = Frontmatter::new();
+    defaults.insert("stream".to_string(), Value::String("python".to_string()));
+    defaults.insert("series".to_string(), Value::String("tutorial".to_string()));
+    defaults.insert("pinned".to_string(), Value::Boolean(true));
+
+    let mut file_fm = Frontmatter::new();
+    file_fm.insert("stream".to_string(), Value::String("rust".to_string()));
+
+    merge_frontmatter(&defaults, &mut file_fm);
+
+    assert_eq!(file_fm.get("stream").and_then(|v| v.as_str()), Some("rust"));
+    assert_eq!(
+        file_fm.get("series").and_then(|v| v.as_str()),
+        Some("tutorial")
+    );
+    assert_eq!(file_fm.get("pinned").and_then(|v| v.as_bool()), Some(true));
+}
+
+#[test]
+fn test_from_markdown_with_folder_defaults() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("test.md");
+    let content = "---\ntitle: My Post\n---\n# My Post\n\nContent here.\n";
+    fs::write(&path, content).unwrap();
+
+    let mut defaults = Frontmatter::new();
+    defaults.insert("stream".to_string(), Value::String("python".to_string()));
+    defaults.insert("date".to_string(), Value::String("2026-01-01".to_string()));
+
+    let result = Content::from_markdown(
+        &path,
+        None,
+        &Marmite::default(),
+        None,
+        None,
+        Some(&defaults),
+    )
+    .unwrap();
+
+    assert_eq!(result.stream.as_deref(), Some("python"));
+    assert!(result.date.is_some());
+    assert_eq!(result.title, "My Post");
+}
+
+#[test]
+fn test_from_markdown_file_frontmatter_overrides_defaults() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("test.md");
+    let content = "---\ntitle: My Post\nstream: rust\n---\n# My Post\n\nContent here.\n";
+    fs::write(&path, content).unwrap();
+
+    let mut defaults = Frontmatter::new();
+    defaults.insert("stream".to_string(), Value::String("python".to_string()));
+    defaults.insert("date".to_string(), Value::String("2026-01-01".to_string()));
+
+    let result = Content::from_markdown(
+        &path,
+        None,
+        &Marmite::default(),
+        None,
+        None,
+        Some(&defaults),
+    )
+    .unwrap();
+
+    assert_eq!(result.stream.as_deref(), Some("rust"));
 }

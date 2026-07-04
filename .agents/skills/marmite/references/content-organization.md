@@ -28,6 +28,45 @@ mysite/
 
 Marmite also works without the `content/` subfolder - markdown files can live directly in the input folder.
 
+## Folder-Level Frontmatter Defaults
+
+Content subfolders can have a `frontmatter.yaml` file that provides default frontmatter values for all `.md` files in that folder. Per-file frontmatter overrides the defaults. `title` and `slug` are never inherited.
+
+```
+content/
+  frontmatter.yaml            # Root-level defaults (apply to all content)
+  python/
+    frontmatter.yaml          # Subfolder defaults (layered on top of root)
+    databases.md              # Inherits stream, tags, date, etc.
+    classes.md                # Can override any inherited field
+  2024-01-15-standalone.md    # Inherits from root only
+```
+
+Example `content/python/frontmatter.yaml`:
+
+```yaml
+date: 2026-01-01
+stream: python
+tags:
+  - python
+  - programming
+```
+
+**Merge priority** (lowest to highest):
+
+1. Root `content/frontmatter.yaml`
+2. Subfolder `content/{folder}/frontmatter.yaml`
+3. Filename conventions (date, stream, language from filename)
+4. The markdown file's own frontmatter block
+
+**Subfolder rendering rules**: A subfolder's `.md` files are only processed when at least one of these is true:
+
+- The subfolder contains a `frontmatter.yaml` (even empty)
+- The subfolder is named `pages`
+- The subfolder is a translation group (files with `xx-*.md` language prefixes)
+
+Other subfolders are ignored.
+
 ## Content Types
 
 ### Posts

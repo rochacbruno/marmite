@@ -335,6 +335,30 @@ Files without any frontmatter are still processed:
 This file has no frontmatter. The title comes from the heading above.
 ```
 
+## Folder-Level Frontmatter Defaults
+
+A `frontmatter.yaml` file in a content subfolder provides default values for all `.md` files in that folder. The `content/` root can also have one for site-wide defaults.
+
+```yaml
+# content/python/frontmatter.yaml
+date: 2026-01-01
+stream: python
+tags:
+  - python
+  - programming
+```
+
+All markdown files in `content/python/` inherit these values. Per-file frontmatter overrides the defaults. `title` and `slug` are never inherited from folder defaults.
+
+**Merge priority** (lowest to highest):
+
+1. Root `content/frontmatter.yaml`
+2. Subfolder `content/{folder}/frontmatter.yaml`
+3. Filename conventions (date, stream, language)
+4. Per-file frontmatter
+
+**Subfolder gating**: Files in subfolders are only rendered when the subfolder has a `frontmatter.yaml`, is named `pages`, or is a translation group. Other subfolders are ignored.
+
 ## Fragment Files
 
 Files prefixed with `_` are treated as layout fragments, not regular content:

@@ -1,7 +1,7 @@
 use crate::config::{Author, Marmite};
 use crate::content::{
-    check_for_duplicate_slugs, detect_language_from_path, is_iso_639_1_code, Content,
-    ContentBuilder, GroupedContent, Kind, TranslationRef, ISO_639_1_CODES,
+    check_for_duplicate_slugs, detect_language_from_path, is_iso_639_1_code, merge_frontmatter,
+    Content, ContentBuilder, GroupedContent, Kind, TranslationRef, ISO_639_1_CODES,
 };
 use crate::embedded::{
     collect_ignore_missing_includes, generate_static, preprocess_template, Templates,
@@ -574,11 +574,14 @@ pub(crate) fn build_site_with_config(
     let highlighter = build_code_highlighter(&site_data.site);
 
     let fragments = collect_content_fragments(&content_folder);
+    let (folder_defaults, translation_folders) = load_folder_frontmatter(&content_folder);
     collect_content(
         &content_folder,
         &mut site_data,
         &fragments,
         highlighter.as_deref(),
+        &folder_defaults,
+        &translation_folders,
     );
 
     discover_translations(&mut site_data, &content_folder);
@@ -781,11 +784,14 @@ pub fn generate(
             let highlighter = build_code_highlighter(&site_data.site);
 
             let fragments = collect_content_fragments(&content_folder);
+            let (folder_defaults, translation_folders) = load_folder_frontmatter(&content_folder);
             collect_content(
                 &content_folder,
                 &mut site_data,
                 &fragments,
                 highlighter.as_deref(),
+                &folder_defaults,
+                &translation_folders,
             );
 
             discover_translations(&mut site_data, &content_folder);
@@ -1035,6 +1041,102 @@ pub(crate) fn collect_content_fragments(content_dir: &Path) -> HashMap<String, S
     markdown_fragments
 }
 
+fn parse_frontmatter_yaml(content: &str) -> Option<frontmatter_gen::Frontmatter> {
+    let trimmed = content.trim();
+    if trimmed.is_empty() {
+        return Some(frontmatter_gen::Frontmatter::new());
+    }
+    frontmatter_gen::parse(trimmed, frontmatter_gen::Format::Yaml).ok()
+}
+
+pub(crate) fn load_folder_frontmatter(
+    content_dir: &Path,
+) -> (
+    HashMap<std::path::PathBuf, frontmatter_gen::Frontmatter>,
+    std::collections::HashSet<std::path::PathBuf>,
+) {
+    use frontmatter_gen::Frontmatter;
+
+    let mut folder_defaults: HashMap<std::path::PathBuf, Frontmatter> = HashMap::new();
+    let mut translation_folders: std::collections::HashSet<std::path::PathBuf> =
+        std::collections::HashSet::new();
+
+    let root_fm_path = content_dir.join("frontmatter.yaml");
+    let root_defaults = if root_fm_path.exists() {
+        match fs::read_to_string(&root_fm_path) {
+            Ok(content) => {
+                if let Some(fm) = parse_frontmatter_yaml(&content) {
+                    debug!("Loaded root frontmatter.yaml");
+                    folder_defaults.insert(content_dir.to_path_buf(), fm.clone());
+                    Some(fm)
+                } else {
+                    warn!("Failed to parse {}", root_fm_path.display());
+                    None
+                }
+            }
+            Err(e) => {
+                warn!("Failed to read {}: {e}", root_fm_path.display());
+                None
+            }
+        }
+    } else {
+        None
+    };
+
+    let entries = match fs::read_dir(content_dir) {
+        Ok(entries) => entries,
+        Err(e) => {
+            warn!("Failed to read content directory: {e}");
+            return (folder_defaults, translation_folders);
+        }
+    };
+
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+
+        let has_translation_files = fs::read_dir(&path).is_ok_and(|entries| {
+            entries.filter_map(Result::ok).any(|e| {
+                let name = e.file_name();
+                let name_str = name.to_string_lossy();
+                name_str.ends_with(".md")
+                    && name_str.len() > 3
+                    && ISO_639_1_CODES.contains(&&name_str[..2])
+                    && name_str.as_bytes().get(2) == Some(&b'-')
+            })
+        });
+
+        if has_translation_files {
+            translation_folders.insert(path.clone());
+        }
+
+        let subfolder_fm_path = path.join("frontmatter.yaml");
+        if subfolder_fm_path.exists() {
+            match fs::read_to_string(&subfolder_fm_path) {
+                Ok(content) => match parse_frontmatter_yaml(&content) {
+                    Some(mut fm) => {
+                        if let Some(ref root) = root_defaults {
+                            merge_frontmatter(root, &mut fm);
+                        }
+                        debug!("Loaded frontmatter.yaml for subfolder {}", path.display());
+                        folder_defaults.insert(path, fm);
+                    }
+                    None => {
+                        warn!("Failed to parse {}", subfolder_fm_path.display());
+                    }
+                },
+                Err(e) => {
+                    warn!("Failed to read {}: {e}", subfolder_fm_path.display());
+                }
+            }
+        }
+    }
+
+    (folder_defaults, translation_folders)
+}
+
 /// Collect global fragments of markdown, process them and insert into the global context
 /// these are dynamic parts of text that will be processed by Tera
 fn collect_global_fragments(
@@ -1229,6 +1331,8 @@ pub(crate) fn collect_content(
     site_data: &mut Data,
     fragments: &HashMap<String, String>,
     highlighter: Option<&MarmiteHighlighter>,
+    folder_defaults: &HashMap<std::path::PathBuf, frontmatter_gen::Frontmatter>,
+    translation_folders: &std::collections::HashSet<std::path::PathBuf>,
 ) {
     let contents = WalkDir::new(content_dir)
         .into_iter()
@@ -1246,10 +1350,46 @@ pub(crate) fn collect_content(
                         .unwrap_or_else(|| panic!("Could not get file name {e:?}")),
                 );
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
-            e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
+            if !(e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_'))
+            {
+                return false;
+            }
+
+            if let Ok(relative) = e.path().strip_prefix(content_dir) {
+                let components: Vec<_> = relative.components().collect();
+                if components.len() >= 2 {
+                    let subfolder = content_dir.join(
+                        components[0]
+                            .as_os_str()
+                            .to_str()
+                            .unwrap_or(""),
+                    );
+                    let subfolder_name = components[0]
+                        .as_os_str()
+                        .to_str()
+                        .unwrap_or("");
+
+                    if subfolder_name == "pages" {
+                        return true;
+                    }
+                    if folder_defaults.contains_key(&subfolder) {
+                        return true;
+                    }
+                    if translation_folders.contains(&subfolder) {
+                        return true;
+                    }
+
+                    debug!(
+                        "Skipping {} - subfolder has no frontmatter.yaml and is not a translation group or pages",
+                        e.path().display()
+                    );
+                    return false;
+                }
+            }
+
+            true
         })
         .map(|entry| {
-            // let modified_time = entry.metadata().unwrap().modified().unwrap();
             let file_metadata = match entry.metadata() {
                 Ok(metadata) => metadata,
                 Err(e) => {
@@ -1262,7 +1402,6 @@ pub(crate) fn collect_content(
                 }
             };
             let modified_time = if let Ok(modified_time) = file_metadata.modified() {
-                // get the timestamp for modified time
                 Some(
                     modified_time
                         .duration_since(std::time::SystemTime::UNIX_EPOCH)
@@ -1275,12 +1414,17 @@ pub(crate) fn collect_content(
             } else {
                 None
             };
+            let defaults = entry
+                .path()
+                .parent()
+                .and_then(|p| folder_defaults.get(p));
             Content::from_markdown(
                 entry.path(),
                 Some(fragments),
                 &site_data.site,
                 modified_time,
                 highlighter,
+                defaults,
             )
         })
         .collect::<Vec<_>>();
@@ -3575,6 +3719,7 @@ fn handle_404(
             &Marmite::default(),
             None,
             highlighter,
+            None,
         )?;
         content.html.clone_from(&custom_content.html);
         content.title.clone_from(&custom_content.title);
@@ -4043,7 +4188,15 @@ pub fn show_urls(
 
     // Collect content fragments and process content
     let fragments = collect_content_fragments(&content_folder);
-    collect_content(&content_folder, &mut site_data, &fragments, None);
+    let (folder_defaults, translation_folders) = load_folder_frontmatter(&content_folder);
+    collect_content(
+        &content_folder,
+        &mut site_data,
+        &fragments,
+        None,
+        &folder_defaults,
+        &translation_folders,
+    );
     site_data.sort_all();
 
     // Collect all URLs including pagination, feeds, and file mappings
