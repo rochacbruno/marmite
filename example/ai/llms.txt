@@ -47,6 +47,7 @@ $ marmite myblog --serve
 - [Streams Guide](https://marmite.blog/streams-guide.html): Organizing content with streams
 - [Series Feature](https://marmite.blog/organizing-content-with-series-in-marmite.html): Creating ordered content series
 - [Draft Posts Guide](https://marmite.blog/how-to-use-draft-posts-in-marmite.html): Working with draft content
+- [Folder-Level Frontmatter Defaults](https://marmite.blog/folder-level-frontmatter-defaults.html): Inherit shared frontmatter (stream, tags, date, etc.) from a folder-level frontmatter.yaml file at any nesting depth, with layered inheritance and support for nested translation groups
 
 ### Configuration
 

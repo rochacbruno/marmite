@@ -138,9 +138,13 @@ impl Content {
         site: &Marmite,
         modified_time: Option<i64>,
         highlighter: Option<&MarmiteHighlighter>,
+        folder_defaults: Option<&Frontmatter>,
     ) -> Result<Content, String> {
         let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
-        let (frontmatter, raw_markdown) = parse_front_matter(&file_content)?;
+        let (mut frontmatter, raw_markdown) = parse_front_matter(&file_content)?;
+        if let Some(defaults) = folder_defaults {
+            merge_frontmatter(defaults, &mut frontmatter);
+        }
         let (title, markdown_without_title) = get_title(&frontmatter, raw_markdown);
         let slug = get_slug(&frontmatter, path);
 
@@ -731,6 +735,17 @@ pub fn get_aliases(frontmatter: &Frontmatter) -> Vec<String> {
         .filter(|alias| !alias.is_empty())
         .map(|a| a.trim().to_string())
         .collect()
+}
+
+pub fn merge_frontmatter(defaults: &Frontmatter, file_fm: &mut Frontmatter) {
+    for (key, value) in defaults.iter() {
+        if key == "title" || key == "slug" {
+            continue;
+        }
+        if !file_fm.contains_key(key) {
+            file_fm.insert(key.clone(), value.clone());
+        }
+    }
 }
 
 fn get_language(frontmatter: &Frontmatter) -> Option<String> {

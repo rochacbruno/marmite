@@ -28,6 +28,34 @@ mysite/
 
 Marmite also works without the `content/` subfolder - markdown files can live directly in the input folder.
 
+## Folder-Level Frontmatter Defaults
+
+Content subfolders can have a `frontmatter.yaml` file that provides default frontmatter values for all `.md` files in that folder. Per-file frontmatter overrides the defaults. `title` and `slug` are never inherited. Works at any nesting depth.
+
+```
+content/
+  frontmatter.yaml                  # Root-level defaults (apply to all content)
+  tutorials/
+    frontmatter.yaml                # Inherits from root, adds stream
+    python/
+      frontmatter.yaml              # Inherits from tutorials, adds tags
+      basics.md                     # Gets root + tutorials + python defaults
+      advanced/
+        decorators.md               # Inherits from python/ (nearest ancestor)
+  2024-01-15-standalone.md          # Inherits from root only
+```
+
+Files in nested subfolders without their own `frontmatter.yaml` inherit from the nearest ancestor that has one.
+
+**Merge priority** (lowest to highest):
+
+1. Root `content/frontmatter.yaml`
+2. Parent subfolder `frontmatter.yaml` files (layered from shallowest to deepest)
+3. Filename conventions (date, stream, language from filename)
+4. The markdown file's own frontmatter block
+
+Subfolders without a `frontmatter.yaml` continue to work as before - their content is rendered normally.
+
 ## Content Types
 
 ### Posts
@@ -541,7 +569,21 @@ content/hello/
   es-hola-mundo.md      # Spanish, slug: es-hola-mundo, stream: es
 ```
 
+Translation groups work at any nesting depth. Each subfolder forms its own independent group:
+
+```
+content/poetry/
+  love/
+    love-poem.md        # Default language
+    pt-poema-amor.md    # Portuguese (grouped with love-poem, not nature-poem)
+  nature/
+    nature-poem.md      # Default language (separate group from love/)
+    pt-poema-natureza.md
+```
+
 The subfolder can also have a date prefix (e.g., `content/2026-07-02-hello/`) so files inside inherit the date without needing it in frontmatter.
+
+Translation groups can also have a `frontmatter.yaml` to share defaults across all translations in the group.
 
 Subfolder names must match the original post's resolved slug (not the filename) to be automatically linked.
 

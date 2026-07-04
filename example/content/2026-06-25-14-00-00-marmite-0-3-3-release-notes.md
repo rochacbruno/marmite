@@ -172,3 +172,22 @@ The `{% macro %}` syntax still works for backward compatibility. Shortcode bodie
 Existing templates and shortcodes continue to work without changes. Marmite preprocesses templates at load time, automatically converting old Tera 1.x syntax (dot indexing, positional test args, `ignore missing` includes) to Tera 2.0 equivalents.
 
 Tera 2.0 removed or renamed some built-in filters. Marmite provides drop-in replacements for `striptags`, `slice`, `trim_start_matches`, and `date`, so templates using these filters work as before.
+
+### Folder-Level Frontmatter Defaults (#487)
+
+Content subfolders can now have a `frontmatter.yaml` file that provides default frontmatter values for all `.md` files in that folder. This eliminates repetitive metadata when multiple posts share the same stream, tags, date, authors, or extra fields.
+
+```
+content/python/
+  frontmatter.yaml    # date, stream, tags defaults
+  databases.md        # inherits defaults, only needs title
+  classes.md          # can override any field
+```
+
+The `content/` root can also have a `frontmatter.yaml` for site-wide defaults. Defaults layer at any nesting depth: root first, then each subfolder level, then filename conventions, then per-file frontmatter on top. Files in nested subfolders without their own `frontmatter.yaml` inherit from the nearest ancestor that has one.
+
+Subfolders without a `frontmatter.yaml` continue to work as before - their content is rendered normally.
+
+Translation groups now work correctly at any nesting depth. Each subfolder forms its own independent group, so `content/poetry/love/` and `content/poetry/nature/` are treated as separate translation groups rather than being lumped together.
+
+See the [Folder-Level Frontmatter Defaults](folder-level-frontmatter-defaults.html) guide for details.

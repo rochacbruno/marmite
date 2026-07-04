@@ -222,7 +222,15 @@ fn collect_publishable_posts(input_folder: &Path, config_path: &Path) -> Vec<Con
             e.path().is_file() && ext == Some("md") && !name.starts_with('_')
         })
         .filter_map(|entry| {
-            Content::from_markdown(entry.path(), Some(&fragments), &site_data.site, None, None).ok()
+            Content::from_markdown(
+                entry.path(),
+                Some(&fragments),
+                &site_data.site,
+                None,
+                None,
+                None,
+            )
+            .ok()
         })
         .filter(|post| post.date.is_some() && post.stream.as_deref() != Some("draft"))
         .collect()

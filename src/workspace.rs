@@ -158,7 +158,14 @@ fn preprocess_all_sites(
         let mut site_data = Data::new(&config_str, &site_config_path);
         let content_folder = site::get_content_folder(&site_data.site, &site_input);
         let fragments = site::collect_content_fragments(&content_folder);
-        site::collect_content(&content_folder, &mut site_data, &fragments, None);
+        let folder_defaults = site::load_folder_frontmatter(&content_folder);
+        site::collect_content(
+            &content_folder,
+            &mut site_data,
+            &fragments,
+            None,
+            &folder_defaults,
+        );
         site_data.sort_all();
         site_data.collect_all_urls();
 
