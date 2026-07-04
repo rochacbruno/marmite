@@ -117,8 +117,13 @@ impl UrlFor {
             self.base_url.trim_end_matches('/').to_string()
         };
 
-        // Parse the base_url to extract the path part if not empty
-        let base_path = if base_url.is_empty() {
+        // Parse the base_url to extract the path part if not empty.
+        // When path_prefix is set (workspace non-default site), the base_url
+        // already contains the prefix path (e.g. https://example.com/en),
+        // so we must NOT also use it as base_path to avoid double-prefixing.
+        let base_path = if !self.path_prefix.is_empty() {
+            String::new()
+        } else if base_url.is_empty() {
             String::new()
         } else {
             Url::parse(&base_url)
@@ -128,8 +133,25 @@ impl UrlFor {
 
         // Construct the URL based on the presence of base_url and abs flag
         if abs && !base_url.is_empty() {
-            // Absolute URL with base_url
-            format!("{}/{}", base_url, path.trim_start_matches('/'))
+            // Absolute URL with base_url.
+            // When path_prefix is set, strip the path part from base_url since
+            // path_prefix is already included in the resolved path.
+            let abs_base = if !self.path_prefix.is_empty() {
+                Url::parse(&base_url)
+                    .map(|parsed_url| {
+                        let host = parsed_url.host_str().unwrap_or("");
+                        let scheme = parsed_url.scheme();
+                        if let Some(port) = parsed_url.port() {
+                            format!("{scheme}://{host}:{port}")
+                        } else {
+                            format!("{scheme}://{host}")
+                        }
+                    })
+                    .unwrap_or_else(|_| base_url.clone())
+            } else {
+                base_url.clone()
+            };
+            format!("{}/{}", abs_base, path.trim_start_matches('/'))
         } else if !base_path.is_empty() {
             // Relative URL with base path from base_url
             format!("{base_path}{path}")
