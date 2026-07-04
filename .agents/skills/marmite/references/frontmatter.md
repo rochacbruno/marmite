@@ -337,7 +337,7 @@ This file has no frontmatter. The title comes from the heading above.
 
 ## Folder-Level Frontmatter Defaults
 
-A `frontmatter.yaml` file in a content subfolder provides default values for all `.md` files in that folder. The `content/` root can also have one for site-wide defaults.
+A `frontmatter.yaml` file in a content subfolder provides default values for all `.md` files in that folder. Works at any nesting depth with layered inheritance. The `content/` root can also have one for site-wide defaults.
 
 ```yaml
 # content/python/frontmatter.yaml
@@ -348,12 +348,14 @@ tags:
   - programming
 ```
 
-All markdown files in `content/python/` inherit these values. Per-file frontmatter overrides the defaults. `title` and `slug` are never inherited from folder defaults.
+All markdown files in `content/python/` and its subdirectories inherit these values. Per-file frontmatter overrides the defaults. `title` and `slug` are never inherited from folder defaults.
+
+Files in nested subfolders without their own `frontmatter.yaml` inherit from the nearest ancestor that has one.
 
 **Merge priority** (lowest to highest):
 
 1. Root `content/frontmatter.yaml`
-2. Subfolder `content/{folder}/frontmatter.yaml`
+2. Parent subfolder `frontmatter.yaml` files (layered from shallowest to deepest)
 3. Filename conventions (date, stream, language)
 4. Per-file frontmatter
 

@@ -80,12 +80,28 @@ content/
 
 When both root and subfolder defaults exist, they layer: root defaults apply first, then subfolder defaults override, then per-file frontmatter overrides last.
 
+## Nested subfolders
+
+Frontmatter defaults work at any nesting depth. Each level inherits from its parent and can add or override values:
+
+```
+content/
+  frontmatter.yaml                  # authors: [admin]
+  tutorials/
+    frontmatter.yaml                # stream: tutorial (inherits authors from root)
+    tutorials/python/
+      frontmatter.yaml              # tags: [python] (inherits authors + stream)
+      basics.md                     # gets all three: authors, stream, tags
+```
+
+Files in nested subfolders without their own `frontmatter.yaml` inherit from the nearest ancestor that has one. A file at `content/tutorials/python/advanced/decorators.md` would inherit from `content/tutorials/python/frontmatter.yaml`.
+
 ## Merge priority
 
 From lowest to highest priority:
 
 1. Root `content/frontmatter.yaml`
-2. Subfolder `content/{folder}/frontmatter.yaml`
+2. Parent subfolder `frontmatter.yaml` files (layered from shallowest to deepest)
 3. Filename conventions (date, stream, and language detection from the filename)
 4. The markdown file's own frontmatter block
 
@@ -97,8 +113,23 @@ Folder-level defaults work alongside translation groups. A subfolder can be both
 content/
   hello/
     frontmatter.yaml      # shared defaults
-    en-hello.md            # English version
+    hello.md               # default language version
     pt-ola.md              # Portuguese version
 ```
 
 Both translations inherit the folder defaults while still being detected and linked as translations.
+
+Translation groups work at any nesting depth. Each subfolder forms its own independent group:
+
+```
+content/
+  poetry/
+    love/
+      love-poem.md         # default language
+      pt-poema-amor.md     # Portuguese translation of love poem
+    nature/
+      nature-poem.md       # default language (separate group from love/)
+      pt-poema-natureza.md # Portuguese translation of nature poem
+```
+
+The `love/` and `nature/` subfolders are treated as separate translation groups - translations in one subfolder are not mixed with translations in the other.

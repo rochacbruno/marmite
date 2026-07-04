@@ -184,8 +184,10 @@ content/python/
   classes.md          # can override any field
 ```
 
-The `content/` root can also have a `frontmatter.yaml` for site-wide defaults. Defaults layer: root first, then subfolder, then filename conventions, then per-file frontmatter on top.
+The `content/` root can also have a `frontmatter.yaml` for site-wide defaults. Defaults layer at any nesting depth: root first, then each subfolder level, then filename conventions, then per-file frontmatter on top. Files in nested subfolders without their own `frontmatter.yaml` inherit from the nearest ancestor that has one.
 
 Subfolders without a `frontmatter.yaml` continue to work as before - their content is rendered normally.
+
+Translation groups now work correctly at any nesting depth. Each subfolder forms its own independent group, so `content/poetry/love/` and `content/poetry/nature/` are treated as separate translation groups rather than being lumped together.
 
 See the [Folder-Level Frontmatter Defaults](folder-level-frontmatter-defaults.html) guide for details.
