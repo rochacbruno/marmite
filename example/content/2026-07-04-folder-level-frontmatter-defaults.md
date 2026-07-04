@@ -89,22 +89,6 @@ From lowest to highest priority:
 3. Filename conventions (date, stream, and language detection from the filename)
 4. The markdown file's own frontmatter block
 
-## Subfolder rendering rules
-
-Not all subfolders render their content. A subfolder's `.md` files are only processed when at least one of these is true:
-
-- The subfolder contains a `frontmatter.yaml` (even an empty one)
-- The subfolder is named `pages` (always rendered for undated page content)
-- The subfolder is a translation group (contains files with language-prefixed names like `pt-ola.md`)
-
-Subfolders that don't match any of these conditions are ignored. This prevents accidental rendering of files in arbitrary subdirectories.
-
-To enable a subfolder for rendering without setting any defaults, create an empty `frontmatter.yaml`:
-
-```bash
-touch content/notes/frontmatter.yaml
-```
-
 ## Use with language streams
 
 Folder-level defaults work alongside translation groups. A subfolder can be both a translation group and have shared defaults:

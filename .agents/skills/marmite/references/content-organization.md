@@ -59,13 +59,7 @@ tags:
 3. Filename conventions (date, stream, language from filename)
 4. The markdown file's own frontmatter block
 
-**Subfolder rendering rules**: A subfolder's `.md` files are only processed when at least one of these is true:
-
-- The subfolder contains a `frontmatter.yaml` (even empty)
-- The subfolder is named `pages`
-- The subfolder is a translation group (files with `xx-*.md` language prefixes)
-
-Other subfolders are ignored.
+Subfolders without a `frontmatter.yaml` continue to work as before - their content is rendered normally.
 
 ## Content Types
 

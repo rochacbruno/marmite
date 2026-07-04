@@ -574,14 +574,13 @@ pub(crate) fn build_site_with_config(
     let highlighter = build_code_highlighter(&site_data.site);
 
     let fragments = collect_content_fragments(&content_folder);
-    let (folder_defaults, translation_folders) = load_folder_frontmatter(&content_folder);
+    let folder_defaults = load_folder_frontmatter(&content_folder);
     collect_content(
         &content_folder,
         &mut site_data,
         &fragments,
         highlighter.as_deref(),
         &folder_defaults,
-        &translation_folders,
     );
 
     discover_translations(&mut site_data, &content_folder);
@@ -784,14 +783,13 @@ pub fn generate(
             let highlighter = build_code_highlighter(&site_data.site);
 
             let fragments = collect_content_fragments(&content_folder);
-            let (folder_defaults, translation_folders) = load_folder_frontmatter(&content_folder);
+            let folder_defaults = load_folder_frontmatter(&content_folder);
             collect_content(
                 &content_folder,
                 &mut site_data,
                 &fragments,
                 highlighter.as_deref(),
                 &folder_defaults,
-                &translation_folders,
             );
 
             discover_translations(&mut site_data, &content_folder);
@@ -1051,15 +1049,10 @@ fn parse_frontmatter_yaml(content: &str) -> Option<frontmatter_gen::Frontmatter>
 
 pub(crate) fn load_folder_frontmatter(
     content_dir: &Path,
-) -> (
-    HashMap<std::path::PathBuf, frontmatter_gen::Frontmatter>,
-    std::collections::HashSet<std::path::PathBuf>,
-) {
+) -> HashMap<std::path::PathBuf, frontmatter_gen::Frontmatter> {
     use frontmatter_gen::Frontmatter;
 
     let mut folder_defaults: HashMap<std::path::PathBuf, Frontmatter> = HashMap::new();
-    let mut translation_folders: std::collections::HashSet<std::path::PathBuf> =
-        std::collections::HashSet::new();
 
     let root_fm_path = content_dir.join("frontmatter.yaml");
     let root_defaults = if root_fm_path.exists() {
@@ -1087,7 +1080,7 @@ pub(crate) fn load_folder_frontmatter(
         Ok(entries) => entries,
         Err(e) => {
             warn!("Failed to read content directory: {e}");
-            return (folder_defaults, translation_folders);
+            return folder_defaults;
         }
     };
 
@@ -1095,21 +1088,6 @@ pub(crate) fn load_folder_frontmatter(
         let path = entry.path();
         if !path.is_dir() {
             continue;
-        }
-
-        let has_translation_files = fs::read_dir(&path).is_ok_and(|entries| {
-            entries.filter_map(Result::ok).any(|e| {
-                let name = e.file_name();
-                let name_str = name.to_string_lossy();
-                name_str.ends_with(".md")
-                    && name_str.len() > 3
-                    && ISO_639_1_CODES.contains(&&name_str[..2])
-                    && name_str.as_bytes().get(2) == Some(&b'-')
-            })
-        });
-
-        if has_translation_files {
-            translation_folders.insert(path.clone());
         }
 
         let subfolder_fm_path = path.join("frontmatter.yaml");
@@ -1134,7 +1112,7 @@ pub(crate) fn load_folder_frontmatter(
         }
     }
 
-    (folder_defaults, translation_folders)
+    folder_defaults
 }
 
 /// Collect global fragments of markdown, process them and insert into the global context
@@ -1332,7 +1310,6 @@ pub(crate) fn collect_content(
     fragments: &HashMap<String, String>,
     highlighter: Option<&MarmiteHighlighter>,
     folder_defaults: &HashMap<std::path::PathBuf, frontmatter_gen::Frontmatter>,
-    translation_folders: &std::collections::HashSet<std::path::PathBuf>,
 ) {
     let contents = WalkDir::new(content_dir)
         .into_iter()
@@ -1353,38 +1330,6 @@ pub(crate) fn collect_content(
             if !(e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_'))
             {
                 return false;
-            }
-
-            if let Ok(relative) = e.path().strip_prefix(content_dir) {
-                let components: Vec<_> = relative.components().collect();
-                if components.len() >= 2 {
-                    let subfolder = content_dir.join(
-                        components[0]
-                            .as_os_str()
-                            .to_str()
-                            .unwrap_or(""),
-                    );
-                    let subfolder_name = components[0]
-                        .as_os_str()
-                        .to_str()
-                        .unwrap_or("");
-
-                    if subfolder_name == "pages" {
-                        return true;
-                    }
-                    if folder_defaults.contains_key(&subfolder) {
-                        return true;
-                    }
-                    if translation_folders.contains(&subfolder) {
-                        return true;
-                    }
-
-                    debug!(
-                        "Skipping {} - subfolder has no frontmatter.yaml and is not a translation group or pages",
-                        e.path().display()
-                    );
-                    return false;
-                }
             }
 
             true
@@ -1414,10 +1359,7 @@ pub(crate) fn collect_content(
             } else {
                 None
             };
-            let defaults = entry
-                .path()
-                .parent()
-                .and_then(|p| folder_defaults.get(p));
+            let defaults = entry.path().parent().and_then(|p| folder_defaults.get(p));
             Content::from_markdown(
                 entry.path(),
                 Some(fragments),
@@ -4188,14 +4130,13 @@ pub fn show_urls(
 
     // Collect content fragments and process content
     let fragments = collect_content_fragments(&content_folder);
-    let (folder_defaults, translation_folders) = load_folder_frontmatter(&content_folder);
+    let folder_defaults = load_folder_frontmatter(&content_folder);
     collect_content(
         &content_folder,
         &mut site_data,
         &fragments,
         None,
         &folder_defaults,
-        &translation_folders,
     );
     site_data.sort_all();
 

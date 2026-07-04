@@ -357,7 +357,7 @@ All markdown files in `content/python/` inherit these values. Per-file frontmatt
 3. Filename conventions (date, stream, language)
 4. Per-file frontmatter
 
-**Subfolder gating**: Files in subfolders are only rendered when the subfolder has a `frontmatter.yaml`, is named `pages`, or is a translation group. Other subfolders are ignored.
+Subfolders without a `frontmatter.yaml` continue to work as before - their content is rendered normally.
 
 ## Fragment Files
 

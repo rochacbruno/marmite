@@ -186,6 +186,6 @@ content/python/
 
 The `content/` root can also have a `frontmatter.yaml` for site-wide defaults. Defaults layer: root first, then subfolder, then filename conventions, then per-file frontmatter on top.
 
-Subfolders without a `frontmatter.yaml` (and not being a `pages` folder or translation group) no longer render their content, preventing accidental output from arbitrary subdirectories.
+Subfolders without a `frontmatter.yaml` continue to work as before - their content is rendered normally.
 
 See the [Folder-Level Frontmatter Defaults](folder-level-frontmatter-defaults.html) guide for details.
