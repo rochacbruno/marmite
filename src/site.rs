@@ -1050,64 +1050,52 @@ fn parse_frontmatter_yaml(content: &str) -> Option<frontmatter_gen::Frontmatter>
 pub(crate) fn load_folder_frontmatter(
     content_dir: &Path,
 ) -> HashMap<std::path::PathBuf, frontmatter_gen::Frontmatter> {
-    use frontmatter_gen::Frontmatter;
+    let mut folder_defaults: HashMap<std::path::PathBuf, frontmatter_gen::Frontmatter> =
+        HashMap::new();
 
-    let mut folder_defaults: HashMap<std::path::PathBuf, Frontmatter> = HashMap::new();
+    let mut fm_paths: Vec<std::path::PathBuf> = WalkDir::new(content_dir)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| {
+            e.path().is_file()
+                && e.path()
+                    .file_name()
+                    .is_some_and(|n| n == "frontmatter.yaml")
+        })
+        .map(|e| e.path().to_path_buf())
+        .collect();
 
-    let root_fm_path = content_dir.join("frontmatter.yaml");
-    let root_defaults = if root_fm_path.exists() {
-        match fs::read_to_string(&root_fm_path) {
-            Ok(content) => {
-                if let Some(fm) = parse_frontmatter_yaml(&content) {
-                    debug!("Loaded root frontmatter.yaml");
-                    folder_defaults.insert(content_dir.to_path_buf(), fm.clone());
-                    Some(fm)
-                } else {
-                    warn!("Failed to parse {}", root_fm_path.display());
-                    None
-                }
-            }
-            Err(e) => {
-                warn!("Failed to read {}: {e}", root_fm_path.display());
-                None
-            }
-        }
-    } else {
-        None
-    };
+    fm_paths.sort_by_key(|p| p.components().count());
 
-    let entries = match fs::read_dir(content_dir) {
-        Ok(entries) => entries,
-        Err(e) => {
-            warn!("Failed to read content directory: {e}");
-            return folder_defaults;
-        }
-    };
+    for fm_path in fm_paths {
+        let folder = match fm_path.parent() {
+            Some(p) => p.to_path_buf(),
+            None => continue,
+        };
 
-    for entry in entries.filter_map(Result::ok) {
-        let path = entry.path();
-        if !path.is_dir() {
-            continue;
-        }
-
-        let subfolder_fm_path = path.join("frontmatter.yaml");
-        if subfolder_fm_path.exists() {
-            match fs::read_to_string(&subfolder_fm_path) {
-                Ok(content) => match parse_frontmatter_yaml(&content) {
-                    Some(mut fm) => {
-                        if let Some(ref root) = root_defaults {
-                            merge_frontmatter(root, &mut fm);
+        match fs::read_to_string(&fm_path) {
+            Ok(content) => match parse_frontmatter_yaml(&content) {
+                Some(mut fm) => {
+                    let mut ancestor = folder.parent();
+                    while let Some(dir) = ancestor {
+                        if !dir.starts_with(content_dir) {
+                            break;
                         }
-                        debug!("Loaded frontmatter.yaml for subfolder {}", path.display());
-                        folder_defaults.insert(path, fm);
+                        if let Some(parent_fm) = folder_defaults.get(dir) {
+                            merge_frontmatter(parent_fm, &mut fm);
+                            break;
+                        }
+                        ancestor = dir.parent();
                     }
-                    None => {
-                        warn!("Failed to parse {}", subfolder_fm_path.display());
-                    }
-                },
-                Err(e) => {
-                    warn!("Failed to read {}: {e}", subfolder_fm_path.display());
+                    debug!("Loaded frontmatter.yaml for {}", folder.display());
+                    folder_defaults.insert(folder, fm);
                 }
+                None => {
+                    warn!("Failed to parse {}", fm_path.display());
+                }
+            },
+            Err(e) => {
+                warn!("Failed to read {}: {e}", fm_path.display());
             }
         }
     }
@@ -1359,7 +1347,20 @@ pub(crate) fn collect_content(
             } else {
                 None
             };
-            let defaults = entry.path().parent().and_then(|p| folder_defaults.get(p));
+            let defaults = {
+                let mut dir = entry.path().parent();
+                loop {
+                    match dir {
+                        Some(d) if d.starts_with(content_dir.as_path()) => {
+                            if let Some(fm) = folder_defaults.get(d) {
+                                break Some(fm);
+                            }
+                            dir = d.parent();
+                        }
+                        _ => break None,
+                    }
+                }
+            };
             Content::from_markdown(
                 entry.path(),
                 Some(fragments),
@@ -1515,17 +1516,17 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
     }
 
     // Pass 2: Build translation groups from subfolders
-    // Group key = subfolder name relative to content_dir
+    // Group key = parent directory path relative to content_dir
     let mut subfolder_groups: HashMap<String, Vec<(usize, bool)>> = HashMap::new(); // group -> [(index, is_post)]
 
     for (i, post) in site_data.posts.iter().enumerate() {
         if let Some(ref source_path) = post.source_path {
             if let Ok(relative) = source_path.strip_prefix(content_dir) {
-                let components: Vec<_> = relative.components().collect();
-                if components.len() >= 2 {
-                    if let Some(group_name) = components[0].as_os_str().to_str() {
+                if let Some(parent) = relative.parent() {
+                    let parent_str = parent.to_string_lossy();
+                    if !parent_str.is_empty() {
                         subfolder_groups
-                            .entry(group_name.to_string())
+                            .entry(parent_str.to_string())
                             .or_default()
                             .push((i, true));
                     }
@@ -1537,11 +1538,11 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
     for (i, page) in site_data.pages.iter().enumerate() {
         if let Some(ref source_path) = page.source_path {
             if let Ok(relative) = source_path.strip_prefix(content_dir) {
-                let components: Vec<_> = relative.components().collect();
-                if components.len() >= 2 {
-                    if let Some(group_name) = components[0].as_os_str().to_str() {
+                if let Some(parent) = relative.parent() {
+                    let parent_str = parent.to_string_lossy();
+                    if !parent_str.is_empty() {
                         subfolder_groups
-                            .entry(group_name.to_string())
+                            .entry(parent_str.to_string())
                             .or_default()
                             .push((i, false));
                     }

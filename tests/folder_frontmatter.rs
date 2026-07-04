@@ -333,3 +333,271 @@ fn test_empty_frontmatter_yaml_enables_subfolder() {
         "empty frontmatter.yaml should still enable the subfolder for rendering"
     );
 }
+
+#[test]
+fn test_nested_subfolder_frontmatter_yaml() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content").join("poetry").join("love")).unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Blog").unwrap();
+
+    fs::write(
+        input_dir
+            .join("content")
+            .join("poetry")
+            .join("love")
+            .join("frontmatter.yaml"),
+        "date: 2026-01-01\nstream: poetry\ntags:\n  - love\n  - poetry\n",
+    )
+    .unwrap();
+
+    fs::write(
+        input_dir
+            .join("content")
+            .join("poetry")
+            .join("love")
+            .join("roses.md"),
+        "---\ntitle: Roses\n---\n# Roses\n\nRoses are red.\n",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        output_dir.join("poetry-roses.html").exists(),
+        "nested subfolder content should render with inherited stream"
+    );
+}
+
+#[test]
+fn test_nested_frontmatter_inheritance_from_ancestor() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content").join("poetry").join("love")).unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Blog").unwrap();
+
+    // Only parent has frontmatter.yaml, not the nested subfolder
+    fs::write(
+        input_dir
+            .join("content")
+            .join("poetry")
+            .join("frontmatter.yaml"),
+        "date: 2026-01-01\nstream: poetry\n",
+    )
+    .unwrap();
+
+    fs::write(
+        input_dir
+            .join("content")
+            .join("poetry")
+            .join("love")
+            .join("sonnet.md"),
+        "---\ntitle: Sonnet\n---\n# Sonnet\n\nA love sonnet.\n",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        output_dir.join("poetry-sonnet.html").exists(),
+        "file in nested subfolder should inherit from ancestor frontmatter.yaml"
+    );
+}
+
+#[test]
+fn test_three_level_frontmatter_layering() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content").join("tutorials").join("python")).unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Blog").unwrap();
+
+    // Root defaults
+    fs::write(
+        input_dir.join("content").join("frontmatter.yaml"),
+        "authors:\n  - admin\ndate: 2026-01-01\n",
+    )
+    .unwrap();
+
+    // Level 1 adds stream
+    fs::write(
+        input_dir
+            .join("content")
+            .join("tutorials")
+            .join("frontmatter.yaml"),
+        "stream: tutorial\n",
+    )
+    .unwrap();
+
+    // Level 2 adds tags
+    fs::write(
+        input_dir
+            .join("content")
+            .join("tutorials")
+            .join("python")
+            .join("frontmatter.yaml"),
+        "tags:\n  - python\n",
+    )
+    .unwrap();
+
+    fs::write(
+        input_dir
+            .join("content")
+            .join("tutorials")
+            .join("python")
+            .join("basics.md"),
+        "---\ntitle: Python Basics\n---\n# Python Basics\n\nLearn Python.\n",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Stream from level 1 should be inherited through level 2
+    assert!(
+        output_dir.join("tutorial-python-basics.html").exists(),
+        "three-level layering should work: root (author/date) + tutorials (stream) + python (tags)"
+    );
+    // Author from root should be inherited through all levels
+    assert!(
+        output_dir.join("author-admin.html").exists(),
+        "root author should be inherited through nested frontmatter layers"
+    );
+}
+
+#[test]
+fn test_nested_translation_group() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content").join("poetry").join("love")).unwrap();
+    fs::create_dir_all(input_dir.join("content").join("poetry").join("nature")).unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Blog\nlanguage: en\n").unwrap();
+
+    // Love subfolder: translation group
+    // Default language (en) file has no prefix
+    fs::write(
+        input_dir
+            .join("content")
+            .join("poetry")
+            .join("love")
+            .join("love-poem.md"),
+        "---\ntitle: Love Poem\ndate: 2026-01-01\n---\n# Love Poem\n\nA love poem.\n",
+    )
+    .unwrap();
+
+    fs::write(
+        input_dir
+            .join("content")
+            .join("poetry")
+            .join("love")
+            .join("pt-poema-amor.md"),
+        "---\ntitle: Poema de Amor\ndate: 2026-01-01\n---\n# Poema de Amor\n\nUm poema de amor.\n",
+    )
+    .unwrap();
+
+    // Nature subfolder: separate translation group
+    fs::write(
+        input_dir
+            .join("content")
+            .join("poetry")
+            .join("nature")
+            .join("nature-poem.md"),
+        "---\ntitle: Nature Poem\ndate: 2026-01-01\n---\n# Nature Poem\n\nA nature poem.\n",
+    )
+    .unwrap();
+
+    fs::write(
+        input_dir
+            .join("content")
+            .join("poetry")
+            .join("nature")
+            .join("pt-poema-natureza.md"),
+        "---\ntitle: Poema da Natureza\ndate: 2026-01-01\n---\n# Poema da Natureza\n\nUm poema da natureza.\n",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Default language (en) renders without prefix, translations with lang prefix
+    let love_en = output_dir.join("love-poem.html").exists();
+    let love_pt = output_dir.join("pt-poema-de-amor.html").exists();
+    let nature_en = output_dir.join("nature-poem.html").exists();
+    let nature_pt = output_dir.join("pt-poema-da-natureza.html").exists();
+
+    assert!(
+        love_en,
+        "English love poem should be rendered without lang prefix"
+    );
+    assert!(love_pt, "Portuguese love poem should be rendered");
+    assert!(
+        nature_en,
+        "English nature poem should be rendered without lang prefix"
+    );
+    assert!(nature_pt, "Portuguese nature poem should be rendered");
+}
