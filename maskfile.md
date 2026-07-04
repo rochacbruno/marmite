@@ -24,7 +24,7 @@ rm -rf ./example/site && cargo run --quiet -- example --serve --watch --force -v
 
 ~~~bash
 .github/prepare_site.sh
-python .github/contributors.py marmitesite/content/contributors.md
+python .github/contributors.py marmitesite/content/pages/contributors.md
 cargo run --quiet -- marmitesite --serve --watch --force -vvvv
 ~~~
 
