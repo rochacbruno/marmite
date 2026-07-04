@@ -902,127 +902,53 @@ fn test_aliases_empty_when_not_specified() {
 
 #[test]
 fn test_detect_language_from_subfolder_with_prefix() {
-    use crate::config::LanguageConfig;
-    use std::collections::HashMap;
-
-    let mut languages = HashMap::new();
-    languages.insert(
-        "pt".to_string(),
-        LanguageConfig {
-            name: "Portugues".to_string(),
-        },
-    );
-    languages.insert(
-        "en".to_string(),
-        LanguageConfig {
-            name: "English".to_string(),
-        },
-    );
-
     let content_dir = Path::new("/site/content");
     let path = Path::new("/site/content/hello/pt-ola.md");
     assert_eq!(
-        detect_language_from_path(path, content_dir, &languages),
+        detect_language_from_path(path, content_dir),
         Some("pt".to_string())
     );
 }
 
 #[test]
 fn test_detect_language_from_subfolder_en_prefix() {
-    use crate::config::LanguageConfig;
-    use std::collections::HashMap;
-
-    let mut languages = HashMap::new();
-    languages.insert(
-        "en".to_string(),
-        LanguageConfig {
-            name: "English".to_string(),
-        },
-    );
-
     let content_dir = Path::new("/site/content");
     let path = Path::new("/site/content/hello/en-hello-world.md");
     assert_eq!(
-        detect_language_from_path(path, content_dir, &languages),
+        detect_language_from_path(path, content_dir),
         Some("en".to_string())
     );
 }
 
 #[test]
 fn test_detect_language_flat_file_no_detection() {
-    use crate::config::LanguageConfig;
-    use std::collections::HashMap;
-
-    let mut languages = HashMap::new();
-    languages.insert(
-        "pt".to_string(),
-        LanguageConfig {
-            name: "Portugues".to_string(),
-        },
-    );
-
     let content_dir = Path::new("/site/content");
     let path = Path::new("/site/content/pt-ola.md");
-    assert_eq!(
-        detect_language_from_path(path, content_dir, &languages),
-        None
-    );
+    assert_eq!(detect_language_from_path(path, content_dir), None);
 }
 
 #[test]
-fn test_detect_language_no_config() {
-    use crate::config::LanguageConfig;
-    use std::collections::HashMap;
-
-    let languages: HashMap<String, LanguageConfig> = HashMap::new();
+fn test_detect_language_without_config() {
     let content_dir = Path::new("/site/content");
     let path = Path::new("/site/content/hello/pt-ola.md");
     assert_eq!(
-        detect_language_from_path(path, content_dir, &languages),
-        None
+        detect_language_from_path(path, content_dir),
+        Some("pt".to_string())
     );
 }
 
 #[test]
 fn test_detect_language_no_false_positive() {
-    use crate::config::LanguageConfig;
-    use std::collections::HashMap;
-
-    let mut languages = HashMap::new();
-    languages.insert(
-        "es".to_string(),
-        LanguageConfig {
-            name: "Espanol".to_string(),
-        },
-    );
-
     let content_dir = Path::new("/site/content");
     let path = Path::new("/site/content/hello/essential-guide.md");
-    assert_eq!(
-        detect_language_from_path(path, content_dir, &languages),
-        None
-    );
+    assert_eq!(detect_language_from_path(path, content_dir), None);
 }
 
 #[test]
 fn test_detect_language_base_content_no_prefix() {
-    use crate::config::LanguageConfig;
-    use std::collections::HashMap;
-
-    let mut languages = HashMap::new();
-    languages.insert(
-        "pt".to_string(),
-        LanguageConfig {
-            name: "Portugues".to_string(),
-        },
-    );
-
     let content_dir = Path::new("/site/content");
     let path = Path::new("/site/content/hello/hello.md");
-    assert_eq!(
-        detect_language_from_path(path, content_dir, &languages),
-        None
-    );
+    assert_eq!(detect_language_from_path(path, content_dir), None);
 }
 
 #[test]
@@ -1058,4 +984,40 @@ fn test_translations_frontmatter_empty_when_not_specified() {
 
     let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
     assert!(result.translations.is_empty());
+}
+
+#[test]
+fn test_translates_frontmatter_parsed() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("ola.md");
+    let content = "---\ntitle: Ola\nlanguage: pt\ntranslates: hello\n---\n# Ola\n";
+    fs::write(&path, content).unwrap();
+
+    let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
+    assert_eq!(result.translates, Some("hello".to_string()));
+    assert_eq!(result.language, Some("pt".to_string()));
+}
+
+#[test]
+fn test_translates_frontmatter_empty_when_not_specified() {
+    let temp_dir = TempDir::new().unwrap();
+    let path = temp_dir.path().join("hello.md");
+    let content = "---\ntitle: Hello\n---\n# Hello\n";
+    fs::write(&path, content).unwrap();
+
+    let result = Content::from_markdown(&path, None, &Marmite::default(), None, None).unwrap();
+    assert!(result.translates.is_none());
+}
+
+#[test]
+fn test_is_iso_639_1_code() {
+    use crate::content::is_iso_639_1_code;
+
+    assert!(is_iso_639_1_code("en"));
+    assert!(is_iso_639_1_code("pt"));
+    assert!(is_iso_639_1_code("es"));
+    assert!(is_iso_639_1_code("zh"));
+    assert!(!is_iso_639_1_code("xyz"));
+    assert!(!is_iso_639_1_code("english"));
+    assert!(!is_iso_639_1_code(""));
 }

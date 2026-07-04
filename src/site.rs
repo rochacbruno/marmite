@@ -1,7 +1,7 @@
 use crate::config::{Author, Marmite};
 use crate::content::{
-    check_for_duplicate_slugs, detect_language_from_path, Content, ContentBuilder, GroupedContent,
-    Kind, TranslationRef,
+    check_for_duplicate_slugs, detect_language_from_path, is_iso_639_1_code, Content,
+    ContentBuilder, GroupedContent, Kind, TranslationRef, ISO_639_1_CODES,
 };
 use crate::embedded::{
     collect_ignore_missing_includes, generate_static, preprocess_template, Templates,
@@ -581,9 +581,7 @@ pub(crate) fn build_site_with_config(
         highlighter.as_deref(),
     );
 
-    if !site_data.site.languages.is_empty() {
-        discover_translations(&mut site_data, &content_folder);
-    }
+    discover_translations(&mut site_data, &content_folder);
 
     let state_path = input_folder.join(".marmite-atproto-state.json");
     if state_path.exists() {
@@ -790,9 +788,7 @@ pub fn generate(
                 highlighter.as_deref(),
             );
 
-            if !site_data.site.languages.is_empty() {
-                discover_translations(&mut site_data, &content_folder);
-            }
+            discover_translations(&mut site_data, &content_folder);
 
             // Load atproto state to populate at_uri on matching posts/pages
             let state_path = moved_input_folder.join(".marmite-atproto-state.json");
@@ -1291,57 +1287,68 @@ pub(crate) fn collect_content(
     for content in contents {
         match content {
             Ok(mut content) => {
-                if !site_data.site.languages.is_empty() {
-                    if let Some(lang) = detect_language_from_path(
-                        content.source_path.as_deref().unwrap_or(Path::new("")),
-                        content_dir,
-                        &site_data.site.languages,
-                    ) {
-                        if content.stream.is_some() {
-                            content.stream = Some(lang.clone());
-                        }
-                        if content.language.is_none() {
-                            content.language = Some(lang.clone());
-                        }
+                if let Some(lang) = detect_language_from_path(
+                    content.source_path.as_deref().unwrap_or(Path::new("")),
+                    content_dir,
+                ) {
+                    if content.stream.is_some() {
+                        content.stream = Some(lang.clone());
+                    }
+                    if content.language.is_none() {
+                        content.language = Some(lang.clone());
+                    }
+                    let prefix = format!("{lang}-");
+                    if !content.slug.starts_with(&prefix) {
+                        content.slug = format!("{lang}-{}", content.slug);
+                    }
+                }
+
+                if let Some(ref lang) = content.language {
+                    if content.stream.as_deref() == Some("index")
+                        && *lang != site_data.site.language
+                    {
+                        content.stream = Some(lang.clone());
                         let prefix = format!("{lang}-");
                         if !content.slug.starts_with(&prefix) {
                             content.slug = format!("{lang}-{}", content.slug);
                         }
                     }
+                }
 
-                    // language frontmatter implies stream when no explicit stream was set
-                    // and the language is not the site default
-                    if let Some(ref lang) = content.language {
-                        if site_data.site.languages.contains_key(lang.as_str())
-                            && content.stream.as_deref() == Some("index")
-                            && *lang != site_data.site.language
-                        {
-                            content.stream = Some(lang.clone());
-                            let prefix = format!("{lang}-");
-                            if !content.slug.starts_with(&prefix) {
-                                content.slug = format!("{lang}-{}", content.slug);
-                            }
-                        }
-                    }
-
-                    // Infer language from stream so tag/archive group clones
-                    // carry the language field for same-language filtering
-                    if content.language.is_none() {
-                        if let Some(ref stream) = content.stream {
-                            if site_data.site.languages.contains_key(stream.as_str()) {
-                                content.language = Some(stream.clone());
-                            } else if stream == "index" {
-                                content.language = Some(site_data.site.language.clone());
-                            }
+                if content.language.is_none() {
+                    if let Some(ref stream) = content.stream {
+                        if is_iso_639_1_code(stream) {
+                            content.language = Some(stream.clone());
+                        } else if stream == "index" {
+                            content.language = Some(site_data.site.language.clone());
                         }
                     }
                 }
+
                 site_data.push_content(content);
             }
             Err(e) => {
                 error!("Failed to process content: {e:?}");
             }
         }
+    }
+
+    // Auto-populate languages from observed content
+    let mut observed_languages: std::collections::HashSet<String> =
+        std::collections::HashSet::new();
+    for content in site_data.posts.iter().chain(&site_data.pages) {
+        if let Some(ref lang) = content.language {
+            if *lang != site_data.site.language {
+                observed_languages.insert(lang.clone());
+            }
+        }
+    }
+    for lang in observed_languages {
+        site_data
+            .site
+            .languages
+            .entry(lang.clone())
+            .or_insert_with(|| crate::config::LanguageConfig { display_name: lang });
     }
 }
 
@@ -1357,11 +1364,45 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
     let default_language = &site_data.site.language;
     let languages = &site_data.site.languages;
 
+    // Pass 0: Process translates: frontmatter for manual linking
+    // Collect (source_index, is_post, target_slug) for items with translates:
+    let mut translates_refs: Vec<(usize, bool, String)> = Vec::new();
+    for (i, post) in site_data.posts.iter().enumerate() {
+        if let Some(ref target_slug) = post.translates {
+            translates_refs.push((i, true, target_slug.clone()));
+        }
+    }
+    for (i, page) in site_data.pages.iter().enumerate() {
+        if let Some(ref target_slug) = page.translates {
+            translates_refs.push((i, false, target_slug.clone()));
+        }
+    }
+    // Inject TranslationRef entries (with empty lang/name/title for Pass 4 to resolve)
+    for (idx, is_post, target_slug) in &translates_refs {
+        let content = if *is_post {
+            &mut site_data.posts[*idx]
+        } else {
+            &mut site_data.pages[*idx]
+        };
+        if !content
+            .translations
+            .iter()
+            .any(|existing| existing.slug == *target_slug)
+        {
+            content.translations.push(TranslationRef {
+                slug: target_slug.clone(),
+                lang: String::new(),
+                name: String::new(),
+                title: String::new(),
+            });
+        }
+    }
+
     // Pass 1: Infer language from stream for posts
     for post in &mut site_data.posts {
         if post.language.is_none() {
             if let Some(ref stream) = post.stream {
-                if languages.contains_key(stream.as_str()) {
+                if is_iso_639_1_code(stream) {
                     post.language = Some(stream.clone());
                 } else if stream == "index" {
                     post.language = Some(default_language.clone());
@@ -1375,10 +1416,10 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
         if page.language.is_none() {
             if let Some(ref source_path) = page.source_path {
                 if let Some(filename) = source_path.file_stem().and_then(|s| s.to_str()) {
-                    for lang_code in languages.keys() {
+                    for &lang_code in ISO_639_1_CODES {
                         let prefix = format!("{lang_code}-");
                         if filename.starts_with(&prefix) {
-                            page.language = Some(lang_code.clone());
+                            page.language = Some(lang_code.to_string());
                             break;
                         }
                     }
@@ -1508,7 +1549,7 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
                 }
                 let lang_name = languages
                     .get(other_lang.as_str())
-                    .map_or_else(|| other_lang.clone(), |c| c.name.clone());
+                    .map_or_else(|| other_lang.clone(), |c| c.display_name.clone());
                 refs.push(TranslationRef {
                     lang: other_lang.clone(),
                     name: lang_name,
@@ -1547,11 +1588,7 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
         let lang = post
             .language
             .clone()
-            .or_else(|| {
-                post.stream
-                    .clone()
-                    .filter(|s| languages.contains_key(s.as_str()))
-            })
+            .or_else(|| post.stream.clone().filter(|s| is_iso_639_1_code(s)))
             .unwrap_or_else(|| default_language.clone());
         slug_index.insert(
             post.slug.clone(),
@@ -1609,7 +1646,7 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
                     };
                     let resolved_name = languages
                         .get(resolved_lang.as_str())
-                        .map_or_else(|| resolved_lang.clone(), |c| c.name.clone());
+                        .map_or_else(|| resolved_lang.clone(), |c| c.display_name.clone());
                     let resolved_title = if tr.title.is_empty() {
                         target_info.title.clone()
                     } else {
@@ -1632,7 +1669,7 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
                         .unwrap_or_else(|| default_language.clone());
                     let src_lang_name = languages
                         .get(src_lang.as_str())
-                        .map_or_else(|| src_lang.clone(), |c| c.name.clone());
+                        .map_or_else(|| src_lang.clone(), |c| c.display_name.clone());
                     bidirectional_adds.push((
                         target_info.idx,
                         target_info.is_post,

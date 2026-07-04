@@ -3,6 +3,142 @@ use std::process::Command;
 use tempfile::TempDir;
 
 #[test]
+fn test_language_detection_without_config() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+
+    // No languages: in config at all
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Test Blog\nlanguage: en",
+    )
+    .unwrap();
+
+    // Post with language: pt frontmatter
+    let pt_post =
+        "---\ndate: 2024-01-01\ntitle: Conteudo\nlanguage: pt\n---\n# Conteudo em Portugues\n";
+    fs::write(input_dir.join("content").join("conteudo.md"), pt_post).unwrap();
+
+    // Default language post
+    let en_post = "---\ndate: 2024-01-01\ntitle: Content\n---\n# English Content\n";
+    fs::write(input_dir.join("content").join("content.md"), en_post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Portuguese post should be on pt stream even without languages: config
+    assert!(
+        output_dir.join("pt-conteudo.html").exists(),
+        "pt-conteudo.html should exist"
+    );
+    assert!(
+        output_dir.join("pt.html").exists(),
+        "pt.html stream page should exist"
+    );
+
+    // English post stays on index
+    let index = fs::read_to_string(output_dir.join("index.html")).unwrap();
+    assert!(
+        index.contains("Content"),
+        "English post should be on index.html"
+    );
+    assert!(
+        !index.contains("pt-conteudo"),
+        "Portuguese post should NOT be on index.html"
+    );
+}
+
+#[test]
+fn test_translates_frontmatter_manual_linking() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Test Blog\nlanguage: en",
+    )
+    .unwrap();
+
+    // Original English post
+    let en_post = "---\ndate: 2024-01-01\ntitle: Hello World\nslug: hello\n---\n# Hello\n";
+    fs::write(input_dir.join("content").join("hello.md"), en_post).unwrap();
+
+    // Portuguese translation using translates:
+    let pt_post = "---\ndate: 2024-01-01\ntitle: Ola Mundo\nslug: ola\nlanguage: pt\ntranslates: hello\n---\n# Ola\n";
+    fs::write(input_dir.join("content").join("ola.md"), pt_post).unwrap();
+
+    // Spanish translation using translates:
+    let es_post = "---\ndate: 2024-01-01\ntitle: Hola Mundo\nslug: hola\nlanguage: es\ntranslates: hello\n---\n# Hola\n";
+    fs::write(input_dir.join("content").join("hola.md"), es_post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // All content pages should exist
+    assert!(output_dir.join("hello.html").exists());
+    assert!(output_dir.join("pt-ola.html").exists());
+    assert!(output_dir.join("es-hola.html").exists());
+
+    // Original should have translation links to both
+    let en_html = fs::read_to_string(output_dir.join("hello.html")).unwrap();
+    assert!(
+        en_html.contains("Also available in"),
+        "English post should show translation links"
+    );
+    assert!(
+        en_html.contains("pt-ola.html"),
+        "English post should link to Portuguese"
+    );
+    assert!(
+        en_html.contains("es-hola.html"),
+        "English post should link to Spanish"
+    );
+
+    // Portuguese should link back to English and Spanish
+    let pt_html = fs::read_to_string(output_dir.join("pt-ola.html")).unwrap();
+    assert!(
+        pt_html.contains("hello.html"),
+        "Portuguese post should link to English original"
+    );
+}
+
+#[test]
 fn test_language_streams_subfolder() {
     let temp_dir = TempDir::new().unwrap();
     let input_dir = temp_dir.path().join("input");

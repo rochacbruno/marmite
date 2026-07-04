@@ -519,20 +519,20 @@ Per-taxonomy feeds: `/tag-{name}.rss`, `/author-{name}.rss`, `/{stream}.rss`, `/
 
 ## Multilingual Content (Language Streams)
 
-Configure available languages in `marmite.yaml`:
+Languages are auto-detected from content. Just set `language: xx` in frontmatter or use subfolder naming conventions. Optionally set display names in `marmite.yaml`:
 
 ```yaml
 language: pt
 languages:
   pt:
-    name: "Portugues"
+    display_name: "Portugues"
   en:
-    name: "English"
+    display_name: "English"
 ```
 
 ### Subfolder auto-discovery
 
-Group translations in subfolders. Files prefixed with a configured language code are auto-detected:
+Group translations in subfolders. Files prefixed with an ISO 639-1 language code are auto-detected:
 
 ```
 content/hello/
@@ -556,15 +556,16 @@ content/
     pt-ola.md           # Translation, auto-linked to hello
 ```
 
-### Stream markers
+### Translates pointer
 
-Use existing stream markers or frontmatter `stream` field. Manual `translations` frontmatter needed:
+Each translation points to the original content's slug using `translates:`:
 
+```yaml
+language: pt
+translates: hello
 ```
-content/
-  hello.md              # translations: [pt-ola]
-  pt-S-ola.md           # stream: pt via -S- pattern
-```
+
+Marmite builds bidirectional links from `translates:` automatically - simpler than maintaining `translations:` lists on every file.
 
 ### Frontmatter translation link
 
