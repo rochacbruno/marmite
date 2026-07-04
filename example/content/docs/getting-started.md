@@ -325,6 +325,33 @@ myblog/
              |_ myphoto.png
 ```
 
+### Recommended content layout
+
+While marmite works with any folder structure, as your site grows you will benefit from organizing content into subfolders. The `--init-site` command creates this recommended layout:
+
+```
+myblog/
+   |_ content/
+         |_ pages/
+         |     |_ about.md
+         |_ posts/
+         |     |_ welcome.md
+         |_ media/
+         |     |_ myphoto.png
+         |_ _hero.md
+         |_ _comments.md
+         |_ _references.md
+```
+
+- **pages/** for static pages (about, contact, showcase) that have no date
+- **posts/** for blog posts, or create topic subfolders like `docs/`, `news/`, `tutorials/`
+- **media/** for images and assets referenced from content
+- **Fragment files** (`_*.md`) stay at the content root
+
+Each subfolder can include a `frontmatter.yaml` file to set shared defaults for all files in that folder (tags, stream, authors, date, etc.). Per-file frontmatter always takes precedence over folder defaults.
+
+See [[Folder-Level Frontmatter Defaults]] for details on how folder defaults work.
+
 ## Configuring
 
 marmite is designed to be **zero** config to get started, just like you

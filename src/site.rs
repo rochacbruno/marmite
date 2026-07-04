@@ -3980,6 +3980,16 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         error!("Failed to create 'content/media' folder: {e:?}");
         process::exit(1);
     }
+    let pages_folder = content_folder.join("pages");
+    if let Err(e) = fs::create_dir(&pages_folder) {
+        error!("Failed to create 'content/pages' folder: {e:?}");
+        process::exit(1);
+    }
+    let posts_folder = content_folder.join("posts");
+    if let Err(e) = fs::create_dir(&posts_folder) {
+        error!("Failed to create 'content/posts' folder: {e:?}");
+        process::exit(1);
+    }
     // create input_folder/custom.css with `/* Custom CSS */` content
     if let Err(e) = fs::write(input_folder.join("custom.css"), "/* Custom CSS */") {
         error!("Failed to create 'custom.css' file: {e:?}");
@@ -4076,40 +4086,49 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         error!("Failed to create 'content/_hero.md' file: {e:?}");
         process::exit(1);
     }
-    // create content/about.md with `# About` content
+    // create content/pages/about.md with `# About` content
     if let Err(e) = fs::write(
-        content_folder.join("about.md"),
+        pages_folder.join("about.md"),
         "# About\n\
         \n\
-        Hi, edit `about.md` to change this content.
+        Hi, edit `content/pages/about.md` to change this content.\n\
+        \n\
+        Pages are content without a date. They do not appear in feeds or the index.\n\
+        Add them to the menu in `marmite.yaml` to make them accessible.\
         ",
     ) {
-        error!("Failed to create 'content/about.md' file: {e:?}");
+        error!("Failed to create 'content/pages/about.md' file: {e:?}");
         process::exit(1);
     }
-    // create content/{now}-welcome.md with `# Welcome to Marmite` content
+    // create content/posts/welcome.md with date in frontmatter
     let now = chrono::Local::now();
-    let now = now.format("%Y-%m-%d").to_string();
+    let now_str = now.format("%Y-%m-%d %H:%M:%S").to_string();
     if let Err(e) = fs::write(
-        content_folder.join(format!("{now}-welcome.md")),
-        "# Welcome to Marmite\n\
-        \n\
-        This is your first post!\n\
-        \n\
-        ## Edit this content\n\n\
-        edit on `content/{date}-welcome.md`\n\n\
-        ## Add more content\n\n\
-        create new markdown files in the `content` folder\n\n\
-        use `marmite --new` to create new content\n\n\
-        ## Customize your site\n\n\
-        edit `marmite.yaml` to change site settings\n\n\
-        edit the files starting with `_` in the `content` folder to change the layout\n\n\
-        or edit the templates to create a custom layout\n\n\
-        ## Deploy your site\n\n\
-        read more on [marmite documentation](https://marmite.blog)\n\n\
-        ",
+        posts_folder.join("welcome.md"),
+        format!(
+            "---\n\
+            date: {now_str}\n\
+            ---\n\
+            # Welcome to Marmite\n\
+            \n\
+            This is your first post!\n\
+            \n\
+            ## Edit this content\n\n\
+            Edit `content/posts/welcome.md` to change this post.\n\n\
+            ## Add more content\n\n\
+            Create new markdown files in `content/posts/` for posts \
+            or `content/pages/` for pages.\n\n\
+            Use `marmite --new \"Post Title\"` to create a new post, \
+            add `-d posts` to place it in the posts folder.\n\n\
+            ## Customize your site\n\n\
+            Edit `marmite.yaml` to change site settings.\n\n\
+            Edit the files starting with `_` in the `content` folder to change the layout.\n\n\
+            ## Deploy your site\n\n\
+            Read more on [marmite documentation](https://marmite.blog).\n\n\
+            "
+        ),
     ) {
-        error!("Failed to create 'content/{now}-welcome.md' file: {e:?}");
+        error!("Failed to create 'content/posts/welcome.md' file: {e:?}");
         process::exit(1);
     }
     info!("Site initialized in {}", input_folder.display());

@@ -78,7 +78,18 @@ myblog/content/2024-11-26-12-34-27-my-first-post.md
 ```
 
 Pass `-p` to create a page instead of a post.  
-Pass `-e` to immediately open the file on the `$EDITOR`
+Pass `-e` to immediately open the file on the `$EDITOR`.  
+Pass `-d` to specify a subfolder within the content directory:
+
+```console
+$ marmite myblog --new "My first post" -d posts
+myblog/content/posts/2024-11-26-12-34-27-my-first-post.md
+
+$ marmite myblog --new "About" -p -d pages
+myblog/content/pages/about.md
+```
+
+The `-d` flag creates the directory if it does not exist, so you can use it to organize content into topic subfolders.
 
 In workspace mode, use `--site` to specify the target site:
 
@@ -574,6 +585,8 @@ Options:
           Set the new content as a page
   -t <TAGS>
           Set the tags for the new content tags are comma separated
+  -d <DIRECTORY>
+          Directory within content folder to create the file
       --site <SITE>
           Target site within a workspace
       --name <NAME>

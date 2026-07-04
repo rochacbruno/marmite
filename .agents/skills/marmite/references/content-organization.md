@@ -10,23 +10,24 @@ A typical marmite project:
 mysite/
   marmite.yaml              # Site configuration
   content/                   # Markdown files (configurable via content_path)
-    2024-06-15-my-post.md    # Post (has date)
-    about.md                 # Page (no date)
-    _hero.md                 # Fragment (layout injection)
-    _references.md           # Global references
+    pages/                   # Static pages (no date)
+      about.md
+      contact.md
+    posts/                   # Blog posts (or topic subfolders)
+      my-post.md             # Post with date in frontmatter
     media/                   # Images and assets for content
       photo.jpg
-      screenshots/
-        example.png
+    _hero.md                 # Fragment (layout injection)
+    _references.md           # Global references
   templates/                 # Custom Tera templates (optional)
   static/                    # Static assets (CSS, JS, images)
-    custom.css
-    custom.js
   shortcodes/                # Custom shortcodes (optional)
   site/                      # Generated output (default)
 ```
 
 Marmite also works without the `content/` subfolder - markdown files can live directly in the input folder.
+
+For simple sites, a flat folder of markdown files works fine. For growing sites, organizing content into subfolders with `frontmatter.yaml` files for shared defaults is recommended.
 
 ## Folder-Level Frontmatter Defaults
 
@@ -405,12 +406,14 @@ file_mapping:
 
 ```
 content/
-  2024-06-15-my-first-post.md      # Post
-  2024-06-20-another-post.md       # Post
-  about.md                          # Page
-  _hero.md                          # Homepage hero
-  _comments.md                     # Comments system
-  _references.md                   # Shared links
+  pages/
+    about.md                          # Page
+  posts/
+    2024-06-15-my-first-post.md       # Post
+    2024-06-20-another-post.md        # Post
+  _hero.md                            # Homepage hero
+  _comments.md                        # Comments system
+  _references.md                      # Shared links
   media/
     banner.jpg
 ```
@@ -424,16 +427,22 @@ menu:
 
 ### Multi-section Blog
 
-Use streams to separate content types:
+Use subfolders with `frontmatter.yaml` to organize by stream:
 
 ```
 content/
-  tutorial-2024-01-01-python-basics.md
-  tutorial-2024-01-15-advanced-python.md
-  news-2024-01-10-v2-release.md
-  news-2024-01-20-roadmap.md
-  2024-01-05-general-thoughts.md
-  about.md
+  tutorials/
+    frontmatter.yaml                  # stream: tutorial
+    python-basics.md
+    advanced-python.md
+  news/
+    frontmatter.yaml                  # stream: news
+    v2-release.md
+    roadmap.md
+  posts/
+    general-thoughts.md               # Default stream
+  pages/
+    about.md
 ```
 
 ```yaml
@@ -628,11 +637,12 @@ Translation links and hreflang tags are added automatically to content pages.
 
 ## Best Practices
 
-1. **Use dates in filenames** for posts - makes the content directory scannable at a glance
-2. **Use `_references.md`** for links you repeat across posts (project URLs, documentation links)
-3. **Keep streams simple** - 3-5 streams maximum. Use tags for fine-grained categorization
-4. **Use series for sequential content** - tutorials, courses, multi-part articles
-5. **Use `stream: draft`** for work-in-progress - drafts are accessible by URL but hidden from feeds
-6. **Name files descriptively** - the filename becomes the default slug
-7. **Organize media by topic** - use subdirectories inside `media/` for large sites
-8. **Set `default_author`** in config to avoid repeating the author field
+1. **Use subfolders for content types** - put pages in `pages/`, posts in `posts/` or topic subfolders
+2. **Use `frontmatter.yaml`** for shared defaults per subfolder - avoids repeating stream, tags, or author fields
+3. **Use `_references.md`** for links you repeat across posts (project URLs, documentation links)
+4. **Keep streams simple** - 3-5 streams maximum. Use tags for fine-grained categorization
+5. **Use series for sequential content** - tutorials, courses, multi-part articles
+6. **Use `stream: draft`** for work-in-progress - drafts are accessible by URL but hidden from feeds
+7. **Name files after content slugs** - the filename becomes the default slug, making files easy to find
+8. **Use translation group subfolders** - group translations of the same content in a shared subfolder
+9. **Flat layouts always work** - marmite supports any folder structure, even a single folder of markdown files

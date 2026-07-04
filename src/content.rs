@@ -889,6 +889,13 @@ pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String>
 pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &Path) {
     let content_folder = get_content_folder(&Data::from_file(config_path).site, input_folder);
     let mut path = content_folder.clone();
+    if let Some(ref dir) = cli_args.create.directory {
+        path.push(dir);
+        if let Err(e) = std::fs::create_dir_all(&path) {
+            error!("Failed to create directory: {e:?}");
+            return;
+        }
+    }
     let slug = crate::slugify::slugify(text);
     if cli_args.create.page {
         path.push(format!("{slug}.md"));
