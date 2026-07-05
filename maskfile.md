@@ -46,7 +46,7 @@ cargo run --quiet -- marmitesite --serve --watch --force -vvvv --theme theme_tem
 ~~~bash
 set -e
 cargo fmt -- --check
-cargo clippy
+cargo clippy -- -D warnings
 ~~~
 
 ## pedantic
@@ -56,7 +56,7 @@ cargo clippy
 ~~~bash
 set -e
 cargo fmt -- --check
-cargo clippy -- -W clippy::pedantic
+cargo clippy -- -W clippy::pedantic -D warnings
 ~~~
 
 ## fmt
