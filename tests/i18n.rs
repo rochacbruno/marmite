@@ -725,3 +725,104 @@ fn test_translation_group_requires_slug_matching_folder() {
         "pt-coisas.html should link back to English original"
     );
 }
+
+#[test]
+fn test_languages_group_page_generated() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Test Blog\nlanguage: en\nlanguages:\n  en:\n    display_name: English\n  pt:\n    display_name: Portugues",
+    )
+    .unwrap();
+
+    let en_post = "---\ndate: 2024-01-01\ntitle: Hello World\n---\n# Hello\n";
+    fs::write(input_dir.join("content").join("hello.md"), en_post).unwrap();
+
+    let pt_post = "---\ndate: 2024-01-02\ntitle: Ola Mundo\nlanguage: pt\n---\n# Ola\n";
+    fs::write(input_dir.join("content").join("ola.md"), pt_post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        output_dir.join("languages.html").exists(),
+        "languages.html should be generated"
+    );
+
+    let html = fs::read_to_string(output_dir.join("languages.html")).unwrap();
+    assert!(
+        html.contains("Portugues"),
+        "languages.html should show Portuguese display name"
+    );
+    assert!(
+        html.contains("English"),
+        "languages.html should show English display name"
+    );
+}
+
+#[test]
+fn test_languages_group_page_monolingual_site() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Test Blog\nlanguage: en",
+    )
+    .unwrap();
+
+    let post = "---\ndate: 2024-01-01\ntitle: Only Post\n---\n# Content\n";
+    fs::write(input_dir.join("content").join("only-post.md"), post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        output_dir.join("languages.html").exists(),
+        "languages.html should exist even on monolingual sites"
+    );
+
+    let html = fs::read_to_string(output_dir.join("languages.html")).unwrap();
+    assert!(
+        html.contains("en"),
+        "languages.html should show the default language"
+    );
+}

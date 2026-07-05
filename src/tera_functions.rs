@@ -190,6 +190,7 @@ fn get_grouped_content_from_data<'a>(
         "author" => Some(&data.author),
         "stream" => Some(&data.stream),
         "series" => Some(&data.series),
+        "language" => Some(&data.language),
         _ => None,
     }
 }
@@ -282,6 +283,7 @@ impl tera::Function<TeraResult<Value>> for Group {
             "author" => &self.site_data.author,
             "stream" => &self.site_data.stream,
             "series" => &self.site_data.series,
+            "language" => &self.site_data.language,
             _ => return Err(tera::Error::message("Invalid `kind` argument")),
         };
 
@@ -310,6 +312,16 @@ impl tera::Function<TeraResult<Value>> for Group {
             .collect();
 
         sort_group_list(&mut group_list, kind, ord);
+
+        if kind == "language" {
+            if let Some(pos) = group_list
+                .iter()
+                .position(|(name, _)| name == &self.site_data.site.language)
+            {
+                let default_lang = group_list.remove(pos);
+                group_list.push(default_lang);
+            }
+        }
 
         if items > 0 && items < group_list.len() {
             group_list.truncate(items);
@@ -400,6 +412,12 @@ impl DisplayName {
                 .site_data
                 .site
                 .series
+                .get(name)
+                .map(|config| &config.display_name),
+            "language" => self
+                .site_data
+                .site
+                .languages
                 .get(name)
                 .map(|config| &config.display_name),
             _ => None,

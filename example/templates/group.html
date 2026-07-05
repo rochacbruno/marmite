@@ -8,7 +8,7 @@
             {% for name, items in group(kind=kind) -%}
             {% if kind == "stream" and name == "draft" %}{% continue %}{% endif %}
             <details {%if loop.index == 1%}open{%endif%}>
-                <summary role="button" class="outline contrast {{kind}}-group-title">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% elif kind == "series" %}{{ series_display_name(series=name) }}{% else %}{{name}}{% endif %} <sup>{{items | remove_draft | length}}</sup></summary>
+                <summary role="button" class="outline contrast {{kind}}-group-title">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% elif kind == "series" %}{{ series_display_name(series=name) }}{% elif kind == "language" %}{{ language_display_name(language=name) }}{% else %}{{name}}{% endif %} <sup>{{items | remove_draft | length}}</sup></summary>
                 <ul>
                 {% for item in (items | remove_draft)[:10] %}
                     <li class="h-entry">
@@ -17,8 +17,12 @@
                     </li>
                 {% endfor %}
                 {% set slug = name | trim | slugify %}
-                {% if kind != "stream" %}
-                {% set slug = kind ~ "-" ~ slug %}
+                {% if kind == "language" %}
+                    {% if name == language %}
+                        {% set slug = "index" %}
+                    {% endif %}
+                {% elif kind != "stream" %}
+                    {% set slug = kind ~ "-" ~ slug %}
                 {% endif %}
                 {% set link = slug ~ ".html"%}
                 <li><a href="{{url_for(path=link)}}">more &rarr;</a></li>

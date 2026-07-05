@@ -46,6 +46,16 @@ Default language content stays on `index.html`. Sites without any language conte
 
 The `languages:` config key `name` has been renamed to `display_name` (matching `streams:` and `series:` patterns). The old `name` key is still accepted for backward compatibility.
 
+### Languages Group Page
+
+A new `languages.html` group page lists all content organized by language, following the same pattern as tags, authors, archives, streams, and series group pages.
+
+The page is always generated, even on monolingual sites (showing just the default language). Each language entry shows a preview of its content and links to the corresponding stream page (`pt.html`, `es.html`, etc.) or to `index.html` for the default language.
+
+Languages are sorted alphabetically with the site's default language appearing last. Display names from the `languages:` config are used when available, falling back to the two-letter code.
+
+A new `languages_title` config option controls the page heading (default: "Languages"). A `language_display_name` Tera function is also available for custom templates.
+
 ### CLI Translation Support and JSON Output
 
 The `--new` command now supports creating translations directly from the CLI and outputs structured JSON instead of a plain file path.
@@ -208,3 +218,31 @@ Subfolders without a `frontmatter.yaml` continue to work as before - their conte
 Translation groups now work correctly at any nesting depth. Each subfolder forms its own independent group, so `content/poetry/love/` and `content/poetry/nature/` are treated as separate translation groups rather than being lumped together.
 
 See the [Folder-Level Frontmatter Defaults](folder-level-frontmatter-defaults.html) guide for details.
+
+## Breaking Changes
+
+### Custom `group.html` templates need updating for language support
+
+The new `languages.html` group page is rendered using the same `group.html` template as tags, authors, archives, streams, and series. If you have a custom `group.html` template, it will need two updates to handle `kind == "language"` correctly:
+
+**Display names** - without a `{% elif kind == "language" %}` branch, language entries will show the raw two-letter code (e.g., "pt") instead of the configured display name (e.g., "Portugues"). This is cosmetic only.
+
+**"More" links** - this is the important one. Without language-specific link handling, the template will generate broken links like `language-pt.html` instead of the correct `pt.html` (or `index.html` for the default language). Add this to your link-building section:
+
+```html
+{% if kind == "language" %}
+    {% if name == language %}
+        {% set slug = "index" %}
+    {% endif %}
+{% elif kind != "stream" %}
+    {% set slug = kind ~ "-" ~ slug %}
+{% endif %}
+```
+
+And for display names, add a branch calling `language_display_name(language=name)`:
+
+```html
+{% elif kind == "language" %}{{ language_display_name(language=name) }}
+```
+
+Sites using the default built-in templates are not affected.

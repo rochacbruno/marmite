@@ -190,6 +190,9 @@ pub struct Marmite {
     #[serde(default = "default_authors_title")]
     pub authors_title: String,
 
+    #[serde(default = "default_languages_title")]
+    pub languages_title: String,
+
     #[serde(default)]
     pub enable_search: bool,
 
@@ -334,6 +337,7 @@ impl Marmite {
             archives_title: default_archives_title(),
             archives_content_title: default_archives_content_title(),
             authors_title: default_authors_title(),
+            languages_title: default_languages_title(),
             streams_title: default_streams_title(),
             streams_content_title: default_streams_content_title(),
             series_title: default_series_title(),
@@ -583,6 +587,10 @@ fn default_pagination() -> usize {
 
 fn default_authors_title() -> String {
     "Authors".to_string()
+}
+
+fn default_languages_title() -> String {
+    "Languages".to_string()
 }
 
 fn default_tags_title() -> String {

@@ -294,6 +294,7 @@ fn create_test_site_data() -> Data {
         author: GroupedContent::new(Kind::Author),
         stream: GroupedContent::new(Kind::Stream),
         series: GroupedContent::new(Kind::Series),
+        language: GroupedContent::new(Kind::Language),
         latest_timestamp: None,
         config_path: String::new(),
         force_render: false,

@@ -644,6 +644,8 @@ When `language` is set without `stream`, the post is automatically assigned to t
 All output stays flat: `hello.html`, `pt-ola-mundo.html`, `pt.html` (stream listing).
 Translation links and hreflang tags are added automatically to content pages.
 
+A `languages.html` group page is always generated, listing all content organized by language. The site's default language appears last. The page heading is configurable via `languages_title` (default: "Languages"). In custom templates, use `group(kind="language")` and `language_display_name(language=name)` to access language-grouped content.
+
 ## Best Practices
 
 1. **Use subfolders for content types** - put pages in `pages/`, posts in `posts/` or topic subfolders

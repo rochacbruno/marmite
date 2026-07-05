@@ -19,11 +19,15 @@
     <div class="group-item">
         <h2 class="group-name">
             {% set slug = name | trim | slugify %}
-            {% if kind != "stream" %}
+            {% if kind == "language" %}
+                {% if name == language %}
+                    {% set slug = "index" %}
+                {% endif %}
+            {% elif kind != "stream" %}
             {% set slug = kind ~ "-" ~ slug %}
             {% endif %}
             {% set link = slug ~ ".html"%}
-            <a href="{{url_for(path=link)}}">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% elif kind == "series" %}{{ series_display_name(series=name) }}{% else %}{{name}}{% endif %}</a>
+            <a href="{{url_for(path=link)}}">{%if kind == "author" %}{% include "group_author_avatar.html" ignore missing%}{% endif %}{% if kind == "stream" %}{{ stream_display_name(stream=name) }}{% elif kind == "series" %}{{ series_display_name(series=name) }}{% elif kind == "language" %}{{ language_display_name(language=name) }}{% else %}{{name}}{% endif %}</a>
         </h2>
         <span class="group-count">{{ items | remove_draft | length }} post{% if items | remove_draft | length != 1 %}s{% endif %}</span>
         <div class="group-preview">

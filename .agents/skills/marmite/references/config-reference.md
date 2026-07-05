@@ -224,6 +224,7 @@ Customize the titles shown on taxonomy pages:
 | `archives_title` | `"Archive"` |
 | `archives_content_title` | `"Posts from '$year'"` |
 | `authors_title` | `"Authors"` |
+| `languages_title` | `"Languages"` |
 | `streams_title` | `"Streams"` |
 | `streams_content_title` | `"Posts from '$stream'"` |
 | `series_title` | `"Series"` |

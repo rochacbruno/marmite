@@ -69,6 +69,9 @@ streams:
   guide:
     display_name: "User Guides"
 
+# Title for the languages group page (default: "Languages")
+# languages_title: "Languages"
+
 # Optional: set display names for language streams (auto-detected from content)
 languages:
   en:
