@@ -1595,7 +1595,7 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
     // First collect all the info we need (to avoid borrow issues)
     let mut translation_links: Vec<(usize, bool, Vec<TranslationRef>)> = Vec::new();
 
-    for (group_key, group) in &subfolder_groups {
+    for group in subfolder_groups.values() {
         if group.len() < 2 {
             continue;
         }

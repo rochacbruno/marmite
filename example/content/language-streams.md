@@ -56,6 +56,9 @@ All three pages automatically show "Also available in" links to each other.
 > [!TIP]
 > The subfolder can also have the date in it, e.g. `content/2026-07-02-hello/` this way you don't have to specify date on each translation frontmatter.
 
+> [!IMPORTANT]
+> A subfolder is only treated as a translation group when it contains exactly one non-prefixed file (the original) and one or more language-prefixed files. If the subfolder has multiple non-prefixed files, marmite cannot determine which one is the original, so all files are treated as independent content and no translation linking occurs. Use `translates:` frontmatter for manual linking in that case.
+
 ### Option 2: Mixed Flat + Subfolder
 
 > **RECOMMENDED**

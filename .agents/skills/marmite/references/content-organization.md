@@ -569,11 +569,11 @@ languages:
 
 ### Subfolder auto-discovery
 
-Group translations in subfolders. Files prefixed with an ISO 639-1 language code are auto-detected:
+Group translations in subfolders. A subfolder is recognized as a translation group when it contains exactly one non-prefixed file (the original) and one or more files prefixed with an ISO 639-1 language code:
 
 ```
 content/hello/
-  hello.md              # Default language, slug: hello, stream: index
+  hello.md              # Original (no prefix), slug: hello, stream: index
   pt-ola-mundo.md       # Portuguese, slug: pt-ola-mundo, stream: pt
   es-hola-mundo.md      # Spanish, slug: es-hola-mundo, stream: es
 ```
@@ -583,11 +583,20 @@ Translation groups work at any nesting depth. Each subfolder forms its own indep
 ```
 content/poetry/
   love/
-    love-poem.md        # Default language
+    love-poem.md        # Original (no prefix)
     pt-poema-amor.md    # Portuguese (grouped with love-poem, not nature-poem)
   nature/
-    nature-poem.md      # Default language (separate group from love/)
+    nature-poem.md      # Original (separate group from love/)
     pt-poema-natureza.md
+```
+
+A subfolder is NOT a translation group when it has multiple non-prefixed files (ambiguous original) or no non-prefixed file at all. In that case, all files are treated as independent content:
+
+```
+content/myfolder/
+  first-post.md         # Independent post
+  second-post.md        # Independent post
+  pt-some-post.md       # NOT a translation, just a regular post with slug pt-some-post
 ```
 
 The subfolder can also have a date prefix (e.g., `content/2026-07-02-hello/`) so files inside inherit the date without needing it in frontmatter.
