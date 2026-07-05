@@ -463,7 +463,7 @@ Hello {{ name }}, welcome to {{ site_title }}!
     assert_eq!(params.len(), 1);
     assert_eq!(params[0].name, "name");
 
-    let mut tera = tera::Tera::default();
+    let tera = tera::Tera::default();
     let mut context = tera::Context::new();
     context.insert("site_title", "My Site");
     context.insert("name", "World");

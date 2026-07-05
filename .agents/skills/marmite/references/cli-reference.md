@@ -64,6 +64,15 @@ marmite <folder> --new "Post Title" -e
 # Combine all options
 marmite <folder> --new "Tutorial: Getting Started" -t "tutorial,beginner" -e
 
+# Create a post in a specific subfolder
+marmite <folder> --new "Post Title" -d posts
+
+# Create a page in the pages subfolder
+marmite <folder> --new "About" -p -d pages
+
+# Create in a topic subfolder (creates it if needed)
+marmite <folder> --new "Python Basics" -d tutorials
+
 # In workspace mode, specify the target site
 marmite <workspace> --new "Post Title" --site blog
 ```
@@ -194,6 +203,7 @@ marmite [site_folder] atproto publish --dry-run
 | `-e` | | Open in `$EDITOR` (requires `--new`) |
 | `-p` | | Create as page instead of post (requires `--new`) |
 | `-t <TAGS>` | | Set comma-separated tags (requires `--new`) |
+| `-d` | | Directory within content folder to create the file |
 
 ### Information
 

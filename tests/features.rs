@@ -684,3 +684,216 @@ Check out [the about page](about.html).
         "Should not warn about broken links when all links are valid, got: {stderr}"
     );
 }
+
+#[test]
+fn test_subfolder_media_copied_to_slug_based_path() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    // Create nested content subfolder with local media
+    fs::create_dir_all(
+        input_dir
+            .join("content")
+            .join("docs")
+            .join("my-post")
+            .join("media"),
+    )
+    .unwrap();
+    fs::create_dir_all(input_dir.join("content").join("media")).unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Test").unwrap();
+
+    fs::write(
+        input_dir
+            .join("content")
+            .join("docs")
+            .join("my-post")
+            .join("my-post.md"),
+        "---\ntitle: My Post\ndate: 2024-01-01\n---\n# My Post\n\n![@/ photo](@/photo.jpg)\n",
+    )
+    .unwrap();
+    fs::write(
+        input_dir
+            .join("content")
+            .join("docs")
+            .join("my-post")
+            .join("media")
+            .join("banner.jpg"),
+        "fake-banner",
+    )
+    .unwrap();
+    fs::write(
+        input_dir
+            .join("content")
+            .join("docs")
+            .join("my-post")
+            .join("media")
+            .join("photo.jpg"),
+        "fake-photo",
+    )
+    .unwrap();
+
+    // Root media file
+    fs::write(
+        input_dir.join("content").join("media").join("root.jpg"),
+        "root-file",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Subfolder media copied to slug-based path, not preserving parent dirs
+    assert!(
+        output_dir
+            .join("media")
+            .join("my-post")
+            .join("photo.jpg")
+            .exists(),
+        "Subfolder media should be at media/my-post/photo.jpg"
+    );
+    assert!(
+        output_dir
+            .join("media")
+            .join("my-post")
+            .join("banner.jpg")
+            .exists(),
+        "Subfolder banner should be at media/my-post/banner.jpg"
+    );
+
+    // Should NOT be nested under docs/
+    assert!(
+        !output_dir
+            .join("media")
+            .join("docs")
+            .join("my-post")
+            .exists(),
+        "Media should not preserve parent subfolder structure"
+    );
+
+    // Root media still works
+    assert!(
+        output_dir.join("media").join("root.jpg").exists(),
+        "Root media should be copied"
+    );
+
+    // @/ in HTML resolves to slug-based path matching the copied files
+    let html = fs::read_to_string(output_dir.join("my-post.html")).unwrap();
+    assert!(
+        html.contains("media/my-post/photo.jpg"),
+        "@/ should resolve to media/my-post/photo.jpg"
+    );
+
+    // Banner auto-discovery works
+    assert!(
+        html.contains("media/my-post/banner.jpg"),
+        "Banner should be discovered from subfolder media"
+    );
+}
+
+#[test]
+fn test_subfolder_media_no_conflicts_between_subfolders() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    // Two subfolders with files of the same name
+    fs::create_dir_all(
+        input_dir
+            .join("content")
+            .join("docs")
+            .join("post-a")
+            .join("media"),
+    )
+    .unwrap();
+    fs::create_dir_all(
+        input_dir
+            .join("content")
+            .join("tutorials")
+            .join("post-b")
+            .join("media"),
+    )
+    .unwrap();
+    fs::create_dir_all(input_dir.join("content").join("media")).unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Test").unwrap();
+
+    fs::write(
+        input_dir
+            .join("content")
+            .join("docs")
+            .join("post-a")
+            .join("post-a.md"),
+        "---\ntitle: Post A\ndate: 2024-01-01\n---\n# Post A\n",
+    )
+    .unwrap();
+    fs::write(
+        input_dir
+            .join("content")
+            .join("docs")
+            .join("post-a")
+            .join("media")
+            .join("photo.jpg"),
+        "photo-from-a",
+    )
+    .unwrap();
+
+    fs::write(
+        input_dir
+            .join("content")
+            .join("tutorials")
+            .join("post-b")
+            .join("post-b.md"),
+        "---\ntitle: Post B\ndate: 2024-02-01\n---\n# Post B\n",
+    )
+    .unwrap();
+    fs::write(
+        input_dir
+            .join("content")
+            .join("tutorials")
+            .join("post-b")
+            .join("media")
+            .join("photo.jpg"),
+        "photo-from-b",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Each subfolder's media is in its own slug-based directory
+    let a_photo = fs::read_to_string(output_dir.join("media").join("post-a").join("photo.jpg"))
+        .expect("post-a media should exist");
+    let b_photo = fs::read_to_string(output_dir.join("media").join("post-b").join("photo.jpg"))
+        .expect("post-b media should exist");
+
+    assert_eq!(a_photo, "photo-from-a", "post-a should have its own photo");
+    assert_eq!(b_photo, "photo-from-b", "post-b should have its own photo");
+}

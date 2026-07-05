@@ -26,6 +26,7 @@ fn create_test_cli(overrides: impl FnOnce(&mut cli::Cli)) -> cli::Cli {
             edit: false,
             page: false,
             tags: None,
+            directory: None,
             site: None,
         },
         configuration: cli::Configuration {

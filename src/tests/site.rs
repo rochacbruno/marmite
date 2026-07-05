@@ -1138,16 +1138,16 @@ fn test_discover_translations_subfolder_grouping() {
     use tempfile::TempDir;
     let temp = TempDir::new().unwrap();
     let content_dir = temp.path();
-    let post_dir = content_dir.join("my-post");
+    let post_dir = content_dir.join("hello-world");
     fs::create_dir(&post_dir).unwrap();
 
     let mut data = Data::new("", Path::new("test.yaml"));
 
     let post_en = ContentBuilder::new()
-        .title("My Post".to_string())
-        .slug("my-post".to_string())
+        .title("Hello World".to_string())
+        .slug("hello-world".to_string())
         .language("en".to_string())
-        .source_path(post_dir.join("my-post.md"))
+        .source_path(post_dir.join("hello-world.md"))
         .date(
             NaiveDate::from_ymd_opt(2024, 1, 1)
                 .unwrap()
@@ -1157,10 +1157,10 @@ fn test_discover_translations_subfolder_grouping() {
         .build();
 
     let post_pt = ContentBuilder::new()
-        .title("Meu Post".to_string())
-        .slug("pt-meu-post".to_string())
+        .title("Ola Mundo".to_string())
+        .slug("pt-ola-mundo".to_string())
         .language("pt".to_string())
-        .source_path(post_dir.join("pt-meu-post.md"))
+        .source_path(post_dir.join("pt-ola-mundo.md"))
         .date(
             NaiveDate::from_ymd_opt(2024, 1, 1)
                 .unwrap()
@@ -1174,14 +1174,18 @@ fn test_discover_translations_subfolder_grouping() {
 
     discover_translations(&mut data, content_dir);
 
-    let en_post = data.posts.iter().find(|p| p.slug == "my-post").unwrap();
+    let en_post = data.posts.iter().find(|p| p.slug == "hello-world").unwrap();
     assert_eq!(en_post.translations.len(), 1);
-    assert_eq!(en_post.translations[0].slug, "pt-meu-post");
+    assert_eq!(en_post.translations[0].slug, "pt-ola-mundo");
     assert_eq!(en_post.translations[0].lang, "pt");
 
-    let pt_post = data.posts.iter().find(|p| p.slug == "pt-meu-post").unwrap();
+    let pt_post = data
+        .posts
+        .iter()
+        .find(|p| p.slug == "pt-ola-mundo")
+        .unwrap();
     assert_eq!(pt_post.translations.len(), 1);
-    assert_eq!(pt_post.translations[0].slug, "my-post");
+    assert_eq!(pt_post.translations[0].slug, "hello-world");
     assert_eq!(pt_post.translations[0].lang, "en");
 }
 

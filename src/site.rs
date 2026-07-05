@@ -1,4 +1,4 @@
-use crate::config::{Author, Marmite};
+use crate::config::{Author, LanguageConfig, Marmite};
 use crate::content::{
     check_for_duplicate_slugs, detect_language_from_path, is_iso_639_1_code, merge_frontmatter,
     Content, ContentBuilder, GroupedContent, Kind, TranslationRef, ISO_639_1_CODES,
@@ -584,6 +584,7 @@ pub(crate) fn build_site_with_config(
     );
 
     discover_translations(&mut site_data, &content_folder);
+    rebuild_stream_index(&mut site_data);
 
     let state_path = input_folder.join(".marmite-atproto-state.json");
     if state_path.exists() {
@@ -793,6 +794,9 @@ pub fn generate(
             );
 
             discover_translations(&mut site_data, &content_folder);
+
+            // Rebuild stream index after discover_translations may have changed streams
+            rebuild_stream_index(&mut site_data);
 
             // Load atproto state to populate at_uri on matching posts/pages
             let state_path = moved_input_folder.join(".marmite-atproto-state.json");
@@ -1368,27 +1372,15 @@ pub(crate) fn collect_content(
                 modified_time,
                 highlighter,
                 defaults,
+                Some(content_dir),
             )
         })
         .collect::<Vec<_>>();
     for content in contents {
         match content {
             Ok(mut content) => {
-                if let Some(lang) = detect_language_from_path(
-                    content.source_path.as_deref().unwrap_or(Path::new("")),
-                    content_dir,
-                ) {
-                    if content.stream.is_some() {
-                        content.stream = Some(lang.clone());
-                    }
-                    if content.language.is_none() {
-                        content.language = Some(lang.clone());
-                    }
-                    let prefix = format!("{lang}-");
-                    if !content.slug.starts_with(&prefix) {
-                        content.slug = format!("{lang}-{}", content.slug);
-                    }
-                }
+                // Language-from-path detection is deferred to discover_translations
+                // Pass 3, where it only applies inside validated translation groups.
 
                 if let Some(ref lang) = content.language {
                     if content.stream.as_deref() == Some("index")
@@ -1440,19 +1432,35 @@ pub(crate) fn collect_content(
 }
 
 #[allow(clippy::too_many_lines)]
-fn discover_translations(site_data: &mut Data, content_dir: &Path) {
-    struct ContentInfo {
-        title: String,
-        lang: String,
-        idx: usize,
-        is_post: bool,
+fn rebuild_stream_index(site_data: &mut Data) {
+    let posts: Vec<_> = site_data.posts.clone();
+    site_data.stream = GroupedContent::new(Kind::Stream);
+    for post in &posts {
+        if let Some(stream) = &post.stream {
+            site_data
+                .stream
+                .entry(stream.clone())
+                .or_default()
+                .push(post.clone());
+        }
     }
+    site_data.stream.sort_all();
+}
 
-    let default_language = &site_data.site.language;
-    let languages = &site_data.site.languages;
+fn discover_translations(site_data: &mut Data, content_dir: &Path) {
+    if site_data.site.language.is_empty() {
+        site_data.site.language = "en".to_string();
+    }
+    let default_language = site_data.site.language.clone();
+    let languages = site_data.site.languages.clone();
 
-    // Pass 0: Process translates: frontmatter for manual linking
-    // Collect (source_index, is_post, target_slug) for items with translates:
+    process_translates_frontmatter(site_data);
+    infer_content_languages(site_data, &default_language);
+    build_and_link_subfolder_translations(site_data, content_dir, &default_language, &languages);
+    resolve_frontmatter_translations(site_data, &default_language, &languages);
+}
+
+fn process_translates_frontmatter(site_data: &mut Data) {
     let mut translates_refs: Vec<(usize, bool, String)> = Vec::new();
     for (i, post) in site_data.posts.iter().enumerate() {
         if let Some(ref target_slug) = post.translates {
@@ -1464,7 +1472,6 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
             translates_refs.push((i, false, target_slug.clone()));
         }
     }
-    // Inject TranslationRef entries (with empty lang/name/title for Pass 4 to resolve)
     for (idx, is_post, target_slug) in &translates_refs {
         let content = if *is_post {
             &mut site_data.posts[*idx]
@@ -1484,21 +1491,21 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
             });
         }
     }
+}
 
-    // Pass 1: Infer language from stream for posts
+fn infer_content_languages(site_data: &mut Data, default_language: &str) {
     for post in &mut site_data.posts {
         if post.language.is_none() {
             if let Some(ref stream) = post.stream {
                 if is_iso_639_1_code(stream) {
                     post.language = Some(stream.clone());
                 } else if stream == "index" {
-                    post.language = Some(default_language.clone());
+                    post.language = Some(default_language.to_string());
                 }
             }
         }
     }
 
-    // Infer language for pages from filename patterns (pages don't have streams)
     for page in &mut site_data.pages {
         if page.language.is_none() {
             if let Some(ref source_path) = page.source_path {
@@ -1514,10 +1521,13 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
             }
         }
     }
+}
 
-    // Pass 2: Build translation groups from subfolders
-    // Group key = parent directory path relative to content_dir
-    let mut subfolder_groups: HashMap<String, Vec<(usize, bool)>> = HashMap::new(); // group -> [(index, is_post)]
+fn build_subfolder_groups(
+    site_data: &Data,
+    content_dir: &Path,
+) -> HashMap<String, Vec<(usize, bool)>> {
+    let mut subfolder_groups: HashMap<String, Vec<(usize, bool)>> = HashMap::new();
 
     for (i, post) in site_data.posts.iter().enumerate() {
         if let Some(ref source_path) = post.source_path {
@@ -1551,12 +1561,10 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
         }
     }
 
-    // Check for mixed flat+subfolder case: flat file slugs matching subfolder names
     for (i, post) in site_data.posts.iter().enumerate() {
         if let Some(ref source_path) = post.source_path {
             if let Ok(relative) = source_path.strip_prefix(content_dir) {
                 let components: Vec<_> = relative.components().collect();
-                // Flat file (1 component) whose slug matches a subfolder group name
                 if components.len() == 1 && subfolder_groups.contains_key(&post.slug) {
                     let group = subfolder_groups.get_mut(&post.slug).unwrap();
                     if !group.iter().any(|&(idx, is_post)| is_post && idx == i) {
@@ -1581,22 +1589,51 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
         }
     }
 
-    // Set default language for base content in subfolder groups
-    for group in subfolder_groups.values() {
-        for &(idx, is_post) in group {
-            let content = if is_post {
-                &mut site_data.posts[idx]
-            } else {
-                &mut site_data.pages[idx]
-            };
-            if content.language.is_none() {
-                content.language = Some(default_language.clone());
+    subfolder_groups
+}
+
+fn is_translation_group(group: &[(usize, bool)], posts: &[Content], pages: &[Content]) -> bool {
+    let has_lang_prefixed_file = group.iter().any(|&(idx, is_post)| {
+        let content = if is_post { &posts[idx] } else { &pages[idx] };
+        if let Some(ref source_path) = content.source_path {
+            if let Some(stem) = source_path.file_stem().and_then(|s| s.to_str()) {
+                return crate::content::ISO_639_1_CODES
+                    .iter()
+                    .any(|code| stem.starts_with(&format!("{code}-")));
             }
         }
+        false
+    });
+    if !has_lang_prefixed_file {
+        return false;
     }
 
-    // Pass 3: Cross-link translations within each subfolder group
-    // First collect all the info we need (to avoid borrow issues)
+    let non_prefixed_count = group
+        .iter()
+        .filter(|&&(idx, is_post)| {
+            let content = if is_post { &posts[idx] } else { &pages[idx] };
+            content
+                .source_path
+                .as_ref()
+                .and_then(|p| p.file_stem())
+                .and_then(|s| s.to_str())
+                .is_some_and(|stem| {
+                    !crate::content::ISO_639_1_CODES
+                        .iter()
+                        .any(|code| stem.starts_with(&format!("{code}-")))
+                })
+        })
+        .count();
+    non_prefixed_count == 1
+}
+
+fn build_and_link_subfolder_translations(
+    site_data: &mut Data,
+    content_dir: &Path,
+    default_language: &str,
+    languages: &HashMap<String, LanguageConfig>,
+) {
+    let subfolder_groups = build_subfolder_groups(site_data, content_dir);
     let mut translation_links: Vec<(usize, bool, Vec<TranslationRef>)> = Vec::new();
 
     for group in subfolder_groups.values() {
@@ -1604,7 +1641,35 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
             continue;
         }
 
-        // Collect info about each member of the group
+        if !is_translation_group(group, &site_data.posts, &site_data.pages) {
+            continue;
+        }
+
+        for &(idx, is_post) in group {
+            let content = if is_post {
+                &mut site_data.posts[idx]
+            } else {
+                &mut site_data.pages[idx]
+            };
+            if let Some(lang) = content
+                .source_path
+                .as_deref()
+                .and_then(|p| detect_language_from_path(p, content_dir))
+            {
+                if content.stream.is_some() {
+                    content.stream = Some(lang.clone());
+                }
+                content.language = Some(lang.clone());
+                let prefix = format!("{lang}-");
+                if !content.slug.starts_with(&prefix) {
+                    content.slug = format!("{lang}-{}", content.slug);
+                }
+            }
+            if content.language.is_none() {
+                content.language = Some(default_language.to_string());
+            }
+        }
+
         let members: Vec<(usize, bool, String, String, String)> = group
             .iter()
             .map(|&(idx, is_post)| {
@@ -1616,7 +1681,7 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
                 let lang = content
                     .language
                     .clone()
-                    .unwrap_or_else(|| default_language.clone());
+                    .unwrap_or_else(|| default_language.to_string());
                 (
                     idx,
                     is_post,
@@ -1627,7 +1692,6 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
             })
             .collect();
 
-        // For each member, build TranslationRef entries for all other members
         for (idx, is_post, lang, member_slug, _title) in &members {
             let mut refs: Vec<TranslationRef> = Vec::new();
             for (_, _, other_lang, other_slug, other_title) in &members {
@@ -1650,7 +1714,6 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
         }
     }
 
-    // Apply subfolder-based translation links
     for (idx, is_post, refs) in translation_links {
         let content = if is_post {
             &mut site_data.posts[idx]
@@ -1667,19 +1730,29 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
             }
         }
     }
+}
 
-    // Pass 4: Resolve frontmatter-based translations (bidirectional)
-    // Build a slug->(title, lang, location) index from all content
-    let mut slug_index: HashMap<String, ContentInfo> = HashMap::new();
+struct TranslationContentInfo {
+    title: String,
+    lang: String,
+    idx: usize,
+    is_post: bool,
+}
+
+fn build_translation_slug_index(
+    site_data: &Data,
+    default_language: &str,
+) -> HashMap<String, TranslationContentInfo> {
+    let mut slug_index: HashMap<String, TranslationContentInfo> = HashMap::new();
     for (i, post) in site_data.posts.iter().enumerate() {
         let lang = post
             .language
             .clone()
             .or_else(|| post.stream.clone().filter(|s| is_iso_639_1_code(s)))
-            .unwrap_or_else(|| default_language.clone());
+            .unwrap_or_else(|| default_language.to_string());
         slug_index.insert(
             post.slug.clone(),
-            ContentInfo {
+            TranslationContentInfo {
                 title: post.title.clone(),
                 lang,
                 idx: i,
@@ -1691,10 +1764,10 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
         let lang = page
             .language
             .clone()
-            .unwrap_or_else(|| default_language.clone());
+            .unwrap_or_else(|| default_language.to_string());
         slug_index.insert(
             page.slug.clone(),
-            ContentInfo {
+            TranslationContentInfo {
                 title: page.title.clone(),
                 lang,
                 idx: i,
@@ -1702,9 +1775,56 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
             },
         );
     }
+    slug_index
+}
 
-    // Collect resolution updates and bidirectional adds (read-only pass)
-    // Updates: (src_idx, src_is_post, tr_slug, resolved_lang, resolved_name, resolved_title)
+fn apply_translation_resolutions(
+    site_data: &mut Data,
+    updates: Vec<(usize, bool, String, String, String, String)>,
+    bidirectional_adds: Vec<(usize, bool, TranslationRef)>,
+) {
+    for (idx, is_post, tr_slug, lang, name, title) in updates {
+        let content = if is_post {
+            &mut site_data.posts[idx]
+        } else {
+            &mut site_data.pages[idx]
+        };
+        if let Some(tr) = content.translations.iter_mut().find(|t| t.slug == tr_slug) {
+            if tr.lang.is_empty() {
+                tr.lang = lang;
+            }
+            if tr.name.is_empty() {
+                tr.name = name;
+            }
+            if tr.title.is_empty() {
+                tr.title = title;
+            }
+        }
+    }
+
+    for (idx, is_post, tr) in bidirectional_adds {
+        let content = if is_post {
+            &mut site_data.posts[idx]
+        } else {
+            &mut site_data.pages[idx]
+        };
+        if !content
+            .translations
+            .iter()
+            .any(|existing| existing.slug == tr.slug)
+        {
+            content.translations.push(tr);
+        }
+    }
+}
+
+fn resolve_frontmatter_translations(
+    site_data: &mut Data,
+    default_language: &str,
+    languages: &HashMap<String, LanguageConfig>,
+) {
+    let slug_index = build_translation_slug_index(site_data, default_language);
+
     let mut updates: Vec<(usize, bool, String, String, String, String)> = Vec::new();
     let mut bidirectional_adds: Vec<(usize, bool, TranslationRef)> = Vec::new();
 
@@ -1749,11 +1869,10 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
                         resolved_title,
                     ));
 
-                    // Schedule bidirectional link
                     let src_lang = content
                         .language
                         .clone()
-                        .unwrap_or_else(|| default_language.clone());
+                        .unwrap_or_else(|| default_language.to_string());
                     let src_lang_name = languages
                         .get(src_lang.as_str())
                         .map_or_else(|| src_lang.clone(), |c| c.display_name.clone());
@@ -1777,41 +1896,7 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
         }
     }
 
-    // Apply resolution updates
-    for (idx, is_post, tr_slug, lang, name, title) in updates {
-        let content = if is_post {
-            &mut site_data.posts[idx]
-        } else {
-            &mut site_data.pages[idx]
-        };
-        if let Some(tr) = content.translations.iter_mut().find(|t| t.slug == tr_slug) {
-            if tr.lang.is_empty() {
-                tr.lang = lang;
-            }
-            if tr.name.is_empty() {
-                tr.name = name;
-            }
-            if tr.title.is_empty() {
-                tr.title = title;
-            }
-        }
-    }
-
-    // Apply bidirectional links
-    for (idx, is_post, tr) in bidirectional_adds {
-        let content = if is_post {
-            &mut site_data.posts[idx]
-        } else {
-            &mut site_data.pages[idx]
-        };
-        if !content
-            .translations
-            .iter()
-            .any(|existing| existing.slug == tr.slug)
-        {
-            content.translations.push(tr);
-        }
-    }
+    apply_translation_resolutions(site_data, updates, bidirectional_adds);
 }
 
 fn detect_slug_collision(site_data: &Data) {
@@ -2693,43 +2778,54 @@ fn handle_static_artifacts(
         );
     }
 
-    // Copy media from content subfolders (content/{name}/media/ -> output/media/{name}/)
-    // These take precedence over global media since they're copied after
+    // Copy media from content subfolders at any depth.
+    // content/{any/path}/media/ -> output/media/{any/path}/
+    // These take precedence over global media since they're copied after.
     let media_folder_name = &site_data.site.media_path;
-    if let Ok(entries) = fs::read_dir(content_dir) {
-        for entry in entries.filter_map(Result::ok) {
-            let path = entry.path();
-            if !path.is_dir() {
-                continue;
-            }
-            let dir_name = match path.file_name().and_then(|n| n.to_str()) {
-                Some(name) => name.to_string(),
-                None => continue,
-            };
-            if dir_name == *media_folder_name {
-                continue;
-            }
-            let subfolder_media = path.join(media_folder_name);
-            if subfolder_media.is_dir() {
-                let dest = output_folder.join(media_folder_name).join(&dir_name);
-                if let Err(e) = fs::create_dir_all(&dest) {
-                    error!("Failed to create media subfolder directory: {e:?}");
-                    continue;
-                }
-                let mut options = CopyOptions::new();
-                options.overwrite = true;
-                options.content_only = true;
-                if let Err(e) = dircopy(&subfolder_media, &dest, &options) {
-                    error!("Failed to copy subfolder media: {e:?}");
-                    continue;
-                }
-                debug!(
-                    "Copied content subfolder media '{}' to '{}'",
-                    subfolder_media.display(),
-                    dest.display()
-                );
-            }
+    for entry in WalkDir::new(content_dir)
+        .min_depth(1)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
         }
+        let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if dir_name != media_folder_name.as_str() {
+            continue;
+        }
+        if path.parent() == Some(content_dir) {
+            continue;
+        }
+        // Map content/{any/path}/media/ -> output/media/{parent-name}/
+        // Uses the immediate parent name (matches the slug) to stay
+        // consistent with @/ references and banner discovery.
+        let Some(parent) = path.parent() else {
+            continue;
+        };
+        let Some(subfolder_name) = parent.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        let dest = output_folder.join(media_folder_name).join(subfolder_name);
+        if let Err(e) = fs::create_dir_all(&dest) {
+            error!("Failed to create media subfolder directory: {e:?}");
+            continue;
+        }
+        let mut options = CopyOptions::new();
+        options.overwrite = true;
+        options.content_only = true;
+        if let Err(e) = dircopy(path, &dest, &options) {
+            error!("Failed to copy subfolder media: {e:?}");
+            continue;
+        }
+        debug!(
+            "Copied content subfolder media '{}' to '{}'",
+            path.display(),
+            dest.display()
+        );
     }
 
     // Process image resizing if configured in extra (and not skipped)
@@ -3663,6 +3759,7 @@ fn handle_404(
             None,
             highlighter,
             None,
+            None,
         )?;
         content.html.clone_from(&custom_content.html);
         content.title.clone_from(&custom_content.title);
@@ -3980,6 +4077,16 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         error!("Failed to create 'content/media' folder: {e:?}");
         process::exit(1);
     }
+    let pages_folder = content_folder.join("pages");
+    if let Err(e) = fs::create_dir(&pages_folder) {
+        error!("Failed to create 'content/pages' folder: {e:?}");
+        process::exit(1);
+    }
+    let posts_folder = content_folder.join("posts");
+    if let Err(e) = fs::create_dir(&posts_folder) {
+        error!("Failed to create 'content/posts' folder: {e:?}");
+        process::exit(1);
+    }
     // create input_folder/custom.css with `/* Custom CSS */` content
     if let Err(e) = fs::write(input_folder.join("custom.css"), "/* Custom CSS */") {
         error!("Failed to create 'custom.css' file: {e:?}");
@@ -4076,40 +4183,49 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         error!("Failed to create 'content/_hero.md' file: {e:?}");
         process::exit(1);
     }
-    // create content/about.md with `# About` content
+    // create content/pages/about.md with `# About` content
     if let Err(e) = fs::write(
-        content_folder.join("about.md"),
+        pages_folder.join("about.md"),
         "# About\n\
         \n\
-        Hi, edit `about.md` to change this content.
+        Hi, edit `content/pages/about.md` to change this content.\n\
+        \n\
+        Pages are content without a date. They do not appear in feeds or the index.\n\
+        Add them to the menu in `marmite.yaml` to make them accessible.\
         ",
     ) {
-        error!("Failed to create 'content/about.md' file: {e:?}");
+        error!("Failed to create 'content/pages/about.md' file: {e:?}");
         process::exit(1);
     }
-    // create content/{now}-welcome.md with `# Welcome to Marmite` content
+    // create content/posts/welcome.md with date in frontmatter
     let now = chrono::Local::now();
-    let now = now.format("%Y-%m-%d").to_string();
+    let now_str = now.format("%Y-%m-%d %H:%M:%S").to_string();
     if let Err(e) = fs::write(
-        content_folder.join(format!("{now}-welcome.md")),
-        "# Welcome to Marmite\n\
-        \n\
-        This is your first post!\n\
-        \n\
-        ## Edit this content\n\n\
-        edit on `content/{date}-welcome.md`\n\n\
-        ## Add more content\n\n\
-        create new markdown files in the `content` folder\n\n\
-        use `marmite --new` to create new content\n\n\
-        ## Customize your site\n\n\
-        edit `marmite.yaml` to change site settings\n\n\
-        edit the files starting with `_` in the `content` folder to change the layout\n\n\
-        or edit the templates to create a custom layout\n\n\
-        ## Deploy your site\n\n\
-        read more on [marmite documentation](https://marmite.blog)\n\n\
-        ",
+        posts_folder.join("welcome.md"),
+        format!(
+            "---\n\
+            date: {now_str}\n\
+            ---\n\
+            # Welcome to Marmite\n\
+            \n\
+            This is your first post!\n\
+            \n\
+            ## Edit this content\n\n\
+            Edit `content/posts/welcome.md` to change this post.\n\n\
+            ## Add more content\n\n\
+            Create new markdown files in `content/posts/` for posts \
+            or `content/pages/` for pages.\n\n\
+            Use `marmite --new \"Post Title\"` to create a new post, \
+            add `-d posts` to place it in the posts folder.\n\n\
+            ## Customize your site\n\n\
+            Edit `marmite.yaml` to change site settings.\n\n\
+            Edit the files starting with `_` in the `content` folder to change the layout.\n\n\
+            ## Deploy your site\n\n\
+            Read more on [marmite documentation](https://marmite.blog).\n\n\
+            "
+        ),
     ) {
-        error!("Failed to create 'content/{now}-welcome.md' file: {e:?}");
+        error!("Failed to create 'content/posts/welcome.md' file: {e:?}");
         process::exit(1);
     }
     info!("Site initialized in {}", input_folder.display());

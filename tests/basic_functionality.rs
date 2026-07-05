@@ -96,8 +96,140 @@ fn test_site_initialization() {
     assert!(site_dir.join("marmite.yaml").exists());
     assert!(site_dir.join("content").exists());
     assert!(site_dir.join("content").join("media").exists());
+    assert!(
+        site_dir.join("content").join("pages").exists(),
+        "content/pages/ should be created"
+    );
+    assert!(
+        site_dir.join("content").join("posts").exists(),
+        "content/posts/ should be created"
+    );
+    assert!(
+        site_dir
+            .join("content")
+            .join("pages")
+            .join("about.md")
+            .exists(),
+        "about.md should be in content/pages/"
+    );
+    assert!(
+        site_dir
+            .join("content")
+            .join("posts")
+            .join("welcome.md")
+            .exists(),
+        "welcome.md should be in content/posts/"
+    );
     assert!(site_dir.join("custom.css").exists());
     assert!(site_dir.join("custom.js").exists());
+}
+
+#[test]
+fn test_new_with_directory_flag() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("dir_site");
+
+    // Initialize site first
+    Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--init-site",
+        ])
+        .output()
+        .expect("Failed to init site");
+
+    // Create a post in a specific directory
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "Test Post",
+            "-d",
+            "posts",
+        ])
+        .output()
+        .expect("Failed to create post");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("posts"),
+        "Output path should contain 'posts' directory: {stdout}"
+    );
+
+    // Create a page in the pages directory
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "Contact",
+            "-p",
+            "-d",
+            "pages",
+        ])
+        .output()
+        .expect("Failed to create page");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        site_dir
+            .join("content")
+            .join("pages")
+            .join("contact.md")
+            .exists(),
+        "Page should be created in content/pages/"
+    );
+
+    // Create in a new directory (should auto-create it)
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "Tutorial One",
+            "-d",
+            "tutorials",
+        ])
+        .output()
+        .expect("Failed to create in new dir");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    assert!(
+        site_dir.join("content").join("tutorials").exists(),
+        "Directory should be auto-created"
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("tutorials"),
+        "Output path should contain 'tutorials' directory: {stdout}"
+    );
 }
 
 #[test]

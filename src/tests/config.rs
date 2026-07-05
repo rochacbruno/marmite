@@ -27,6 +27,7 @@ fn test_cli() -> crate::cli::Cli {
             edit: false,
             page: false,
             tags: None,
+            directory: None,
             site: None,
         },
         configuration: crate::cli::Configuration {
