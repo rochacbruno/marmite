@@ -1145,11 +1145,15 @@ fn fix_at_media_refs(
 
     let parent = path.parent().unwrap_or(path);
     let has_slug_media = content_dir.is_some_and(|cd| cd.join(media_path).join(slug).is_dir())
-        || content_dir.is_some_and(|cd| cd.join(slug).join(media_path).is_dir())
-        || (content_dir.is_some_and(|cd| parent != cd) && parent.join(media_path).is_dir());
+        || content_dir.is_some_and(|cd| cd.join(slug).join(media_path).is_dir());
+    let parent_has_media =
+        content_dir.is_some_and(|cd| parent != cd) && parent.join(media_path).is_dir();
 
     let replacement = if has_slug_media {
         format!("${{attr}}=\"{media_path}/{slug}/")
+    } else if parent_has_media {
+        let folder = parent.file_name().and_then(|n| n.to_str()).unwrap_or(slug);
+        format!("${{attr}}=\"{media_path}/{folder}/")
     } else {
         format!("${{attr}}=\"{media_path}/")
     };
