@@ -46,6 +46,23 @@ Default language content stays on `index.html`. Sites without any language conte
 
 The `languages:` config key `name` has been renamed to `display_name` (matching `streams:` and `series:` patterns). The old `name` key is still accepted for backward compatibility.
 
+### CLI Translation Support and JSON Output
+
+The `--new` command now supports creating translations directly from the CLI and outputs structured JSON instead of a plain file path.
+
+New flags:
+- `--lang <CODE>` - Set an ISO 639-1 language code on the new content
+- `--translates <SLUG>` - Link the new content as a translation of an existing post (requires `--lang`)
+
+When `--translates` targets a post in a subfolder, the translation is automatically placed in the same folder with a language-code prefix (e.g. `pt-slug.md`), following the subfolder translation convention. When the target is at root level, the translation is placed at root with `translates` frontmatter.
+
+The JSON output includes `file`, `title`, `slug`, `date`, `tags`, `language`, and `translates` fields as applicable, making it easy to pipe into scripts with tools like `jq`.
+
+```bash
+marmite myblog --new "Ola Mundo" --lang pt --translates hello-world
+# {"file":"myblog/content/hello-world/pt-ola-mundo.md","title":"Ola Mundo","slug":"ola-mundo","language":"pt","translates":"hello-world"}
+```
+
 ### Content Subfolder Media
 
 Media files can now live inside content subfolders (`content/{slug}/media/`) as an alternative to the global `content/media/{slug}/` location. Content subfolder media takes precedence and is automatically copied to the output.

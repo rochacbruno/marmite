@@ -28,6 +28,8 @@ fn test_cli() -> crate::cli::Cli {
             page: false,
             tags: None,
             directory: None,
+            lang: None,
+            translates: None,
             site: None,
         },
         configuration: crate::cli::Configuration {
