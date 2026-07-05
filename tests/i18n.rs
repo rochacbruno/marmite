@@ -607,3 +607,121 @@ fn test_no_languages_backward_compat() {
         "No hreflang tags without languages config"
     );
 }
+
+#[test]
+fn test_lang_prefixed_file_without_original_is_not_translation_group() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    let myfolder = input_dir.join("content").join("myfolder");
+    fs::create_dir_all(&myfolder).unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Blog\nlanguage: en\n").unwrap();
+
+    fs::write(
+        myfolder.join("firstpost.md"),
+        "---\ntitle: First Post\ndate: 2024-01-01\n---\n# First Post\n",
+    )
+    .unwrap();
+    fs::write(
+        myfolder.join("secondpost.md"),
+        "---\ntitle: Second Post\ndate: 2024-01-02\n---\n# Second Post\n",
+    )
+    .unwrap();
+    // Has a pt- prefix but no original matching the folder name "myfolder"
+    fs::write(
+        myfolder.join("pt-forthpost.md"),
+        "---\ntitle: Forth Post\ndate: 2024-01-03\n---\n# Forth Post\n",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // None of these should have translation links
+    let first = fs::read_to_string(output_dir.join("first-post.html")).unwrap();
+    assert!(
+        !first.contains("content-translations"),
+        "first-post should not be in a translation group"
+    );
+
+    let forth = fs::read_to_string(output_dir.join("pt-forth-post.html")).unwrap();
+    assert!(
+        !forth.contains("content-translations"),
+        "pt-forth-post should not be in a translation group without a matching original"
+    );
+}
+
+#[test]
+fn test_translation_group_requires_slug_matching_folder() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    let things = input_dir.join("content").join("things");
+    fs::create_dir_all(&things).unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Blog\nlanguage: en\n").unwrap();
+
+    // File slug "things" matches folder name "things" -> valid original
+    fs::write(
+        things.join("things.md"),
+        "---\ntitle: Things\ndate: 2024-01-01\n---\n# Things\n",
+    )
+    .unwrap();
+    fs::write(
+        things.join("pt-coisas.md"),
+        "---\ntitle: Coisas\ndate: 2024-01-01\n---\n# Coisas\n",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let things_html = fs::read_to_string(output_dir.join("things.html")).unwrap();
+    assert!(
+        things_html.contains("content-translations"),
+        "things.html should have translations (slug matches folder)"
+    );
+    assert!(
+        things_html.contains("hreflang=\"pt\""),
+        "things.html should link to Portuguese translation"
+    );
+
+    let coisas_html = fs::read_to_string(output_dir.join("pt-coisas.html")).unwrap();
+    assert!(
+        coisas_html.contains("content-translations"),
+        "pt-coisas.html should have translations"
+    );
+    assert!(
+        coisas_html.contains("hreflang=\"en\""),
+        "pt-coisas.html should link back to English original"
+    );
+}

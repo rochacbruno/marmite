@@ -1585,31 +1585,24 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
         }
     }
 
-    // Set default language for base content in subfolder groups
-    for group in subfolder_groups.values() {
-        for &(idx, is_post) in group {
-            let content = if is_post {
-                &mut site_data.posts[idx]
-            } else {
-                &mut site_data.pages[idx]
-            };
-            if content.language.is_none() {
-                content.language = Some(default_language.clone());
-            }
-        }
-    }
-
     // Pass 3: Cross-link translations within each subfolder group
     // First collect all the info we need (to avoid borrow issues)
     let mut translation_links: Vec<(usize, bool, Vec<TranslationRef>)> = Vec::new();
 
-    for group in subfolder_groups.values() {
+    for (group_key, group) in &subfolder_groups {
         if group.len() < 2 {
             continue;
         }
 
-        // Only cross-link subfolders that are actual translation groups:
-        // at least one file must have an ISO 639-1 language code prefix (e.g. pt-, es-)
+        // A subfolder is a translation group only when BOTH conditions are met:
+        // 1. At least one file has an ISO 639-1 language code prefix (e.g. pt-, es-)
+        // 2. There is an identifiable "original" content, meaning either:
+        //    a. A flat file at a higher level whose slug matches the subfolder name
+        //       (already added to the group by the mixed flat+subfolder pass above)
+        //    b. A file inside the subfolder whose slug matches the folder name
+        //
+        // Without an identifiable original, marmite cannot know which content the
+        // translations belong to, so the subfolder is treated as regular content.
         let has_lang_prefixed_file = group.iter().any(|&(idx, is_post)| {
             let content = if is_post {
                 &site_data.posts[idx]
@@ -1627,6 +1620,36 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
         });
         if !has_lang_prefixed_file {
             continue;
+        }
+
+        // Check for an identifiable original: a member whose slug matches the
+        // leaf folder name (e.g. folder "hello" has a file with slug "hello")
+        let folder_name = std::path::Path::new(group_key.as_str())
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("");
+        let has_original = group.iter().any(|&(idx, is_post)| {
+            let content = if is_post {
+                &site_data.posts[idx]
+            } else {
+                &site_data.pages[idx]
+            };
+            content.slug == folder_name
+        });
+        if !has_original {
+            continue;
+        }
+
+        // Set default language for members of this valid translation group
+        for &(idx, is_post) in group {
+            let content = if is_post {
+                &mut site_data.posts[idx]
+            } else {
+                &mut site_data.pages[idx]
+            };
+            if content.language.is_none() {
+                content.language = Some(default_language.clone());
+            }
         }
 
         // Collect info about each member of the group
