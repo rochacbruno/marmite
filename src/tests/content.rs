@@ -693,7 +693,7 @@ fn test_find_matching_file_subfolder_card() {
 }
 
 #[test]
-fn test_find_matching_file_flat_takes_precedence_over_subfolder() {
+fn test_find_matching_file_subfolder_takes_precedence_over_flat() {
     let temp_dir = TempDir::new().unwrap();
     let content_dir = temp_dir.path();
     let media_dir = content_dir.join("media");
@@ -707,8 +707,8 @@ fn test_find_matching_file_flat_takes_precedence_over_subfolder() {
     let result = find_matching_file("test-slug", &dummy_file, "banner", &["png"], "media", None);
     assert_eq!(
         result,
-        Some("media/test-slug.banner.png".to_string()),
-        "Flat file should take precedence over subfolder"
+        Some("media/test-slug/banner.png".to_string()),
+        "Subfolder should take precedence over flat file"
     );
 }
 

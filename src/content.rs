@@ -1014,18 +1014,7 @@ fn find_matching_file(
     let parent_path = path.parent().unwrap_or(path);
     let media_path = parent_path.join(media_folder_name);
     for ext in exts {
-        for image_filename in [format!("{slug}.{kind}.{ext}"), format!("{slug}.{ext}")] {
-            let file_path = media_path.join(&image_filename);
-            if file_path.exists() {
-                return Some(format!("{media_folder_name}/{image_filename}"));
-            }
-            let file_path = parent_path.join(&image_filename);
-            if file_path.exists() {
-                return Some(image_filename.clone());
-            }
-        }
         // Content subfolder media: {parent}/{slug}/media/{kind}.{ext}
-        // e.g., content/language-streams/media/banner.png
         let content_subfolder_media = parent_path.join(slug).join(media_folder_name);
         if content_subfolder_media.is_dir() {
             for subfolder_filename in [format!("{kind}.{ext}"), format!("{slug}.{ext}")] {
@@ -1036,7 +1025,6 @@ fn find_matching_file(
             }
         }
         // Global media subfolder: {parent}/media/{slug}/{kind}.{ext}
-        // e.g., content/media/language-streams/banner.png
         let slug_subfolder = media_path.join(slug);
         if slug_subfolder.is_dir() {
             for subfolder_filename in [format!("{kind}.{ext}"), format!("{slug}.{ext}")] {
@@ -1044,6 +1032,17 @@ fn find_matching_file(
                 if file_path.exists() {
                     return Some(format!("{media_folder_name}/{slug}/{subfolder_filename}"));
                 }
+            }
+        }
+        // Flat slug-prefixed files: media/{slug}.{kind}.{ext}
+        for image_filename in [format!("{slug}.{kind}.{ext}"), format!("{slug}.{ext}")] {
+            let file_path = media_path.join(&image_filename);
+            if file_path.exists() {
+                return Some(format!("{media_folder_name}/{image_filename}"));
+            }
+            let file_path = parent_path.join(&image_filename);
+            if file_path.exists() {
+                return Some(image_filename.clone());
             }
         }
     }
