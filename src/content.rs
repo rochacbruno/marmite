@@ -898,7 +898,7 @@ pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String>
 pub fn find_file_by_slug(content_folder: &Path, target_slug: &str) -> Option<std::path::PathBuf> {
     for entry in walkdir::WalkDir::new(content_folder)
         .into_iter()
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
     {
         let path = entry.path();
         if path.extension().and_then(|e| e.to_str()) != Some("md") {
@@ -942,29 +942,26 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
             .lang
             .as_ref()
             .expect("--lang is required with --translates");
-        match find_file_by_slug(&content_folder, translates_slug) {
-            Some(original_path) => {
-                if let Ok(relative) = original_path.strip_prefix(&content_folder) {
-                    let components: Vec<_> = relative.components().collect();
-                    if components.len() > 1 {
-                        in_subfolder = true;
-                        let parent = original_path.parent().expect("file should have parent");
-                        path = parent.to_path_buf();
-                        path.push(format!("{lang}-{slug}.md"));
-                    } else if cli_args.create.page {
-                        path.push(format!("{slug}.md"));
-                    } else {
-                        path.push(format!("{}-{slug}.md", now.format("%Y-%m-%d-%H-%M-%S")));
-                    }
+        if let Some(original_path) = find_file_by_slug(&content_folder, translates_slug) {
+            if let Ok(relative) = original_path.strip_prefix(&content_folder) {
+                let components: Vec<_> = relative.components().collect();
+                if components.len() > 1 {
+                    in_subfolder = true;
+                    let parent = original_path.parent().expect("file should have parent");
+                    path = parent.to_path_buf();
+                    path.push(format!("{lang}-{slug}.md"));
+                } else if cli_args.create.page {
+                    path.push(format!("{slug}.md"));
+                } else {
+                    path.push(format!("{}-{slug}.md", now.format("%Y-%m-%d-%H-%M-%S")));
                 }
             }
-            None => {
-                error!(
-                    "Cannot find content with slug '{translates_slug}' in {}",
-                    content_folder.display()
-                );
-                return;
-            }
+        } else {
+            error!(
+                "Cannot find content with slug '{translates_slug}' in {}",
+                content_folder.display()
+            );
+            return;
         }
     } else {
         if let Some(ref dir) = cli_args.create.directory {
@@ -999,34 +996,78 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
     let lang = cli_args.create.lang.as_deref();
     let translates = cli_args.create.translates.as_deref();
     let needs_translates_field = translates.is_some() && !in_subfolder;
-    let has_frontmatter = tags.is_some() || lang.is_some() || needs_translates_field;
-
-    let content = if has_frontmatter {
-        let mut fm = String::from("---\n");
-        if let Some(lang) = lang {
-            fm.push_str(&format!("language: {lang}\n"));
-        }
-        if needs_translates_field {
-            fm.push_str(&format!(
-                "translates: {}\n",
-                translates.expect("checked above")
-            ));
-        }
-        if let Some(tags) = tags {
-            fm.push_str(&format!("tags: {tags}\n"));
-        }
-        fm.push_str("---\n");
-        format!("{fm}# {text}\n")
-    } else {
-        format!("# {text}\n")
-    };
+    let content = build_new_content_body(text, tags, lang, translates, needs_translates_field);
 
     if let Err(e) = file.write_all(content.as_bytes()) {
         error!("Failed to write to file: {e:?}");
         return;
     }
 
-    // JSON output
+    print_new_content_json(
+        &path,
+        text,
+        &slug,
+        cli_args.create.page,
+        now,
+        tags,
+        lang,
+        translates,
+    );
+
+    if cli_args.create.edit {
+        let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
+            if cfg!(target_os = "windows") {
+                "notepad".to_string()
+            } else {
+                "nano".to_string()
+            }
+        });
+        let status = std::process::Command::new(editor).arg(&path).status();
+        if let Err(e) = status {
+            error!("Failed to open editor: {e:?}");
+        }
+    }
+}
+
+fn build_new_content_body(
+    text: &str,
+    tags: Option<&str>,
+    lang: Option<&str>,
+    translates: Option<&str>,
+    needs_translates_field: bool,
+) -> String {
+    use std::fmt::Write;
+
+    let has_frontmatter = tags.is_some() || lang.is_some() || needs_translates_field;
+    if !has_frontmatter {
+        return format!("# {text}\n");
+    }
+
+    let mut fm = String::from("---\n");
+    if let Some(lang) = lang {
+        let _ = writeln!(fm, "language: {lang}");
+    }
+    if needs_translates_field {
+        let _ = writeln!(fm, "translates: {}", translates.expect("checked above"));
+    }
+    if let Some(tags) = tags {
+        let _ = writeln!(fm, "tags: {tags}");
+    }
+    fm.push_str("---\n");
+    format!("{fm}# {text}\n")
+}
+
+#[allow(clippy::too_many_arguments)]
+fn print_new_content_json(
+    path: &Path,
+    text: &str,
+    slug: &str,
+    is_page: bool,
+    now: chrono::DateTime<chrono::Local>,
+    tags: Option<&str>,
+    lang: Option<&str>,
+    translates: Option<&str>,
+) {
     let mut output = serde_json::Map::new();
     output.insert(
         "file".to_string(),
@@ -1036,8 +1077,11 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
         "title".to_string(),
         serde_json::Value::String(text.to_string()),
     );
-    output.insert("slug".to_string(), serde_json::Value::String(slug.clone()));
-    if !cli_args.create.page {
+    output.insert(
+        "slug".to_string(),
+        serde_json::Value::String(slug.to_string()),
+    );
+    if !is_page {
         output.insert(
             "date".to_string(),
             serde_json::Value::String(now.format("%Y-%m-%d").to_string()),
@@ -1065,20 +1109,6 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
         "{}",
         serde_json::to_string(&output).expect("JSON serialization should not fail")
     );
-
-    if cli_args.create.edit {
-        let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
-            if cfg!(target_os = "windows") {
-                "notepad".to_string()
-            } else {
-                "nano".to_string()
-            }
-        });
-        let status = std::process::Command::new(editor).arg(&path).status();
-        if let Err(e) = status {
-            error!("Failed to open editor: {e:?}");
-        }
-    }
 }
 
 /// Capture `card_image` from frontmatter, then if not defined
