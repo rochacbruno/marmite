@@ -71,6 +71,9 @@ example/              Complete working example site - primary dev/test target
 # Install mask task runner (if not already installed)
 cargo install mask
 
+# Install pre-commit hook (runs mask pedantic before every commit)
+mask install_hook
+
 # Build and serve the example site with full trace logging and live reload
 mask serve
 ```
@@ -90,6 +93,7 @@ The site runs at http://localhost:8000 with auto-rebuild on file changes. Edit s
 | `mask test_integration` | Run integration tests only (`cargo test --test '*'`) |
 | `mask build` | Build release binary |
 | `mask pedantic` | Run clippy with pedantic warnings |
+| `mask install_hook` | Install pre-commit hook that runs `mask pedantic` |
 | `mask fix` | Auto-apply clippy fixes |
 | `mask pedantic_fix` | Auto-apply clippy pedantic fixes |
 
