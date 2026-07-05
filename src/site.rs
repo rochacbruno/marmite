@@ -1604,6 +1604,27 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
             continue;
         }
 
+        // Only cross-link subfolders that are actual translation groups:
+        // at least one file must have an ISO 639-1 language code prefix (e.g. pt-, es-)
+        let has_lang_prefixed_file = group.iter().any(|&(idx, is_post)| {
+            let content = if is_post {
+                &site_data.posts[idx]
+            } else {
+                &site_data.pages[idx]
+            };
+            if let Some(ref source_path) = content.source_path {
+                if let Some(stem) = source_path.file_stem().and_then(|s| s.to_str()) {
+                    return crate::content::ISO_639_1_CODES
+                        .iter()
+                        .any(|code| stem.starts_with(&format!("{code}-")));
+                }
+            }
+            false
+        });
+        if !has_lang_prefixed_file {
+            continue;
+        }
+
         // Collect info about each member of the group
         let members: Vec<(usize, bool, String, String, String)> = group
             .iter()
