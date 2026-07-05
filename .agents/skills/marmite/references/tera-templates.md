@@ -165,8 +165,8 @@ Get grouped content for taxonomy displays:
 {% endfor %}
 ```
 
-- `kind` (required): `"tag"`, `"archive"`, `"author"`, `"stream"`, `"series"`
-- `ord` (optional, default `"desc"`): Sort order. `"desc"` sorts by post count (most first). `"asc"` sorts alphabetically.
+- `kind` (required): `"tag"`, `"archive"`, `"author"`, `"stream"`, `"series"`, `"language"`
+- `ord` (optional, default `"desc"`): Sort order. `"desc"` sorts by post count (most first). `"asc"` sorts alphabetically. For `"language"`, the default site language always appears last regardless of sort order.
 - `items` (optional, default `0`): Max items to return (0 = all)
 
 ### `get_posts(ord, items)`
@@ -229,6 +229,15 @@ Get the configured display name for a series:
 ```html
 {{ series_display_name(series="python-tutorial") }}
 <!-- Output: "Python Tutorial" (if configured) -->
+```
+
+### `language_display_name(language)`
+
+Get the configured display name for a language:
+
+```html
+{{ language_display_name(language="pt") }}
+<!-- Output: "Portugues" (if configured in languages: config) -->
 ```
 
 ### `get_gallery(path)`

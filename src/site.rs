@@ -41,6 +41,7 @@ pub struct UrlCollection {
     pub series: Vec<String>,
     pub streams: Vec<String>,
     pub archives: Vec<String>,
+    pub languages: Vec<String>,
     pub feeds: Vec<String>,
     pub pagination: Vec<String>,
     pub file_mappings: Vec<String>,
@@ -58,6 +59,7 @@ pub struct Data {
     pub author: GroupedContent,
     pub stream: GroupedContent,
     pub series: GroupedContent,
+    pub language: GroupedContent,
     pub latest_timestamp: Option<i64>,
     pub config_path: String,
     pub force_render: bool,
@@ -84,6 +86,7 @@ impl Data {
             author: GroupedContent::new(Kind::Author),
             stream: GroupedContent::new(Kind::Stream),
             series: GroupedContent::new(Kind::Series),
+            language: GroupedContent::new(Kind::Language),
             latest_timestamp: None,
             config_path: config_path.to_string_lossy().to_string(),
             force_render: false,
@@ -118,6 +121,7 @@ impl Data {
         self.author.sort_all();
         self.stream.sort_all();
         self.series.sort_all();
+        self.language.sort_all();
     }
 
     /// takes content then classifies the content
@@ -374,6 +378,10 @@ impl Data {
                 .add_url("archives", "archive.html".to_string());
         }
 
+        // Add languages group page (always rendered)
+        self.generated_urls
+            .add_url("languages", "languages.html".to_string());
+
         // Add main index pagination
         let posts_count = self.posts.len();
         if posts_count > self.site.pagination {
@@ -585,6 +593,7 @@ pub(crate) fn build_site_with_config(
 
     discover_translations(&mut site_data, &content_folder);
     rebuild_stream_index(&mut site_data);
+    build_language_index(&mut site_data);
 
     let state_path = input_folder.join(".marmite-atproto-state.json");
     if state_path.exists() {
@@ -795,8 +804,9 @@ pub fn generate(
 
             discover_translations(&mut site_data, &content_folder);
 
-            // Rebuild stream index after discover_translations may have changed streams
+            // Rebuild stream and language indexes after discover_translations may have changed them
             rebuild_stream_index(&mut site_data);
+            build_language_index(&mut site_data);
 
             // Load atproto state to populate at_uri on matching posts/pages
             let state_path = moved_input_folder.join(".marmite-atproto-state.json");
@@ -1447,6 +1457,25 @@ fn rebuild_stream_index(site_data: &mut Data) {
     site_data.stream.sort_all();
 }
 
+pub fn build_language_index(site_data: &mut Data) {
+    let default_language = site_data.site.language.clone();
+    let posts: Vec<_> = site_data.posts.clone();
+    site_data.language = GroupedContent::new(Kind::Language);
+    for post in &posts {
+        let lang = post
+            .language
+            .as_deref()
+            .unwrap_or(&default_language)
+            .to_string();
+        site_data
+            .language
+            .entry(lang)
+            .or_default()
+            .push(post.clone());
+    }
+    site_data.language.sort_all();
+}
+
 fn discover_translations(site_data: &mut Data, content_dir: &Path) {
     if site_data.site.language.is_empty() {
         site_data.site.language = "en".to_string();
@@ -1970,6 +1999,13 @@ fn initialize_tera(
         },
     );
     tera.register_function(
+        "language_display_name",
+        DisplayName {
+            site_data: site_data.clone(),
+            kind: "language".to_string(),
+        },
+    );
+    tera.register_function(
         "get_posts",
         GetPosts {
             site_data: site_data.clone(),
@@ -2186,31 +2222,41 @@ fn handle_group_pages(
     tera: &Tera,
     output_dir: &Path,
 ) -> Result<(), String> {
-    ["tags", "archives", "authors", "streams", "series"]
-        .par_iter()
-        .map(|step| -> Result<(), String> {
-            match *step {
-                "tags" => {
-                    handle_tag_pages(output_dir, site_data, global_context, tera)?;
-                }
-                "archives" => {
-                    handle_archive_pages(output_dir, site_data, global_context, tera)?;
-                }
-                "authors" => {
-                    handle_author_pages(output_dir, site_data, global_context, tera)?;
-                }
-                "streams" => {
-                    handle_stream_list_page(output_dir, site_data, global_context, tera)?;
-                }
-                "series" => {
-                    handle_series_list_page(output_dir, site_data, global_context, tera)?;
-                }
-                _ => {}
+    [
+        "tags",
+        "archives",
+        "authors",
+        "streams",
+        "series",
+        "languages",
+    ]
+    .par_iter()
+    .map(|step| -> Result<(), String> {
+        match *step {
+            "tags" => {
+                handle_tag_pages(output_dir, site_data, global_context, tera)?;
             }
-            Ok(())
-        })
-        .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
-        .unwrap_or(Ok(()))
+            "archives" => {
+                handle_archive_pages(output_dir, site_data, global_context, tera)?;
+            }
+            "authors" => {
+                handle_author_pages(output_dir, site_data, global_context, tera)?;
+            }
+            "streams" => {
+                handle_stream_list_page(output_dir, site_data, global_context, tera)?;
+            }
+            "series" => {
+                handle_series_list_page(output_dir, site_data, global_context, tera)?;
+            }
+            "languages" => {
+                handle_language_list_page(output_dir, site_data, global_context, tera)?;
+            }
+            _ => {}
+        }
+        Ok(())
+    })
+    .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
+    .unwrap_or(Ok(()))
 }
 
 /// Assuming every item on `site_data.posts` is a Content and has a stream field
@@ -2398,6 +2444,26 @@ fn handle_series_list_page(
         "series.html",
         tera,
         &series_list_context,
+        output_dir,
+    )?;
+    Ok(())
+}
+
+fn handle_language_list_page(
+    output_dir: &Path,
+    site_data: &Data,
+    global_context: &Context,
+    tera: &Tera,
+) -> Result<(), String> {
+    let mut lang_list_context = global_context.clone();
+    lang_list_context.insert("title", &site_data.site.languages_title);
+    lang_list_context.insert("current_page", "languages.html");
+    lang_list_context.insert("kind", "language");
+    render_html(
+        "group.html",
+        "languages.html",
+        tera,
+        &lang_list_context,
         output_dir,
     )?;
     Ok(())
@@ -3225,6 +3291,23 @@ pub(crate) fn create_urls_json(site_data: &Data, path_prefix: &str) -> serde_jso
         ),
     );
 
+    // Add languages
+    let languages: Vec<String> = site_data
+        .generated_urls
+        .languages
+        .iter()
+        .map(|url| generate_url(url.trim_start_matches('/')))
+        .collect();
+    output.insert(
+        "languages".to_string(),
+        serde_json::Value::Array(
+            languages
+                .iter()
+                .map(|url| serde_json::Value::String(url.clone()))
+                .collect(),
+        ),
+    );
+
     // Add feeds
     let feeds: Vec<String> = site_data
         .generated_urls
@@ -3338,6 +3421,10 @@ pub(crate) fn create_urls_json(site_data: &Data, path_prefix: &str) -> serde_jso
     summary.insert(
         "archives".to_string(),
         serde_json::Value::Number(serde_json::Number::from(archives.len())),
+    );
+    summary.insert(
+        "languages".to_string(),
+        serde_json::Value::Number(serde_json::Number::from(languages.len())),
     );
     summary.insert(
         "feeds".to_string(),
@@ -3932,6 +4019,7 @@ impl UrlCollection {
             "series" => self.series.push(url),
             "streams" => self.streams.push(url),
             "archives" => self.archives.push(url),
+            "languages" => self.languages.push(url),
             "feeds" => self.feeds.push(url),
             "pagination" => self.pagination.push(url),
             "file_mappings" => self.file_mappings.push(url),
@@ -3949,6 +4037,7 @@ impl UrlCollection {
         all_urls.extend(self.series.iter().cloned());
         all_urls.extend(self.streams.iter().cloned());
         all_urls.extend(self.archives.iter().cloned());
+        all_urls.extend(self.languages.iter().cloned());
         all_urls.extend(self.feeds.iter().cloned());
         all_urls.extend(self.pagination.iter().cloned());
         all_urls.extend(self.file_mappings.iter().cloned());
@@ -3966,6 +4055,7 @@ impl UrlCollection {
             + self.series.len()
             + self.streams.len()
             + self.archives.len()
+            + self.languages.len()
             + self.feeds.len()
             + self.pagination.len()
             + self.file_mappings.len()

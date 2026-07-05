@@ -799,3 +799,115 @@ fn test_merge_grouped_content_unknown_site() {
     let merged = merge_grouped_content("unknown", "tag", &csd);
     assert!(merged.is_empty());
 }
+
+#[test]
+fn test_group_function_language() {
+    let site_data = create_test_data();
+    let mut tera = tera::Tera::default();
+    tera.register_function(
+        "group",
+        Group {
+            site_data,
+            cross_site_data: None,
+        },
+    );
+    tera.add_raw_template("test", r#"{{ group(kind="language") }}"#)
+        .unwrap();
+    let result = tera.render("test", &tera::Context::new());
+    assert!(result.is_ok());
+}
+
+#[test]
+fn test_group_function_language_default_last() {
+    use crate::content::ContentBuilder;
+    use chrono::NaiveDate;
+    use std::path::Path;
+
+    let mut site_data = Data::new("language: en", Path::new("marmite.yaml"));
+
+    let en_post = ContentBuilder::new()
+        .title("English".to_string())
+        .slug("en-post".to_string())
+        .language("en".to_string())
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+    let pt_post = ContentBuilder::new()
+        .title("Portuguese".to_string())
+        .slug("pt-post".to_string())
+        .language("pt".to_string())
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 2)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+    let es_post = ContentBuilder::new()
+        .title("Spanish".to_string())
+        .slug("es-post".to_string())
+        .language("es".to_string())
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 3)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    site_data.push_content(en_post);
+    site_data.push_content(pt_post);
+    site_data.push_content(es_post);
+    crate::site::build_language_index(&mut site_data);
+
+    let mut tera = tera::Tera::default();
+    tera.register_function(
+        "group",
+        Group {
+            site_data,
+            cross_site_data: None,
+        },
+    );
+    tera.add_raw_template(
+        "test",
+        r#"{% for name, items in group(kind="language") %}{{ name }}{% if not loop.last %},{% endif %}{% endfor %}"#,
+    )
+    .unwrap();
+    let result = tera
+        .render("test", &tera::Context::new())
+        .expect("Template should render");
+
+    let names: Vec<&str> = result.split(',').collect();
+    assert_eq!(
+        names.last().copied(),
+        Some("en"),
+        "Default language should be last, got: {result}"
+    );
+    assert!(names.contains(&"pt"));
+    assert!(names.contains(&"es"));
+}
+
+#[test]
+fn test_language_display_name() {
+    use crate::config::LanguageConfig;
+
+    let mut site_data = create_test_data();
+    site_data.site.languages.insert(
+        "pt".to_string(),
+        LanguageConfig {
+            display_name: "Portugues".to_string(),
+        },
+    );
+
+    let display = DisplayName {
+        site_data,
+        kind: "language".to_string(),
+    };
+
+    assert_eq!(display.resolve("pt"), "Portugues");
+    assert_eq!(display.resolve("fr"), "fr");
+}

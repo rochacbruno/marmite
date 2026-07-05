@@ -28,6 +28,7 @@ pub enum Kind {
     Author,
     Stream,
     Series,
+    Language,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -78,7 +79,7 @@ impl GroupedContent {
                 // sort by year, newest first
                 vec.sort_by(|a, b| b.0.cmp(a.0));
             }
-            Kind::Author | Kind::Stream | Kind::Series => {
+            Kind::Author | Kind::Stream | Kind::Series | Kind::Language => {
                 // sort alphabetically
                 vec.sort_by(|a, b| a.0.cmp(b.0));
             }

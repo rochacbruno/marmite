@@ -1535,3 +1535,144 @@ fn test_collect_all_urls_posts_and_pages() {
     assert!(all.contains(&"tag-rust.html".to_string()));
     assert!(all.contains(&"blog.html".to_string()));
 }
+
+#[test]
+fn test_build_language_index_groups_posts_by_language() {
+    let mut data = Data::new("language: en", Path::new("marmite.yaml"));
+
+    let en_post = ContentBuilder::new()
+        .title("Hello World".to_string())
+        .slug("hello-world".to_string())
+        .language("en".to_string())
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    let pt_post = ContentBuilder::new()
+        .title("Ola Mundo".to_string())
+        .slug("pt-ola-mundo".to_string())
+        .language("pt".to_string())
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 2)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    let es_post = ContentBuilder::new()
+        .title("Hola Mundo".to_string())
+        .slug("es-hola-mundo".to_string())
+        .language("es".to_string())
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 3)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    data.push_content(en_post);
+    data.push_content(pt_post);
+    data.push_content(es_post);
+    build_language_index(&mut data);
+
+    assert_eq!(data.language.map.len(), 3);
+    assert!(data.language.map.contains_key("en"));
+    assert!(data.language.map.contains_key("pt"));
+    assert!(data.language.map.contains_key("es"));
+    assert_eq!(data.language.map["en"].len(), 1);
+    assert_eq!(data.language.map["pt"].len(), 1);
+    assert_eq!(data.language.map["es"].len(), 1);
+}
+
+#[test]
+fn test_build_language_index_defaults_to_site_language() {
+    let mut data = Data::new("language: en", Path::new("marmite.yaml"));
+
+    let post_with_lang = ContentBuilder::new()
+        .title("Post With Lang".to_string())
+        .slug("post-with-lang".to_string())
+        .language("en".to_string())
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    let post_without_lang = ContentBuilder::new()
+        .title("Post Without Lang".to_string())
+        .slug("post-without-lang".to_string())
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 2)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    data.push_content(post_with_lang);
+    data.push_content(post_without_lang);
+    build_language_index(&mut data);
+
+    assert_eq!(data.language.map.len(), 1);
+    assert!(data.language.map.contains_key("en"));
+    assert_eq!(data.language.map["en"].len(), 2);
+}
+
+#[test]
+fn test_build_language_index_monolingual_site() {
+    let mut data = Data::new("language: en", Path::new("marmite.yaml"));
+
+    let post = ContentBuilder::new()
+        .title("Only Post".to_string())
+        .slug("only-post".to_string())
+        .date(
+            NaiveDate::from_ymd_opt(2024, 6, 15)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    data.push_content(post);
+    build_language_index(&mut data);
+
+    assert_eq!(data.language.map.len(), 1);
+    assert!(data.language.map.contains_key("en"));
+    assert_eq!(data.language.map["en"].len(), 1);
+}
+
+#[test]
+fn test_url_collection_includes_languages() {
+    let mut data = Data::new("language: en", Path::new("marmite.yaml"));
+
+    let post = ContentBuilder::new()
+        .title("Test Post".to_string())
+        .slug("test-post".to_string())
+        .language("en".to_string())
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+
+    data.push_content(post);
+    build_language_index(&mut data);
+    data.collect_all_urls();
+
+    assert!(data
+        .generated_urls
+        .languages
+        .contains(&"languages.html".to_string()));
+    let all = data.generated_urls.get_all_urls();
+    assert!(all.contains(&"languages.html".to_string()));
+}

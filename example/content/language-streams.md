@@ -174,6 +174,37 @@ The `<html lang="...">` attribute is also set correctly per page.
 
 Language stream pages use the configured language name as the display name. A stream named `pt` automatically displays as "Portugues" without needing a separate `streams.pt.display_name` entry. You can override this by defining both `languages` and `streams` entries for the same code.
 
+## Languages Group Page
+
+Marmite generates a `languages.html` page that lists all content organized by language. This page is always generated, even on monolingual sites (showing just the default language).
+
+The page follows the same group template pattern as tags, authors, streams, series, and archives. Each language shows a collapsible list of its content with a link to the full language stream page.
+
+Languages are sorted alphabetically, with the site's default language appearing last in the list.
+
+### Customization
+
+The page heading can be changed in `marmite.yaml`:
+
+```yaml
+languages_title: "Idiomas"
+```
+
+In custom templates, the `language_display_name` Tera function returns the configured display name for a language code:
+
+```html
+{{ language_display_name(language="pt") }}
+```
+
+The `group(kind="language")` Tera function returns all content grouped by language:
+
+```html
+{% for lang, posts in group(kind="language") %}
+  <h2>{{ language_display_name(language=lang) }}</h2>
+  <p>{{ posts | length }} posts</p>
+{% endfor %}
+```
+
 ## How It Works Internally
 
 1. During content collection, files in subfolders with an ISO 639-1 language code prefix (e.g., `en-`) are detected and assigned to that language stream

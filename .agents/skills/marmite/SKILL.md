@@ -234,7 +234,7 @@ languages:
   pt:
     display_name: "Portugues"
 ```
-Set `language: xx` in frontmatter or use subfolder naming conventions. Link translations via subfolder auto-discovery, `translations:` list, or `translates:` pointer. Each language gets its own stream page and RSS feed. Translation links and hreflang SEO tags are added automatically.
+Set `language: xx` in frontmatter or use subfolder naming conventions. Link translations via subfolder auto-discovery, `translations:` list, or `translates:` pointer. Each language gets its own stream page and RSS feed. Translation links and hreflang SEO tags are added automatically. A `languages.html` group page lists all content by language (always generated, configurable via `languages_title`).
 
 See `references/content-organization.md` for all content organization modes.
 

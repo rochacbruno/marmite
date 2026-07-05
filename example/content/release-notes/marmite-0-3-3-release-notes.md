@@ -46,6 +46,16 @@ Default language content stays on `index.html`. Sites without any language conte
 
 The `languages:` config key `name` has been renamed to `display_name` (matching `streams:` and `series:` patterns). The old `name` key is still accepted for backward compatibility.
 
+### Languages Group Page
+
+A new `languages.html` group page lists all content organized by language, following the same pattern as tags, authors, archives, streams, and series group pages.
+
+The page is always generated, even on monolingual sites (showing just the default language). Each language entry shows a preview of its content and links to the corresponding stream page (`pt.html`, `es.html`, etc.) or to `index.html` for the default language.
+
+Languages are sorted alphabetically with the site's default language appearing last. Display names from the `languages:` config are used when available, falling back to the two-letter code.
+
+A new `languages_title` config option controls the page heading (default: "Languages"). A `language_display_name` Tera function is also available for custom templates.
+
 ### CLI Translation Support and JSON Output
 
 The `--new` command now supports creating translations directly from the CLI and outputs structured JSON instead of a plain file path.
