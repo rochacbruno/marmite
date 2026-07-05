@@ -351,6 +351,7 @@ impl Marmite {
             gallery_path: default_gallery_path(),
             gallery_create_thumbnails: default_true(),
             gallery_thumb_size: default_gallery_thumb_size(),
+            language: default_language(),
             ..Default::default()
         }
     }

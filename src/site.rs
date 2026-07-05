@@ -1449,6 +1449,9 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
         is_post: bool,
     }
 
+    if site_data.site.language.is_empty() {
+        site_data.site.language = "en".to_string();
+    }
     let default_language = &site_data.site.language;
     let languages = &site_data.site.languages;
 
