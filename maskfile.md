@@ -44,6 +44,7 @@ cargo run --quiet -- marmitesite --serve --watch --force -vvvv --theme theme_tem
 > Check code formatting and run clippy
 
 ~~~bash
+set -e
 cargo fmt -- --check
 cargo clippy
 ~~~
@@ -53,6 +54,7 @@ cargo clippy
 > Check code formatting and run clippy with pedantic warnings
 
 ~~~bash
+set -e
 cargo fmt -- --check
 cargo clippy -- -W clippy::pedantic
 ~~~
