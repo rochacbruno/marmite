@@ -185,7 +185,7 @@ impl Content {
         let html = if is_fragment {
             html
         } else {
-            fix_at_media_refs(&html, &site.media_path, &slug)
+            fix_at_media_refs(&html, &site.media_path, &slug, path, content_dir)
         };
 
         let description = get_description(&frontmatter);
@@ -1133,13 +1133,26 @@ fn get_banner_image(
     None
 }
 
-/// Replace `@/` references in rendered HTML `src` and `href` attributes
-/// with the slug-specific media path.
-/// Operates on final HTML so code blocks and plain text are not affected.
-fn fix_at_media_refs(html: &str, media_path: &str, slug: &str) -> String {
+fn fix_at_media_refs(
+    html: &str,
+    media_path: &str,
+    slug: &str,
+    path: &Path,
+    content_dir: Option<&Path>,
+) -> String {
     let re =
         Regex::new(re::REPLACE_AT_MEDIA_REF_IN_HTML).expect("At-media HTML regex should compile");
-    let replacement = format!("${{attr}}=\"{media_path}/{slug}/");
+
+    let parent = path.parent().unwrap_or(path);
+    let has_slug_media = content_dir.is_some_and(|cd| cd.join(media_path).join(slug).is_dir())
+        || content_dir.is_some_and(|cd| cd.join(slug).join(media_path).is_dir())
+        || (content_dir.is_some_and(|cd| parent != cd) && parent.join(media_path).is_dir());
+
+    let replacement = if has_slug_media {
+        format!("${{attr}}=\"{media_path}/{slug}/")
+    } else {
+        format!("${{attr}}=\"{media_path}/")
+    };
     re.replace_all(html, replacement.as_str()).into_owned()
 }
 

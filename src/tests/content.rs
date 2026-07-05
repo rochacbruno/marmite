@@ -757,12 +757,22 @@ fn test_find_matching_file_subfolder_nonexistent() {
 #[test]
 fn test_at_prefix_replacement_in_content() {
     let temp_dir = TempDir::new().unwrap();
-    let path = temp_dir.path().join("2024-01-01-my-post.md");
+    let content_dir = temp_dir.path();
+    fs::create_dir_all(content_dir.join("media").join("my-post")).unwrap();
+    let path = content_dir.join("2024-01-01-my-post.md");
     let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n![](@/photo.png)\n";
     fs::write(&path, content).unwrap();
 
-    let result =
-        Content::from_markdown(&path, None, &Marmite::new(), None, None, None, None).unwrap();
+    let result = Content::from_markdown(
+        &path,
+        None,
+        &Marmite::new(),
+        None,
+        None,
+        None,
+        Some(content_dir),
+    )
+    .unwrap();
     assert!(
         result.html.contains("media/my-post/photo.png"),
         "Expected @/ to be replaced with media/my-post/, got: {}",
@@ -771,15 +781,51 @@ fn test_at_prefix_replacement_in_content() {
 }
 
 #[test]
+fn test_at_prefix_fallback_to_root_media() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path();
+    fs::create_dir_all(content_dir.join("media")).unwrap();
+    let path = content_dir.join("2024-01-01-my-post.md");
+    let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n![](@/photo.png)\n";
+    fs::write(&path, content).unwrap();
+
+    let result = Content::from_markdown(
+        &path,
+        None,
+        &Marmite::new(),
+        None,
+        None,
+        None,
+        Some(content_dir),
+    )
+    .unwrap();
+    assert!(
+        result.html.contains("media/photo.png"),
+        "Expected @/ to fall back to media/ when no slug subfolder exists, got: {}",
+        result.html
+    );
+}
+
+#[test]
 fn test_at_prefix_replacement_multiple_occurrences() {
     let temp_dir = TempDir::new().unwrap();
-    let path = temp_dir.path().join("2024-01-01-my-post.md");
+    let content_dir = temp_dir.path();
+    fs::create_dir_all(content_dir.join("media").join("my-post")).unwrap();
+    let path = content_dir.join("2024-01-01-my-post.md");
     let content =
         "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n![](@/a.png)\n\n[PDF](@/doc.pdf)\n";
     fs::write(&path, content).unwrap();
 
-    let result =
-        Content::from_markdown(&path, None, &Marmite::new(), None, None, None, None).unwrap();
+    let result = Content::from_markdown(
+        &path,
+        None,
+        &Marmite::new(),
+        None,
+        None,
+        None,
+        Some(content_dir),
+    )
+    .unwrap();
     assert!(
         result.html.contains("media/my-post/a.png"),
         "got: {}",
@@ -811,14 +857,17 @@ fn test_at_prefix_no_replacement_in_fragments() {
 #[test]
 fn test_at_prefix_with_custom_media_path() {
     let temp_dir = TempDir::new().unwrap();
-    let path = temp_dir.path().join("2024-01-01-my-post.md");
+    let content_dir = temp_dir.path();
+    fs::create_dir_all(content_dir.join("assets").join("my-post")).unwrap();
+    let path = content_dir.join("2024-01-01-my-post.md");
     let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n![](@/photo.png)\n";
     fs::write(&path, content).unwrap();
 
     let mut config = Marmite::new();
     config.media_path = "assets".to_string();
 
-    let result = Content::from_markdown(&path, None, &config, None, None, None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &config, None, None, None, Some(content_dir)).unwrap();
     assert!(
         result.html.contains("assets/my-post/photo.png"),
         "Expected @/ to use custom media_path 'assets', got: {}",
