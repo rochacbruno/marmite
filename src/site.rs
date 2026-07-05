@@ -584,6 +584,7 @@ pub(crate) fn build_site_with_config(
     );
 
     discover_translations(&mut site_data, &content_folder);
+    rebuild_stream_index(&mut site_data);
 
     let state_path = input_folder.join(".marmite-atproto-state.json");
     if state_path.exists() {
@@ -793,6 +794,9 @@ pub fn generate(
             );
 
             discover_translations(&mut site_data, &content_folder);
+
+            // Rebuild stream index after discover_translations may have changed streams
+            rebuild_stream_index(&mut site_data);
 
             // Load atproto state to populate at_uri on matching posts/pages
             let state_path = moved_input_folder.join(".marmite-atproto-state.json");
@@ -1375,21 +1379,8 @@ pub(crate) fn collect_content(
     for content in contents {
         match content {
             Ok(mut content) => {
-                if let Some(lang) = detect_language_from_path(
-                    content.source_path.as_deref().unwrap_or(Path::new("")),
-                    content_dir,
-                ) {
-                    if content.stream.is_some() {
-                        content.stream = Some(lang.clone());
-                    }
-                    if content.language.is_none() {
-                        content.language = Some(lang.clone());
-                    }
-                    let prefix = format!("{lang}-");
-                    if !content.slug.starts_with(&prefix) {
-                        content.slug = format!("{lang}-{}", content.slug);
-                    }
-                }
+                // Language-from-path detection is deferred to discover_translations
+                // Pass 3, where it only applies inside validated translation groups.
 
                 if let Some(ref lang) = content.language {
                     if content.stream.as_deref() == Some("index")
@@ -1441,6 +1432,21 @@ pub(crate) fn collect_content(
 }
 
 #[allow(clippy::too_many_lines)]
+fn rebuild_stream_index(site_data: &mut Data) {
+    let posts: Vec<_> = site_data.posts.clone();
+    site_data.stream = GroupedContent::new(Kind::Stream);
+    for post in &posts {
+        if let Some(stream) = &post.stream {
+            site_data
+                .stream
+                .entry(stream.clone())
+                .or_default()
+                .push(post.clone());
+        }
+    }
+    site_data.stream.sort_all();
+}
+
 fn discover_translations(site_data: &mut Data, content_dir: &Path) {
     struct ContentInfo {
         title: String,
@@ -1622,31 +1628,55 @@ fn discover_translations(site_data: &mut Data, content_dir: &Path) {
             continue;
         }
 
-        // Check for an identifiable original: a member whose slug matches the
-        // leaf folder name (e.g. folder "hello" has a file with slug "hello")
-        let folder_name = std::path::Path::new(group_key.as_str())
-            .file_name()
-            .and_then(|n| n.to_str())
-            .unwrap_or("");
-        let has_original = group.iter().any(|&(idx, is_post)| {
-            let content = if is_post {
-                &site_data.posts[idx]
-            } else {
-                &site_data.pages[idx]
-            };
-            content.slug == folder_name
-        });
-        if !has_original {
+        // Check for an unambiguous original: exactly one member whose filename
+        // does NOT start with a language code prefix. With multiple non-prefixed
+        // files, marmite cannot tell which one is the original, so the subfolder
+        // is not treated as a translation group.
+        let non_prefixed_count = group
+            .iter()
+            .filter(|&&(idx, is_post)| {
+                let content = if is_post {
+                    &site_data.posts[idx]
+                } else {
+                    &site_data.pages[idx]
+                };
+                content
+                    .source_path
+                    .as_ref()
+                    .and_then(|p| p.file_stem())
+                    .and_then(|s| s.to_str())
+                    .is_some_and(|stem| {
+                        !crate::content::ISO_639_1_CODES
+                            .iter()
+                            .any(|code| stem.starts_with(&format!("{code}-")))
+                    })
+            })
+            .count();
+        if non_prefixed_count != 1 {
             continue;
         }
 
-        // Set default language for members of this valid translation group
+        // Apply language-from-path detection and set defaults for this group
         for &(idx, is_post) in group {
             let content = if is_post {
                 &mut site_data.posts[idx]
             } else {
                 &mut site_data.pages[idx]
             };
+            if let Some(lang) = content
+                .source_path
+                .as_deref()
+                .and_then(|p| detect_language_from_path(p, content_dir))
+            {
+                if content.stream.is_some() {
+                    content.stream = Some(lang.clone());
+                }
+                content.language = Some(lang.clone());
+                let prefix = format!("{lang}-");
+                if !content.slug.starts_with(&prefix) {
+                    content.slug = format!("{lang}-{}", content.slug);
+                }
+            }
             if content.language.is_none() {
                 content.language = Some(default_language.clone());
             }

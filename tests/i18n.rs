@@ -659,10 +659,10 @@ fn test_lang_prefixed_file_without_original_is_not_translation_group() {
         "first-post should not be in a translation group"
     );
 
-    let forth = fs::read_to_string(output_dir.join("pt-forth-post.html")).unwrap();
+    let forth = fs::read_to_string(output_dir.join("forth-post.html")).unwrap();
     assert!(
         !forth.contains("content-translations"),
-        "pt-forth-post should not be in a translation group without a matching original"
+        "forth-post should not be in a translation group without a matching original"
     );
 }
 
