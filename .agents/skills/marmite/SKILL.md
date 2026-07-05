@@ -146,6 +146,32 @@ extra:
 
 TOML (`+++` delimiters) and JSON (`{}` wrapper) are also supported. See `references/frontmatter.md` for the full field reference.
 
+### Folder-Level Frontmatter Defaults
+
+A `frontmatter.yaml` file in a content subfolder provides default values for all `.md` files in that folder. Works at any nesting depth with layered inheritance - deeper folders inherit from ancestors and can override specific fields. Per-file frontmatter always wins. `title` and `slug` are never inherited.
+
+```
+content/
+  frontmatter.yaml              # Root-level defaults (apply to all content)
+  tutorials/
+    frontmatter.yaml            # Inherits from root, adds stream: tutorial
+    rust/
+      frontmatter.yaml          # Inherits from tutorials, adds tags
+      intro.md                  # Gets all three layers of defaults
+```
+
+See `references/frontmatter.md` and `references/content-organization.md` for details.
+
+### Redirect Aliases
+
+The `aliases` frontmatter field generates redirect pages at old URLs when content slugs change:
+
+```yaml
+aliases: old-post-url, legacy-path
+```
+
+Each alias generates a lightweight HTML file with `<meta http-equiv="refresh">`, a canonical link, and a JS fallback pointing to the current URL. Redirect pages are excluded from sitemap, feeds, and search. A warning is logged if an alias conflicts with an existing slug.
+
 ### Creating Content via CLI
 
 ```bash
@@ -671,6 +697,25 @@ marmite <input_folder> --show-urls
 
 The output is a flat directory of static HTML, CSS, and JS files. Deploy by copying the output folder to any static hosting provider (Netlify, Vercel, GitHub Pages, Cloudflare Pages, or any web server).
 
+### Internal Link Validation
+
+Marmite can validate internal links at build time:
+
+```yaml
+check_internal_links: true    # Warn about broken internal links
+strict_internal_links: true   # Fail the build on broken internal links
+```
+
+### Markdown Source Publishing
+
+Publish the original `.md` source files alongside HTML output:
+
+```yaml
+publish_markdown_source: true
+```
+
+Each content page gets a link to its markdown source via the `source_link(content=content)` template function.
+
 ### File Mapping
 
 Copy arbitrary files into the output during build:
@@ -691,6 +736,44 @@ Generated automatically:
 - `urls.json` (when `publish_urls_json: true`, default)
 - Per-tag, per-stream, per-series RSS feeds
 
+## Workflow: Workspace Multi-Site
+
+Build multiple independent sites from a single workspace directory:
+
+```bash
+# Create a workspace config
+cat > marmite-workspace.yaml << 'EOF'
+defaults:
+  pagination: 10
+  enable_search: true
+sites:
+  - name: blog
+    path: blog
+    default: true        # Renders at root
+  - name: photos
+    path: photos         # Renders at /photos/
+EOF
+
+# Build all sites
+marmite <workspace> <output>
+
+# Create content in a specific site
+marmite <workspace> --new "Post Title" --site blog
+
+# Serve with live reload (covers all sites)
+marmite <workspace> --serve --watch
+```
+
+Workspace mode is activated when `marmite-workspace.yaml` is found in the input folder. The `defaults` section accepts any standard `marmite.yaml` field - each site's own config overrides these defaults.
+
+Cross-site links use `site::path` syntax: `[See gallery](photos::gallery.html)` becomes `/photos/gallery.html`.
+
+See `references/config-reference.md` and `references/cli-reference.md` for all workspace options.
+
+## Workflow: Marmite Playground
+
+Try marmite directly in the browser at [marmite.blog/marmite-playground.html](https://marmite.blog/marmite-playground.html). The playground is a live editor where you can write markdown, tweak settings, and preview your site in real time - no installation required.
+
 ## Reference Files
 
 - `references/cli-reference.md` - Complete CLI flags, options, and command examples
@@ -703,3 +786,105 @@ Generated automatically:
 - `references/shortcodes.md` - Shortcode creation and built-in shortcodes
 - `references/deployment-guide.md` - Deploying to GitHub Pages, GitLab, Netlify, Vercel, Cloudflare, Docker, Nginx, Apache
 - `references/comment-system.md` - Setting up Giscus, Utterances, Hatsu, and other comment systems
+
+
+## Tools for agent to call
+
+### Show urls
+
+```
+marmite input_folder --show-urls
+```
+```
+{
+  "archives": [
+    "/archive-2027.html",
+    "/archive.html"
+  ],
+  "authors": [
+    "/author-jao.html",
+    "/authors.html"
+  ],
+  "feeds": [
+    "/index.rss",
+    "/internet.rss",
+    "/tag-python.rss",
+    "/author-jao.rss",
+    "/archive-2026.rss"
+  ],
+  "file_mappings": [],
+  "misc": [
+    "/index.html"
+  ],
+  "pages": [
+    "/about.html",
+    "/pages.html"
+  ],
+  "pagination": [
+    "/pages-1.html",
+    "/tag-dev-1.html",
+    "/tag-python-1.html",
+    "/author-jao-1.html",
+    "/archive-2026-1.html",
+    "/index-1.html",
+  ],
+  "posts": [
+    "/code-django.html",
+    "/code-python.html",
+  ],
+  "redirects": [],
+  "series": [],
+  "streams": [
+    "/code.html",
+    "/streams.html"
+  ],
+  "summary": {
+    "archives": 1,
+    "authors": 1,
+    "feeds": 5,
+    "file_mappings": 0,
+    "meta": {
+      "absolute_urls": false,
+      "url": ""
+    },
+    "misc": 1,
+    "pages": 1,
+    "pagination": 1,
+    "posts": 2,
+    "redirects": 0,
+    "series": 0,
+    "streams": 2,
+    "tags": 1,
+  },
+  "tags": [
+    "/tag-python.html",
+    "/tags.html"
+  ]
+}
+```
+
+This tool allows the agent to:
+
+- compare urls before and after a refactor
+- check generated content slug
+- count number of contents
+
+### init site
+
+```
+marmite input_folder --init-site
+```
+
+Initialize a new site structure from scaffolding.
+
+### New post
+
+```
+marmite input_folder --new "title" -t tag
+```
+
+Create a new post.
+
+### More
+
+Use `marmite --help` to check what else is available.

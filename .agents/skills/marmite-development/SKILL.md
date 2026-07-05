@@ -12,6 +12,107 @@ This skill is for developers contributing to the marmite codebase. For building 
 - License: AGPL-3.0-or-later
 - Language: Rust (edition 2021)
 
+## Tools to call during development
+
+### Show urls
+
+```
+marmite input_folder --show-urls
+```
+```
+{
+  "archives": [
+    "/archive-2027.html",
+    "/archive.html"
+  ],
+  "authors": [
+    "/author-jao.html",
+    "/authors.html"
+  ],
+  "feeds": [
+    "/index.rss",
+    "/internet.rss",
+    "/tag-python.rss",
+    "/author-jao.rss",
+    "/archive-2026.rss"
+  ],
+  "file_mappings": [],
+  "misc": [
+    "/index.html"
+  ],
+  "pages": [
+    "/about.html",
+    "/pages.html"
+  ],
+  "pagination": [
+    "/pages-1.html",
+    "/tag-dev-1.html",
+    "/tag-python-1.html",
+    "/author-jao-1.html",
+    "/archive-2026-1.html",
+    "/index-1.html",
+  ],
+  "posts": [
+    "/code-django.html",
+    "/code-python.html",
+  ],
+  "redirects": [],
+  "series": [],
+  "streams": [
+    "/code.html",
+    "/streams.html"
+  ],
+  "summary": {
+    "archives": 1,
+    "authors": 1,
+    "feeds": 5,
+    "file_mappings": 0,
+    "meta": {
+      "absolute_urls": false,
+      "url": ""
+    },
+    "misc": 1,
+    "pages": 1,
+    "pagination": 1,
+    "posts": 2,
+    "redirects": 0,
+    "series": 0,
+    "streams": 2,
+    "tags": 1,
+  },
+  "tags": [
+    "/tag-python.html",
+    "/tags.html"
+  ]
+}
+```
+
+This tool allows the agent to:
+
+- compare urls before and after a refactor
+- check generated content slug
+- count number of contents
+
+### init site
+
+```
+marmite input_folder --init-site
+```
+
+Initialize a new site structure from scaffolding.
+
+### New post
+
+```
+marmite input_folder --new "title" -t tag
+```
+
+Create a new post.
+
+### More
+
+Use `marmite --help` to check what else is available.
+
 ## Code Quality Requirements
 
 ### Formatting and Linting
@@ -249,9 +350,11 @@ Update the corresponding reference file when the feature changes:
 
 These files are compiled into the binary via `rust_embed` and installed with `--skill-install`. They must stay accurate.
 
+When adding a new feature, add to the top level SKILL.md
+
 ### Release notes
 
-Every new feature and bug fix must be added to the current draft release notes. Find the latest release notes file with `stream: draft` in frontmatter under `example/content/`. The filename pattern is `YYYY-MM-DD-HH-MM-SS-marmite-X-Y-Z-release-notes.md`.
+Every new feature and bug fix must be added to the current draft release notes. Find the latest release notes file with `stream: draft` in frontmatter under `example/content/release-notes/`. The filename pattern is `marmite-X-Y-Z-release-notes.md`.
 
 - For new features, add a section describing what the feature does and how to use it.
 - For bug fixes, describe what was broken and how it is fixed.

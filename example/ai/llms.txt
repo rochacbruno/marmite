@@ -37,14 +37,18 @@ $ marmite myblog --serve
 
 - [Why to use Marmite?](https://marmite.blog/why-to-use-marmite.html): Learn about Marmite's features and design philosophy
 - [Getting Started](https://marmite.blog/getting-started.html): Quick start guide to create your first blog with Marmite
+- [Python Installation](https://marmite.blog/python-installation-with-pip.html): Installing marmite via pip or uvx
 - [Command Line Interface](https://marmite.blog/marmite-command-line-interface.html): Complete reference for all CLI commands and options
 
 ### Content Creation
 
 - [Content Types and Taxonomy](https://marmite.blog/content-types.html): Understanding posts, pages, tags, and streams
 - [Markdown Format](https://marmite.blog/markdown-format.html): Supported markdown syntax and extensions
+- [Wikilinks Guide](https://marmite.blog/wikilinks-demo-how-to-guide.html): Obsidian-style wikilinks with slug resolution
 - [Using Markdown to Customize Layout](https://marmite.blog/using-markdown-to-customize-layout.html): Special markdown files for layout customization
 - [Streams Guide](https://marmite.blog/streams-guide.html): Organizing content with streams
+- [Filename-Based Streams](https://marmite.blog/filename-based-streams-organize-content-with-file-naming.html): Automatic stream detection from filename prefixes
+- [Language Streams (i18n)](https://marmite.blog/language-streams.html): Multilingual content with auto-detected languages, translation linking, per-language streams and RSS, hreflang SEO tags
 - [Series Feature](https://marmite.blog/organizing-content-with-series-in-marmite.html): Creating ordered content series
 - [Draft Posts Guide](https://marmite.blog/how-to-use-draft-posts-in-marmite.html): Working with draft content
 - [Folder-Level Frontmatter Defaults](https://marmite.blog/folder-level-frontmatter-defaults.html): Inherit shared frontmatter (stream, tags, date, etc.) from a folder-level frontmatter.yaml file at any nesting depth, with layered inheritance and support for nested translation groups
@@ -81,6 +85,7 @@ $ marmite myblog --serve
 - [AT Protocol standard.site](https://marmite.blog/atproto-standard-site.html): Complete guide to publishing your Marmite blog posts to the decentralized AT Protocol
 - [Redirect Aliases](https://marmite.blog/redirect-aliases.html): Generate redirect pages for old URLs when content slugs change
 - [Internal Link Validation](https://marmite.blog/internal-link-validation.html): Build-time validation of internal links with warning and strict failure modes
+- [Marmite Playground](https://marmite.blog/marmite-playground.html): Try marmite in the browser with a live editor and real-time preview
 
 ### Deployment
 
