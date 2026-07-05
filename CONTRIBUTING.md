@@ -40,13 +40,25 @@ Project maintainers have the right and responsibility to remove, edit, or reject
 
 Before contributing, please ensure that you meet the following prerequisites:
 
-1. Rust Installed: Make sure you have Rust installed on your machine, as the project is written in Rust. Run the following command to check your installation:
+1. **Rust Installed:** Make sure you have Rust installed on your machine, as the project is written in Rust. Run the following command to check your installation:
 
 ```bash
 rustc --version
 ```
 
 Visit the rust page for more information [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install)
+
+2. **Mask Installed:** Install the [mask](https://crates.io/crates/mask) task runner:
+
+```bash
+cargo install mask
+```
+
+3. **Install the pre-commit hook:** This runs `mask pedantic` (format check + clippy with pedantic warnings) before every commit, so code quality issues are caught early:
+
+```bash
+mask install_hook
+```
 
 ## How to Contribute
 
@@ -84,40 +96,28 @@ feat: Added support for multiple markdown templates
 
 ### Code Quality
 
-Before pushing your changes ensure it meets the minimal code quality.
+If you ran `mask install_hook` during setup (see [Prerequisites](#prerequisites)), the pre-commit hook automatically runs `mask pedantic` before every commit. This checks formatting and runs clippy with pedantic warnings, so most issues are caught before they reach the PR.
 
-1. Format the code **Required**
+To bypass the hook for work-in-progress commits, use the standard git flag:
 
 ```bash
-cargo fmt
+git commit --no-verify
 ```
 
-2. Check clippy suggestions **Required**
+You can also run checks manually:
 
 ```bash
-cargo clippy
-```
+# Format the code
+mask fmt
 
-2. Apply clippy fixes **optional**
-
-```bash
-cargo clippy --fix
-```
-
-#### Mask
-
-There is a `maskfile.md` in the root of repo.
-You can use it for running checks with [mask](https://crates.io/crates/mask).
-
-```bash
-cargo install mask
+# Check formatting + clippy
 mask check
 
-# Ensure your changes are committed before running.
-mask fix
+# Check formatting + clippy with pedantic warnings (same as the pre-commit hook)
+mask pedantic
 
-# If you have free time :)
-mask pedantic 
+# Auto-apply clippy fixes (ensure your changes are committed first)
+mask fix
 mask pedantic_fix
 ```
 

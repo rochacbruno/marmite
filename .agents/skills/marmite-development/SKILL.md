@@ -578,11 +578,18 @@ When implementing a new feature that needs to transform paths, URLs, or text in 
 # Install mask task runner
 cargo install mask
 
+# Install pre-commit hook (runs mask pedantic before every commit)
+mask install_hook
+
 # Build and serve the example site with live reload
 mask serve
 ```
 
 The site runs at http://localhost:8000 with auto-rebuild on file changes.
+
+**Pre-commit hook:** The hook runs `mask pedantic` (format check + clippy with pedantic warnings) before every commit. If a check fails, the commit is blocked. To bypass for work-in-progress commits, use `git commit --no-verify`.
+
+**Agent note:** Before starting development work, verify the hook is in place. Check if `.git/hooks/pre-commit` exists and contains `mask pedantic`. If not, run `mask install_hook`.
 
 ### Useful commands
 
@@ -597,6 +604,7 @@ The site runs at http://localhost:8000 with auto-rebuild on file changes.
 | `mask test_integration` | Run integration tests only |
 | `mask build` | Build release binary |
 | `mask pedantic` | Run clippy with pedantic warnings |
+| `mask install_hook` | Install pre-commit hook that runs `mask pedantic` |
 | `mask fix` | Auto-apply clippy fixes |
 | `mask serve_theme` | Serve with the `theme_template` theme |
 | `mask serve_site` | Serve the actual marmite.blog site locally |

@@ -185,6 +185,21 @@ cargo llvm-cov report --html # generate report without tests (replace with --lco
 ~~~
 
 
+## install_hook
+
+> Install git pre-commit hook that runs mask pedantic
+
+~~~bash
+#!/usr/bin/env bash
+hook=".git/hooks/pre-commit"
+cat > "$hook" << 'HOOK'
+#!/bin/sh
+mask pedantic
+HOOK
+chmod +x "$hook"
+echo "Pre-commit hook installed at $hook"
+~~~
+
 ## build_python
 
 > Build Python wheel with maturin
