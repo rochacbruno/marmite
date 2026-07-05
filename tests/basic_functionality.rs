@@ -1,3 +1,4 @@
+use serde_json::Value;
 use std::fs;
 use std::process::Command;
 use tempfile::TempDir;
@@ -163,9 +164,17 @@ fn test_new_with_directory_flag() {
     );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+    let file_path = json["file"].as_str().unwrap();
     assert!(
-        stdout.contains("posts"),
-        "Output path should contain 'posts' directory: {stdout}"
+        file_path.contains("posts"),
+        "Output file path should contain 'posts' directory: {file_path}"
+    );
+    assert_eq!(json["title"].as_str().unwrap(), "Test Post");
+    assert_eq!(json["slug"].as_str().unwrap(), "test-post");
+    assert!(
+        json["date"].as_str().is_some(),
+        "Posts should have a date field"
     );
 
     // Create a page in the pages directory
@@ -226,9 +235,347 @@ fn test_new_with_directory_flag() {
     );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+    let file_path = json["file"].as_str().unwrap();
     assert!(
-        stdout.contains("tutorials"),
-        "Output path should contain 'tutorials' directory: {stdout}"
+        file_path.contains("tutorials"),
+        "Output file path should contain 'tutorials' directory: {file_path}"
+    );
+}
+
+#[test]
+fn test_new_json_output_format() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("json_site");
+
+    Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--init-site",
+        ])
+        .output()
+        .expect("Failed to init site");
+
+    // Create a post and verify JSON output
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "My Post",
+            "-t",
+            "rust,web",
+        ])
+        .output()
+        .expect("Failed to create post");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+    assert_eq!(json["title"].as_str().unwrap(), "My Post");
+    assert_eq!(json["slug"].as_str().unwrap(), "my-post");
+    assert!(json["file"].as_str().unwrap().ends_with(".md"));
+    assert!(json["date"].as_str().is_some());
+    assert_eq!(json["tags"].as_str().unwrap(), "rust,web");
+
+    // Create a page and verify no date field
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "About",
+            "-p",
+        ])
+        .output()
+        .expect("Failed to create page");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+    assert_eq!(json["title"].as_str().unwrap(), "About");
+    assert!(json["date"].is_null(), "Pages should not have a date field");
+}
+
+#[test]
+fn test_new_with_lang_standalone() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("lang_site");
+
+    Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--init-site",
+        ])
+        .output()
+        .expect("Failed to init site");
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "Ola Mundo",
+            "--lang",
+            "pt",
+        ])
+        .output()
+        .expect("Failed to create post with lang");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+    assert_eq!(json["language"].as_str().unwrap(), "pt");
+
+    let file_path = json["file"].as_str().unwrap();
+    let content = fs::read_to_string(file_path).unwrap();
+    assert!(
+        content.contains("language: pt"),
+        "Frontmatter should contain language field"
+    );
+}
+
+#[test]
+fn test_new_with_invalid_lang() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("invalid_lang_site");
+
+    Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--init-site",
+        ])
+        .output()
+        .expect("Failed to init site");
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "Test",
+            "--lang",
+            "xyz",
+        ])
+        .output()
+        .expect("Failed to run command");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Invalid language code"),
+        "Should report invalid language code: {stderr}"
+    );
+}
+
+#[test]
+fn test_new_translation_subfolder() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("trans_sub_site");
+
+    Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--init-site",
+        ])
+        .output()
+        .expect("Failed to init site");
+
+    // Create original post in a subfolder
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "Hello World",
+            "-p",
+            "-d",
+            "hello-world",
+        ])
+        .output()
+        .expect("Failed to create original post");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // Create translation - should auto-place in the same subfolder
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "Ola Mundo",
+            "--lang",
+            "pt",
+            "--translates",
+            "hello-world",
+        ])
+        .output()
+        .expect("Failed to create translation");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+    assert_eq!(json["language"].as_str().unwrap(), "pt");
+    assert_eq!(json["translates"].as_str().unwrap(), "hello-world");
+
+    let file_path = json["file"].as_str().unwrap();
+    assert!(
+        file_path.contains("hello-world/pt-ola-mundo.md"),
+        "Translation should be in the original's subfolder with lang prefix: {file_path}"
+    );
+    assert!(
+        std::path::Path::new(file_path).exists(),
+        "Translation file should exist"
+    );
+
+    // Verify frontmatter does NOT include translates (subfolder grouping handles it)
+    let content = fs::read_to_string(file_path).unwrap();
+    assert!(content.contains("language: pt"));
+    assert!(
+        !content.contains("translates:"),
+        "Subfolder translations should not have translates frontmatter"
+    );
+}
+
+#[test]
+fn test_new_translation_root_level() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("trans_root_site");
+
+    Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--init-site",
+        ])
+        .output()
+        .expect("Failed to init site");
+
+    // Create original post at root level (page so filename is predictable)
+    Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "About Page",
+            "-p",
+        ])
+        .output()
+        .expect("Failed to create original page");
+
+    // Create translation
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "Pagina Sobre",
+            "-p",
+            "--lang",
+            "pt",
+            "--translates",
+            "about-page",
+        ])
+        .output()
+        .expect("Failed to create translation");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+
+    let file_path = json["file"].as_str().unwrap();
+    let content = fs::read_to_string(file_path).unwrap();
+    assert!(content.contains("language: pt"));
+    assert!(
+        content.contains("translates: about-page"),
+        "Root-level translations should have translates frontmatter: {content}"
+    );
+}
+
+#[test]
+fn test_new_translation_nonexistent_slug() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("trans_noexist_site");
+
+    Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--init-site",
+        ])
+        .output()
+        .expect("Failed to init site");
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "Translation",
+            "--lang",
+            "pt",
+            "--translates",
+            "nonexistent-slug",
+        ])
+        .output()
+        .expect("Failed to run command");
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Cannot find content with slug"),
+        "Should report missing original content: {stderr}"
     );
 }
 

@@ -893,31 +893,98 @@ pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String>
     Ok(())
 }
 
+/// Find an existing content file whose slug matches the given target slug.
+pub fn find_file_by_slug(content_folder: &Path, target_slug: &str) -> Option<std::path::PathBuf> {
+    for entry in walkdir::WalkDir::new(content_folder)
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("md") {
+            continue;
+        }
+        if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+            let mut candidate = remove_date_from_filename(stem);
+            // Strip lang prefix (e.g. "pt-slug" -> "slug") for lang-prefixed files
+            if let Some((prefix, rest)) = candidate.split_once('-') {
+                if is_iso_639_1_code(prefix) {
+                    candidate = rest.to_string();
+                }
+            }
+            if candidate == target_slug {
+                return Some(path.to_path_buf());
+            }
+        }
+    }
+    None
+}
+
 /// Create a new file with the given text as title and slug
 pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &Path) {
     let content_folder = get_content_folder(&Data::from_file(config_path).site, input_folder);
     let mut path = content_folder.clone();
-    if let Some(ref dir) = cli_args.create.directory {
-        path.push(dir);
-        if let Err(e) = std::fs::create_dir_all(&path) {
-            error!("Failed to create directory: {e:?}");
+
+    if let Some(ref lang) = cli_args.create.lang {
+        if !is_iso_639_1_code(lang) {
+            error!("Invalid language code: {lang}. Must be a valid ISO 639-1 code.");
             return;
         }
     }
+
     let slug = crate::slugify::slugify(text);
-    if cli_args.create.page {
-        path.push(format!("{slug}.md"));
+    let now = chrono::Local::now();
+    let mut in_subfolder = false;
+
+    if let Some(ref translates_slug) = cli_args.create.translates {
+        let lang = cli_args
+            .create
+            .lang
+            .as_ref()
+            .expect("--lang is required with --translates");
+        match find_file_by_slug(&content_folder, translates_slug) {
+            Some(original_path) => {
+                if let Ok(relative) = original_path.strip_prefix(&content_folder) {
+                    let components: Vec<_> = relative.components().collect();
+                    if components.len() > 1 {
+                        in_subfolder = true;
+                        let parent = original_path.parent().expect("file should have parent");
+                        path = parent.to_path_buf();
+                        path.push(format!("{lang}-{slug}.md"));
+                    } else if cli_args.create.page {
+                        path.push(format!("{slug}.md"));
+                    } else {
+                        path.push(format!("{}-{slug}.md", now.format("%Y-%m-%d-%H-%M-%S")));
+                    }
+                }
+            }
+            None => {
+                error!(
+                    "Cannot find content with slug '{translates_slug}' in {}",
+                    content_folder.display()
+                );
+                return;
+            }
+        }
     } else {
-        path.push(format!(
-            "{}-{}.md",
-            chrono::Local::now().format("%Y-%m-%d-%H-%M-%S"),
-            slug
-        ));
+        if let Some(ref dir) = cli_args.create.directory {
+            path.push(dir);
+            if let Err(e) = std::fs::create_dir_all(&path) {
+                error!("Failed to create directory: {e:?}");
+                return;
+            }
+        }
+        if cli_args.create.page {
+            path.push(format!("{slug}.md"));
+        } else {
+            path.push(format!("{}-{slug}.md", now.format("%Y-%m-%d-%H-%M-%S")));
+        }
     }
+
     if path.exists() {
         error!("File already exists: {}", path.display());
         return;
     }
+
     let mut file = match std::fs::File::create(&path) {
         Ok(file) => file,
         Err(e) => {
@@ -925,25 +992,79 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
             return;
         }
     };
-    let content = if cli_args.create.tags.is_some() {
-        format!(
-            "---\n\
-            tags: {tags}\n\
-            ---\n\
-            # {text}\n\
-            \n\
-            ",
-            text = text,
-            tags = cli_args.create.tags.as_deref().unwrap_or(""),
-        )
+
+    // Build frontmatter from applicable fields
+    let tags = cli_args.create.tags.as_deref();
+    let lang = cli_args.create.lang.as_deref();
+    let translates = cli_args.create.translates.as_deref();
+    let needs_translates_field = translates.is_some() && !in_subfolder;
+    let has_frontmatter = tags.is_some() || lang.is_some() || needs_translates_field;
+
+    let content = if has_frontmatter {
+        let mut fm = String::from("---\n");
+        if let Some(lang) = lang {
+            fm.push_str(&format!("language: {lang}\n"));
+        }
+        if needs_translates_field {
+            fm.push_str(&format!(
+                "translates: {}\n",
+                translates.expect("checked above")
+            ));
+        }
+        if let Some(tags) = tags {
+            fm.push_str(&format!("tags: {tags}\n"));
+        }
+        fm.push_str("---\n");
+        format!("{fm}# {text}\n")
     } else {
         format!("# {text}\n")
     };
+
     if let Err(e) = file.write_all(content.as_bytes()) {
         error!("Failed to write to file: {e:?}");
         return;
     }
-    println!("{}", path.display());
+
+    // JSON output
+    let mut output = serde_json::Map::new();
+    output.insert(
+        "file".to_string(),
+        serde_json::Value::String(path.display().to_string()),
+    );
+    output.insert(
+        "title".to_string(),
+        serde_json::Value::String(text.to_string()),
+    );
+    output.insert("slug".to_string(), serde_json::Value::String(slug.clone()));
+    if !cli_args.create.page {
+        output.insert(
+            "date".to_string(),
+            serde_json::Value::String(now.format("%Y-%m-%d").to_string()),
+        );
+    }
+    if let Some(tags) = tags {
+        output.insert(
+            "tags".to_string(),
+            serde_json::Value::String(tags.to_string()),
+        );
+    }
+    if let Some(lang) = lang {
+        output.insert(
+            "language".to_string(),
+            serde_json::Value::String(lang.to_string()),
+        );
+    }
+    if let Some(translates_slug) = translates {
+        output.insert(
+            "translates".to_string(),
+            serde_json::Value::String(translates_slug.to_string()),
+        );
+    }
+    println!(
+        "{}",
+        serde_json::to_string(&output).expect("JSON serialization should not fail")
+    );
+
     if cli_args.create.edit {
         let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
             if cfg!(target_os = "windows") {

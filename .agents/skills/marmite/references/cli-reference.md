@@ -73,9 +73,25 @@ marmite <folder> --new "About" -p -d pages
 # Create in a topic subfolder (creates it if needed)
 marmite <folder> --new "Python Basics" -d tutorials
 
+# Create with a language code
+marmite <folder> --new "Articulo" --lang es
+
+# Create a translation of an existing post
+marmite <folder> --new "Ola Mundo" --lang pt --translates hello-world
+
 # In workspace mode, specify the target site
 marmite <workspace> --new "Post Title" --site blog
 ```
+
+The `--new` command outputs JSON with fields: `file`, `title`, `slug`, `date` (posts only), `tags`, `language`, `translates` (when applicable). Use `jq` to extract specific fields:
+
+```bash
+marmite <folder> --new "Title" | jq -r .file
+```
+
+When `--translates <slug>` is used:
+- If the original content is in a subfolder, the translation is placed in the same folder with a language-code prefix (e.g. `pt-slug.md`)
+- If the original is at root level, the translation goes to root with `translates` frontmatter
 
 ### Workspace (Multi-Site)
 
@@ -199,11 +215,13 @@ marmite [site_folder] atproto publish --dry-run
 
 | Flag | Short | Description |
 |------|-------|-------------|
-| `--new <TITLE>` | | Create new markdown file with given title |
+| `--new <TITLE>` | | Create new markdown file with given title (outputs JSON) |
 | `-e` | | Open in `$EDITOR` (requires `--new`) |
 | `-p` | | Create as page instead of post (requires `--new`) |
 | `-t <TAGS>` | | Set comma-separated tags (requires `--new`) |
 | `-d` | | Directory within content folder to create the file |
+| `--lang <CODE>` | | ISO 639-1 language code for the new content (requires `--new`) |
+| `--translates <SLUG>` | | Slug of original content this translates (requires `--new` and `--lang`) |
 
 ### Information
 

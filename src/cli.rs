@@ -146,8 +146,14 @@ pub struct Create {
     #[arg(short, requires = "new")]
     pub tags: Option<String>,
     /// Directory within the content folder to create the file
-    #[arg(short = 'd', requires = "new")]
+    #[arg(short = 'd', requires = "new", conflicts_with = "translates")]
     pub directory: Option<String>,
+    /// Language code (ISO 639-1) for the new content
+    #[arg(long, requires = "new")]
+    pub lang: Option<String>,
+    /// Slug of the original content this file translates
+    #[arg(long, requires_all = ["new", "lang"])]
+    pub translates: Option<String>,
     /// Target site within a workspace
     #[arg(long, requires = "new")]
     pub site: Option<String>,

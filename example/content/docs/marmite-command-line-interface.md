@@ -74,6 +74,13 @@ to have the **date** attribute set automatically.
 
 ```console
 $ marmite myblog --new "My first post" -t "post,content"   
+{"file":"myblog/content/2024-11-26-12-34-27-my-first-post.md","title":"My first post","slug":"my-first-post","date":"2024-11-26","tags":"post,content"}
+```
+
+The output is JSON, making it easy to pipe and filter with tools like `jq`:
+
+```console
+$ marmite myblog --new "My first post" | jq -r .file
 myblog/content/2024-11-26-12-34-27-my-first-post.md
 ```
 
@@ -83,19 +90,42 @@ Pass `-d` to specify a subfolder within the content directory:
 
 ```console
 $ marmite myblog --new "My first post" -d posts
-myblog/content/posts/2024-11-26-12-34-27-my-first-post.md
+{"file":"myblog/content/posts/2024-11-26-12-34-27-my-first-post.md","title":"My first post","slug":"my-first-post","date":"2024-11-26"}
 
 $ marmite myblog --new "About" -p -d pages
-myblog/content/pages/about.md
+{"file":"myblog/content/pages/about.md","title":"About","slug":"about"}
 ```
 
 The `-d` flag creates the directory if it does not exist, so you can use it to organize content into topic subfolders.
+
+### Creating translations
+
+Pass `--lang` to set a language code, and `--translates` to link the new content as a translation of an existing post:
+
+```console
+$ marmite myblog --new "Hello World" -p -d hello-world
+{"file":"myblog/content/hello-world/hello-world.md","title":"Hello World","slug":"hello-world"}
+
+$ marmite myblog --new "Ola Mundo" --lang pt --translates hello-world
+{"file":"myblog/content/hello-world/pt-ola-mundo.md","title":"Ola Mundo","slug":"ola-mundo","language":"pt","translates":"hello-world"}
+```
+
+When the original content is in a subfolder, the translation file is automatically placed in the same folder with a language-code prefix (e.g. `pt-ola-mundo.md`). This follows the subfolder-based translation convention that marmite detects automatically during site generation.
+
+When the original content is at the root of the content directory, the translation is also placed at root level with `language` and `translates` fields in its frontmatter.
+
+`--lang` can also be used without `--translates` to set the `language` frontmatter field on standalone content:
+
+```console
+$ marmite myblog --new "Articulo en Espanol" --lang es
+{"file":"myblog/content/2024-11-26-12-34-27-articulo-en-espanol.md","title":"Articulo en Espanol","slug":"articulo-en-espanol","date":"2024-11-26","language":"es"}
+```
 
 In workspace mode, use `--site` to specify the target site:
 
 ```console
 $ marmite myworkspace --new "My first post" --site blog
-myworkspace/blog/content/2024-11-26-12-34-27-my-first-post.md
+{"file":"myworkspace/blog/content/2024-11-26-12-34-27-my-first-post.md","title":"My first post","slug":"my-first-post","date":"2024-11-26"}
 ```
 
 
@@ -586,7 +616,11 @@ Options:
   -t <TAGS>
           Set the tags for the new content tags are comma separated
   -d <DIRECTORY>
-          Directory within content folder to create the file
+          Directory within the content folder to create the file
+      --lang <LANG>
+          Language code (ISO 639-1) for the new content
+      --translates <TRANSLATES>
+          Slug of the original content this file translates
       --site <SITE>
           Target site within a workspace
       --name <NAME>

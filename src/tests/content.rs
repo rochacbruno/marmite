@@ -1240,3 +1240,79 @@ fn test_from_markdown_file_frontmatter_overrides_defaults() {
 
     assert_eq!(result.stream.as_deref(), Some("rust"));
 }
+
+#[test]
+fn test_find_file_by_slug_dated_filename() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path();
+    fs::write(
+        content_dir.join("2024-01-01-hello-world.md"),
+        "# Hello World\n",
+    )
+    .unwrap();
+
+    let result = find_file_by_slug(content_dir, "hello-world");
+    assert!(result.is_some());
+    assert!(result
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .contains("2024-01-01-hello-world.md"));
+}
+
+#[test]
+fn test_find_file_by_slug_page_filename() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path();
+    fs::write(content_dir.join("about.md"), "# About\n").unwrap();
+
+    let result = find_file_by_slug(content_dir, "about");
+    assert!(result.is_some());
+    assert!(result.unwrap().to_str().unwrap().contains("about.md"));
+}
+
+#[test]
+fn test_find_file_by_slug_in_subfolder() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path();
+    let sub = content_dir.join("hello-world");
+    fs::create_dir_all(&sub).unwrap();
+    fs::write(sub.join("hello-world.md"), "# Hello World\n").unwrap();
+
+    let result = find_file_by_slug(content_dir, "hello-world");
+    assert!(result.is_some());
+    assert!(result
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .contains("hello-world/hello-world.md"));
+}
+
+#[test]
+fn test_find_file_by_slug_no_match() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path();
+    fs::write(content_dir.join("other-post.md"), "# Other\n").unwrap();
+
+    let result = find_file_by_slug(content_dir, "nonexistent");
+    assert!(result.is_none());
+}
+
+#[test]
+fn test_find_file_by_slug_skips_lang_prefix() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path();
+    let sub = content_dir.join("hello-world");
+    fs::create_dir_all(&sub).unwrap();
+    fs::write(sub.join("hello-world.md"), "# Hello World\n").unwrap();
+    fs::write(sub.join("pt-ola-mundo.md"), "# Ola Mundo\n").unwrap();
+
+    let result = find_file_by_slug(content_dir, "hello-world");
+    assert!(result.is_some());
+    let path = result.unwrap();
+    assert!(
+        path.to_str().unwrap().contains("hello-world.md"),
+        "Should find the base file, not the translation: {}",
+        path.display()
+    );
+}
