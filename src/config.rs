@@ -643,6 +643,7 @@ fn default_date_format() -> String {
 
 fn default_menu() -> Option<Vec<(String, String)>> {
     vec![
+        ("About".to_string(), "about.html".to_string()),
         ("Tags".to_string(), "tags.html".to_string()),
         ("Archive".to_string(), "archive.html".to_string()),
         ("Authors".to_string(), "authors.html".to_string()),

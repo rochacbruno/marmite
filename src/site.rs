@@ -4136,7 +4136,7 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     }
     // create content/_sidebar.md with `<!-- Sidebar content -->` content
     let side_bar_content = "
-    {% set groups = ['tag', 'archive', 'author', 'stream'] %}\n\
+    {% set groups = ['tag', 'archive', 'author'] %}\n\
     {% for group in groups %}\n\
     \n\
     ##### {{group}}s\n\
@@ -4145,7 +4145,15 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     - [{{name}}]({{group}}-{{name | slugify}}.html)\n\
     {% endfor %}\n\
     \n\
-    {% endfor %}
+    {% endfor %}\n\
+    \n\
+    #### Streams\n\
+    \n\
+    {% for name, items in group(kind='stream') -%}\n\
+    \n\
+    - [{{name}}]({{name | slugify}}.html)\n\
+    \n\
+    {% endfor %}\n\n\
     ";
     if let Err(e) = fs::write(content_folder.join("_sidebar.example.md"), side_bar_content) {
         error!("Failed to create 'content/_sidebar.md' file: {e:?}");
@@ -4191,7 +4199,9 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         Hi, edit `content/pages/about.md` to change this content.\n\
         \n\
         Pages are content without a date. They do not appear in feeds or the index.\n\
-        Add them to the menu in `marmite.yaml` to make them accessible.\
+        Add them to the menu in `marmite.yaml` to make them accessible.\n\
+        \n\
+        To see all your pages take a look at [[pages]]\n\n\
         ",
     ) {
         error!("Failed to create 'content/pages/about.md' file: {e:?}");
