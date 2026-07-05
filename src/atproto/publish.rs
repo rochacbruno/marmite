@@ -229,6 +229,7 @@ fn collect_publishable_posts(input_folder: &Path, config_path: &Path) -> Vec<Con
                 None,
                 None,
                 None,
+                None,
             )
             .ok()
         })

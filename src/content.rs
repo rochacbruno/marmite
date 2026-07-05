@@ -139,6 +139,7 @@ impl Content {
         modified_time: Option<i64>,
         highlighter: Option<&MarmiteHighlighter>,
         folder_defaults: Option<&Frontmatter>,
+        content_dir: Option<&Path>,
     ) -> Result<Content, String> {
         let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
         let (mut frontmatter, raw_markdown) = parse_front_matter(&file_content)?;
@@ -196,14 +197,21 @@ impl Content {
 
         // Download banner image if image provider is configured and this is a post (has date)
         if date.is_some() {
-            if let Some(parent) = path.parent() {
-                let _ =
-                    image_provider::download_banner_image(site, &frontmatter, parent, &slug, &tags);
-            }
+            let media_root = content_dir.or(path.parent()).unwrap_or(path);
+            let _ =
+                image_provider::download_banner_image(site, &frontmatter, media_root, &slug, &tags);
         }
 
-        let card_image = get_card_image(&frontmatter, &html, path, &slug, &site.media_path);
-        let banner_image = get_banner_image(&frontmatter, path, &slug, &site.media_path);
+        let card_image = get_card_image(
+            &frontmatter,
+            &html,
+            path,
+            &slug,
+            &site.media_path,
+            content_dir,
+        );
+        let banner_image =
+            get_banner_image(&frontmatter, path, &slug, &site.media_path, content_dir);
         let authors = get_authors(&frontmatter, Some(site.default_author.clone()));
         let pinned = frontmatter
             .get("pinned")
@@ -959,19 +967,26 @@ pub fn get_card_image(
     path: &Path,
     slug: &str,
     media_path: &str,
+    content_dir: Option<&Path>,
 ) -> Option<String> {
     if let Some(card_image) = frontmatter.get("card_image") {
         return Some(card_image.to_string());
     }
 
     // Try to find image matching the slug
-    if let Some(value) = find_matching_file(slug, path, "card", &["png", "jpg", "jpeg"], media_path)
-    {
+    if let Some(value) = find_matching_file(
+        slug,
+        path,
+        "card",
+        &["png", "jpg", "jpeg"],
+        media_path,
+        content_dir,
+    ) {
         return Some(value);
     }
 
     // try banner_image
-    if let Some(banner_image) = get_banner_image(frontmatter, path, slug, media_path) {
+    if let Some(banner_image) = get_banner_image(frontmatter, path, slug, media_path, content_dir) {
         return Some(banner_image);
     }
 
@@ -994,6 +1009,7 @@ fn find_matching_file(
     kind: &str,
     exts: &[&str],
     media_folder_name: &str,
+    content_dir: Option<&Path>,
 ) -> Option<String> {
     let parent_path = path.parent().unwrap_or(path);
     let media_path = parent_path.join(media_folder_name);
@@ -1035,11 +1051,9 @@ fn find_matching_file(
     // Fallback: generic {kind}.{ext} in subfolder media (shared by all files in the subfolder)
     // e.g., content/language-streams/media/banner.jpg matches for any .md in that subfolder
     // Only applies when the content is in a real subfolder, not the content root itself.
-    // The parent must have its own parent with a media folder for this to be a subfolder.
+    // An ancestor (up to 3 levels) must have its own media folder for this to be a subfolder.
     if media_path.is_dir() {
-        let is_subfolder = parent_path
-            .parent()
-            .is_some_and(|gp| gp.join(media_folder_name).is_dir());
+        let is_subfolder = content_dir.is_some_and(|cd| parent_path != cd);
         if is_subfolder {
             if let Some(subfolder_name) = parent_path.file_name().and_then(|n| n.to_str()) {
                 for ext in exts {
@@ -1055,6 +1069,25 @@ fn find_matching_file(
         }
     }
 
+    // Fallback: check the content root's media directory for slug-based files.
+    // When content is in a subfolder (content/docs/post.md), the root
+    // content/media/ may have the banner (e.g. downloaded by image_provider).
+    if let Some(cd) = content_dir {
+        if parent_path != cd {
+            let root_media = cd.join(media_folder_name);
+            if root_media.is_dir() {
+                for ext in exts {
+                    for image_filename in [format!("{slug}.{kind}.{ext}"), format!("{slug}.{ext}")]
+                    {
+                        if root_media.join(&image_filename).exists() {
+                            return Some(format!("{media_folder_name}/{image_filename}"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     None
 }
 
@@ -1063,6 +1096,7 @@ fn get_banner_image(
     path: &Path,
     slug: &str,
     media_path: &str,
+    content_dir: Option<&Path>,
 ) -> Option<String> {
     if let Some(banner_image) = frontmatter.get("banner_image") {
         return Some(
@@ -1075,9 +1109,14 @@ fn get_banner_image(
     }
 
     // Try to find image matching the slug
-    if let Some(value) =
-        find_matching_file(slug, path, "banner", &["png", "jpg", "jpeg"], media_path)
-    {
+    if let Some(value) = find_matching_file(
+        slug,
+        path,
+        "banner",
+        &["png", "jpg", "jpeg"],
+        media_path,
+        content_dir,
+    ) {
         return Some(value);
     }
 

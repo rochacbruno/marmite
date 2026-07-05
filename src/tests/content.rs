@@ -521,7 +521,7 @@ fn test_get_card_image_from_frontmatter() {
     let expected = Some("\"media/image.jpg\"".to_string());
     // assert_eq!(get_card_image(&frontmatter, html, ), expected);
     assert_eq!(
-        get_card_image(&frontmatter, html, Path::new("test"), "test", "media"),
+        get_card_image(&frontmatter, html, Path::new("test"), "test", "media", None),
         expected
     );
 }
@@ -532,7 +532,7 @@ fn test_get_card_image_from_html() {
     let html = r#"<p>Some content</p><img src="media/image.jpg" />"#;
     let expected = Some("media/image.jpg".to_string());
     assert_eq!(
-        get_card_image(&frontmatter, html, Path::new("test"), "test", "media"),
+        get_card_image(&frontmatter, html, Path::new("test"), "test", "media", None),
         expected
     );
 }
@@ -543,7 +543,7 @@ fn test_get_card_image_no_image() {
     let html = "<p>Some content</p>";
     let expected: Option<String> = None;
     assert_eq!(
-        get_card_image(&frontmatter, html, Path::new("test"), "test", "media"),
+        get_card_image(&frontmatter, html, Path::new("test"), "test", "media", None),
         expected
     );
 }
@@ -554,7 +554,7 @@ fn test_get_card_image_with_multiple_images() {
     let html = r#"<p>Some content</p><img src="image1.jpg" /><img src="image2.jpg" />"#;
     let expected = Some("image1.jpg".to_string());
     assert_eq!(
-        get_card_image(&frontmatter, html, Path::new("test"), "test", "media"),
+        get_card_image(&frontmatter, html, Path::new("test"), "test", "media", None),
         expected
     );
 }
@@ -565,7 +565,7 @@ fn test_get_card_image_with_invalid_html() {
     let html = r#"<p>Some content</p><img src="image.jpg"#;
     let expected: Option<String> = None;
     assert_eq!(
-        get_card_image(&frontmatter, html, Path::new("test"), "test", "media"),
+        get_card_image(&frontmatter, html, Path::new("test"), "test", "media", None),
         expected
     );
 }
@@ -585,7 +585,8 @@ date: "2023-01-01"
 This is a test content.
 "#;
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None, None, None).unwrap();
+    let result =
+        Content::from_markdown(path, None, &Marmite::default(), None, None, None, None).unwrap();
     assert_eq!(result.title, "Test Title");
     assert_eq!(result.description, Some("\"Test Description\"".to_string()));
     assert_eq!(result.slug, "test-title");
@@ -611,7 +612,7 @@ extra: "extra content"
 This is a test content.
 "#;
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None, None, None);
+    let result = Content::from_markdown(path, None, &Marmite::default(), None, None, None, None);
     assert!(result.is_err());
     fs::remove_file(path).unwrap();
 }
@@ -624,7 +625,8 @@ fn test_get_content_without_frontmatter() {
 This is a test content.
 ";
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None, None, None).unwrap();
+    let result =
+        Content::from_markdown(path, None, &Marmite::default(), None, None, None, None).unwrap();
     assert_eq!(result.title, "Test Content".to_string());
     assert_eq!(result.description, None);
     assert_eq!(result.slug, "test_get_content_without_frontmatter");
@@ -640,7 +642,8 @@ fn test_get_content_with_empty_file() {
     let path = Path::new("test_get_content_with_empty_file.md");
     let content = "";
     fs::write(path, content).unwrap();
-    let result = Content::from_markdown(path, None, &Marmite::default(), None, None, None).unwrap();
+    let result =
+        Content::from_markdown(path, None, &Marmite::default(), None, None, None, None).unwrap();
     assert_eq!(result.slug, "test_get_content_with_empty_file".to_string());
     fs::remove_file(path).unwrap();
 }
@@ -656,7 +659,14 @@ fn test_find_matching_file_subfolder_banner() {
     let dummy_file = content_dir.join("test.md");
     fs::write(&dummy_file, "").unwrap();
 
-    let result = find_matching_file("test-slug", &dummy_file, "banner", &["png", "jpg"], "media");
+    let result = find_matching_file(
+        "test-slug",
+        &dummy_file,
+        "banner",
+        &["png", "jpg"],
+        "media",
+        None,
+    );
     assert_eq!(result, Some("media/test-slug/banner.png".to_string()));
 }
 
@@ -671,7 +681,14 @@ fn test_find_matching_file_subfolder_card() {
     let dummy_file = content_dir.join("test.md");
     fs::write(&dummy_file, "").unwrap();
 
-    let result = find_matching_file("test-slug", &dummy_file, "card", &["png", "jpg"], "media");
+    let result = find_matching_file(
+        "test-slug",
+        &dummy_file,
+        "card",
+        &["png", "jpg"],
+        "media",
+        None,
+    );
     assert_eq!(result, Some("media/test-slug/card.jpg".to_string()));
 }
 
@@ -687,7 +704,7 @@ fn test_find_matching_file_flat_takes_precedence_over_subfolder() {
     let dummy_file = content_dir.join("test.md");
     fs::write(&dummy_file, "").unwrap();
 
-    let result = find_matching_file("test-slug", &dummy_file, "banner", &["png"], "media");
+    let result = find_matching_file("test-slug", &dummy_file, "banner", &["png"], "media", None);
     assert_eq!(
         result,
         Some("media/test-slug.banner.png".to_string()),
@@ -706,7 +723,14 @@ fn test_find_matching_file_subfolder_slug_named() {
     let dummy_file = content_dir.join("test.md");
     fs::write(&dummy_file, "").unwrap();
 
-    let result = find_matching_file("my-post", &dummy_file, "card", &["png", "jpg"], "media");
+    let result = find_matching_file(
+        "my-post",
+        &dummy_file,
+        "card",
+        &["png", "jpg"],
+        "media",
+        None,
+    );
     assert_eq!(result, Some("media/my-post/my-post.jpg".to_string()));
 }
 
@@ -725,6 +749,7 @@ fn test_find_matching_file_subfolder_nonexistent() {
         "banner",
         &["png", "jpg"],
         "media",
+        None,
     );
     assert_eq!(result, None);
 }
@@ -736,7 +761,8 @@ fn test_at_prefix_replacement_in_content() {
     let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n![](@/photo.png)\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::new(), None, None, None, None).unwrap();
     assert!(
         result.html.contains("media/my-post/photo.png"),
         "Expected @/ to be replaced with media/my-post/, got: {}",
@@ -752,7 +778,8 @@ fn test_at_prefix_replacement_multiple_occurrences() {
         "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\n![](@/a.png)\n\n[PDF](@/doc.pdf)\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::new(), None, None, None, None).unwrap();
     assert!(
         result.html.contains("media/my-post/a.png"),
         "got: {}",
@@ -772,7 +799,8 @@ fn test_at_prefix_no_replacement_in_fragments() {
     let content = "---\ntitle: Fragment\n---\n![](@/should-stay.png)\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::new(), None, None, None, None).unwrap();
     assert!(
         result.html.contains("@/should-stay.png"),
         "Fragments should not have @/ replaced, got: {}",
@@ -790,7 +818,7 @@ fn test_at_prefix_with_custom_media_path() {
     let mut config = Marmite::new();
     config.media_path = "assets".to_string();
 
-    let result = Content::from_markdown(&path, None, &config, None, None, None).unwrap();
+    let result = Content::from_markdown(&path, None, &config, None, None, None, None).unwrap();
     assert!(
         result.html.contains("assets/my-post/photo.png"),
         "Expected @/ to use custom media_path 'assets', got: {}",
@@ -806,7 +834,8 @@ fn test_at_prefix_not_replaced_in_plain_text() {
         "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\nHello, this is my symbol @/ and should not be replaced\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::new(), None, None, None, None).unwrap();
     assert!(
         result.html.contains("@/"),
         "Plain text @/ should not be replaced, got: {}",
@@ -826,7 +855,8 @@ fn test_at_prefix_not_replaced_in_code_block() {
     let content = "---\ntitle: My Post\nslug: my-post\ndate: 2024-01-01\n---\nHere is how you use it:\n\n```markdown\n![](@/foo.png)\n```\n";
     fs::write(&path, content).unwrap();
 
-    let result = Content::from_markdown(&path, None, &Marmite::new(), None, None, None).unwrap();
+    let result =
+        Content::from_markdown(&path, None, &Marmite::new(), None, None, None, None).unwrap();
     assert!(
         !result.html.contains("media/my-post/foo.png"),
         "Code block @/ should not be replaced, got: {}",
@@ -886,7 +916,7 @@ fn test_aliases_parsed_from_markdown() {
     fs::write(&path, content).unwrap();
 
     let result =
-        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None, None).unwrap();
     assert_eq!(result.aliases, vec!["old-post", "legacy-post"]);
 }
 
@@ -898,7 +928,7 @@ fn test_aliases_empty_when_not_specified() {
     fs::write(&path, content).unwrap();
 
     let result =
-        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None, None).unwrap();
     assert!(result.aliases.is_empty());
 }
 
@@ -961,7 +991,7 @@ fn test_language_frontmatter_parsed() {
     fs::write(&path, content).unwrap();
 
     let result =
-        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None, None).unwrap();
     assert_eq!(result.language, Some("en".to_string()));
 }
 
@@ -973,7 +1003,7 @@ fn test_translations_frontmatter_parsed() {
     fs::write(&path, content).unwrap();
 
     let result =
-        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None, None).unwrap();
     assert_eq!(result.translations.len(), 2);
     assert_eq!(result.translations[0].slug, "pt-ola");
     assert_eq!(result.translations[1].slug, "es-hola");
@@ -987,7 +1017,7 @@ fn test_translations_frontmatter_empty_when_not_specified() {
     fs::write(&path, content).unwrap();
 
     let result =
-        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None, None).unwrap();
     assert!(result.translations.is_empty());
 }
 
@@ -999,7 +1029,7 @@ fn test_translates_frontmatter_parsed() {
     fs::write(&path, content).unwrap();
 
     let result =
-        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None, None).unwrap();
     assert_eq!(result.translates, Some("hello".to_string()));
     assert_eq!(result.language, Some("pt".to_string()));
 }
@@ -1012,7 +1042,7 @@ fn test_translates_frontmatter_empty_when_not_specified() {
     fs::write(&path, content).unwrap();
 
     let result =
-        Content::from_markdown(&path, None, &Marmite::default(), None, None, None).unwrap();
+        Content::from_markdown(&path, None, &Marmite::default(), None, None, None, None).unwrap();
     assert!(result.translates.is_none());
 }
 
@@ -1128,6 +1158,7 @@ fn test_from_markdown_with_folder_defaults() {
         None,
         None,
         Some(&defaults),
+        None,
     )
     .unwrap();
 
@@ -1154,6 +1185,7 @@ fn test_from_markdown_file_frontmatter_overrides_defaults() {
         None,
         None,
         Some(&defaults),
+        None,
     )
     .unwrap();
 

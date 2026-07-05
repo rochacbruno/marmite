@@ -1368,6 +1368,7 @@ pub(crate) fn collect_content(
                 modified_time,
                 highlighter,
                 defaults,
+                Some(content_dir),
             )
         })
         .collect::<Vec<_>>();
@@ -2714,43 +2715,59 @@ fn handle_static_artifacts(
         );
     }
 
-    // Copy media from content subfolders (content/{name}/media/ -> output/media/{name}/)
-    // These take precedence over global media since they're copied after
+    // Copy media from content subfolders at any depth.
+    // content/{any/path}/media/ -> output/media/{any/path}/
+    // These take precedence over global media since they're copied after.
     let media_folder_name = &site_data.site.media_path;
-    if let Ok(entries) = fs::read_dir(content_dir) {
-        for entry in entries.filter_map(Result::ok) {
-            let path = entry.path();
-            if !path.is_dir() {
-                continue;
-            }
-            let dir_name = match path.file_name().and_then(|n| n.to_str()) {
-                Some(name) => name.to_string(),
-                None => continue,
-            };
-            if dir_name == *media_folder_name {
-                continue;
-            }
-            let subfolder_media = path.join(media_folder_name);
-            if subfolder_media.is_dir() {
-                let dest = output_folder.join(media_folder_name).join(&dir_name);
-                if let Err(e) = fs::create_dir_all(&dest) {
-                    error!("Failed to create media subfolder directory: {e:?}");
-                    continue;
-                }
-                let mut options = CopyOptions::new();
-                options.overwrite = true;
-                options.content_only = true;
-                if let Err(e) = dircopy(&subfolder_media, &dest, &options) {
-                    error!("Failed to copy subfolder media: {e:?}");
-                    continue;
-                }
-                debug!(
-                    "Copied content subfolder media '{}' to '{}'",
-                    subfolder_media.display(),
-                    dest.display()
-                );
-            }
+    for entry in WalkDir::new(content_dir)
+        .min_depth(1)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
         }
+        let dir_name = match path.file_name().and_then(|n| n.to_str()) {
+            Some(name) => name,
+            None => continue,
+        };
+        if dir_name != media_folder_name.as_str() {
+            continue;
+        }
+        // Skip the root media directory (already copied above)
+        if path.parent() == Some(content_dir) {
+            continue;
+        }
+        // Use the immediate parent directory name as the destination.
+        // This matches the slug-based media paths used by @/ and banner discovery.
+        // content/docs/my-post/media/ -> output/media/my-post/
+        // content/hello/media/        -> output/media/hello/
+        let parent = match path.parent() {
+            Some(p) => p,
+            None => continue,
+        };
+        let subfolder_name = match parent.file_name().and_then(|n| n.to_str()) {
+            Some(name) => name,
+            None => continue,
+        };
+        let dest = output_folder.join(media_folder_name).join(subfolder_name);
+        if let Err(e) = fs::create_dir_all(&dest) {
+            error!("Failed to create media subfolder directory: {e:?}");
+            continue;
+        }
+        let mut options = CopyOptions::new();
+        options.overwrite = true;
+        options.content_only = true;
+        if let Err(e) = dircopy(path, &dest, &options) {
+            error!("Failed to copy subfolder media: {e:?}");
+            continue;
+        }
+        debug!(
+            "Copied content subfolder media '{}' to '{}'",
+            path.display(),
+            dest.display()
+        );
     }
 
     // Process image resizing if configured in extra (and not skipped)
@@ -3683,6 +3700,7 @@ fn handle_404(
             &Marmite::default(),
             None,
             highlighter,
+            None,
             None,
         )?;
         content.html.clone_from(&custom_content.html);
