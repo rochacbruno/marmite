@@ -11,6 +11,10 @@ on:
         description: 'Git ref (branch/tag/commit) to build marmite from (ignored when using crates.io)'
         type: string
         default: ''
+      cli_overrides:
+        description: 'Additional CLI flags passed to marmite (e.g. --toc false --strict-internal-links false)'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -72,12 +76,12 @@ jobs:
           python .github/contributors.py marmitesite/content/contributors.md
 
       - name: Build site 🏗️
-        run: marmite marmitesite site -vvvv
+        run: marmite marmitesite site -vvvv ${{ inputs.cli_overrides }}
 
       - name: Build site with alternative theme 🏗️
         run: |
           rm -rf marmitesite/content/_hero.md
-          marmite marmitesite site/theme_template -vvvv --theme theme_template --url https://marmite.blog/theme_template
+          marmite marmitesite site/theme_template -vvvv --theme theme_template --url https://marmite.blog/theme_template ${{ inputs.cli_overrides }}
 
       - name: List files on site 📂
         run: ls -R site
