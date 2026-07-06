@@ -517,6 +517,11 @@ Values deep-merge across layers (site < folder < page), so a page can override j
 
 To use client-side rendering instead, set `native_mermaid_render: false` in `marmite.yaml` and add `extra: {"mermaid": true}` to each content's frontmatter. MermaidJS is then loaded from a CDN and renders diagrams in the browser. Use `extra: {"mermaid_theme": "dark"}` to set the theme per page, with values `forest`, `neutral`, `dark`, `base`, `default`. Unlike `mermaid_config`, this must be configured individually on each content file.
 
+
+#### Example Diagrams
+
+##### Sequence
+
 ```mermaid
 sequenceDiagram
     Alice ->> Bob: Hello Bob, how are you?
@@ -530,6 +535,8 @@ sequenceDiagram
 
 ```
 
+##### Flowchart
+
 ```mermaid
 graph LR
     A[Square Rect] -- Link text --> B((Circle))
@@ -538,6 +545,8 @@ graph LR
     C --> D
 
 ```
+
+##### Bar Chart
 
 ```mermaid
 xychart-beta
@@ -549,6 +558,8 @@ xychart-beta
 
 ```
 
+##### Pie Chart
+
 ```mermaid
 pie title Pets adopted by volunteers
     "Dogs" : 386
@@ -556,6 +567,8 @@ pie title Pets adopted by volunteers
     "Rats" : 15
 
 ```
+
+##### Timeline
 
 ```mermaid
 timeline
@@ -566,6 +579,11 @@ timeline
     2024-10-20 : Big refactor
     2024-10-22 : Diagram support
 ```
+
+
+> [!TIP]
+> See more mermaid diagrams on [[Mermaid Examples|draft-mermaid-diagram-tests]]
+
 
 <details>
 <summary> Click to see the raw mermaid </summary>
