@@ -338,7 +338,7 @@ Use `@/` to reference files in the content's own media subfolder without typing 
 
 Marmite replaces `@/` with `media/{slug}/` in the rendered HTML. The replacement only targets `src` and `href` attributes - `@/` in plain text and code blocks is left untouched.
 
-See the [Media Organization](media-organization.html) guide for full details.
+See the [Media Organization](media-organization-with-slug-based-subfolders.html) guide for full details.
   
 ### Site Config
   

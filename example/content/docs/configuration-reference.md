@@ -493,7 +493,7 @@ atproto:
   publish_content: true
 ```
 
-See the [[AT Protocol standard.site]] documentation for more details.
+See the [[AT Protocol standard.site|atproto-standard-site]] documentation for more details.
 
 ## Markdown parser options
 

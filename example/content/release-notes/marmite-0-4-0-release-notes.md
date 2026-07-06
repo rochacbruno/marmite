@@ -123,7 +123,7 @@ Use `@/` in markdown image and link syntax to reference files in the content's m
 
 Marmite replaces `@/` with `media/{slug}/` in the rendered HTML. The replacement only targets `src` and `href` attributes, so `@/` in plain text, code blocks, and fragment files is left untouched.
 
-See the [Media Organization](media-organization.html) guide for details.
+See the [Media Organization](media-organization-with-slug-based-subfolders.html) guide for details.
 
 ### Redirect Aliases (#472)
 

@@ -89,4 +89,7 @@ languages:
   it:
     name: "Italiano"
 
+check_internal_links: true
+strict_internal_links: true
+
 native_mermaid_render: true
