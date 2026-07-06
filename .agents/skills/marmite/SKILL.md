@@ -140,7 +140,7 @@ card_image: media/social-card.jpg
 banner_image: media/banner.jpg
 extra:
   math: true
-  mermaid: true
+  mermaid: true       # only needed for client-side JS rendering
 ---
 ```
 
@@ -261,7 +261,7 @@ Marmite supports extended markdown:
 - Spoilers: `||hidden text||`
 - Description lists, underline, multiline block quotes (`>>>`)
 - Math (when `extra.math: true`): `$inline$` and `$$display$$`
-- Mermaid diagrams (when `extra.mermaid: true`)
+- Mermaid diagrams (native SVG via `native_mermaid_render: true` in config, or client-side JS via `extra.mermaid: true` in frontmatter)
 
 ## Workflow: Layout Customization with Fragment Files
 

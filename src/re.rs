@@ -107,6 +107,12 @@ pub const CAPTURE_DATE_PREFIX_FROM_TEXT: &str = r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2
 /// Used for replacing @/ with media/{slug}/ in rendered HTML
 pub const REPLACE_AT_MEDIA_REF_IN_HTML: &str = r#"(?P<attr>src|href)="@/"#;
 
+// === Mermaid Patterns ===
+
+/// Matches pre/code blocks with language-mermaid class in rendered HTML
+/// Captures: 1) the HTML-escaped mermaid source code inside the code tag
+pub const CAPTURE_MERMAID_BLOCK: &str = r#"<pre[^>]*class="[^"]*marmite-code[^"]*"[^>]*>\s*<code[^>]*class="[^"]*language-mermaid[^"]*"[^>]*>([\s\S]*?)</code>\s*</pre>"#;
+
 // === Text Processing Patterns ===
 
 #[cfg(test)]

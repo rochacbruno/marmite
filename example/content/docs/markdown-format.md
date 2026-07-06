@@ -470,9 +470,11 @@ Optionally a title can be added to the alert:
 
 ### Diagrams
 
-> Depends on `extra: {"mermaid": true}` defined on frontmatter, then **MermaidJS** is loaded.
->  
-> `mermaid_theme` is also configurable with values `forest`,`neutral`,`dark`,`forest`,`base`,`default`
+Marmite supports mermaid diagrams in two ways:
+
+**Native rendering (build-time SVG)** - Set `native_mermaid_render: true` in `marmite.yaml`. All mermaid code blocks are converted to inline SVG during site generation. No JavaScript is loaded on the page. No per-content frontmatter is needed.
+
+**Client-side rendering (default)** - Set `extra: {"mermaid": true}` in the content frontmatter. MermaidJS is loaded from a CDN and renders diagrams in the browser. `mermaid_theme` is configurable with values `forest`, `neutral`, `dark`, `base`, `default`.
 
 ```mermaid
 sequenceDiagram

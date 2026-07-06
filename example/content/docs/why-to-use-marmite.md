@@ -114,7 +114,7 @@ The built-in theme uses Javascript only to:
 
 And on content, optionally enabled on content metadata.
 
-- Render mermaid diagrams
+- Render mermaid diagrams (native SVG at build time or client-side via MermaidJS)
 - Render Math syntax
 
 Optional features

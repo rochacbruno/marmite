@@ -116,8 +116,9 @@ templates/
 #### Extra Fields
 ```html
 {{ content.extra.math }}           <!-- Enable MathJax -->
-{{ content.extra.mermaid }}        <!-- Enable Mermaid diagrams -->
-{{ content.extra.mermaid_theme }}  <!-- Mermaid theme -->
+{{ content.extra.mermaid }}        <!-- Enable client-side Mermaid (ignored when site.native_mermaid_render is true) -->
+{{ content.extra.mermaid_theme }}  <!-- Mermaid theme for client-side rendering -->
+{{ site.native_mermaid_render }}   <!-- Build-time SVG rendering for mermaid diagrams -->
 {{ content.extra.custom_field }}   <!-- Any custom frontmatter field -->
 ```
 

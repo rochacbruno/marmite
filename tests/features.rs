@@ -897,3 +897,99 @@ fn test_subfolder_media_no_conflicts_between_subfolders() {
     assert_eq!(a_photo, "photo-from-a", "post-a should have its own photo");
     assert_eq!(b_photo, "photo-from-b", "post-b should have its own photo");
 }
+
+#[test]
+fn test_native_mermaid_render() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Test Site\nnative_mermaid_render: true",
+    )
+    .unwrap();
+    fs::write(
+        input_dir.join("content").join("diagrams.md"),
+        "# Diagrams\n\n```mermaid\ngraph LR\n  A --> B\n```\n",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let html = fs::read_to_string(output_dir.join("diagrams.html")).unwrap();
+    assert!(
+        html.contains("<div class=\"mermaid-diagram\">"),
+        "Should contain rendered mermaid diagram div"
+    );
+    assert!(
+        html.contains("<svg"),
+        "Should contain SVG output from mermaid-rs-renderer"
+    );
+    assert!(
+        !html.contains("language-mermaid"),
+        "Should not contain raw mermaid code block"
+    );
+}
+
+#[test]
+fn test_native_mermaid_render_disabled_preserves_js_flow() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Test Site").unwrap();
+    fs::write(
+        input_dir.join("content").join("diagrams.md"),
+        "---\nextra:\n  mermaid: true\n---\n# Diagrams\n\n```mermaid\ngraph LR\n  A --> B\n```\n",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let html = fs::read_to_string(output_dir.join("diagrams.html")).unwrap();
+    assert!(
+        html.contains("language-mermaid"),
+        "Should contain raw mermaid code block for JS rendering"
+    );
+    assert!(
+        html.contains("mermaid.min.js"),
+        "Should load MermaidJS script"
+    );
+    assert!(
+        !html.contains("<div class=\"mermaid-diagram\">"),
+        "Should not contain build-time rendered diagram"
+    );
+}

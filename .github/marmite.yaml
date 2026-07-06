@@ -88,3 +88,5 @@ languages:
     name: "Espanol"
   it:
     name: "Italiano"
+
+native_mermaid_render: true

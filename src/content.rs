@@ -189,6 +189,12 @@ impl Content {
             fix_at_media_refs(&html, &site.media_path, &slug, path, content_dir)
         };
 
+        let html = if site.native_mermaid_render && !is_fragment {
+            crate::parser::render_native_mermaid(&html, &slug)
+        } else {
+            html
+        };
+
         let description = get_description(&frontmatter);
         let tags = get_tags(&frontmatter);
         let date = get_date(&frontmatter, path);

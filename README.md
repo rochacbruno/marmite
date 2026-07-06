@@ -78,7 +78,7 @@ It also handles generating or copying `static/` and `media/` to the `output` dir
   - Spotlight search.
   - Easy to replace the index page and add custom CSS/JS.
   - Easy to customize Tera templates.
-  - Math and Mermaid diagrams.
+  - Math and Mermaid diagrams (native build-time SVG or client-side JS).
   - Build-time syntax highlighting via [arborium](https://arborium.bearcove.eu/).
   - Commenting system integration.
   - Banner images and `og:` tags.
