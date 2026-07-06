@@ -472,6 +472,46 @@ Optionally a title can be added to the alert:
 
 Marmite renders mermaid diagrams to inline SVG at build time by default. No JavaScript is loaded on the page and no per-content frontmatter is needed - just write mermaid fenced code blocks in your markdown.
 
+#### Customizing mermaid rendering
+
+You can customize the mermaid renderer (theme, spacing, colors, etc.) using `mermaid_config` at three levels with deep merge:
+
+**Site-wide** in `marmite.yaml`:
+
+```yaml
+mermaid_config:
+  theme: dark
+  themeVariables:
+    primaryColor: "#BB2528"
+    fontFamily: "Inter, sans-serif"
+  flowchart:
+    nodeSpacing: 80
+    rankSpacing: 60
+  preferredAspectRatio: "16:9"
+```
+
+**Per-folder** in `frontmatter.yaml`:
+
+```yaml
+mermaid_config:
+  theme: forest
+```
+
+**Per-page** in frontmatter:
+
+```yaml
+---
+title: My Diagram Page
+mermaid_config:
+  flowchart:
+    nodeSpacing: 120
+---
+```
+
+Values deep-merge across layers (site < folder < page), so a page can override just one setting without losing the rest. The config accepts the same keys as the [mermaid-rs-renderer JSON config format](https://github.com/1jehuang/mermaid-rs-renderer#configuration) using camelCase keys.
+
+#### Client-side rendering
+
 To use client-side rendering instead, set `native_mermaid_render: false` in `marmite.yaml` and add `extra: {"mermaid": true}` to the content frontmatter. MermaidJS is then loaded from a CDN and renders diagrams in the browser. `mermaid_theme` is configurable with values `forest`, `neutral`, `dark`, `base`, `default`.
 
 ```mermaid
