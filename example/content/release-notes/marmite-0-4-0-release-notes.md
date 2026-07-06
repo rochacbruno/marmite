@@ -1,11 +1,11 @@
 ---
-title: Marmite 0.3.3 Release Notes
-slug: marmite-0-3-3-release-notes
-description: "Marmite 0.3.3 adds workspace multi-site support, multilingual content via language streams, content subfolder media, internal link validation, redirect aliases, and migrates to Tera 2.0."
+title: Marmite 0.4.0 Release Notes
+slug: marmite-0-4-0-release-notes
+description: "Marmite 0.4.0 adds workspace multi-site support, multilingual content via language streams, content subfolder media, internal link validation, redirect aliases, and migrates to Tera 2.0."
 tags: [release-notes, marmite, features, announcement]
 author: rochacbruno
 stream: draft
-date: 2026-06-25 14:00:00
+date: 2026-07-06 16:00:00
 ---
 
 ## New Features
