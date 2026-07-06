@@ -274,3 +274,51 @@ fn test_override_from_cli_args_native_mermaid_render() {
     m.override_from_cli_args(&Arc::new(args));
     assert!(!m.native_mermaid_render);
 }
+
+#[test]
+fn test_mermaid_config_defaults_to_none() {
+    let config = Marmite::new();
+    assert!(config.mermaid_config.is_none());
+}
+
+#[test]
+fn test_mermaid_config_none_when_absent_from_yaml() {
+    let config: Marmite = serde_yaml::from_str("name: Test").unwrap();
+    assert!(config.mermaid_config.is_none());
+}
+
+#[test]
+fn test_mermaid_config_from_yaml() {
+    let config: Marmite = serde_yaml::from_str(
+        r#"
+mermaid_config:
+  theme: dark
+  flowchart:
+    nodeSpacing: 80
+"#,
+    )
+    .unwrap();
+    let mc = config.mermaid_config.unwrap();
+    let mapping = mc.as_mapping().unwrap();
+    assert_eq!(
+        mapping
+            .get(serde_yaml::Value::String("theme".into()))
+            .unwrap()
+            .as_str()
+            .unwrap(),
+        "dark"
+    );
+    let flowchart = mapping
+        .get(serde_yaml::Value::String("flowchart".into()))
+        .unwrap()
+        .as_mapping()
+        .unwrap();
+    assert_eq!(
+        flowchart
+            .get(serde_yaml::Value::String("nodeSpacing".into()))
+            .unwrap()
+            .as_u64()
+            .unwrap(),
+        80
+    );
+}

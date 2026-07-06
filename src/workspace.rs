@@ -83,7 +83,10 @@ pub fn load_workspace_config(
     Ok(config)
 }
 
-fn deep_merge_yaml(base: serde_yaml::Value, overlay: serde_yaml::Value) -> serde_yaml::Value {
+pub(crate) fn deep_merge_yaml(
+    base: serde_yaml::Value,
+    overlay: serde_yaml::Value,
+) -> serde_yaml::Value {
     match (base, overlay) {
         (serde_yaml::Value::Mapping(mut base_map), serde_yaml::Value::Mapping(overlay_map)) => {
             for (key, overlay_val) in overlay_map {
