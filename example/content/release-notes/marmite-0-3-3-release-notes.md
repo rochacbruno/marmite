@@ -236,6 +236,8 @@ mermaid_config:
 
 Values are deep-merged across layers, so a page can override just one setting (e.g. `nodeSpacing`) without losing site-wide theme colors. The config accepts the same keys as the [mermaid-rs-renderer JSON config format](https://github.com/1jehuang/mermaid-rs-renderer#configuration) using camelCase keys. Available theme presets: `dark`, `forest`, `neutral`, `modern`, `default`. Invalid config values produce a warning and fall back to defaults.
 
+Note: `mermaid_config` only applies when using native build-time rendering (`native_mermaid_render: true`, the default). If you opt out with `native_mermaid_render: false`, use the per-content `extra: {"mermaid": true, "mermaid_theme": "dark"}` frontmatter for client-side configuration instead.
+
 ### Folder-Level Frontmatter Defaults (#487)
 
 Content subfolders can now have a `frontmatter.yaml` file that provides default frontmatter values for all `.md` files in that folder. This eliminates repetitive metadata when multiple posts share the same stream, tags, date, authors, or extra fields.
