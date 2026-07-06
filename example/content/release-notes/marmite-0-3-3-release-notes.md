@@ -214,6 +214,30 @@ Or via CLI: `--native-mermaid-render false`
 
 When disabled, the per-content `extra: { mermaid: true }` frontmatter continues to work as before for JS-based rendering.
 
+### Mermaid Config - Theme and Layout Customization (#504)
+
+The mermaid renderer can now be customized with `mermaid_config` at three cascading levels with deep merge:
+
+- `mermaid_config` in `marmite.yaml` for site-wide defaults
+- `mermaid_config` in `frontmatter.yaml` for folder-level overrides
+- `mermaid_config` in `.md` frontmatter for per-page overrides (highest priority)
+
+```yaml
+mermaid_config:
+  theme: dark
+  themeVariables:
+    primaryColor: "#BB2528"
+    fontFamily: "Inter, sans-serif"
+  flowchart:
+    nodeSpacing: 80
+    rankSpacing: 60
+  preferredAspectRatio: "16:9"
+```
+
+Values are deep-merged across layers, so a page can override just one setting (e.g. `nodeSpacing`) without losing site-wide theme colors. The config accepts the same keys as the [mermaid-rs-renderer JSON config format](https://github.com/1jehuang/mermaid-rs-renderer#configuration) using camelCase keys. Available theme presets: `dark`, `forest`, `neutral`, `modern`, `default`. Invalid config values produce a warning and fall back to defaults.
+
+Note: `mermaid_config` only applies when using native build-time rendering (`native_mermaid_render: true`, the default). If you opt out with `native_mermaid_render: false`, use the per-content `extra: {"mermaid": true, "mermaid_theme": "dark"}` frontmatter for client-side configuration instead.
+
 ### Folder-Level Frontmatter Defaults (#487)
 
 Content subfolders can now have a `frontmatter.yaml` file that provides default frontmatter values for all `.md` files in that folder. This eliminates repetitive metadata when multiple posts share the same stream, tags, date, authors, or extra fields.
