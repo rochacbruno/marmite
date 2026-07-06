@@ -317,7 +317,7 @@ pub struct Marmite {
     pub strict_internal_links: bool,
 
     /// Render mermaid diagrams to SVG at build time instead of using client-side JS
-    #[serde(default)]
+    #[serde(default = "default_true")]
     pub native_mermaid_render: bool,
 
     /// atproto standard.site publishing configuration
@@ -363,6 +363,7 @@ impl Marmite {
             enable_related_content: default_enable_related_content(),
             search_match_count: default_search_match_count(),
             search_title: default_search_title(),
+            native_mermaid_render: default_true(),
             ..Default::default()
         }
     }

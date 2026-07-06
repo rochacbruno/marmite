@@ -202,17 +202,17 @@ Tera 2.0 removed or renamed some built-in filters. Marmite provides drop-in repl
 
 ### Native Mermaid Rendering (#494)
 
-Mermaid diagrams can now be rendered to inline SVG at build time, eliminating the need for client-side JavaScript and the MermaidJS CDN dependency. Enable it in `marmite.yaml`:
+Mermaid diagrams are now rendered to inline SVG at build time by default, eliminating the need for client-side JavaScript and the MermaidJS CDN dependency. All mermaid fenced code blocks are converted to SVG during site generation using the `mermaid-rs-renderer` crate (pure Rust, no browser required). The MermaidJS script is not loaded on the page. If a diagram fails to render (e.g. invalid syntax), the raw source is preserved and a warning is logged.
+
+To opt out and use client-side JS rendering instead, set in `marmite.yaml`:
 
 ```yaml
-native_mermaid_render: true
+native_mermaid_render: false
 ```
 
-Or via CLI: `--native-mermaid-render true`
+Or via CLI: `--native-mermaid-render false`
 
-When enabled, all mermaid fenced code blocks are converted to SVG during site generation using the `mermaid-rs-renderer` crate (pure Rust, no browser required). The MermaidJS script is not loaded on the page. If a diagram fails to render (e.g. invalid syntax), the raw source is preserved and a warning is logged.
-
-The existing JavaScript-based rendering remains the default when `native_mermaid_render` is not set. The per-content `extra: { mermaid: true }` frontmatter continues to work as before for JS-based rendering.
+When disabled, the per-content `extra: { mermaid: true }` frontmatter continues to work as before for JS-based rendering.
 
 ### Folder-Level Frontmatter Defaults (#487)
 

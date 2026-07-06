@@ -100,7 +100,7 @@ fn test_marmite_new_defaults() {
     assert!(!m.skip_image_resize);
     assert!(!m.check_internal_links);
     assert!(!m.strict_internal_links);
-    assert!(!m.native_mermaid_render);
+    assert!(m.native_mermaid_render);
 }
 
 #[test]
@@ -255,22 +255,22 @@ fn test_override_from_cli_args_colorscheme() {
 }
 
 #[test]
-fn test_native_mermaid_render_defaults_to_false() {
+fn test_native_mermaid_render_defaults_to_true() {
     let config: Marmite = serde_yaml::from_str("name: Test").unwrap();
-    assert!(!config.native_mermaid_render);
+    assert!(config.native_mermaid_render);
 }
 
 #[test]
-fn test_native_mermaid_render_from_yaml() {
-    let config: Marmite = serde_yaml::from_str("native_mermaid_render: true").unwrap();
-    assert!(config.native_mermaid_render);
+fn test_native_mermaid_render_disabled_from_yaml() {
+    let config: Marmite = serde_yaml::from_str("native_mermaid_render: false").unwrap();
+    assert!(!config.native_mermaid_render);
 }
 
 #[test]
 fn test_override_from_cli_args_native_mermaid_render() {
     let mut m = Marmite::new();
     let mut args = test_cli();
-    args.configuration.native_mermaid_render = Some(true);
+    args.configuration.native_mermaid_render = Some(false);
     m.override_from_cli_args(&Arc::new(args));
-    assert!(m.native_mermaid_render);
+    assert!(!m.native_mermaid_render);
 }

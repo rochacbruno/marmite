@@ -294,7 +294,7 @@ pub struct Configuration {
     #[arg(long)]
     pub strict_internal_links: Option<bool>,
 
-    /// Render mermaid diagrams to SVG at build time [default: false or from config file]
+    /// Render mermaid diagrams to SVG at build time [default: true or from config file]
     #[arg(long)]
     pub native_mermaid_render: Option<bool>,
 }

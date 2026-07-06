@@ -270,7 +270,7 @@ These flags override values from `marmite.yaml` for a single build:
 | `--enable-shortcodes <BOOL>` | bool | true |
 | `--shortcode-pattern <REGEX>` | String | HTML comment pattern |
 | `--skip-image-resize <BOOL>` | bool | false |
-| `--native-mermaid-render <BOOL>` | bool | false |
+| `--native-mermaid-render <BOOL>` | bool | true |
 
 ## Show URLs Output
 
