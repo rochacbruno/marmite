@@ -320,6 +320,11 @@ pub struct Marmite {
     #[serde(default = "default_true")]
     pub native_mermaid_render: bool,
 
+    /// Mermaid diagram rendering options (theme, layout, spacing, etc.)
+    /// Accepts the same structure as mermaid-rs-renderer JSON config files.
+    #[serde(default)]
+    pub mermaid_config: Option<serde_yaml::Value>,
+
     /// atproto standard.site publishing configuration
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub atproto: Option<AtprotoConfig>,

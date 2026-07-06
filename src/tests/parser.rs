@@ -398,7 +398,7 @@ fn test_decode_html_entities() {
 fn test_render_native_mermaid_basic() {
     let html = r#"<p>Before</p><pre class="marmite-code"><code class="marmite-code-inner language-mermaid">graph LR
   A --&gt; B</code></pre><p>After</p>"#;
-    let result = render_native_mermaid(html, "test-slug");
+    let result = render_native_mermaid(html, "test-slug", None);
     assert!(result.contains("<div class=\"mermaid-diagram\">"));
     assert!(result.contains("<svg"));
     assert!(result.contains("<p>Before</p>"));
@@ -409,13 +409,50 @@ fn test_render_native_mermaid_basic() {
 #[test]
 fn test_render_native_mermaid_preserves_non_mermaid_blocks() {
     let html = r#"<pre class="marmite-code"><code class="marmite-code-inner language-rust">fn main() {}</code></pre>"#;
-    let result = render_native_mermaid(html, "test-slug");
+    let result = render_native_mermaid(html, "test-slug", None);
     assert_eq!(result, html);
 }
 
 #[test]
 fn test_render_native_mermaid_no_mermaid_blocks() {
     let html = "<p>No code blocks here</p>";
-    let result = render_native_mermaid(html, "test-slug");
+    let result = render_native_mermaid(html, "test-slug", None);
     assert_eq!(result, html);
+}
+
+#[test]
+fn test_render_native_mermaid_with_dark_theme() {
+    let config: serde_yaml::Value = serde_yaml::from_str("theme: dark").unwrap();
+    let html = r#"<pre class="marmite-code"><code class="marmite-code-inner language-mermaid">graph LR
+  A --&gt; B</code></pre>"#;
+    let result = render_native_mermaid(html, "test-slug", Some(&config));
+    assert!(result.contains("<div class=\"mermaid-diagram\">"));
+    assert!(result.contains("<svg"));
+}
+
+#[test]
+fn test_render_native_mermaid_with_spacing_config() {
+    let config: serde_yaml::Value = serde_yaml::from_str(
+        r#"
+flowchart:
+  nodeSpacing: 80
+  rankSpacing: 60
+"#,
+    )
+    .unwrap();
+    let html = r#"<pre class="marmite-code"><code class="marmite-code-inner language-mermaid">graph LR
+  A --&gt; B</code></pre>"#;
+    let result = render_native_mermaid(html, "test-slug", Some(&config));
+    assert!(result.contains("<div class=\"mermaid-diagram\">"));
+    assert!(result.contains("<svg"));
+}
+
+#[test]
+fn test_render_native_mermaid_invalid_config_falls_back() {
+    let config: serde_yaml::Value = serde_yaml::from_str("theme: nonexistent_theme").unwrap();
+    let html = r#"<pre class="marmite-code"><code class="marmite-code-inner language-mermaid">graph LR
+  A --&gt; B</code></pre>"#;
+    let result = render_native_mermaid(html, "test-slug", Some(&config));
+    // Falls back to defaults on invalid theme
+    assert!(result.contains("<svg") || result.contains("language-mermaid"));
 }

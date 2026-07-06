@@ -1316,3 +1316,99 @@ fn test_find_file_by_slug_skips_lang_prefix() {
         path.display()
     );
 }
+
+#[test]
+fn test_merge_mermaid_configs_all_none() {
+    let result = merge_mermaid_configs(None, None, None);
+    assert!(result.is_none());
+}
+
+#[test]
+fn test_merge_mermaid_configs_site_only() {
+    let site: serde_yaml::Value = serde_yaml::from_str("theme: dark").unwrap();
+    let result = merge_mermaid_configs(Some(&site), None, None);
+    assert!(result.is_some());
+    let mapping = result.unwrap().as_mapping().unwrap().clone();
+    assert_eq!(
+        mapping
+            .get(serde_yaml::Value::String("theme".into()))
+            .unwrap()
+            .as_str()
+            .unwrap(),
+        "dark"
+    );
+}
+
+#[test]
+fn test_merge_mermaid_configs_page_overrides_folder() {
+    let folder: serde_yaml::Value = serde_yaml::from_str("theme: forest").unwrap();
+    let page: serde_yaml::Value = serde_yaml::from_str("theme: dark").unwrap();
+    let result = merge_mermaid_configs(None, Some(&folder), Some(&page)).unwrap();
+    let mapping = result.as_mapping().unwrap();
+    assert_eq!(
+        mapping
+            .get(serde_yaml::Value::String("theme".into()))
+            .unwrap()
+            .as_str()
+            .unwrap(),
+        "dark"
+    );
+}
+
+#[test]
+fn test_merge_mermaid_configs_deep_merge_all_three() {
+    let site: serde_yaml::Value = serde_yaml::from_str(
+        r#"
+theme: dark
+flowchart:
+  nodeSpacing: 50
+  rankSpacing: 50
+"#,
+    )
+    .unwrap();
+    let folder: serde_yaml::Value = serde_yaml::from_str(
+        r#"
+flowchart:
+  nodeSpacing: 80
+"#,
+    )
+    .unwrap();
+    let page: serde_yaml::Value = serde_yaml::from_str(
+        r#"
+flowchart:
+  rankSpacing: 100
+"#,
+    )
+    .unwrap();
+    let result = merge_mermaid_configs(Some(&site), Some(&folder), Some(&page)).unwrap();
+    let mapping = result.as_mapping().unwrap();
+
+    assert_eq!(
+        mapping
+            .get(serde_yaml::Value::String("theme".into()))
+            .unwrap()
+            .as_str()
+            .unwrap(),
+        "dark"
+    );
+
+    let flow = mapping
+        .get(serde_yaml::Value::String("flowchart".into()))
+        .unwrap()
+        .as_mapping()
+        .unwrap();
+    assert_eq!(
+        flow.get(serde_yaml::Value::String("nodeSpacing".into()))
+            .unwrap()
+            .as_u64()
+            .unwrap(),
+        80
+    );
+    assert_eq!(
+        flow.get(serde_yaml::Value::String("rankSpacing".into()))
+            .unwrap()
+            .as_u64()
+            .unwrap(),
+        100
+    );
+}

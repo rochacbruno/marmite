@@ -144,9 +144,23 @@ impl Content {
     ) -> Result<Content, String> {
         let file_content = fs::read_to_string(path).map_err(|e| e.to_string())?;
         let (mut frontmatter, raw_markdown) = parse_front_matter(&file_content)?;
+
+        let page_mermaid_config: Option<serde_yaml::Value> = frontmatter
+            .remove("mermaid_config")
+            .and_then(|v| serde_yaml::to_value(&v).ok());
+        let folder_mermaid_config: Option<serde_yaml::Value> = folder_defaults
+            .and_then(|fd| fd.get("mermaid_config"))
+            .and_then(|v| serde_yaml::to_value(v).ok());
+
         if let Some(defaults) = folder_defaults {
             merge_frontmatter(defaults, &mut frontmatter);
         }
+
+        let merged_mermaid_config = merge_mermaid_configs(
+            site.mermaid_config.as_ref(),
+            folder_mermaid_config.as_ref(),
+            page_mermaid_config.as_ref(),
+        );
         let (title, markdown_without_title) = get_title(&frontmatter, raw_markdown);
         let slug = get_slug(&frontmatter, path);
 
@@ -190,7 +204,7 @@ impl Content {
         };
 
         let html = if site.native_mermaid_render && !is_fragment {
-            crate::parser::render_native_mermaid(&html, &slug)
+            crate::parser::render_native_mermaid(&html, &slug, merged_mermaid_config.as_ref())
         } else {
             html
         };
@@ -761,6 +775,21 @@ pub fn merge_frontmatter(defaults: &Frontmatter, file_fm: &mut Frontmatter) {
             file_fm.insert(key.clone(), value.clone());
         }
     }
+}
+
+fn merge_mermaid_configs(
+    site: Option<&serde_yaml::Value>,
+    folder: Option<&serde_yaml::Value>,
+    page: Option<&serde_yaml::Value>,
+) -> Option<serde_yaml::Value> {
+    let mut result: Option<serde_yaml::Value> = None;
+    for overlay in [site, folder, page].into_iter().flatten() {
+        result = Some(match result {
+            Some(base) => crate::workspace::deep_merge_yaml(base, overlay.clone()),
+            None => overlay.clone(),
+        });
+    }
+    result
 }
 
 fn get_language(frontmatter: &Frontmatter) -> Option<String> {

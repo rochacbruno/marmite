@@ -103,6 +103,20 @@ publish_urls_json: true
 # Render mermaid diagrams to SVG at build time (instead of client-side JS)
 # native_mermaid_render: true
 
+# Mermaid rendering options (theme, layout, spacing, etc.)
+# Uses the same keys as the mermaid-rs-renderer JSON config format.
+# Can also be set per-folder in frontmatter.yaml or per-page in .md frontmatter.
+# Values are deep-merged: site < folder < page.
+# mermaid_config:
+#   theme: dark
+#   themeVariables:
+#     primaryColor: "#BB2528"
+#     fontFamily: "Inter, sans-serif"
+#   flowchart:
+#     nodeSpacing: 80
+#     rankSpacing: 60
+#   preferredAspectRatio: "16:9"
+
 # extra data for template customization
 extra:
   # banner_image_width: 124 # resize the banner images

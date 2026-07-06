@@ -10,6 +10,7 @@ use frontmatter_gen::{detect_format, extract_raw_frontmatter, parse, Frontmatter
 use log::warn;
 use regex::Regex;
 use std::fmt::Write as _;
+use std::io::Write as IoWrite;
 
 use std::fs;
 use std::path::Path;
@@ -246,14 +247,63 @@ fn decode_html_entities(text: &str) -> String {
         .replace("&#x27;", "'")
 }
 
+/// Convert a `serde_yaml::Value` mermaid config into `RenderOptions`.
+///
+/// Serializes the YAML value to JSON, writes it to a temp file, and calls
+/// `mermaid_rs_renderer::load_config()` which handles all the camelCase
+/// field mapping (themeVariables, flowchart, etc.) internally.
+fn yaml_config_to_render_options(
+    config: &serde_yaml::Value,
+    slug: &str,
+) -> Result<mermaid_rs_renderer::RenderOptions, String> {
+    let json_string = serde_json::to_string(config)
+        .map_err(|e| format!("Failed to serialize mermaid_config to JSON: {e}"))?;
+
+    let mut tmp = tempfile::NamedTempFile::new()
+        .map_err(|e| format!("Failed to create temp file for mermaid config: {e}"))?;
+    tmp.write_all(json_string.as_bytes())
+        .map_err(|e| format!("Failed to write mermaid config to temp file: {e}"))?;
+    tmp.flush()
+        .map_err(|e| format!("Failed to flush temp file: {e}"))?;
+
+    let mermaid_config = mermaid_rs_renderer::config::load_config(Some(tmp.path()))
+        .map_err(|e| format!("Failed to parse mermaid_config for '{slug}': {e}"))?;
+
+    Ok(mermaid_rs_renderer::RenderOptions {
+        theme: mermaid_config.theme,
+        layout: mermaid_config.layout,
+    })
+}
+
 /// Replace mermaid code blocks in HTML with SVG rendered at build time.
-pub fn render_native_mermaid(html: &str, slug: &str) -> String {
+pub fn render_native_mermaid(
+    html: &str,
+    slug: &str,
+    mermaid_config: Option<&serde_yaml::Value>,
+) -> String {
     let re = Regex::new(re::CAPTURE_MERMAID_BLOCK).expect("Mermaid block regex should compile");
+
+    let render_options =
+        mermaid_config.and_then(|cfg| match yaml_config_to_render_options(cfg, slug) {
+            Ok(opts) => Some(opts),
+            Err(e) => {
+                warn!("Invalid mermaid_config for '{slug}': {e}; using defaults");
+                None
+            }
+        });
+
     re.replace_all(html, |caps: &regex::Captures| {
         let full_match = caps.get(0).map_or("", |m| m.as_str());
         let escaped_source = caps.get(1).map_or("", |m| m.as_str());
         let source = decode_html_entities(escaped_source);
-        match mermaid_rs_renderer::render(&source) {
+
+        let render_result = if let Some(ref opts) = render_options {
+            mermaid_rs_renderer::render_with_options(&source, opts.clone())
+        } else {
+            mermaid_rs_renderer::render(&source)
+        };
+
+        match render_result {
             Ok(svg) => {
                 format!("<div class=\"mermaid-diagram\">{svg}</div>")
             }

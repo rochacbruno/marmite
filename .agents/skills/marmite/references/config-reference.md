@@ -85,6 +85,7 @@ RSS feeds (`index.rss`, per-tag, per-stream, per-series) are always generated.
 | `check_internal_links` | bool | `false` | Validate internal links at build time and warn about broken ones |
 | `strict_internal_links` | bool | `false` | Fail the build when broken internal links are found (requires `check_internal_links: true`) |
 | `native_mermaid_render` | bool | `true` | Render mermaid diagrams to SVG at build time instead of using client-side JavaScript. When enabled, mermaid code blocks are converted to inline SVG during site generation and the MermaidJS script is not loaded. |
+| `mermaid_config` | mapping | (none) | Mermaid rendering options (theme, layout, spacing, etc.). Uses the same keys as the mermaid-rs-renderer JSON config format (camelCase). Can also be set per-folder in `frontmatter.yaml` or per-page in `.md` frontmatter. Values are deep-merged across layers: site < folder < page. Supported keys include `theme` (preset name: dark, forest, neutral, modern, default), `themeVariables` (colors, fonts), `flowchart` (`nodeSpacing`, `rankSpacing`), `preferredAspectRatio`, and more. |
 
 ## Shortcodes
 
