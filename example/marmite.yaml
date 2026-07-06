@@ -100,6 +100,9 @@ publish_urls_json: true
 # check_internal_links: true
 # strict_internal_links: true
 
+# Render mermaid diagrams to SVG at build time (instead of client-side JS)
+# native_mermaid_render: false
+
 # extra data for template customization
 extra:
   # banner_image_width: 124 # resize the banner images
@@ -181,3 +184,5 @@ file_mapping:
     dest: install.sh
   - source: scripts/install.ps1
     dest: install.ps1
+
+native_mermaid_render: true

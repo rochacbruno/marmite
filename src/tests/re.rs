@@ -21,6 +21,7 @@ fn test_all_patterns_compile() {
     Regex::new(CAPTURE_STREAM_FROM_S_FILENAME).unwrap();
     Regex::new(CAPTURE_DATE_PREFIX_FROM_TEXT).unwrap();
     Regex::new(REPLACE_AT_MEDIA_REF_IN_HTML).unwrap();
+    Regex::new(CAPTURE_MERMAID_BLOCK).unwrap();
 }
 
 #[test]
@@ -218,4 +219,22 @@ fn test_replace_at_media_ref_in_html() {
     assert_eq!(&caps["attr"], "href");
 
     assert!(re.captures(r#"alt="@/""#).is_none());
+}
+
+#[test]
+fn test_capture_mermaid_block_matches() {
+    let re = Regex::new(CAPTURE_MERMAID_BLOCK).unwrap();
+    let html = r#"<pre class="marmite-code"><code class="marmite-code-inner language-mermaid">graph LR
+  A --&gt; B</code></pre>"#;
+    let caps = re.captures(html).unwrap();
+    let source = caps.get(1).unwrap().as_str();
+    assert!(source.contains("graph LR"));
+    assert!(source.contains("--&gt;"));
+}
+
+#[test]
+fn test_capture_mermaid_block_no_match_for_other_langs() {
+    let re = Regex::new(CAPTURE_MERMAID_BLOCK).unwrap();
+    let html = r#"<pre class="marmite-code"><code class="marmite-code-inner language-rust">fn main() {}</code></pre>"#;
+    assert!(re.captures(html).is_none());
 }

@@ -64,6 +64,7 @@ fn test_cli() -> crate::cli::Cli {
             skip_image_resize: None,
             check_internal_links: None,
             strict_internal_links: None,
+            native_mermaid_render: None,
         },
         subcommand: None,
     }
@@ -99,6 +100,7 @@ fn test_marmite_new_defaults() {
     assert!(!m.skip_image_resize);
     assert!(!m.check_internal_links);
     assert!(!m.strict_internal_links);
+    assert!(!m.native_mermaid_render);
 }
 
 #[test]
@@ -250,4 +252,25 @@ fn test_override_from_cli_args_colorscheme() {
         extra.get("colorscheme"),
         Some(&serde_yaml::Value::String("dracula".to_string()))
     );
+}
+
+#[test]
+fn test_native_mermaid_render_defaults_to_false() {
+    let config: Marmite = serde_yaml::from_str("name: Test").unwrap();
+    assert!(!config.native_mermaid_render);
+}
+
+#[test]
+fn test_native_mermaid_render_from_yaml() {
+    let config: Marmite = serde_yaml::from_str("native_mermaid_render: true").unwrap();
+    assert!(config.native_mermaid_render);
+}
+
+#[test]
+fn test_override_from_cli_args_native_mermaid_render() {
+    let mut m = Marmite::new();
+    let mut args = test_cli();
+    args.configuration.native_mermaid_render = Some(true);
+    m.override_from_cli_args(&Arc::new(args));
+    assert!(m.native_mermaid_render);
 }

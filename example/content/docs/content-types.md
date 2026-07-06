@@ -200,7 +200,7 @@ Content
       math: true
       mermaid: true
     ```
-    **important**: the above example shows the keys supported by the default theme.  
+    **important**: the above example shows the keys supported by the default theme for client-side rendering. When `native_mermaid_render: true` is set in `marmite.yaml`, mermaid diagrams are rendered to SVG at build time and the `extra.mermaid` field is not needed.  
 
 **pinned**
 

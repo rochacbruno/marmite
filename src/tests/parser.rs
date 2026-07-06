@@ -393,3 +393,29 @@ fn test_decode_html_entities() {
         "Mixed & 'entities' <here>"
     );
 }
+
+#[test]
+fn test_render_native_mermaid_basic() {
+    let html = r#"<p>Before</p><pre class="marmite-code"><code class="marmite-code-inner language-mermaid">graph LR
+  A --&gt; B</code></pre><p>After</p>"#;
+    let result = render_native_mermaid(html, "test-slug");
+    assert!(result.contains("<div class=\"mermaid-diagram\">"));
+    assert!(result.contains("<svg"));
+    assert!(result.contains("<p>Before</p>"));
+    assert!(result.contains("<p>After</p>"));
+    assert!(!result.contains("language-mermaid"));
+}
+
+#[test]
+fn test_render_native_mermaid_preserves_non_mermaid_blocks() {
+    let html = r#"<pre class="marmite-code"><code class="marmite-code-inner language-rust">fn main() {}</code></pre>"#;
+    let result = render_native_mermaid(html, "test-slug");
+    assert_eq!(result, html);
+}
+
+#[test]
+fn test_render_native_mermaid_no_mermaid_blocks() {
+    let html = "<p>No code blocks here</p>";
+    let result = render_native_mermaid(html, "test-slug");
+    assert_eq!(result, html);
+}

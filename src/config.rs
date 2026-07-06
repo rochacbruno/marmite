@@ -316,6 +316,10 @@ pub struct Marmite {
     #[serde(default)]
     pub strict_internal_links: bool,
 
+    /// Render mermaid diagrams to SVG at build time instead of using client-side JS
+    #[serde(default)]
+    pub native_mermaid_render: bool,
+
     /// atproto standard.site publishing configuration
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub atproto: Option<AtprotoConfig>,
@@ -498,6 +502,9 @@ impl Marmite {
         }
         if let Some(strict_internal_links) = cli_args.configuration.strict_internal_links {
             self.strict_internal_links = strict_internal_links;
+        }
+        if let Some(native_mermaid_render) = cli_args.configuration.native_mermaid_render {
+            self.native_mermaid_render = native_mermaid_render;
         }
     }
 }

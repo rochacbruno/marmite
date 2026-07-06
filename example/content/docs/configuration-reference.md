@@ -121,7 +121,10 @@ toc: true                          # Show table of contents (default: false)
 json_feed: true                    # Generate JSON feeds (default: false)
 enable_shortcodes: true            # Enable shortcodes processing (default: true)
 shortcode_pattern: null            # Custom regex pattern for shortcodes (default: <!-- \.(\w+)(?:\s+([^-][\s\S]*?))?\s*-->)
+native_mermaid_render: true        # Render mermaid diagrams to SVG at build time (default: false)
 ```
+
+When `native_mermaid_render` is enabled, mermaid fenced code blocks are converted to inline SVG during site generation using a native Rust renderer. No JavaScript is loaded on the page, and the per-content `extra: { mermaid: true }` frontmatter is not needed. When disabled (the default), mermaid diagrams use client-side JavaScript rendering via MermaidJS.
 
 **CLI Override for Shortcodes**:
 ```bash

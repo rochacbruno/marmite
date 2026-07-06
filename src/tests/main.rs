@@ -63,6 +63,7 @@ fn create_test_cli(overrides: impl FnOnce(&mut cli::Cli)) -> cli::Cli {
             skip_image_resize: None,
             check_internal_links: None,
             strict_internal_links: None,
+            native_mermaid_render: None,
         },
         subcommand: None,
     };

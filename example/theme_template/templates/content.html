@@ -239,7 +239,7 @@
 {% block scripts %}
 {{ super() }}
 
-{%if content.extra.mermaid %}
+{%if content.extra.mermaid and not site.native_mermaid_render %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.3.0/mermaid.min.js"></script>
 <script>
   var config = {

@@ -246,6 +246,26 @@ fn decode_html_entities(text: &str) -> String {
         .replace("&#x27;", "'")
 }
 
+/// Replace mermaid code blocks in HTML with SVG rendered at build time.
+pub fn render_native_mermaid(html: &str, slug: &str) -> String {
+    let re = Regex::new(re::CAPTURE_MERMAID_BLOCK).expect("Mermaid block regex should compile");
+    re.replace_all(html, |caps: &regex::Captures| {
+        let full_match = caps.get(0).map_or("", |m| m.as_str());
+        let escaped_source = caps.get(1).map_or("", |m| m.as_str());
+        let source = decode_html_entities(escaped_source);
+        match mermaid_rs_renderer::render(&source) {
+            Ok(svg) => {
+                format!("<div class=\"mermaid-diagram\">{svg}</div>")
+            }
+            Err(e) => {
+                warn!("Failed to render mermaid diagram in '{slug}': {e}; keeping raw source");
+                full_match.to_string()
+            }
+        }
+    })
+    .to_string()
+}
+
 /// Find content by title in site data (case-insensitive)
 /// Returns the slug of the matching content if found
 fn find_content_by_title(title: &str, site_data: &Data) -> Option<String> {

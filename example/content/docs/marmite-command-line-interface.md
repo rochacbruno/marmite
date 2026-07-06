@@ -699,6 +699,8 @@ Options:
           Check internal links during build [default: false or from config file] [possible values: true, false]
       --strict-internal-links <STRICT_INTERNAL_LINKS>
           Fail the build on broken internal links [default: false or from config file] [possible values: true, false]
+      --native-mermaid-render <NATIVE_MERMAID_RENDER>
+          Render mermaid diagrams to SVG at build time [default: false or from config file] [possible values: true, false]
   -h, --help
           Print help
   -V, --version
