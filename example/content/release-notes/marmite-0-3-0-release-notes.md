@@ -5,7 +5,6 @@ slug: marmite-0-3-0-release-notes
 description: "Marmite 0.3.0 brings build-time syntax highlighting with Arborium, enhanced search with inline match previews, improved font rendering with Atkinson Hyperlegible Next, and several bug fixes."
 tags: [release-notes, marmite, features, announcement]
 author: rochacbruno
-pinned: true
 ---
 
 We're excited to announce Marmite 0.3.0! This release brings a major improvement to code rendering with build-time syntax highlighting powered by Arborium, an enhanced search experience with inline match previews, an updated default font, and several important bug fixes.

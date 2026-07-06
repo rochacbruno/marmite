@@ -5,7 +5,6 @@ slug: marmite-0-2-7-release-notes
 description: "Marmite 0.2.7 introduces shortcodes, image galleries, automatic image resizing with parallel processing, live reload for development, sitemap generation, Python package, and many improvements. A major update packed with new features!"
 tags: [release-notes, marmite, features, announcement]
 author: rochacbruno
-pinned: true
 ---
 
 We're excited to announce Marmite 0.2.7, a major release packed with powerful new features, improvements, and bug fixes. This release introduces shortcodes, image galleries, automatic image resizing with parallel processing, live reload for development, sitemap generation, Python package support, and much more.

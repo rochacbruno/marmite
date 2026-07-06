@@ -5,7 +5,6 @@ slug: marmite-0-3-1-release-notes
 description: "Marmite 0.3.1 fixes static file merging, wikilink URL-decoding, multi-byte shortcode handling, and updates several dependencies."
 tags: [release-notes, marmite, features, announcement]
 author: rochacbruno
-pinned: true
 ---
 
 We're excited to announce Marmite 0.3.1! This release brings several bug fixes and dependency updates.

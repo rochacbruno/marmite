@@ -4,7 +4,6 @@ slug: marmite-0-3-2-release-notes
 description: "Marmite 0.3.2 adds embedded AI agent skills, AT Protocol / standard.site publishing, and the Marmite Playground."
 tags: [release-notes, marmite, features, announcement]
 author: rochacbruno
-pinned: true
 date: 2026-06-25 12:00:00
 ---
 
