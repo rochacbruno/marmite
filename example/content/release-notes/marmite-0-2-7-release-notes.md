@@ -28,7 +28,7 @@ markdown_parser:
 
 ### Automatic Image Resizing
 
-Marmite can now automatically resize images during site generation to optimize performance. [[Image Optimization and Resizing|2025-12-22-image-optimization]]
+Marmite can now automatically resize images during site generation to optimize performance. [[Image Optimization and Resizing|image-optimization-and-resizing]]
 
 - **Automatic resizing** of images exceeding a specified maximum width
 - **Parallel processing** using all CPU cores for faster builds
@@ -56,7 +56,7 @@ marmite mysite --skip-image-resize
 
 ### Shortcodes
 
-Marmite now supports shortcodes - reusable content snippets that can be embedded in your markdown files. [[Shortcodes Guide|2025-08-01-shortcodes-guide]]
+Marmite now supports shortcodes - reusable content snippets that can be embedded in your markdown files. [[Shortcodes Guide|shortcodes-guide]]
 
 - Create custom shortcodes in the `shortcodes/` directory
 - Use HTML or Markdown for shortcode templates

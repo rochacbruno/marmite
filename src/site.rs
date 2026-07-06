@@ -1211,12 +1211,23 @@ fn validate_internal_links(site_data: &Data) -> Vec<(String, String)> {
         valid_slugs.insert(url.trim_end_matches(".html").to_string());
     }
 
+    // Build a set of slugified titles so wikilinks that will be resolved
+    // by fix_wikilinks at render time are not reported as broken.
+    // Include both normal slugification and a variant with "&" -> "amp"
+    // because comrak encodes "&" as "&amp;" in HTML which then slugifies
+    // to "amp" in the auto-generated wikilink href.
+    let mut title_slugs: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for content in site_data.posts.iter().chain(&site_data.pages) {
+        title_slugs.insert(crate::slugify::slugify(&content.title));
+        title_slugs.insert(crate::slugify::slugify(content.title.replace('&', "amp")));
+    }
+
     let mut broken = Vec::new();
     for content in site_data.posts.iter().chain(&site_data.pages) {
         if let Some(ref links) = content.links_to {
             for link in links {
                 let slug = link.split('#').next().unwrap_or(link);
-                if !valid_slugs.contains(slug) {
+                if !valid_slugs.contains(slug) && !title_slugs.contains(slug) {
                     broken.push((content.slug.clone(), slug.to_string()));
                 }
             }

@@ -97,8 +97,8 @@ publish_md: true
 publish_urls_json: true
 
 # Internal link validation
-# check_internal_links: true
-# strict_internal_links: true
+check_internal_links: true
+strict_internal_links: true
 
 # Render mermaid diagrams to SVG at build time (instead of client-side JS)
 # native_mermaid_render: true

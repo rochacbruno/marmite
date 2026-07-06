@@ -59,7 +59,7 @@ atproto:
   publish_content: true
 ```
 
-See the [[AT Protocol standard.site]] documentation for setup and usage details.
+See the [[AT Protocol standard.site|atproto-standard-site]] documentation for setup and usage details.
 
 Thanks to **Eduardo Cuducos** for this contribution!
 
