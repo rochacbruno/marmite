@@ -4,7 +4,6 @@ slug: marmite-0-4-0-release-notes
 description: "Marmite 0.4.0 adds workspace multi-site support, multilingual content via language streams, content subfolder media, internal link validation, redirect aliases, and migrates to Tera 2.0."
 tags: [release-notes, marmite, features, announcement]
 author: rochacbruno
-stream: draft
 date: 2026-07-06 16:00:00
 ---
 
