@@ -905,11 +905,7 @@ fn test_native_mermaid_render() {
     let output_dir = temp_dir.path().join("output");
 
     fs::create_dir_all(input_dir.join("content")).unwrap();
-    fs::write(
-        input_dir.join("marmite.yaml"),
-        "name: Test Site\nnative_mermaid_render: true",
-    )
-    .unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Test Site").unwrap();
     fs::write(
         input_dir.join("content").join("diagrams.md"),
         "# Diagrams\n\n```mermaid\ngraph LR\n  A --> B\n```\n",
@@ -955,7 +951,11 @@ fn test_native_mermaid_render_disabled_preserves_js_flow() {
     let output_dir = temp_dir.path().join("output");
 
     fs::create_dir_all(input_dir.join("content")).unwrap();
-    fs::write(input_dir.join("marmite.yaml"), "name: Test Site").unwrap();
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Test Site\nnative_mermaid_render: false",
+    )
+    .unwrap();
     fs::write(
         input_dir.join("content").join("diagrams.md"),
         "---\nextra:\n  mermaid: true\n---\n# Diagrams\n\n```mermaid\ngraph LR\n  A --> B\n```\n",

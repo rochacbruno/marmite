@@ -84,7 +84,7 @@ RSS feeds (`index.rss`, per-tag, per-stream, per-series) are always generated.
 |-------|------|---------|-------------|
 | `check_internal_links` | bool | `false` | Validate internal links at build time and warn about broken ones |
 | `strict_internal_links` | bool | `false` | Fail the build when broken internal links are found (requires `check_internal_links: true`) |
-| `native_mermaid_render` | bool | `false` | Render mermaid diagrams to SVG at build time instead of using client-side JavaScript. When enabled, mermaid code blocks are converted to inline SVG during site generation and the MermaidJS script is not loaded. |
+| `native_mermaid_render` | bool | `true` | Render mermaid diagrams to SVG at build time instead of using client-side JavaScript. When enabled, mermaid code blocks are converted to inline SVG during site generation and the MermaidJS script is not loaded. |
 
 ## Shortcodes
 
