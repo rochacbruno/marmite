@@ -7,31 +7,19 @@ authors: [marmite]
 description: How to install Marmite - a fast, minimal static site generator
 ---
 
-Marmite can be installed using various methods depending on your platform and preferences. Choose the method that works best for you.
+<!-- .install -->
 
-## Quick Install (Recommended)
+## Additional Details
 
-The easiest way to install Marmite is using our automated install script:
+### Install Script Options
 
-```bash
-curl -sS https://marmite.blog/install.sh | sh
-```
-
-This script will:
-- Detect your operating system and architecture
-- Download the appropriate binary for your system
-- Install it to `~/.local/bin` (or a custom directory)
-- Verify the installation
-
-### Custom Installation Directory
+The install script will detect your operating system and architecture, download the appropriate binary, install it to `~/.local/bin` (or a custom directory), and verify the installation.
 
 To install to a custom directory:
 
 ```bash
 curl -sS https://marmite.blog/install.sh | sh -s -- --bin-dir /usr/local/bin
 ```
-
-### Environment Variables
 
 You can also use environment variables:
 
@@ -40,36 +28,16 @@ export MARMITE_BIN_DIR=/custom/path
 curl -sS https://marmite.blog/install.sh | sh
 ```
 
-## Install from PyPI
-
-Marmite is also released on Python Package Index
+### Install from Source
 
 ```bash
-pip install marmite
-
-# OR without installation with uv
-uvx marmite
-```
-
-Check [[Python Installation with pip]]
-
-
-## Install from Source
-
-If you have Rust installed, you can build Marmite from source:
-
-```bash
-# Install from crates.io
-cargo install marmite
-
-# Or install from GitHub
+# Or install from GitHub directly
 cargo install --git https://github.com/rochacbruno/marmite
-
-# Or install using cargo-binstall to get the compiled binary via cargo
-cargo binstall marmite
 ```
 
-## Manual Installation
+Check [[Python Installation with pip]] for more details on the pip/uvx method.
+
+### Manual Installation
 
 1. Download the appropriate binary for your platform from the [releases page](https://github.com/rochacbruno/marmite/releases/latest)
 
@@ -97,30 +65,6 @@ cargo binstall marmite
    chmod +x /usr/local/bin/marmite
    ```
 
-## Platform-Specific Installation
-
-### brew
-
-```bash
-brew install marmite
-```
-
-### Linux
-
-#### Arch Linux
-
-```bash
-pacman -S marmite
-```
-
-### FreeBSD
-
-```bash
-pkg install marmite
-```
-
-For other Linux distributions, use the automated install script or download the binary manually from the releases page.
-
 ### Windows
 
 1. Download the Windows binary from the [releases page](https://github.com/rochacbruno/marmite/releases/latest)
@@ -130,16 +74,6 @@ For other Linux distributions, use the automated install script or download the 
 Or use PowerShell:
 ```powershell
 iwr -useb https://marmite.blog/install.ps1 | iex
-```
-
-## Docker
-
-Run Marmite using Docker:
-
-```bash
-docker run -v $PWD:/input ghcr.io/rochacbruno/marmite
-# OR
-docker run -p 8000:8000 -v $PWD:/input ghcr.io/rochacbruno/marmite --serve
 ```
 
 ## Verify Installation

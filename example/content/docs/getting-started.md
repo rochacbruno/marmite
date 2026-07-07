@@ -16,73 +16,7 @@ Not convinced yet? Read [[why-to-use-marmite]]
 
 ### Installation
 
-The quickest way to install Marmite is using our install script:
-
-```bash
-curl -sS https://marmite.blog/install.sh | sh
-```
-
-For other installation methods, see the [[installation]] guide.
-
-Alternatively, if you have Rust :crab: installed, you can use cargo:
-
-```bash
-cargo binstall marmite
-```
-or
-
-```bash
-cargo install marmite
-```
-
-Or download the pre-built **binary** from the [releases](https://github.com/rochacbruno/marmite/releases)
-
-
-<details>
-
-<summary>Or use docker</summary>
-
-
-> [!IMPORTANT]
-> The directory containing your marmite project must be mapped to containers `/input`  
-> If running inside the directory use `$PWD:/input` 
-> The result will be generates in a `site` folder inside the input dir.
-
-Build
-```console
-$ docker run -v $PWD:/input ghcr.io/rochacbruno/marmite
-Site generated at: site/
-```
-Serve (just add port mapping and the --serve)
-```console
-$ docker run -p 8000:8000 -v $PWD:/input ghcr.io/rochacbruno/marmite --serve
-```
-
-</details>
-
-<details>
-
-<summary>Or install from the package manager</summary>
-
-**Homebrew (macOS/Linux)**
-```console
-brew install marmite
-```
-[View formula](https://formulae.brew.sh/formula/marmite)
-
-**Arch Linux**
-```console
-pacman -S marmite
-```
-[View package](https://archlinux.org/packages/extra/x86_64/marmite/)
-
-**FreeBSD**
-```console
-pkg install marmite
-```
-[View port](https://www.freshports.org/www/marmite/)
-
-</details>
+<!-- .install -->
 
 
 ### Starting your site project

@@ -207,8 +207,8 @@ fn test_list_shortcodes_with_descriptions() {
     assert_eq!(
         names,
         vec![
-            "authors", "card", "gallery", "pages", "posts", "series", "socials", "spotify",
-            "streams", "tags", "toc", "youtube"
+            "authors", "card", "gallery", "install", "pages", "posts", "series", "socials",
+            "spotify", "streams", "tags", "toc", "youtube"
         ]
     );
 
