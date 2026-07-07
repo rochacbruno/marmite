@@ -55,10 +55,10 @@ cargo install --force marmite
 brew install marmite
 ```
 
-### Arch Linux (AUR)
+### Arch Linux
 
 ```bash
-yay -S marmite-bin
+pacman -S marmite
 ```
 
 ### FreeBSD

@@ -116,11 +116,11 @@ brew install marmite
 ```
 [View formula](https://formulae.brew.sh/formula/marmite)
 
-**Arch Linux (AUR)**
+**Arch Linux**
 ```bash
-yay -S marmite-bin
+pacman -S marmite
 ```
-[View package](https://aur.archlinux.org/packages/marmite-bin)
+[View package](https://archlinux.org/packages/extra/x86_64/marmite/)
 
 **FreeBSD**
 ```bash
