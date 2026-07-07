@@ -92,69 +92,12 @@ It also handles generating or copying `static/` and `media/` to the `output` dir
 
 ## Installation
 
-Install with cargo
-
 ```bash
-cargo binstall marmite
-```
-or
-
-```bash
-cargo install marmite
+curl -sS https://marmite.blog/install.sh | sh
 ```
 
-Or download the pre-built **binary** from the [releases](https://github.com/rochacbruno/marmite/releases)
-
-### Alternative installation methods
-
-<details>
-<summary>Package managers</summary>
-
-**Homebrew (macOS/Linux)**
-```bash
-brew install marmite
-```
-[View formula](https://formulae.brew.sh/formula/marmite)
-
-**Arch Linux**
-```bash
-pacman -S marmite
-```
-[View package](https://archlinux.org/packages/extra/x86_64/marmite/)
-
-**FreeBSD**
-```bash
-pkg install marmite
-```
-[View port](https://www.freshports.org/www/marmite/)
-
-</details>
-
-
-<details>
-
-<summary>Or use docker</summary>
-
-
-> [!IMPORTANT]  
-> The directory containing your marmite project must be mapped to containers `/input`  
-> If running inside the directory use `$PWD:/input` 
-> The result will be generates in a `site` folder inside the input dir.
-
-Build
-```console
-$ docker run -v $PWD:/input ghcr.io/rochacbruno/marmite
-Site generated at: site/
-```
-Serve (just add port mapping and the --serve)
-```console
-$ docker run -p 8000:8000 -v $PWD:/input ghcr.io/rochacbruno/marmite --serve
-```
-
-> [!INFO]  
-> By default will run `:latest`, Add `:x.y.z` with the version you want to run.
-
-</details>
+Also available via cargo, pip/uvx, Homebrew, Arch Linux, FreeBSD, and Docker.
+See the full [installation guide](https://marmite.blog/installation.html) for all methods.
 
 ## Usage
 
