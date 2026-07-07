@@ -110,7 +110,7 @@ brew install marmite
 #### Arch Linux
 
 ```bash
-yay -S marmite-bin
+pacman -S marmite
 ```
 
 ### FreeBSD
