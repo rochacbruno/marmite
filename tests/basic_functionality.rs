@@ -279,11 +279,17 @@ fn test_new_json_output_format() {
     let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
     assert_eq!(json["title"].as_str().unwrap(), "My Post");
     assert_eq!(json["slug"].as_str().unwrap(), "my-post");
-    assert!(json["file"].as_str().unwrap().ends_with(".md"));
+    let file_path = json["file"].as_str().unwrap();
+    assert!(file_path.ends_with(".md"));
+    assert!(
+        file_path.contains("posts"),
+        "Post should auto-detect posts/ directory: {file_path}"
+    );
     assert!(json["date"].as_str().is_some());
     assert_eq!(json["tags"].as_str().unwrap(), "rust,web");
 
     // Create a page and verify no date field
+    // Use "Contact" instead of "About" because --init-site already creates pages/about.md
     let output = Command::new("cargo")
         .args([
             "run",
@@ -291,17 +297,26 @@ fn test_new_json_output_format() {
             "--",
             site_dir.to_str().unwrap(),
             "--new",
-            "About",
+            "Contact",
             "-p",
         ])
         .output()
         .expect("Failed to create page");
 
-    assert!(output.status.success());
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let stdout = String::from_utf8_lossy(&output.stdout);
     let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
-    assert_eq!(json["title"].as_str().unwrap(), "About");
+    assert_eq!(json["title"].as_str().unwrap(), "Contact");
     assert!(json["date"].is_null(), "Pages should not have a date field");
+    let file_path = json["file"].as_str().unwrap();
+    assert!(
+        file_path.contains("pages"),
+        "Page should auto-detect pages/ directory: {file_path}"
+    );
 }
 
 #[test]
@@ -479,16 +494,15 @@ fn test_new_translation_root_level() {
     let temp_dir = TempDir::new().unwrap();
     let site_dir = temp_dir.path().join("trans_root_site");
 
-    Command::new("cargo")
-        .args([
-            "run",
-            "--quiet",
-            "--",
-            site_dir.to_str().unwrap(),
-            "--init-site",
-        ])
-        .output()
-        .expect("Failed to init site");
+    // Manually create a content-folder project without posts/pages subdirs
+    // so the page stays at the content root level
+    let content_dir = site_dir.join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        site_dir.join("marmite.yaml"),
+        "name: Test Site\ntagline: Test",
+    )
+    .unwrap();
 
     // Create original post at root level (page so filename is predictable)
     Command::new("cargo")
@@ -576,6 +590,227 @@ fn test_new_translation_nonexistent_slug() {
     assert!(
         stderr.contains("Cannot find content with slug"),
         "Should report missing original content: {stderr}"
+    );
+}
+
+#[test]
+fn test_new_auto_detects_posts_directory() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("auto_posts_site");
+    let content_dir = site_dir.join("content");
+
+    fs::create_dir_all(content_dir.join("posts")).unwrap();
+    fs::write(
+        site_dir.join("marmite.yaml"),
+        "name: Test Site\ntagline: Test",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "My Post",
+        ])
+        .output()
+        .expect("Failed to create post");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+    let file_path = json["file"].as_str().unwrap();
+    assert!(
+        file_path.contains("content/posts/"),
+        "Post should auto-detect posts/ directory: {file_path}"
+    );
+    assert!(
+        std::path::Path::new(file_path).exists(),
+        "File should exist at the auto-detected path"
+    );
+}
+
+#[test]
+fn test_new_auto_detects_pages_directory() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("auto_pages_site");
+    let content_dir = site_dir.join("content");
+
+    fs::create_dir_all(content_dir.join("pages")).unwrap();
+    fs::write(
+        site_dir.join("marmite.yaml"),
+        "name: Test Site\ntagline: Test",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "About",
+            "-p",
+        ])
+        .output()
+        .expect("Failed to create page");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+    let file_path = json["file"].as_str().unwrap();
+    assert!(
+        file_path.contains("content/pages/"),
+        "Page should auto-detect pages/ directory: {file_path}"
+    );
+    assert!(
+        std::path::Path::new(file_path).exists(),
+        "File should exist at the auto-detected path"
+    );
+}
+
+#[test]
+fn test_new_no_auto_detect_without_subdirs() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("no_subdirs_site");
+    let content_dir = site_dir.join("content");
+
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        site_dir.join("marmite.yaml"),
+        "name: Test Site\ntagline: Test",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "My Post",
+        ])
+        .output()
+        .expect("Failed to create post");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+    let file_path = json["file"].as_str().unwrap();
+    assert!(
+        !file_path.contains("posts"),
+        "Without posts/ dir, file should stay in content root: {file_path}"
+    );
+    assert!(
+        file_path.contains("content/"),
+        "File should be in the content directory: {file_path}"
+    );
+}
+
+#[test]
+fn test_new_explicit_d_overrides_auto_detect() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("override_site");
+    let content_dir = site_dir.join("content");
+
+    fs::create_dir_all(content_dir.join("posts")).unwrap();
+    fs::write(
+        site_dir.join("marmite.yaml"),
+        "name: Test Site\ntagline: Test",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "My Post",
+            "-d",
+            "other",
+        ])
+        .output()
+        .expect("Failed to create post");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+    let file_path = json["file"].as_str().unwrap();
+    assert!(
+        file_path.contains("content/other/"),
+        "Explicit -d should override auto-detection: {file_path}"
+    );
+    assert!(
+        !file_path.contains("posts"),
+        "Should not use posts/ when -d is explicit: {file_path}"
+    );
+}
+
+#[test]
+fn test_new_flat_project_unchanged() {
+    let temp_dir = TempDir::new().unwrap();
+    let site_dir = temp_dir.path().join("flat_site");
+
+    fs::create_dir_all(&site_dir).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            site_dir.to_str().unwrap(),
+            "--new",
+            "My Post",
+        ])
+        .output()
+        .expect("Failed to create post");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let json: Value = serde_json::from_str(stdout.trim()).expect("Output should be valid JSON");
+    let file_path = json["file"].as_str().unwrap();
+    assert!(
+        !file_path.contains("content"),
+        "Flat project should not use content/ directory: {file_path}"
+    );
+    assert!(
+        !file_path.contains("posts"),
+        "Flat project should not use posts/ directory: {file_path}"
+    );
+    assert!(
+        std::path::Path::new(file_path).exists(),
+        "File should exist in the flat project root"
     );
 }
 

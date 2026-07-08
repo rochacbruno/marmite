@@ -1005,6 +1005,12 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
                 error!("Failed to create directory: {e:?}");
                 return;
             }
+        } else if cli_args.create.page {
+            if content_folder.join("pages").is_dir() {
+                path.push("pages");
+            }
+        } else if content_folder.join("posts").is_dir() {
+            path.push("posts");
         }
         if cli_args.create.page {
             path.push(format!("{slug}.md"));
@@ -1050,17 +1056,21 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
     );
 
     if cli_args.create.edit {
-        let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
-            if cfg!(target_os = "windows") {
-                "notepad".to_string()
-            } else {
-                "nano".to_string()
-            }
-        });
-        let status = std::process::Command::new(editor).arg(&path).status();
-        if let Err(e) = status {
-            error!("Failed to open editor: {e:?}");
+        open_in_editor(&path);
+    }
+}
+
+fn open_in_editor(path: &Path) {
+    let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
+        if cfg!(target_os = "windows") {
+            "notepad".to_string()
+        } else {
+            "nano".to_string()
         }
+    });
+    let status = std::process::Command::new(editor).arg(path).status();
+    if let Err(e) = status {
+        error!("Failed to open editor: {e:?}");
     }
 }
 

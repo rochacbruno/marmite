@@ -64,11 +64,14 @@ marmite <folder> --new "Post Title" -e
 # Combine all options
 marmite <folder> --new "Tutorial: Getting Started" -t "tutorial,beginner" -e
 
-# Create a post in a specific subfolder
-marmite <folder> --new "Post Title" -d posts
+# Auto-detects posts/ dir in structured projects
+marmite <folder> --new "Post Title"
 
-# Create a page in the pages subfolder
-marmite <folder> --new "About" -p -d pages
+# Auto-detects pages/ dir in structured projects
+marmite <folder> --new "About" -p
+
+# Override auto-detection with -d
+marmite <folder> --new "Post Title" -d custom-dir
 
 # Create in a topic subfolder (creates it if needed)
 marmite <folder> --new "Python Basics" -d tutorials
@@ -88,6 +91,8 @@ The `--new` command outputs JSON with fields: `file`, `title`, `slug`, `date` (p
 ```bash
 marmite <folder> --new "Title" | jq -r .file
 ```
+
+**Directory auto-detection:** When `posts/` or `pages/` subdirectories exist in the content folder, `--new` automatically places posts in `posts/` and pages in `pages/`. This works with structured projects created by `--init-site`. Use `-d` to override auto-detection. Flat projects and content-folder projects without these subdirectories are unaffected.
 
 When `--translates <slug>` is used:
 - If the original content is in a subfolder, the translation is placed in the same folder with a language-code prefix (e.g. `pt-slug.md`)
