@@ -685,6 +685,7 @@ pub(crate) fn build_site_with_config(
                 shortcode_processor.as_ref(),
                 highlighter.as_deref(),
                 cross_site_data,
+                false,
             ) {
                 error!("Failed to render templates: {e:?}");
                 process::exit(1);
@@ -898,6 +899,7 @@ pub fn generate(
                         shortcode_processor.as_ref(),
                         highlighter.as_deref(),
                         None,
+                        serve,
                     ) {
                         error!("Failed to render templates: {e:?}");
                         process::exit(1);
@@ -998,11 +1000,12 @@ pub fn generate(
         // Keep the thread alive for watching
         if serve {
             info!("Starting built-in HTTP server...");
-            server::start(
-                bind_address,
-                &Arc::clone(output_folder),
-                live_reload.as_ref(),
-            );
+            let ctx = server::ServerContext {
+                output_folder: Arc::clone(output_folder),
+                input_folder: Arc::clone(input_folder),
+                config_path: Arc::clone(config_path),
+            };
+            server::start(bind_address, &ctx, live_reload.as_ref());
         } else {
             loop {
                 std::thread::sleep(std::time::Duration::from_secs(1));
@@ -2160,6 +2163,7 @@ fn render_templates(
     shortcode_processor: Option<&ShortcodeProcessor>,
     highlighter: Option<&MarmiteHighlighter>,
     cross_site_data: Option<&crate::workspace::CrossSiteData>,
+    generate_metadata: bool,
 ) -> Result<(), String> {
     // Build the context of variables that are global on every template
     let mut global_context = Context::new();
@@ -2220,6 +2224,7 @@ fn render_templates(
         shortcode_processor,
         highlighter,
         cross_site_data,
+        generate_metadata,
     )?;
 
     handle_redirect_aliases(&site_data, output_dir)?;
@@ -3692,6 +3697,44 @@ fn handle_redirect_aliases(site_data: &Data, output_dir: &Path) -> Result<(), St
     Ok(())
 }
 
+fn build_content_metadata(content: &Content, content_dir: &Path) -> serde_json::Value {
+    let source_path = content
+        .source_path
+        .as_ref()
+        .and_then(|p| p.strip_prefix(content_dir).ok())
+        .map(|p| p.display().to_string());
+
+    let last_updated = content.modified_time.map(|ts| {
+        chrono::DateTime::from_timestamp(ts, 0)
+            .map(|dt| dt.to_rfc3339())
+            .unwrap_or_default()
+    });
+
+    serde_json::json!({
+        "frontmatter": {
+            "title": content.title,
+            "description": content.description,
+            "slug": content.slug,
+            "date": content.date.map(|d| d.to_string()),
+            "tags": content.tags,
+            "authors": content.authors,
+            "stream": content.stream,
+            "series": content.series,
+            "pinned": content.pinned,
+            "language": content.language,
+            "translates": content.translates,
+            "translations": content.translations,
+            "card_image": content.card_image,
+            "banner_image": content.banner_image,
+            "aliases": content.aliases,
+            "comments": content.comments,
+            "extra": content.extra,
+        },
+        "source_path": source_path,
+        "last_updated": last_updated,
+    })
+}
+
 #[allow(clippy::too_many_arguments)]
 fn handle_content_pages(
     site_data: &Data,
@@ -3704,6 +3747,7 @@ fn handle_content_pages(
     shortcode_processor: Option<&ShortcodeProcessor>,
     highlighter: Option<&MarmiteHighlighter>,
     cross_site_data: Option<&crate::workspace::CrossSiteData>,
+    generate_metadata: bool,
 ) -> Result<(), String> {
     let last_build = site_data.latest_timestamp.unwrap_or(0);
     let force_render = should_force_render(
@@ -3745,7 +3789,7 @@ fn handle_content_pages(
                 content_context.remove("comments");
             }
 
-            render_html_with_shortcodes(
+            let result = render_html_with_shortcodes(
                 "content.html",
                 &format!("{}.html", &content.slug),
                 tera,
@@ -3757,7 +3801,20 @@ fn handle_content_pages(
                     highlighter,
                     cross_site_data,
                 },
-            )
+            );
+
+            if generate_metadata && result.is_ok() {
+                let metadata = build_content_metadata(content, content_dir);
+                let metadata_path = output_dir.join(format!("{}.metadata.json", &content.slug));
+                if let Err(e) = fs::write(
+                    &metadata_path,
+                    serde_json::to_string_pretty(&metadata).unwrap_or_default(),
+                ) {
+                    error!("Failed to write metadata for {}: {e}", content.slug);
+                }
+            }
+
+            result
         })
         .reduce_with(|r1, r2| if r1.is_err() { r1 } else { r2 })
         .unwrap_or(Ok(()))

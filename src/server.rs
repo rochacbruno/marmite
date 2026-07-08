@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
-use std::{fs::File, path::Path, thread};
+use std::{fs::File, thread};
 use tiny_http::{Header, Method, Request, Response, Server};
 use tungstenite::handshake::derive_accept_key;
 use tungstenite::protocol::Role;
@@ -14,9 +14,17 @@ use tungstenite::Error as WsError;
 use tungstenite::Message;
 use urlencoding::decode;
 
+pub struct ServerContext {
+    pub output_folder: Arc<PathBuf>,
+    pub input_folder: Arc<PathBuf>,
+    pub config_path: Arc<PathBuf>,
+}
+
 const FALLBACK_BIND_ADDRESS: &str = "0.0.0.0:0";
 const LIVE_RELOAD_SCRIPT_PATH: &str = "__marmite__/livereload.js";
 const LIVE_RELOAD_WS_PATH: &str = "/__marmite__/livereload";
+const CONTENT_API_PATH: &str = "/__marmite__/content";
+const CONFIG_API_PATH: &str = "/__marmite__/config";
 const LIVE_RELOAD_SCRIPT: &str = r#"(() => {
     const isHttps = window.location.protocol === "https:";
     const hostPart = window.location.hostname.includes(":") ? `[${window.location.hostname}]` : window.location.hostname;
@@ -49,7 +57,7 @@ const LIVE_RELOAD_SCRIPT: &str = r#"(() => {
     connect();
 })();"#;
 
-pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Option<&LiveReload>) {
+pub fn start(bind_address: &str, ctx: &ServerContext, live_reload: Option<&LiveReload>) {
     let server = match Server::http(bind_address) {
         Ok(server) => server,
         Err(e) => {
@@ -76,7 +84,7 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Opti
             info!("Live reload WebSocket available at ws://{server_bind_address}{LIVE_RELOAD_WS_PATH}");
         }
         // Continue with request handling
-        for request in server.incoming_requests() {
+        for mut request in server.incoming_requests() {
             if let Some(live_reload_handler) = live_reload {
                 if is_live_reload_ws_request(&request) {
                     live_reload_handler.accept(request);
@@ -84,14 +92,13 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Opti
                 }
             }
 
-            let response =
-                match handle_request(&request, output_folder.as_path(), live_reload.is_some()) {
-                    Ok(response) => response,
-                    Err(err) => {
-                        error!("Error handling request: {err:?}");
-                        Response::from_string("Internal Server Error").with_status_code(500)
-                    }
-                };
+            let response = match handle_request(&mut request, ctx, live_reload.is_some()) {
+                Ok(response) => response,
+                Err(err) => {
+                    error!("Error handling request: {err:?}");
+                    Response::from_string("Internal Server Error").with_status_code(500)
+                }
+            };
 
             if let Err(err) = request.respond(response) {
                 error!("Error sending response: {err:?}");
@@ -108,7 +115,7 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Opti
 
     info!("Server started at http://{server_bind_address}/ - Type ^C to stop.");
 
-    for request in server.incoming_requests() {
+    for mut request in server.incoming_requests() {
         if let Some(live_reload_handler) = live_reload {
             if is_live_reload_ws_request(&request) {
                 live_reload_handler.accept(request);
@@ -116,14 +123,13 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Opti
             }
         }
 
-        let response =
-            match handle_request(&request, output_folder.as_path(), live_reload.is_some()) {
-                Ok(response) => response,
-                Err(err) => {
-                    error!("Error handling request: {err:?}");
-                    Response::from_string("Internal Server Error").with_status_code(500)
-                }
-            };
+        let response = match handle_request(&mut request, ctx, live_reload.is_some()) {
+            Ok(response) => response,
+            Err(err) => {
+                error!("Error handling request: {err:?}");
+                Response::from_string("Internal Server Error").with_status_code(500)
+            }
+        };
 
         if let Err(err) = request.respond(response) {
             error!("Failed to send response: {err:?}");
@@ -133,10 +139,11 @@ pub fn start(bind_address: &str, output_folder: &Arc<PathBuf>, live_reload: Opti
 
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
 fn handle_request(
-    request: &tiny_http::Request,
-    output_folder: &Path,
+    request: &mut tiny_http::Request,
+    ctx: &ServerContext,
     live_reload_enabled: bool,
 ) -> Result<Response<Cursor<Vec<u8>>>, String> {
+    let output_folder = ctx.output_folder.as_path();
     let decoded_url = match decode(request.url()) {
         Ok(decoded) => decoded.into_owned(),
         Err(err) => {
@@ -144,6 +151,14 @@ fn handle_request(
             return Err(format!("Error decoding url: {err}"));
         }
     };
+
+    if decoded_url.starts_with(CONTENT_API_PATH) {
+        return Ok(handle_content_api(request, &decoded_url, ctx));
+    }
+
+    if decoded_url == CONFIG_API_PATH {
+        return Ok(handle_config_api(request, ctx));
+    }
 
     if live_reload_enabled && decoded_url == format!("/{LIVE_RELOAD_SCRIPT_PATH}") {
         let mut response = Response::from_string(LIVE_RELOAD_SCRIPT);
@@ -216,6 +231,289 @@ fn handle_request(
         );
         render_not_found(&error_path)
     }
+}
+
+fn json_response(status: u16, body: &serde_json::Value) -> Response<Cursor<Vec<u8>>> {
+    let json_bytes = serde_json::to_string_pretty(body)
+        .unwrap_or_else(|_| r#"{"error":"serialization failed"}"#.to_string())
+        .into_bytes();
+    let mut resp = Response::from_data(json_bytes).with_status_code(status);
+    if let Ok(header) = Header::from_bytes("Content-Type", "application/json; charset=utf-8") {
+        resp.add_header(header);
+    }
+    resp
+}
+
+fn read_request_body(request: &mut Request) -> Result<String, String> {
+    let mut body = String::new();
+    request
+        .as_reader()
+        .read_to_string(&mut body)
+        .map_err(|e| format!("Failed to read request body: {e}"))?;
+    Ok(body)
+}
+
+fn handle_content_api(
+    request: &mut Request,
+    url: &str,
+    ctx: &ServerContext,
+) -> Response<Cursor<Vec<u8>>> {
+    match *request.method() {
+        Method::Post if url == CONTENT_API_PATH => handle_create_content(request, ctx),
+        Method::Patch => {
+            let slug = url
+                .strip_prefix(CONTENT_API_PATH)
+                .and_then(|s| s.strip_prefix('/'))
+                .unwrap_or("");
+            if slug.is_empty() {
+                return json_response(400, &json!({"error": "slug is required in URL path"}));
+            }
+            handle_patch_content(request, slug, ctx)
+        }
+        _ => json_response(405, &json!({"error": "method not allowed"})),
+    }
+}
+
+fn handle_create_content(request: &mut Request, ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    let body = match read_request_body(request) {
+        Ok(b) => b,
+        Err(e) => return json_response(400, &json!({"error": e})),
+    };
+
+    let parsed: serde_json::Value = match serde_json::from_str(&body) {
+        Ok(v) => v,
+        Err(e) => return json_response(400, &json!({"error": format!("Invalid JSON: {e}")})),
+    };
+
+    let title = match parsed.get("title").and_then(|t| t.as_str()) {
+        Some(t) => t.to_string(),
+        None => return json_response(400, &json!({"error": "title is required"})),
+    };
+
+    let tags = parsed.get("tags").and_then(|v| {
+        if let Some(s) = v.as_str() {
+            Some(s.to_string())
+        } else if let Some(arr) = v.as_array() {
+            let items: Vec<String> = arr
+                .iter()
+                .filter_map(|i| i.as_str().map(String::from))
+                .collect();
+            if items.is_empty() {
+                None
+            } else {
+                Some(items.join(", "))
+            }
+        } else {
+            None
+        }
+    });
+    let directory = parsed
+        .get("directory")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+    let page = parsed
+        .get("page")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false);
+    let lang = parsed
+        .get("lang")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+    let translates = parsed
+        .get("translates")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
+    let params = crate::content::CreateContentParams {
+        title,
+        tags,
+        directory,
+        page,
+        lang,
+        translates,
+    };
+
+    match crate::content::create_content(&ctx.input_folder, &ctx.config_path, &params) {
+        Ok(result) => {
+            let mut output = serde_json::Map::new();
+            output.insert("file".into(), json!(result.file_path.display().to_string()));
+            output.insert("title".into(), json!(result.title));
+            output.insert("slug".into(), json!(result.slug));
+            output.insert("is_page".into(), json!(result.is_page));
+            if let Some(ref date) = result.date {
+                output.insert("date".into(), json!(date));
+            }
+            if let Some(ref tags) = result.tags {
+                output.insert("tags".into(), json!(tags));
+            }
+            if let Some(ref lang) = result.lang {
+                output.insert("language".into(), json!(lang));
+            }
+            if let Some(ref translates) = result.translates {
+                output.insert("translates".into(), json!(translates));
+            }
+            json_response(201, &serde_json::Value::Object(output))
+        }
+        Err(e) => json_response(400, &json!({"error": e})),
+    }
+}
+
+fn handle_patch_content(
+    request: &mut Request,
+    slug: &str,
+    ctx: &ServerContext,
+) -> Response<Cursor<Vec<u8>>> {
+    let body = match read_request_body(request) {
+        Ok(b) => b,
+        Err(e) => return json_response(400, &json!({"error": e})),
+    };
+
+    let patch_fields: serde_json::Map<String, serde_json::Value> = match serde_json::from_str(&body)
+    {
+        Ok(v) => v,
+        Err(e) => return json_response(400, &json!({"error": format!("Invalid JSON: {e}")})),
+    };
+
+    if patch_fields.is_empty() {
+        return json_response(400, &json!({"error": "no fields to update"}));
+    }
+
+    let site_data = crate::site::Data::from_file(&ctx.config_path);
+    let content_folder = crate::site::get_content_folder(&site_data.site, &ctx.input_folder);
+
+    let Some(file_path) = crate::content::find_file_by_slug(&content_folder, slug) else {
+        return json_response(
+            404,
+            &json!({"error": format!("Content with slug '{slug}' not found")}),
+        );
+    };
+
+    match crate::content::update_frontmatter(&file_path, &patch_fields) {
+        Ok(frontmatter) => json_response(
+            200,
+            &json!({
+                "slug": slug,
+                "file": file_path.display().to_string(),
+                "frontmatter": frontmatter,
+            }),
+        ),
+        Err(e) => json_response(500, &json!({"error": e})),
+    }
+}
+
+fn handle_config_api(request: &mut Request, ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    match *request.method() {
+        Method::Post => handle_create_config(ctx),
+        Method::Patch => handle_patch_config(request, ctx),
+        _ => json_response(405, &json!({"error": "method not allowed"})),
+    }
+}
+
+fn handle_create_config(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    let config_path = ctx.config_path.as_path();
+    if config_path.exists() {
+        return json_response(
+            409,
+            &json!({"error": "config file already exists", "file": config_path.display().to_string()}),
+        );
+    }
+
+    let config = crate::config::Marmite::new();
+    let yaml = match serde_yaml::to_string(&config) {
+        Ok(s) => s,
+        Err(e) => {
+            return json_response(
+                500,
+                &json!({"error": format!("Failed to serialize config: {e}")}),
+            )
+        }
+    };
+
+    if let Err(e) = std::fs::write(config_path, &yaml) {
+        return json_response(
+            500,
+            &json!({"error": format!("Failed to write config: {e}")}),
+        );
+    }
+
+    json_response(
+        201,
+        &json!({"file": config_path.display().to_string(), "config": config}),
+    )
+}
+
+fn handle_patch_config(request: &mut Request, ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    let body = match read_request_body(request) {
+        Ok(b) => b,
+        Err(e) => return json_response(400, &json!({"error": e})),
+    };
+
+    let patch: serde_yaml::Mapping = match serde_json::from_str::<serde_json::Value>(&body) {
+        Ok(json_val) => match serde_yaml::to_value(&json_val) {
+            Ok(serde_yaml::Value::Mapping(m)) => m,
+            _ => {
+                return json_response(400, &json!({"error": "request body must be a JSON object"}))
+            }
+        },
+        Err(e) => return json_response(400, &json!({"error": format!("Invalid JSON: {e}")})),
+    };
+
+    if patch.is_empty() {
+        return json_response(400, &json!({"error": "no fields to update"}));
+    }
+
+    let config_path = ctx.config_path.as_path();
+
+    let mut existing: serde_yaml::Mapping = if config_path.exists() {
+        match std::fs::read_to_string(config_path) {
+            Ok(content) if !content.trim().is_empty() => {
+                serde_yaml::from_str(&content).unwrap_or_default()
+            }
+            _ => serde_yaml::Mapping::new(),
+        }
+    } else {
+        let config = crate::config::Marmite::new();
+        match serde_yaml::to_value(&config) {
+            Ok(serde_yaml::Value::Mapping(m)) => m,
+            _ => serde_yaml::Mapping::new(),
+        }
+    };
+
+    for (key, value) in &patch {
+        if value.is_null() {
+            existing.remove(key);
+        } else {
+            existing.insert(key.clone(), value.clone());
+        }
+    }
+
+    let yaml = match serde_yaml::to_string(&existing) {
+        Ok(s) => s,
+        Err(e) => {
+            return json_response(
+                500,
+                &json!({"error": format!("Failed to serialize config: {e}")}),
+            )
+        }
+    };
+
+    if let Err(e) = std::fs::write(config_path, &yaml) {
+        return json_response(
+            500,
+            &json!({"error": format!("Failed to write config: {e}")}),
+        );
+    }
+
+    let result: serde_json::Value =
+        serde_json::to_value(&existing).unwrap_or(serde_json::Value::Null);
+
+    json_response(
+        200,
+        &json!({
+            "file": config_path.display().to_string(),
+            "config": result,
+        }),
+    )
 }
 
 fn content_type_for(path: &str) -> Option<&'static str> {

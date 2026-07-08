@@ -1412,3 +1412,219 @@ flowchart:
         100
     );
 }
+
+#[test]
+fn test_create_content_basic_post() {
+    let temp = TempDir::new().unwrap();
+    let input = temp.path().join("site");
+    let content = input.join("content");
+    fs::create_dir_all(&content).unwrap();
+    fs::write(input.join("marmite.yaml"), "name: Test\ntagline: t").unwrap();
+
+    let params = CreateContentParams {
+        title: "Hello World".to_string(),
+        tags: None,
+        directory: None,
+        page: false,
+        lang: None,
+        translates: None,
+    };
+    let result = create_content(&input, &input.join("marmite.yaml"), &params).unwrap();
+
+    assert_eq!(result.title, "Hello World");
+    assert_eq!(result.slug, "hello-world");
+    assert!(!result.is_page);
+    assert!(result.date.is_some());
+    assert!(result.file_path.exists());
+    let file_content = fs::read_to_string(&result.file_path).unwrap();
+    assert!(file_content.contains("# Hello World"));
+}
+
+#[test]
+fn test_create_content_page() {
+    let temp = TempDir::new().unwrap();
+    let input = temp.path().join("site");
+    let content = input.join("content");
+    fs::create_dir_all(&content).unwrap();
+    fs::write(input.join("marmite.yaml"), "name: Test\ntagline: t").unwrap();
+
+    let params = CreateContentParams {
+        title: "About Me".to_string(),
+        tags: None,
+        directory: None,
+        page: true,
+        lang: None,
+        translates: None,
+    };
+    let result = create_content(&input, &input.join("marmite.yaml"), &params).unwrap();
+
+    assert_eq!(result.slug, "about-me");
+    assert!(result.is_page);
+    assert!(result.date.is_none());
+    assert!(result.file_path.file_name().unwrap().to_str().unwrap() == "about-me.md");
+}
+
+#[test]
+fn test_create_content_with_tags() {
+    let temp = TempDir::new().unwrap();
+    let input = temp.path().join("site");
+    let content = input.join("content");
+    fs::create_dir_all(&content).unwrap();
+    fs::write(input.join("marmite.yaml"), "name: Test\ntagline: t").unwrap();
+
+    let params = CreateContentParams {
+        title: "Tagged Post".to_string(),
+        tags: Some("rust, web".to_string()),
+        directory: None,
+        page: false,
+        lang: None,
+        translates: None,
+    };
+    let result = create_content(&input, &input.join("marmite.yaml"), &params).unwrap();
+
+    let file_content = fs::read_to_string(&result.file_path).unwrap();
+    assert!(file_content.contains("tags: rust, web"));
+}
+
+#[test]
+fn test_create_content_duplicate_fails() {
+    let temp = TempDir::new().unwrap();
+    let input = temp.path().join("site");
+    let content = input.join("content");
+    fs::create_dir_all(&content).unwrap();
+    fs::write(input.join("marmite.yaml"), "name: Test\ntagline: t").unwrap();
+
+    let params = CreateContentParams {
+        title: "Unique Page".to_string(),
+        tags: None,
+        directory: None,
+        page: true,
+        lang: None,
+        translates: None,
+    };
+    create_content(&input, &input.join("marmite.yaml"), &params).unwrap();
+    let result = create_content(&input, &input.join("marmite.yaml"), &params);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("already exists"));
+}
+
+#[test]
+fn test_create_content_invalid_lang() {
+    let temp = TempDir::new().unwrap();
+    let input = temp.path().join("site");
+    let content = input.join("content");
+    fs::create_dir_all(&content).unwrap();
+    fs::write(input.join("marmite.yaml"), "name: Test\ntagline: t").unwrap();
+
+    let params = CreateContentParams {
+        title: "Bad Lang".to_string(),
+        tags: None,
+        directory: None,
+        page: false,
+        lang: Some("xyz".to_string()),
+        translates: None,
+    };
+    let result = create_content(&input, &input.join("marmite.yaml"), &params);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("Invalid language code"));
+}
+
+#[test]
+fn test_update_frontmatter_add_fields() {
+    let temp = TempDir::new().unwrap();
+    let file_path = temp.path().join("test.md");
+    fs::write(
+        &file_path,
+        "---\ntitle: Original\n---\n# Content\n\nBody text.",
+    )
+    .unwrap();
+
+    let mut updates = serde_json::Map::new();
+    updates.insert("tags".into(), serde_json::json!("rust, web"));
+    updates.insert("pinned".into(), serde_json::json!(true));
+
+    let result = update_frontmatter(&file_path, &updates).unwrap();
+
+    assert_eq!(result.get("tags").unwrap().as_str().unwrap(), "rust, web");
+    assert!(result.get("pinned").unwrap().as_bool().unwrap());
+    assert_eq!(result.get("title").unwrap().as_str().unwrap(), "Original");
+
+    let written = fs::read_to_string(&file_path).unwrap();
+    assert!(written.starts_with("---\n"));
+    assert!(written.contains("# Content"));
+    assert!(written.contains("Body text."));
+}
+
+#[test]
+fn test_update_frontmatter_remove_field() {
+    let temp = TempDir::new().unwrap();
+    let file_path = temp.path().join("test.md");
+    fs::write(&file_path, "---\ntitle: Hello\ntags: old\n---\n# Hello\n").unwrap();
+
+    let mut updates = serde_json::Map::new();
+    updates.insert("tags".into(), serde_json::Value::Null);
+
+    let result = update_frontmatter(&file_path, &updates).unwrap();
+
+    assert!(result.get("tags").is_none());
+    assert_eq!(result.get("title").unwrap().as_str().unwrap(), "Hello");
+}
+
+#[test]
+fn test_update_frontmatter_no_existing_frontmatter() {
+    let temp = TempDir::new().unwrap();
+    let file_path = temp.path().join("test.md");
+    fs::write(&file_path, "# Just a title\n\nSome content.").unwrap();
+
+    let mut updates = serde_json::Map::new();
+    updates.insert("tags".into(), serde_json::json!("new-tag"));
+
+    let result = update_frontmatter(&file_path, &updates).unwrap();
+
+    assert_eq!(result.get("tags").unwrap().as_str().unwrap(), "new-tag");
+
+    let written = fs::read_to_string(&file_path).unwrap();
+    assert!(written.starts_with("---\n"));
+    assert!(written.contains("# Just a title"));
+}
+
+#[test]
+fn test_json_to_fm_value_conversions() {
+    assert!(json_to_fm_value(&serde_json::Value::Null).is_none());
+
+    let s = json_to_fm_value(&serde_json::json!("hello")).unwrap();
+    assert!(matches!(s, frontmatter_gen::Value::String(ref v) if v == "hello"));
+
+    let b = json_to_fm_value(&serde_json::json!(true)).unwrap();
+    assert!(matches!(b, frontmatter_gen::Value::Boolean(true)));
+
+    let n = json_to_fm_value(&serde_json::json!(42.0)).unwrap();
+    if let frontmatter_gen::Value::Number(v) = n {
+        assert!((v - 42.0).abs() < f64::EPSILON);
+    } else {
+        panic!("Expected Number");
+    }
+
+    let arr = json_to_fm_value(&serde_json::json!(["a", "b"])).unwrap();
+    if let frontmatter_gen::Value::Array(items) = arr {
+        assert_eq!(items.len(), 2);
+    } else {
+        panic!("Expected Array");
+    }
+}
+
+#[test]
+fn test_fm_value_to_json_roundtrip() {
+    let original = serde_json::json!({
+        "title": "Test",
+        "tags": ["a", "b"],
+        "pinned": true,
+        "count": 5.0
+    });
+    let fm_val = json_to_fm_value(&original).unwrap();
+    let back = fm_value_to_json(&fm_val);
+
+    assert_eq!(back.get("title").unwrap().as_str().unwrap(), "Test");
+    assert_eq!(back.get("tags").unwrap().as_array().unwrap().len(), 2);
+    assert!(back.get("pinned").unwrap().as_bool().unwrap());
+}

@@ -955,64 +955,86 @@ pub fn find_file_by_slug(content_folder: &Path, target_slug: &str) -> Option<std
     None
 }
 
-/// Create a new file with the given text as title and slug
-pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &Path) {
+#[derive(Debug, Clone)]
+pub struct CreateContentParams {
+    pub title: String,
+    pub tags: Option<String>,
+    pub directory: Option<String>,
+    pub page: bool,
+    pub lang: Option<String>,
+    pub translates: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CreateContentResult {
+    pub file_path: std::path::PathBuf,
+    pub title: String,
+    pub slug: String,
+    pub date: Option<String>,
+    pub tags: Option<String>,
+    pub lang: Option<String>,
+    pub translates: Option<String>,
+    pub is_page: bool,
+}
+
+pub fn create_content(
+    input_folder: &Path,
+    config_path: &Path,
+    params: &CreateContentParams,
+) -> Result<CreateContentResult, String> {
     let content_folder = get_content_folder(&Data::from_file(config_path).site, input_folder);
     let mut path = content_folder.clone();
 
-    if let Some(ref lang) = cli_args.create.lang {
+    if let Some(ref lang) = params.lang {
         if !is_iso_639_1_code(lang) {
-            error!("Invalid language code: {lang}. Must be a valid ISO 639-1 code.");
-            return;
+            return Err(format!(
+                "Invalid language code: {lang}. Must be a valid ISO 639-1 code."
+            ));
         }
     }
 
-    let slug = crate::slugify::slugify(text);
+    let slug = crate::slugify::slugify(&params.title);
     let now = chrono::Local::now();
     let mut in_subfolder = false;
 
-    if let Some(ref translates_slug) = cli_args.create.translates {
-        let lang = cli_args
-            .create
+    if let Some(ref translates_slug) = params.translates {
+        let lang = params
             .lang
             .as_ref()
-            .expect("--lang is required with --translates");
+            .ok_or("--lang is required with --translates")?;
         if let Some(original_path) = find_file_by_slug(&content_folder, translates_slug) {
             if let Ok(relative) = original_path.strip_prefix(&content_folder) {
                 let components: Vec<_> = relative.components().collect();
                 if components.len() > 1 {
                     in_subfolder = true;
-                    let parent = original_path.parent().expect("file should have parent");
+                    let parent = original_path.parent().ok_or("file should have parent")?;
                     path = parent.to_path_buf();
                     path.push(format!("{lang}-{slug}.md"));
-                } else if cli_args.create.page {
+                } else if params.page {
                     path.push(format!("{slug}.md"));
                 } else {
                     path.push(format!("{}-{slug}.md", now.format("%Y-%m-%d-%H-%M-%S")));
                 }
             }
         } else {
-            error!(
+            return Err(format!(
                 "Cannot find content with slug '{translates_slug}' in {}",
                 content_folder.display()
-            );
-            return;
+            ));
         }
     } else {
-        if let Some(ref dir) = cli_args.create.directory {
+        if let Some(ref dir) = params.directory {
             path.push(dir);
-            if let Err(e) = std::fs::create_dir_all(&path) {
-                error!("Failed to create directory: {e:?}");
-                return;
-            }
-        } else if cli_args.create.page {
+            std::fs::create_dir_all(&path)
+                .map_err(|e| format!("Failed to create directory: {e}"))?;
+        } else if params.page {
             if content_folder.join("pages").is_dir() {
                 path.push("pages");
             }
         } else if content_folder.join("posts").is_dir() {
             path.push("posts");
         }
-        if cli_args.create.page {
+        if params.page {
             path.push(format!("{slug}.md"));
         } else {
             path.push(format!("{}-{slug}.md", now.format("%Y-%m-%d-%H-%M-%S")));
@@ -1020,44 +1042,147 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
     }
 
     if path.exists() {
-        error!("File already exists: {}", path.display());
-        return;
+        return Err(format!("File already exists: {}", path.display()));
     }
 
-    let mut file = match std::fs::File::create(&path) {
-        Ok(file) => file,
-        Err(e) => {
-            error!("Failed to create file: {e:?}");
-            return;
-        }
-    };
-
-    // Build frontmatter from applicable fields
-    let tags = cli_args.create.tags.as_deref();
-    let lang = cli_args.create.lang.as_deref();
-    let translates = cli_args.create.translates.as_deref();
+    let tags = params.tags.as_deref();
+    let lang = params.lang.as_deref();
+    let translates = params.translates.as_deref();
     let needs_translates_field = translates.is_some() && !in_subfolder;
-    let content = build_new_content_body(text, tags, lang, translates, needs_translates_field);
-
-    if let Err(e) = file.write_all(content.as_bytes()) {
-        error!("Failed to write to file: {e:?}");
-        return;
-    }
-
-    print_new_content_json(
-        &path,
-        text,
-        &slug,
-        cli_args.create.page,
-        now,
+    let body = build_new_content_body(
+        &params.title,
         tags,
         lang,
         translates,
+        needs_translates_field,
     );
 
-    if cli_args.create.edit {
-        open_in_editor(&path);
+    let mut file =
+        std::fs::File::create(&path).map_err(|e| format!("Failed to create file: {e}"))?;
+    file.write_all(body.as_bytes())
+        .map_err(|e| format!("Failed to write to file: {e}"))?;
+
+    let date = if params.page {
+        None
+    } else {
+        Some(now.format("%Y-%m-%d").to_string())
+    };
+
+    Ok(CreateContentResult {
+        file_path: path,
+        title: params.title.clone(),
+        slug,
+        date,
+        tags: params.tags.clone(),
+        lang: params.lang.clone(),
+        translates: params.translates.clone(),
+        is_page: params.page,
+    })
+}
+
+/// Create a new file with the given text as title and slug
+pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &Path) {
+    let params = CreateContentParams {
+        title: text.to_string(),
+        tags: cli_args.create.tags.clone(),
+        directory: cli_args.create.directory.clone(),
+        page: cli_args.create.page,
+        lang: cli_args.create.lang.clone(),
+        translates: cli_args.create.translates.clone(),
+    };
+    match create_content(input_folder, config_path, &params) {
+        Ok(result) => {
+            print_new_content_json(
+                &result.file_path,
+                text,
+                &result.slug,
+                result.is_page,
+                chrono::Local::now(),
+                params.tags.as_deref(),
+                params.lang.as_deref(),
+                params.translates.as_deref(),
+            );
+            if cli_args.create.edit {
+                open_in_editor(&result.file_path);
+            }
+        }
+        Err(e) => error!("{e}"),
     }
+}
+
+fn json_to_fm_value(v: &serde_json::Value) -> Option<frontmatter_gen::Value> {
+    match v {
+        serde_json::Value::Null => None,
+        serde_json::Value::String(s) => Some(frontmatter_gen::Value::String(s.clone())),
+        serde_json::Value::Bool(b) => Some(frontmatter_gen::Value::Boolean(*b)),
+        serde_json::Value::Number(n) => n.as_f64().map(frontmatter_gen::Value::Number),
+        serde_json::Value::Array(arr) => {
+            let items: Vec<frontmatter_gen::Value> =
+                arr.iter().filter_map(json_to_fm_value).collect();
+            Some(frontmatter_gen::Value::Array(items))
+        }
+        serde_json::Value::Object(map) => {
+            let mut fm = Frontmatter::new();
+            for (k, v) in map {
+                if let Some(fv) = json_to_fm_value(v) {
+                    fm.insert(k.clone(), fv);
+                }
+            }
+            Some(frontmatter_gen::Value::Object(Box::new(fm)))
+        }
+    }
+}
+
+fn fm_value_to_json(v: &frontmatter_gen::Value) -> serde_json::Value {
+    match v {
+        frontmatter_gen::Value::Null => serde_json::Value::Null,
+        frontmatter_gen::Value::String(s) => serde_json::Value::String(s.clone()),
+        frontmatter_gen::Value::Boolean(b) => serde_json::Value::Bool(*b),
+        frontmatter_gen::Value::Number(n) => serde_json::Value::Number(
+            serde_json::Number::from_f64(*n).unwrap_or_else(|| serde_json::Number::from(0)),
+        ),
+        frontmatter_gen::Value::Array(arr) => {
+            serde_json::Value::Array(arr.iter().map(fm_value_to_json).collect())
+        }
+        frontmatter_gen::Value::Object(fm) => {
+            let map: serde_json::Map<String, serde_json::Value> = fm
+                .iter()
+                .map(|(k, v)| (k.clone(), fm_value_to_json(v)))
+                .collect();
+            serde_json::Value::Object(map)
+        }
+        frontmatter_gen::Value::Tagged(tag, inner) => {
+            serde_json::json!({ tag: fm_value_to_json(inner) })
+        }
+    }
+}
+
+pub fn update_frontmatter(
+    file_path: &Path,
+    updates: &serde_json::Map<String, serde_json::Value>,
+) -> Result<serde_json::Value, String> {
+    let file_content = fs::read_to_string(file_path).map_err(|e| e.to_string())?;
+    let (mut frontmatter, raw_markdown) = crate::parser::parse_front_matter(&file_content)?;
+
+    for (key, value) in updates {
+        if value.is_null() {
+            frontmatter.remove(key);
+        } else if let Some(fm_val) = json_to_fm_value(value) {
+            frontmatter.insert(key.clone(), fm_val);
+        }
+    }
+
+    let yaml_str = serde_yaml::to_string(&frontmatter)
+        .map_err(|e| format!("Failed to serialize frontmatter: {e}"))?;
+
+    let new_content = format!("---\n{yaml_str}---\n{raw_markdown}");
+    fs::write(file_path, new_content).map_err(|e| format!("Failed to write file: {e}"))?;
+
+    let result: serde_json::Map<String, serde_json::Value> = frontmatter
+        .iter()
+        .map(|(k, v)| (k.clone(), fm_value_to_json(v)))
+        .collect();
+    Ok(serde_json::Value::Object(result))
 }
 
 fn open_in_editor(path: &Path) {

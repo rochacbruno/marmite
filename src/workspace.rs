@@ -695,11 +695,12 @@ fn handle_workspace_watch_serve(
 
         if serve {
             info!("Starting built-in HTTP server...");
-            crate::server::start(
-                bind_address,
-                &Arc::new(output_root.to_path_buf()),
-                live_reload.as_ref(),
-            );
+            let ctx = crate::server::ServerContext {
+                output_folder: Arc::new(output_root.to_path_buf()),
+                input_folder: Arc::new(workspace_root.to_path_buf()),
+                config_path: Arc::new(ws_config_path.to_path_buf()),
+            };
+            crate::server::start(bind_address, &ctx, live_reload.as_ref());
         } else {
             loop {
                 std::thread::sleep(std::time::Duration::from_secs(1));
@@ -707,7 +708,12 @@ fn handle_workspace_watch_serve(
         }
     } else if serve {
         info!("Starting built-in HTTP server...");
-        crate::server::start(bind_address, &Arc::new(output_root.to_path_buf()), None);
+        let ctx = crate::server::ServerContext {
+            output_folder: Arc::new(output_root.to_path_buf()),
+            input_folder: Arc::new(workspace_root.to_path_buf()),
+            config_path: Arc::new(ws_config_path.to_path_buf()),
+        };
+        crate::server::start(bind_address, &ctx, None);
     }
 }
 

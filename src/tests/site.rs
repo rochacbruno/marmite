@@ -1676,3 +1676,43 @@ fn test_url_collection_includes_languages() {
     let all = data.generated_urls.get_all_urls();
     assert!(all.contains(&"languages.html".to_string()));
 }
+
+#[test]
+fn test_build_content_metadata_basic() {
+    let content = ContentBuilder::new()
+        .title("Test Post".to_string())
+        .slug("test-post".to_string())
+        .tags(vec!["rust".into(), "web".into()])
+        .date(NaiveDate::from_ymd_opt(2025, 1, 15).unwrap().into())
+        .source_path(PathBuf::from("/project/content/posts/test.md"))
+        .build();
+
+    let content_dir = Path::new("/project/content");
+    let metadata = build_content_metadata(&content, content_dir);
+
+    let fm = metadata.get("frontmatter").unwrap();
+    assert_eq!(fm.get("title").unwrap().as_str().unwrap(), "Test Post");
+    assert_eq!(fm.get("slug").unwrap().as_str().unwrap(), "test-post");
+    assert_eq!(fm.get("tags").unwrap().as_array().unwrap().len(), 2);
+
+    assert_eq!(
+        metadata.get("source_path").unwrap().as_str().unwrap(),
+        "posts/test.md"
+    );
+}
+
+#[test]
+fn test_build_content_metadata_page_no_date() {
+    let content = ContentBuilder::new()
+        .title("About".to_string())
+        .slug("about".to_string())
+        .build();
+
+    let content_dir = Path::new("/project/content");
+    let metadata = build_content_metadata(&content, content_dir);
+
+    let fm = metadata.get("frontmatter").unwrap();
+    assert_eq!(fm.get("title").unwrap().as_str().unwrap(), "About");
+    assert!(fm.get("date").unwrap().is_null());
+    assert!(metadata.get("source_path").unwrap().is_null());
+}

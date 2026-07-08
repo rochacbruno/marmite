@@ -200,7 +200,12 @@ fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
 
     if serve && !watch {
         info!("Starting built-in HTTP server...");
-        server::start(bind_address, &Arc::clone(&output_folder), None);
+        let ctx = server::ServerContext {
+            output_folder: Arc::clone(&output_folder),
+            input_folder: Arc::clone(&input_folder),
+            config_path: Arc::clone(&config_path),
+        };
+        server::start(bind_address, &ctx, None);
     }
 
     Ok(())
