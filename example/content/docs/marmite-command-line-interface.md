@@ -86,14 +86,25 @@ myblog/content/2024-11-26-12-34-27-my-first-post.md
 
 Pass `-p` to create a page instead of a post.  
 Pass `-e` to immediately open the file on the `$EDITOR`.  
-Pass `-d` to specify a subfolder within the content directory:
+Pass `-d` to specify a subfolder within the content directory.
+
+When `posts/` or `pages/` subdirectories exist in the content folder (as created by `--init-site`), `--new` automatically places content in the right directory:
 
 ```console
-$ marmite myblog --new "My first post" -d posts
+$ marmite myblog --new "My first post"
 {"file":"myblog/content/posts/2024-11-26-12-34-27-my-first-post.md","title":"My first post","slug":"my-first-post","date":"2024-11-26"}
 
-$ marmite myblog --new "About" -p -d pages
+$ marmite myblog --new "About" -p
 {"file":"myblog/content/pages/about.md","title":"About","slug":"about"}
+```
+
+If neither `posts/` nor `pages/` exists, files are created directly in the content folder as before.
+
+Use `-d` to override the auto-detected directory or to place content in a custom subfolder:
+
+```console
+$ marmite myblog --new "My first post" -d tutorials
+{"file":"myblog/content/tutorials/2024-11-26-12-34-27-my-first-post.md","title":"My first post","slug":"my-first-post","date":"2024-11-26"}
 ```
 
 The `-d` flag creates the directory if it does not exist, so you can use it to organize content into topic subfolders.
