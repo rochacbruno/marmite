@@ -1436,8 +1436,13 @@ fn test_create_content_basic_post() {
     assert!(!result.is_page);
     assert!(result.date.is_some());
     assert!(result.file_path.exists());
+    assert_eq!(
+        result.file_path.file_name().unwrap().to_str().unwrap(),
+        "hello-world.md"
+    );
     let file_content = fs::read_to_string(&result.file_path).unwrap();
     assert!(file_content.contains("# Hello World"));
+    assert!(file_content.contains("date:"));
 }
 
 #[test]
@@ -1484,10 +1489,37 @@ fn test_create_content_with_tags() {
 
     let file_content = fs::read_to_string(&result.file_path).unwrap();
     assert!(file_content.contains("tags: rust, web"));
+    assert!(file_content.contains("date:"));
 }
 
 #[test]
-fn test_create_content_duplicate_fails() {
+fn test_create_content_duplicate_post_fails() {
+    let temp = TempDir::new().unwrap();
+    let input = temp.path().join("site");
+    let content = input.join("content");
+    fs::create_dir_all(&content).unwrap();
+    fs::write(input.join("marmite.yaml"), "name: Test\ntagline: t").unwrap();
+
+    let params = CreateContentParams {
+        title: "Unique Post".to_string(),
+        tags: None,
+        directory: None,
+        page: false,
+        lang: None,
+        translates: None,
+    };
+    create_content(&input, &input.join("marmite.yaml"), &params).unwrap();
+    let result = create_content(&input, &input.join("marmite.yaml"), &params);
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(
+        err.contains("already exists"),
+        "Expected 'already exists' error, got: {err}"
+    );
+}
+
+#[test]
+fn test_create_content_duplicate_page_fails() {
     let temp = TempDir::new().unwrap();
     let input = temp.path().join("site");
     let content = input.join("content");
@@ -1505,7 +1537,11 @@ fn test_create_content_duplicate_fails() {
     create_content(&input, &input.join("marmite.yaml"), &params).unwrap();
     let result = create_content(&input, &input.join("marmite.yaml"), &params);
     assert!(result.is_err());
-    assert!(result.unwrap_err().contains("already exists"));
+    let err = result.unwrap_err();
+    assert!(
+        err.contains("already exists"),
+        "Expected 'already exists' error, got: {err}"
+    );
 }
 
 #[test]

@@ -997,6 +997,13 @@ pub fn create_content(
     let now = chrono::Local::now();
     let mut in_subfolder = false;
 
+    if let Some(existing) = find_file_by_slug(&content_folder, &slug) {
+        return Err(format!(
+            "Slug '{slug}' already exists: {}",
+            existing.display()
+        ));
+    }
+
     if let Some(ref translates_slug) = params.translates {
         let lang = params
             .lang
@@ -1010,10 +1017,8 @@ pub fn create_content(
                     let parent = original_path.parent().ok_or("file should have parent")?;
                     path = parent.to_path_buf();
                     path.push(format!("{lang}-{slug}.md"));
-                } else if params.page {
-                    path.push(format!("{slug}.md"));
                 } else {
-                    path.push(format!("{}-{slug}.md", now.format("%Y-%m-%d-%H-%M-%S")));
+                    path.push(format!("{slug}.md"));
                 }
             }
         } else {
@@ -1034,11 +1039,7 @@ pub fn create_content(
         } else if content_folder.join("posts").is_dir() {
             path.push("posts");
         }
-        if params.page {
-            path.push(format!("{slug}.md"));
-        } else {
-            path.push(format!("{}-{slug}.md", now.format("%Y-%m-%d-%H-%M-%S")));
-        }
+        path.push(format!("{slug}.md"));
     }
 
     if path.exists() {
@@ -1049,8 +1050,14 @@ pub fn create_content(
     let lang = params.lang.as_deref();
     let translates = params.translates.as_deref();
     let needs_translates_field = translates.is_some() && !in_subfolder;
+    let date_str = if params.page {
+        None
+    } else {
+        Some(now.format("%Y-%m-%d %H:%M:%S").to_string())
+    };
     let body = build_new_content_body(
         &params.title,
+        date_str.as_deref(),
         tags,
         lang,
         translates,
@@ -1065,7 +1072,7 @@ pub fn create_content(
     let date = if params.page {
         None
     } else {
-        Some(now.format("%Y-%m-%d").to_string())
+        Some(now.format("%Y-%m-%d %H:%M:%S").to_string())
     };
 
     Ok(CreateContentResult {
@@ -1096,8 +1103,7 @@ pub fn new(input_folder: &Path, text: &str, cli_args: &Arc<Cli>, config_path: &P
                 &result.file_path,
                 text,
                 &result.slug,
-                result.is_page,
-                chrono::Local::now(),
+                result.date.as_deref(),
                 params.tags.as_deref(),
                 params.lang.as_deref(),
                 params.translates.as_deref(),
@@ -1201,6 +1207,7 @@ fn open_in_editor(path: &Path) {
 
 fn build_new_content_body(
     text: &str,
+    date: Option<&str>,
     tags: Option<&str>,
     lang: Option<&str>,
     translates: Option<&str>,
@@ -1208,12 +1215,16 @@ fn build_new_content_body(
 ) -> String {
     use std::fmt::Write;
 
-    let has_frontmatter = tags.is_some() || lang.is_some() || needs_translates_field;
+    let has_frontmatter =
+        date.is_some() || tags.is_some() || lang.is_some() || needs_translates_field;
     if !has_frontmatter {
         return format!("# {text}\n");
     }
 
     let mut fm = String::from("---\n");
+    if let Some(date) = date {
+        let _ = writeln!(fm, "date: {date}");
+    }
     if let Some(lang) = lang {
         let _ = writeln!(fm, "language: {lang}");
     }
@@ -1227,13 +1238,11 @@ fn build_new_content_body(
     format!("{fm}# {text}\n")
 }
 
-#[allow(clippy::too_many_arguments)]
 fn print_new_content_json(
     path: &Path,
     text: &str,
     slug: &str,
-    is_page: bool,
-    now: chrono::DateTime<chrono::Local>,
+    date: Option<&str>,
     tags: Option<&str>,
     lang: Option<&str>,
     translates: Option<&str>,
@@ -1251,10 +1260,10 @@ fn print_new_content_json(
         "slug".to_string(),
         serde_json::Value::String(slug.to_string()),
     );
-    if !is_page {
+    if let Some(date) = date {
         output.insert(
             "date".to_string(),
-            serde_json::Value::String(now.format("%Y-%m-%d").to_string()),
+            serde_json::Value::String(date.to_string()),
         );
     }
     if let Some(tags) = tags {
