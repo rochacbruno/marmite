@@ -203,9 +203,13 @@ Starting built-in HTTP server
 Server started at http://localhost:8000/ - Type ^C to stop.
 ```
 
-Open your browser and check http://localhost:8000/ to see your running blog
+Open your browser and check http://localhost:8000/ to see your running blog.
 
-if you want to share your site with others in the same network, just 
+When the server is running, a [[marmite-toolbar]] icon appears at the top-left corner of every page. Click it to open a sidebar panel where you can create, edit, move, and delete content, manage site configuration, and view site stats - all without leaving the browser.
+
+The server also exposes a [[content-management-api]] under `/__marmite__/` for programmatic content and config management.
+
+If you want to share your site with others in the same network, just 
 pass `--bind "0.0.0.0:8000` and then share your local IP address.
 
 ## Media
