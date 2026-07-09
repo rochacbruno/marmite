@@ -686,8 +686,8 @@
     // Build menu editor rows
     const menuRows = menu.map((item, i) => `
       <div class="mt-menu-row" data-idx="${i}">
-        <input type="text" class="mt-menu-name" value="${esc(item[0])}" placeholder="Label" style="flex:1">
-        <input type="text" class="mt-menu-url" value="${esc(item[1])}" placeholder="URL" style="flex:1">
+        <input type="text" class="mt-menu-name" name="mt-menu-${i}-name" value="${esc(item[0])}" placeholder="Label" style="flex:1">
+        <input type="text" class="mt-menu-url" name="mt-menu-${i}-url" value="${esc(item[1])}" placeholder="URL" style="flex:1">
         <button class="mt-menu-up" title="Move up" style="padding:1px 5px;cursor:pointer;border:1px solid;border-radius:3px;background:none;font-size:11px">&uarr;</button>
         <button class="mt-menu-down" title="Move down" style="padding:1px 5px;cursor:pointer;border:1px solid;border-radius:3px;background:none;font-size:11px">&darr;</button>
         <button class="mt-menu-del" title="Remove" style="padding:1px 5px;cursor:pointer;border:1px solid;border-radius:3px;background:none;font-size:11px;color:#c0392b">&times;</button>
@@ -699,8 +699,8 @@
       const desc = (val && typeof val === 'object') ? (val.description || '') : '';
       return `<div style="display:flex;gap:4px;margin-bottom:3px;align-items:center" class="mt-dn-row" data-section="${title}">
         <span style="font-weight:600;min-width:50px;font-size:11px">${key}</span>
-        <input type="text" class="mt-dn-field" data-section="${title}" data-key="${key}" data-field="display_name" value="${esc(dn)}" placeholder="Display name" style="flex:1">
-        ${title === 'series' ? `<input type="text" class="mt-dn-field" data-section="${title}" data-key="${key}" data-field="description" value="${esc(desc)}" placeholder="Description" style="flex:1">` : ''}
+        <input type="text" class="mt-dn-field" data-section="${title}" data-key="${key}" data-field="display_name" name="mt-dn-${title}-${key}-dn" value="${esc(dn)}" placeholder="Display name" style="flex:1">
+        ${title === 'series' ? `<input type="text" class="mt-dn-field" data-section="${title}" data-key="${key}" data-field="description" name="mt-dn-${title}-${key}-desc" value="${esc(desc)}" placeholder="Description" style="flex:1">` : ''}
         <button class="mt-dn-del" title="Remove" style="padding:1px 5px;cursor:pointer;border:1px solid;border-radius:3px;background:none;font-size:11px;color:#c0392b">&times;</button>
       </div>`;
     }
@@ -723,10 +723,10 @@
       return `<details class="mt-author-entry" style="margin-bottom:4px;border:1px solid;border-radius:4px;padding:4px 6px">
         <summary style="cursor:pointer;font-weight:600;font-size:11px;display:flex;align-items:center;justify-content:space-between">${key}<button class="mt-author-del" title="Remove" style="padding:1px 5px;cursor:pointer;border:1px solid;border-radius:3px;background:none;font-size:11px;color:#c0392b">&times;</button></summary>
         <div style="margin-top:3px;display:flex;flex-direction:column;gap:2px">
-          <input type="text" class="mt-author-field" data-author="${key}" data-field="name" value="${esc(v.name)}" placeholder="Display name">
-          <input type="text" class="mt-author-field" data-author="${key}" data-field="avatar" value="${esc(v.avatar)}" placeholder="Avatar URL">
-          <input type="text" class="mt-author-field" data-author="${key}" data-field="bio" value="${esc(v.bio)}" placeholder="Bio">
-          <input type="text" class="mt-author-field" data-author="${key}" data-field="links" value="${esc(linksStr)}" placeholder="Label=URL, Label=URL">
+          <input type="text" class="mt-author-field" data-author="${key}" data-field="name" name="mt-author-${key}-name" value="${esc(v.name)}" placeholder="Display name">
+          <input type="text" class="mt-author-field" data-author="${key}" data-field="avatar" name="mt-author-${key}-avatar" value="${esc(v.avatar)}" placeholder="Avatar URL">
+          <input type="text" class="mt-author-field" data-author="${key}" data-field="bio" name="mt-author-${key}-bio" value="${esc(v.bio)}" placeholder="Bio">
+          <input type="text" class="mt-author-field" data-author="${key}" data-field="links" name="mt-author-${key}-links" value="${esc(linksStr)}" placeholder="Label=URL, Label=URL">
         </div>
       </details>`;
     }
@@ -758,35 +758,35 @@
       <div class="mt-section-title">Titles</div>
       <div class="mt-field">
         <label>Pages Title</label>
-        <input type="text" class="mt-layout-title" data-key="pages_title" value="${esc(cfg.pages_title)}">
+        <input type="text" class="mt-layout-title" name="mt-layout-title" data-key="pages_title" value="${esc(cfg.pages_title)}">
       </div>
       <div class="mt-field">
         <label>Tags Title</label>
-        <input type="text" class="mt-layout-title" data-key="tags_title" value="${esc(cfg.tags_title)}">
+        <input type="text" class="mt-layout-title" name="mt-layout-title" data-key="tags_title" value="${esc(cfg.tags_title)}">
       </div>
       <div class="mt-field">
         <label>Archives Title</label>
-        <input type="text" class="mt-layout-title" data-key="archives_title" value="${esc(cfg.archives_title)}">
+        <input type="text" class="mt-layout-title" name="mt-layout-title" data-key="archives_title" value="${esc(cfg.archives_title)}">
       </div>
       <div class="mt-field">
         <label>Authors Title</label>
-        <input type="text" class="mt-layout-title" data-key="authors_title" value="${esc(cfg.authors_title)}">
+        <input type="text" class="mt-layout-title" name="mt-layout-title" data-key="authors_title" value="${esc(cfg.authors_title)}">
       </div>
       <div class="mt-field">
         <label>Streams Title</label>
-        <input type="text" class="mt-layout-title" data-key="streams_title" value="${esc(cfg.streams_title)}">
+        <input type="text" class="mt-layout-title" name="mt-layout-title" data-key="streams_title" value="${esc(cfg.streams_title)}">
       </div>
       <div class="mt-field">
         <label>Series Title</label>
-        <input type="text" class="mt-layout-title" data-key="series_title" value="${esc(cfg.series_title)}">
+        <input type="text" class="mt-layout-title" name="mt-layout-title" data-key="series_title" value="${esc(cfg.series_title)}">
       </div>
       <div class="mt-field">
         <label>Languages Title</label>
-        <input type="text" class="mt-layout-title" data-key="languages_title" value="${esc(cfg.languages_title)}">
+        <input type="text" class="mt-layout-title" name="mt-layout-title" data-key="languages_title" value="${esc(cfg.languages_title)}">
       </div>
       <div class="mt-field">
         <label>Search Title</label>
-        <input type="text" class="mt-layout-title" data-key="search_title" value="${esc(cfg.search_title)}">
+        <input type="text" class="mt-layout-title" name="mt-layout-title" data-key="search_title" value="${esc(cfg.search_title)}">
       </div>
 
       ${displayNameSection('streams', cfg.streams)}
@@ -827,8 +827,8 @@
       div.className = 'mt-menu-row';
       div.style.cssText = 'display:flex;gap:4px;align-items:center';
       div.innerHTML = `
-        <input type="text" class="mt-menu-name" value="${esc(name)}" placeholder="Label" style="flex:1">
-        <input type="text" class="mt-menu-url" value="${esc(url)}" placeholder="URL" style="flex:1">
+        <input type="text" class="mt-menu-name" name="mt-menu-new-name" value="${esc(name)}" placeholder="Label" style="flex:1">
+        <input type="text" class="mt-menu-url" name="mt-menu-new-url" value="${esc(url)}" placeholder="URL" style="flex:1">
         <button class="mt-menu-up" title="Move up" style="padding:1px 5px;cursor:pointer;border:1px solid;border-radius:3px;background:none;font-size:11px">&uarr;</button>
         <button class="mt-menu-down" title="Move down" style="padding:1px 5px;cursor:pointer;border:1px solid;border-radius:3px;background:none;font-size:11px">&darr;</button>
         <button class="mt-menu-del" title="Remove" style="padding:1px 5px;cursor:pointer;border:1px solid;border-radius:3px;background:none;font-size:11px;color:#c0392b">&times;</button>
@@ -983,67 +983,60 @@
     const cfg = (siteData && siteData.config) ? siteData.config : {};
 
     const esc = (v) => v == null ? '' : String(v).replace(/"/g, '&quot;');
-    const boolSel = (val) => {
-      const v = val === true || val === 'true';
-      return `<select class="mt-cfg-field">
-        <option value="true"${v ? ' selected' : ''}>Yes</option>
-        <option value="false"${!v ? ' selected' : ''}>No</option>
-      </select>`;
-    };
 
     container.innerHTML = `
       <div class="mt-section-title">General</div>
       <div class="mt-field">
         <label>Site Name</label>
-        <input type="text" class="mt-cfg-field" data-key="name" value="${esc(cfg.name)}">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="name" value="${esc(cfg.name)}">
       </div>
       <div class="mt-field">
         <label>Tagline</label>
-        <input type="text" class="mt-cfg-field" data-key="tagline" value="${esc(cfg.tagline)}">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="tagline" value="${esc(cfg.tagline)}">
       </div>
       <div class="mt-field">
         <label>URL</label>
-        <input type="text" class="mt-cfg-field" data-key="url" value="${esc(cfg.url)}" placeholder="https://example.com">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="url" value="${esc(cfg.url)}" placeholder="https://example.com">
       </div>
       <div class="mt-field">
         <label>Language</label>
-        <input type="text" class="mt-cfg-field" data-key="language" value="${esc(cfg.language)}">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="language" value="${esc(cfg.language)}">
       </div>
       <div class="mt-field">
         <label>Footer</label>
-        <textarea class="mt-cfg-field" data-key="footer">${cfg.footer || ''}</textarea>
+        <textarea class="mt-cfg-field" name="mt-cfg" data-key="footer">${cfg.footer || ''}</textarea>
       </div>
       <div class="mt-field">
         <label>Default Author</label>
-        <input type="text" class="mt-cfg-field" data-key="default_author" value="${esc(cfg.default_author)}">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="default_author" value="${esc(cfg.default_author)}">
       </div>
       <div class="mt-field">
         <label>Default Date Format</label>
-        <input type="text" class="mt-cfg-field" data-key="default_date_format" value="${esc(cfg.default_date_format)}" placeholder="%B %d, %Y">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="default_date_format" value="${esc(cfg.default_date_format)}" placeholder="%B %d, %Y">
       </div>
 
       <div class="mt-section-title">Display</div>
       <div class="mt-field">
         <label>Pagination</label>
-        <input type="number" class="mt-cfg-field" data-key="pagination" data-type="number" value="${cfg.pagination || 10}" min="1">
+        <input type="number" class="mt-cfg-field" name="mt-cfg" data-key="pagination" data-type="number" value="${cfg.pagination || 10}" min="1">
       </div>
       <div class="mt-field">
         <label>Enable Search</label>
-        <select class="mt-cfg-field" data-key="enable_search">
+        <select class="mt-cfg-field" name="mt-cfg" data-key="enable_search">
           <option value="true"${cfg.enable_search ? ' selected' : ''}>Yes</option>
           <option value="false"${!cfg.enable_search ? ' selected' : ''}>No</option>
         </select>
       </div>
       <div class="mt-field">
         <label>Show Related Content</label>
-        <select class="mt-cfg-field" data-key="enable_related_content">
+        <select class="mt-cfg-field" name="mt-cfg" data-key="enable_related_content">
           <option value="true"${cfg.enable_related_content ? ' selected' : ''}>Yes</option>
           <option value="false"${!cfg.enable_related_content ? ' selected' : ''}>No</option>
         </select>
       </div>
       <div class="mt-field">
         <label>Show Next/Prev Links</label>
-        <select class="mt-cfg-field" data-key="show_next_prev_links">
+        <select class="mt-cfg-field" name="mt-cfg" data-key="show_next_prev_links">
           <option value="true"${cfg.show_next_prev_links ? ' selected' : ''}>Yes</option>
           <option value="false"${!cfg.show_next_prev_links ? ' selected' : ''}>No</option>
         </select>
@@ -1052,34 +1045,34 @@
       <div class="mt-section-title">Images</div>
       <div class="mt-field">
         <label>Card Image</label>
-        <input type="text" class="mt-cfg-field" data-key="card_image" value="${esc(cfg.card_image)}">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="card_image" value="${esc(cfg.card_image)}">
       </div>
       <div class="mt-field">
         <label>Banner Image</label>
-        <input type="text" class="mt-cfg-field" data-key="banner_image" value="${esc(cfg.banner_image)}">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="banner_image" value="${esc(cfg.banner_image)}">
       </div>
       <div class="mt-field">
         <label>Logo Image</label>
-        <input type="text" class="mt-cfg-field" data-key="logo_image" value="${esc(cfg.logo_image)}">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="logo_image" value="${esc(cfg.logo_image)}">
       </div>
 
       <div class="mt-section-title">Paths</div>
       <div class="mt-field">
         <label>Content Path</label>
-        <input type="text" class="mt-cfg-field" data-key="content_path" value="${esc(cfg.content_path)}" placeholder="content">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="content_path" value="${esc(cfg.content_path)}" placeholder="content">
       </div>
       <div class="mt-field">
         <label>Site Path</label>
-        <input type="text" class="mt-cfg-field" data-key="site_path" value="${esc(cfg.site_path)}" placeholder="site">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="site_path" value="${esc(cfg.site_path)}" placeholder="site">
       </div>
       <div class="mt-field">
         <label>Media Path</label>
-        <input type="text" class="mt-cfg-field" data-key="media_path" value="${esc(cfg.media_path)}" placeholder="media">
+        <input type="text" class="mt-cfg-field" name="mt-cfg" data-key="media_path" value="${esc(cfg.media_path)}" placeholder="media">
       </div>
 
       <div class="mt-section-title">Extra (JSON)</div>
       <div class="mt-field">
-        <textarea class="mt-cfg-field" data-key="extra" id="mt-cfg-extra" style="min-height:100px">${cfg.extra ? JSON.stringify(cfg.extra, null, 2) : '{}'}</textarea>
+        <textarea class="mt-cfg-field" name="mt-cfg" data-key="extra" id="mt-cfg-extra" style="min-height:100px">${cfg.extra ? JSON.stringify(cfg.extra, null, 2) : '{}'}</textarea>
       </div>
 
       <button class="mt-btn mt-btn-primary mt-btn-block" id="mt-cfg-save">Save Config</button>
