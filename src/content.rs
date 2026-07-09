@@ -940,15 +940,15 @@ pub fn find_file_by_slug(content_folder: &Path, target_slug: &str) -> Option<std
             continue;
         }
         if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-            let mut candidate = remove_date_from_filename(stem);
-            // Strip lang prefix (e.g. "pt-slug" -> "slug") for lang-prefixed files
-            if let Some((prefix, rest)) = candidate.split_once('-') {
-                if is_iso_639_1_code(prefix) {
-                    candidate = rest.to_string();
-                }
-            }
+            let candidate = remove_date_from_filename(stem);
             if candidate == target_slug {
                 return Some(path.to_path_buf());
+            }
+            // Also try stripping lang prefix (e.g. "pt-slug" -> "slug")
+            if let Some((prefix, rest)) = candidate.split_once('-') {
+                if is_iso_639_1_code(prefix) && rest == target_slug {
+                    return Some(path.to_path_buf());
+                }
             }
         }
     }
