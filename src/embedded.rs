@@ -27,6 +27,18 @@ pub struct Shortcodes;
 #[folder = "$CARGO_MANIFEST_DIR/.agents/"]
 pub struct AgentSkills;
 
+#[derive(Embed, Debug)]
+#[folder = "$CARGO_MANIFEST_DIR/assets/toolbar/"]
+pub struct ToolbarAssets;
+
+pub fn get_toolbar_asset(name: &str) -> Option<String> {
+    ToolbarAssets::get(name).and_then(|file| {
+        std::str::from_utf8(file.data.as_ref())
+            .ok()
+            .map(String::from)
+    })
+}
+
 pub static EMBEDDED_SHORTCODES: LazyLock<Vec<(String, Vec<u8>)>> = LazyLock::new(|| {
     let mut files: Vec<(String, Vec<u8>)> = Vec::new();
 
