@@ -930,7 +930,10 @@ pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String>
 }
 
 /// Find an existing content file whose slug matches the given target slug.
+/// Checks filename-derived slug, lang-stripped slug, and explicit slug in frontmatter.
 pub fn find_file_by_slug(content_folder: &Path, target_slug: &str) -> Option<std::path::PathBuf> {
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+
     for entry in walkdir::WalkDir::new(content_folder)
         .into_iter()
         .filter_map(std::result::Result::ok)
@@ -951,7 +954,27 @@ pub fn find_file_by_slug(content_folder: &Path, target_slug: &str) -> Option<std
                 }
             }
         }
+        candidates.push(path.to_path_buf());
     }
+
+    // Fallback: check explicit slug in frontmatter (handles stream-prefixed slugs)
+    for path in &candidates {
+        if let Ok(content) = fs::read_to_string(path) {
+            if let Ok((fm, _)) = crate::parser::parse_front_matter(&content) {
+                if let Some(slug_val) = fm.get("slug") {
+                    let slug = slug_val
+                        .as_str()
+                        .unwrap_or("")
+                        .trim_matches('"')
+                        .to_string();
+                    if slug == target_slug {
+                        return Some(path.clone());
+                    }
+                }
+            }
+        }
+    }
+
     None
 }
 

@@ -425,7 +425,8 @@
       const extraText = container.querySelector('#mt-edit-extra').value.trim();
 
       if (newTitle !== (fm.title || '')) updates.title = newTitle;
-      if (newSlug !== (fm.slug || '')) updates.slug = newSlug || null;
+      // Always write slug to frontmatter so the content has an explicit slug
+      updates.slug = newSlug || fm.slug;
       if (newDesc !== (fm.description || '')) updates.description = newDesc || null;
       if (newDate !== (fm.date || '')) updates.date = newDate || null;
       if (JSON.stringify(newTags) !== JSON.stringify(fm.tags || [])) updates.tags = newTags.length ? newTags.join(', ') : null;
@@ -450,7 +451,9 @@
         updates.extra = null;
       }
 
-      if (Object.keys(updates).length === 0) {
+      // slug is always included; check if anything else changed
+      const hasChanges = Object.keys(updates).some(k => k !== 'slug' || updates[k] !== fm.slug);
+      if (!hasChanges) {
         toast('No changes to save');
         return;
       }
