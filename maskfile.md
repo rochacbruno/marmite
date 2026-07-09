@@ -10,6 +10,14 @@ This file contains development tasks for the Marmite static site generator.
 cargo build --release
 ~~~
 
+## embed
+
+> Rebuild after changing embedded assets (toolbar, templates, shortcodes)
+
+~~~bash
+touch src/embedded.rs && cargo build
+~~~
+
 ## serve
 
 > Build and serve the example site while watching for changes on the example dir

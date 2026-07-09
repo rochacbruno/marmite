@@ -191,6 +191,8 @@ If you want to change the address use `--bind ip:port`
 > [!IMPORTANT]  
 > The built-in server is not suitable for production, when deploying use a webserver such as [Nginx] or read the [[hosting]] guide to learn how to deploy to Github pages, Gitlab pages, Codeberg Pages, Netlify and more.
 
+When the server is running, the [[marmite-toolbar]] is automatically injected into every page, providing a visual interface for creating, editing, and managing content. The server also exposes a [[content-management-api]] under `/__marmite__/` for programmatic access.
+
 
 ## Start a new theme
 

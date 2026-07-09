@@ -1,11 +1,12 @@
 use chrono::Utc;
 use log::{error, info, warn};
 use serde_json::json;
+use std::fmt::Write as _;
 use std::io::{Cursor, ErrorKind};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::{fs::File, thread};
 use tiny_http::{Header, Method, Request, Response, Server};
 use tungstenite::handshake::derive_accept_key;
@@ -22,9 +23,12 @@ pub struct ServerContext {
 
 const FALLBACK_BIND_ADDRESS: &str = "0.0.0.0:0";
 const LIVE_RELOAD_SCRIPT_PATH: &str = "__marmite__/livereload.js";
+const TOOLBAR_JS_PATH: &str = "__marmite__/toolbar.js";
+const TOOLBAR_CSS_PATH: &str = "__marmite__/toolbar.css";
 const LIVE_RELOAD_WS_PATH: &str = "/__marmite__/livereload";
 const CONTENT_API_PATH: &str = "/__marmite__/content";
 const CONFIG_API_PATH: &str = "/__marmite__/config";
+const DATA_API_PATH: &str = "/__marmite__/data";
 const LIVE_RELOAD_SCRIPT: &str = r#"(() => {
     const isHttps = window.location.protocol === "https:";
     const hostPart = window.location.hostname.includes(":") ? `[${window.location.hostname}]` : window.location.hostname;
@@ -56,6 +60,16 @@ const LIVE_RELOAD_SCRIPT: &str = r#"(() => {
 
     connect();
 })();"#;
+
+static TOOLBAR_CSS: LazyLock<String> = LazyLock::new(|| {
+    crate::embedded::get_toolbar_asset("toolbar.css")
+        .expect("embedded toolbar.css missing - this is a build-time error")
+});
+
+static TOOLBAR_JS: LazyLock<String> = LazyLock::new(|| {
+    crate::embedded::get_toolbar_asset("toolbar.js")
+        .expect("embedded toolbar.js missing - this is a build-time error")
+});
 
 pub fn start(bind_address: &str, ctx: &ServerContext, live_reload: Option<&LiveReload>) {
     let server = match Server::http(bind_address) {
@@ -137,7 +151,10 @@ pub fn start(bind_address: &str, ctx: &ServerContext, live_reload: Option<&LiveR
     }
 }
 
-#[allow(clippy::case_sensitive_file_extension_comparisons)]
+#[allow(
+    clippy::case_sensitive_file_extension_comparisons,
+    clippy::too_many_lines
+)]
 fn handle_request(
     request: &mut tiny_http::Request,
     ctx: &ServerContext,
@@ -160,6 +177,10 @@ fn handle_request(
         return Ok(handle_config_api(request, ctx));
     }
 
+    if decoded_url == DATA_API_PATH {
+        return Ok(handle_data_api(ctx));
+    }
+
     if live_reload_enabled && decoded_url == format!("/{LIVE_RELOAD_SCRIPT_PATH}") {
         let mut response = Response::from_string(LIVE_RELOAD_SCRIPT);
         let js_header = Header::from_bytes("Content-Type", "application/javascript")
@@ -167,6 +188,28 @@ fn handle_request(
         response.add_header(js_header);
         if let Ok(cache_header) = Header::from_bytes("Cache-Control", "no-store") {
             response.add_header(cache_header);
+        }
+        return Ok(response);
+    }
+
+    if decoded_url == format!("/{TOOLBAR_JS_PATH}") {
+        let mut response = Response::from_string(TOOLBAR_JS.as_str());
+        if let Ok(h) = Header::from_bytes("Content-Type", "application/javascript; charset=utf-8") {
+            response.add_header(h);
+        }
+        if let Ok(h) = Header::from_bytes("Cache-Control", "no-store") {
+            response.add_header(h);
+        }
+        return Ok(response);
+    }
+
+    if decoded_url == format!("/{TOOLBAR_CSS_PATH}") {
+        let mut response = Response::from_string(TOOLBAR_CSS.as_str());
+        if let Ok(h) = Header::from_bytes("Content-Type", "text/css; charset=utf-8") {
+            response.add_header(h);
+        }
+        if let Ok(h) = Header::from_bytes("Cache-Control", "no-store") {
+            response.add_header(h);
         }
         return Ok(response);
     }
@@ -185,12 +228,24 @@ fn handle_request(
             Ok(mut file) => {
                 let mut buffer = Vec::new();
                 std::io::copy(&mut file, &mut buffer).map_err(|e| e.to_string())?;
-                if live_reload_enabled && request_path.ends_with(".html") {
+                if request_path.ends_with(".html") {
                     let original_buffer = buffer.clone();
                     if let Ok(mut html) = String::from_utf8(buffer) {
-                        if !html.contains(LIVE_RELOAD_SCRIPT_PATH) {
-                            let snippet =
-                                format!("\n<script src=\"/{LIVE_RELOAD_SCRIPT_PATH}\"></script>\n");
+                        let mut snippet = String::new();
+                        if live_reload_enabled && !html.contains(LIVE_RELOAD_SCRIPT_PATH) {
+                            let _ = write!(
+                                snippet,
+                                "\n<script src=\"/{LIVE_RELOAD_SCRIPT_PATH}\"></script>\n"
+                            );
+                        }
+                        if !html.contains(TOOLBAR_CSS_PATH) {
+                            let _ = write!(
+                                snippet,
+                                "<link rel=\"stylesheet\" href=\"/{TOOLBAR_CSS_PATH}\">\n\
+                                 <script src=\"/{TOOLBAR_JS_PATH}\"></script>\n"
+                            );
+                        }
+                        if !snippet.is_empty() {
                             if let Some(pos) = html.rfind("</body>") {
                                 html.insert_str(pos, &snippet);
                             } else {
@@ -229,7 +284,7 @@ fn handle_request(
             request_path,
             request.http_version()
         );
-        render_not_found(&error_path)
+        render_not_found(&error_path, &request_path, live_reload_enabled)
     }
 }
 
@@ -258,17 +313,38 @@ fn handle_content_api(
     url: &str,
     ctx: &ServerContext,
 ) -> Response<Cursor<Vec<u8>>> {
+    let rest = url
+        .strip_prefix(CONTENT_API_PATH)
+        .and_then(|s| s.strip_prefix('/'))
+        .unwrap_or("");
+
     match *request.method() {
-        Method::Post if url == CONTENT_API_PATH => handle_create_content(request, ctx),
-        Method::Patch => {
-            let slug = url
-                .strip_prefix(CONTENT_API_PATH)
-                .and_then(|s| s.strip_prefix('/'))
-                .unwrap_or("");
+        Method::Post if rest.is_empty() => handle_create_content(request, ctx),
+        Method::Post if rest.ends_with("/move") => {
+            let slug = rest.strip_suffix("/move").unwrap_or("");
             if slug.is_empty() {
                 return json_response(400, &json!({"error": "slug is required in URL path"}));
             }
-            handle_patch_content(request, slug, ctx)
+            handle_move_content(request, slug, ctx)
+        }
+        Method::Post if rest.ends_with("/clone") => {
+            let slug = rest.strip_suffix("/clone").unwrap_or("");
+            if slug.is_empty() {
+                return json_response(400, &json!({"error": "slug is required in URL path"}));
+            }
+            handle_clone_content(request, slug, ctx)
+        }
+        Method::Patch => {
+            if rest.is_empty() {
+                return json_response(400, &json!({"error": "slug is required in URL path"}));
+            }
+            handle_patch_content(request, rest, ctx)
+        }
+        Method::Delete => {
+            if rest.is_empty() {
+                return json_response(400, &json!({"error": "slug is required in URL path"}));
+            }
+            handle_delete_content(rest, ctx)
         }
         _ => json_response(405, &json!({"error": "method not allowed"})),
     }
@@ -399,6 +475,254 @@ fn handle_patch_content(
         ),
         Err(e) => json_response(500, &json!({"error": e})),
     }
+}
+
+fn handle_delete_content(slug: &str, ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    let site_data = crate::site::Data::from_file(&ctx.config_path);
+    let content_folder = crate::site::get_content_folder(&site_data.site, &ctx.input_folder);
+
+    match crate::content::delete_content(&content_folder, slug) {
+        Ok(file_path) => json_response(
+            200,
+            &json!({
+                "slug": slug,
+                "file": file_path.display().to_string(),
+                "deleted": true,
+            }),
+        ),
+        Err(e) if e.contains("not found") => json_response(404, &json!({"error": e})),
+        Err(e) => json_response(500, &json!({"error": e})),
+    }
+}
+
+fn handle_move_content(
+    request: &mut Request,
+    slug: &str,
+    ctx: &ServerContext,
+) -> Response<Cursor<Vec<u8>>> {
+    let body = match read_request_body(request) {
+        Ok(b) => b,
+        Err(e) => return json_response(400, &json!({"error": e})),
+    };
+
+    let parsed: serde_json::Value = match serde_json::from_str(&body) {
+        Ok(v) => v,
+        Err(e) => return json_response(400, &json!({"error": format!("Invalid JSON: {e}")})),
+    };
+
+    let Some(new_filename) = parsed.get("filename").and_then(|v| v.as_str()) else {
+        return json_response(400, &json!({"error": "filename is required"}));
+    };
+
+    let site_data = crate::site::Data::from_file(&ctx.config_path);
+    let content_folder = crate::site::get_content_folder(&site_data.site, &ctx.input_folder);
+
+    match crate::content::move_content(&content_folder, slug, new_filename) {
+        Ok((old_path, new_path)) => {
+            let mut new_slug = new_path.file_stem().and_then(|s| s.to_str()).map_or_else(
+                || slug.to_string(),
+                crate::content::remove_date_from_filename,
+            );
+            if let Ok(file_content) = std::fs::read_to_string(&new_path) {
+                if let Ok((fm, _)) = crate::parser::parse_front_matter(&file_content) {
+                    if let Some(s) = fm
+                        .get("slug")
+                        .and_then(|v| v.as_str().map(|s| s.trim_matches('"').to_string()))
+                    {
+                        new_slug = s;
+                    }
+                }
+            }
+            json_response(
+                200,
+                &json!({
+                    "slug": new_slug,
+                    "old_file": old_path.display().to_string(),
+                    "new_file": new_path.display().to_string(),
+                }),
+            )
+        }
+        Err(e) if e.contains("not found") => json_response(404, &json!({"error": e})),
+        Err(e) => json_response(400, &json!({"error": e})),
+    }
+}
+
+fn handle_clone_content(
+    request: &mut Request,
+    slug: &str,
+    ctx: &ServerContext,
+) -> Response<Cursor<Vec<u8>>> {
+    let body = match read_request_body(request) {
+        Ok(b) => b,
+        Err(e) => return json_response(400, &json!({"error": e})),
+    };
+
+    let parsed: serde_json::Value = match serde_json::from_str(&body) {
+        Ok(v) => v,
+        Err(e) => return json_response(400, &json!({"error": format!("Invalid JSON: {e}")})),
+    };
+
+    let Some(title) = parsed.get("title").and_then(|v| v.as_str()) else {
+        return json_response(400, &json!({"error": "title is required"}));
+    };
+
+    let new_slug = parsed.get("slug").and_then(|v| v.as_str());
+
+    let site_data = crate::site::Data::from_file(&ctx.config_path);
+    let content_folder = crate::site::get_content_folder(&site_data.site, &ctx.input_folder);
+
+    match crate::content::clone_content(&content_folder, slug, title, new_slug) {
+        Ok((file_path, result_slug)) => json_response(
+            201,
+            &json!({
+                "slug": result_slug,
+                "file": file_path.display().to_string(),
+                "source": slug,
+            }),
+        ),
+        Err(e) if e.contains("not found") => json_response(404, &json!({"error": e})),
+        Err(e) => json_response(400, &json!({"error": e})),
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+fn handle_data_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    let marmite_json_path = ctx.output_folder.join("marmite.json");
+    let build_info: serde_json::Value = if marmite_json_path.exists() {
+        match std::fs::read_to_string(&marmite_json_path) {
+            Ok(s) => serde_json::from_str(&s).unwrap_or(json!({})),
+            Err(_) => json!({}),
+        }
+    } else {
+        json!({})
+    };
+
+    let mut tags: Vec<String> = Vec::new();
+    let mut streams: Vec<String> = Vec::new();
+    let mut series: Vec<String> = Vec::new();
+    let mut authors: Vec<String> = Vec::new();
+    let mut languages: Vec<String> = Vec::new();
+
+    let all_content = build_info
+        .get("posts")
+        .into_iter()
+        .chain(build_info.get("pages"))
+        .filter_map(|v| v.as_array());
+
+    for content_list in all_content {
+        for item in content_list {
+            if let Some(item_tags) = item.get("tags").and_then(|v| v.as_array()) {
+                for t in item_tags {
+                    if let Some(s) = t.as_str() {
+                        let val = s.to_string();
+                        if !tags.contains(&val) {
+                            tags.push(val);
+                        }
+                    }
+                }
+            }
+            if let Some(s) = item.get("stream").and_then(|v| v.as_str()) {
+                let val = s.to_string();
+                if !streams.contains(&val) {
+                    streams.push(val);
+                }
+            }
+            if let Some(s) = item.get("series").and_then(|v| v.as_str()) {
+                let val = s.to_string();
+                if !series.contains(&val) {
+                    series.push(val);
+                }
+            }
+            if let Some(item_authors) = item.get("authors").and_then(|v| v.as_array()) {
+                for a in item_authors {
+                    if let Some(s) = a.as_str() {
+                        let val = s.to_string();
+                        if !authors.contains(&val) {
+                            authors.push(val);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(config) = build_info.get("config") {
+        if let Some(langs) = config.get("languages").and_then(|v| v.as_object()) {
+            for key in langs.keys() {
+                if !languages.contains(key) {
+                    languages.push(key.clone());
+                }
+            }
+        }
+    }
+
+    tags.sort();
+    streams.sort();
+    series.sort();
+    authors.sort();
+    languages.sort();
+
+    let config = build_info.get("config").cloned().unwrap_or(json!({}));
+
+    let mut slugs: Vec<String> = Vec::new();
+    for key in &["posts", "pages"] {
+        if let Some(items) = build_info.get(key).and_then(|v| v.as_array()) {
+            for item in items {
+                if let Some(s) = item.get("slug").and_then(|v| v.as_str()) {
+                    slugs.push(s.to_string());
+                }
+            }
+        }
+    }
+    slugs.sort();
+
+    let iso_languages: Vec<&str> = crate::content::ISO_639_1_CODES.to_vec();
+
+    let mut images: Vec<String> = Vec::new();
+    let image_extensions = [
+        "jpg", "jpeg", "png", "gif", "webp", "svg", "avif", "bmp", "tiff",
+    ];
+    let output_folder = ctx.output_folder.as_path();
+    for entry in walkdir::WalkDir::new(output_folder)
+        .into_iter()
+        .filter_map(std::result::Result::ok)
+    {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        if !image_extensions.contains(&ext.as_str()) {
+            continue;
+        }
+        if let Ok(rel) = path.strip_prefix(output_folder) {
+            images.push(rel.to_string_lossy().to_string());
+        }
+    }
+    images.sort();
+
+    json_response(
+        200,
+        &json!({
+            "tags": tags,
+            "streams": streams,
+            "series": series,
+            "authors": authors,
+            "languages": languages,
+            "iso_languages": iso_languages,
+            "slugs": slugs,
+            "images": images,
+            "post_count": build_info.get("posts").and_then(|v| v.as_array()).map_or(0, Vec::len),
+            "page_count": build_info.get("pages").and_then(|v| v.as_array()).map_or(0, Vec::len),
+            "elapsed_time": build_info.get("elapsed_time").and_then(serde_json::Value::as_f64).unwrap_or(0.0),
+            "marmite_version": build_info.get("marmite_version").and_then(|v| v.as_str()).unwrap_or(""),
+            "config": config,
+        }),
+    )
 }
 
 fn handle_config_api(request: &mut Request, ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
@@ -542,12 +866,40 @@ fn content_type_for(path: &str) -> Option<&'static str> {
     })
 }
 
-fn render_not_found(error_path: &PathBuf) -> Result<Response<Cursor<Vec<u8>>>, String> {
+fn render_not_found(
+    error_path: &PathBuf,
+    request_path: &str,
+    live_reload_enabled: bool,
+) -> Result<Response<Cursor<Vec<u8>>>, String> {
     match File::open(error_path) {
         Ok(mut file) => {
             let mut buffer = Vec::new();
             std::io::copy(&mut file, &mut buffer).map_err(|e| e.to_string())?;
-            let resp = Response::from_data(buffer);
+            if let Ok(mut html) = String::from_utf8(buffer.clone()) {
+                let slug = request_path.trim_end_matches(".html");
+                let live_reload_tag = if live_reload_enabled {
+                    format!("<script src=\"/{LIVE_RELOAD_SCRIPT_PATH}\"></script>\n")
+                } else {
+                    String::new()
+                };
+                let inject = format!(
+                    "<script>window.__marmite_404_slug__={slug};</script>\n\
+                     <link rel=\"stylesheet\" href=\"/{TOOLBAR_CSS_PATH}\">\n\
+                     <script src=\"/{TOOLBAR_JS_PATH}\"></script>\n\
+                     {live_reload_tag}",
+                    slug = serde_json::to_string(slug).unwrap_or_else(|_| "null".into()),
+                );
+                if let Some(pos) = html.rfind("</body>") {
+                    html.insert_str(pos, &inject);
+                } else {
+                    html.push_str(&inject);
+                }
+                buffer = html.into_bytes();
+            }
+            let mut resp = Response::from_data(buffer).with_status_code(404);
+            if let Ok(h) = Header::from_bytes("Content-Type", "text/html; charset=utf-8") {
+                resp.add_header(h);
+            }
             Ok(resp)
         }
         Err(err) => {

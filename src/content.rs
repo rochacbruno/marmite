@@ -570,7 +570,7 @@ fn determine_series(frontmatter: &Frontmatter) -> Option<String> {
 
 // Remove date prefix from filename `2024-01-01-myfile.md` -> `myfile.md`
 // Return filename if no date prefix is found
-fn remove_date_from_filename(filename: &str) -> String {
+pub fn remove_date_from_filename(filename: &str) -> String {
     let date_prefix_re =
         Regex::new(re::MATCH_DATE_PREFIX_FROM_FILENAME).expect("Date prefix regex should compile");
     date_prefix_re.replace(filename, "").to_string()
@@ -930,7 +930,10 @@ pub fn check_for_duplicate_slugs(contents: &Vec<&Content>) -> Result<(), String>
 }
 
 /// Find an existing content file whose slug matches the given target slug.
+/// Checks filename-derived slug, lang-stripped slug, and explicit slug in frontmatter.
 pub fn find_file_by_slug(content_folder: &Path, target_slug: &str) -> Option<std::path::PathBuf> {
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+
     for entry in walkdir::WalkDir::new(content_folder)
         .into_iter()
         .filter_map(std::result::Result::ok)
@@ -940,18 +943,38 @@ pub fn find_file_by_slug(content_folder: &Path, target_slug: &str) -> Option<std
             continue;
         }
         if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-            let mut candidate = remove_date_from_filename(stem);
-            // Strip lang prefix (e.g. "pt-slug" -> "slug") for lang-prefixed files
-            if let Some((prefix, rest)) = candidate.split_once('-') {
-                if is_iso_639_1_code(prefix) {
-                    candidate = rest.to_string();
-                }
-            }
+            let candidate = remove_date_from_filename(stem);
             if candidate == target_slug {
                 return Some(path.to_path_buf());
             }
+            // Also try stripping lang prefix (e.g. "pt-slug" -> "slug")
+            if let Some((prefix, rest)) = candidate.split_once('-') {
+                if is_iso_639_1_code(prefix) && rest == target_slug {
+                    return Some(path.to_path_buf());
+                }
+            }
+        }
+        candidates.push(path.to_path_buf());
+    }
+
+    // Fallback: check explicit slug in frontmatter (handles stream-prefixed slugs)
+    for path in &candidates {
+        if let Ok(content) = fs::read_to_string(path) {
+            if let Ok((fm, _)) = crate::parser::parse_front_matter(&content) {
+                if let Some(slug_val) = fm.get("slug") {
+                    let slug = slug_val
+                        .as_str()
+                        .unwrap_or("")
+                        .trim_matches('"')
+                        .to_string();
+                    if slug == target_slug {
+                        return Some(path.clone());
+                    }
+                }
+            }
         }
     }
+
     None
 }
 
@@ -1011,13 +1034,19 @@ pub fn create_content(
             .ok_or("--lang is required with --translates")?;
         if let Some(original_path) = find_file_by_slug(&content_folder, translates_slug) {
             if let Ok(relative) = original_path.strip_prefix(&content_folder) {
+                // Check if the original file is inside a slug-named content subfolder
+                // e.g. content/i-like-potato/i-like-potato.md (subfolder matches slug)
+                // vs content/posts/i-like-potato.md (just a category directory)
+                let parent = original_path.parent().ok_or("file should have parent")?;
+                let parent_name = parent.file_name().and_then(|n| n.to_str()).unwrap_or("");
                 let components: Vec<_> = relative.components().collect();
-                if components.len() > 1 {
+                if components.len() > 1 && parent_name == translates_slug {
                     in_subfolder = true;
-                    let parent = original_path.parent().ok_or("file should have parent")?;
                     path = parent.to_path_buf();
                     path.push(format!("{lang}-{slug}.md"));
                 } else {
+                    // Place in the same directory as the original
+                    path = parent.to_path_buf();
                     path.push(format!("{slug}.md"));
                 }
             }
@@ -1191,6 +1220,109 @@ pub fn update_frontmatter(
     Ok(serde_json::Value::Object(result))
 }
 
+pub fn clone_content(
+    content_folder: &Path,
+    source_slug: &str,
+    new_title: &str,
+    new_slug: Option<&str>,
+) -> Result<(std::path::PathBuf, String), String> {
+    let source_path = find_file_by_slug(content_folder, source_slug)
+        .ok_or_else(|| format!("Content with slug '{source_slug}' not found"))?;
+
+    let slug = new_slug.map_or_else(|| crate::slugify::slugify(new_title), String::from);
+
+    if find_file_by_slug(content_folder, &slug).is_some() {
+        return Err(format!("Slug '{slug}' already exists"));
+    }
+
+    let parent = source_path
+        .parent()
+        .ok_or_else(|| "Source file has no parent directory".to_string())?;
+    let dest_path = parent.join(format!("{slug}.md"));
+
+    if dest_path.exists() {
+        return Err(format!("File already exists: {}", dest_path.display()));
+    }
+
+    fs::copy(&source_path, &dest_path).map_err(|e| {
+        format!(
+            "Failed to copy {} to {}: {e}",
+            source_path.display(),
+            dest_path.display()
+        )
+    })?;
+
+    let mut updates = serde_json::Map::new();
+    updates.insert(
+        "title".to_string(),
+        serde_json::Value::String(new_title.to_string()),
+    );
+    updates.insert("slug".to_string(), serde_json::Value::String(slug.clone()));
+    // Remove fields that should not carry over to the clone
+    updates.insert("aliases".to_string(), serde_json::Value::Null);
+    updates.insert("translates".to_string(), serde_json::Value::Null);
+
+    update_frontmatter(&dest_path, &updates)
+        .map_err(|e| format!("Failed to update cloned frontmatter: {e}"))?;
+
+    Ok((dest_path, slug))
+}
+
+pub fn delete_content(content_folder: &Path, slug: &str) -> Result<std::path::PathBuf, String> {
+    let file_path = find_file_by_slug(content_folder, slug)
+        .ok_or_else(|| format!("Content with slug '{slug}' not found"))?;
+    fs::remove_file(&file_path)
+        .map_err(|e| format!("Failed to delete {}: {e}", file_path.display()))?;
+    Ok(file_path)
+}
+
+pub fn move_content(
+    content_folder: &Path,
+    slug: &str,
+    new_filename: &str,
+) -> Result<(std::path::PathBuf, std::path::PathBuf), String> {
+    let file_path = find_file_by_slug(content_folder, slug)
+        .ok_or_else(|| format!("Content with slug '{slug}' not found"))?;
+
+    if !std::path::Path::new(new_filename)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+    {
+        return Err("New filename must end with .md".to_string());
+    }
+
+    let new_path = if new_filename.contains('/') || new_filename.contains(std::path::MAIN_SEPARATOR)
+    {
+        let full = content_folder.join(new_filename);
+        if let Some(parent) = full.parent() {
+            fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {e}"))?;
+        }
+        full
+    } else {
+        let parent = file_path
+            .parent()
+            .ok_or_else(|| "File has no parent directory".to_string())?;
+        parent.join(new_filename)
+    };
+
+    if new_path.exists() {
+        return Err(format!(
+            "Target file already exists: {}",
+            new_path.display()
+        ));
+    }
+
+    fs::rename(&file_path, &new_path).map_err(|e| {
+        format!(
+            "Failed to move {} to {}: {e}",
+            file_path.display(),
+            new_path.display()
+        )
+    })?;
+
+    Ok((file_path, new_path))
+}
+
 fn open_in_editor(path: &Path) {
     let editor = std::env::var("EDITOR").unwrap_or_else(|_| {
         if cfg!(target_os = "windows") {
@@ -1222,6 +1354,11 @@ fn build_new_content_body(
     }
 
     let mut fm = String::from("---\n");
+    // Always include title in frontmatter for translations so the translated
+    // title is explicit and not derived from the slug
+    if lang.is_some() {
+        let _ = writeln!(fm, "title: \"{}\"", text.replace('"', "\\\""));
+    }
     if let Some(date) = date {
         let _ = writeln!(fm, "date: {date}");
     }

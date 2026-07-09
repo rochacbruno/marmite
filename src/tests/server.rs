@@ -1,5 +1,6 @@
 use super::*;
 use std::fs;
+use std::io::Read;
 use tempfile::TempDir;
 
 #[test]
@@ -8,7 +9,7 @@ fn test_render_not_found_with_file() {
     let error_path = temp_dir.path().join("404.html");
     fs::write(&error_path, "Custom 404 page").unwrap();
 
-    let response = render_not_found(&error_path);
+    let response = render_not_found(&error_path, "missing.html", false);
     assert!(response.is_ok());
 }
 
@@ -17,7 +18,7 @@ fn test_render_not_found_without_file() {
     let temp_dir = TempDir::new().unwrap();
     let error_path = temp_dir.path().join("nonexistent_404.html");
 
-    let response = render_not_found(&error_path);
+    let response = render_not_found(&error_path, "missing.html", false);
     assert!(response.is_ok());
 }
 
@@ -28,9 +29,7 @@ fn test_render_not_found_with_file_content() {
     let content = "<html><body><h1>404 - Page Not Found</h1></body></html>";
     fs::write(&error_path, content).unwrap();
 
-    let _response = render_not_found(&error_path).unwrap();
-    // Response should be created successfully
-    // Testing the actual content is difficult without accessing internal data
+    let _response = render_not_found(&error_path, "missing.html", false).unwrap();
 }
 
 #[test]
@@ -38,9 +37,40 @@ fn test_render_not_found_fallback() {
     let temp_dir = TempDir::new().unwrap();
     let error_path = temp_dir.path().join("non_existent_404.html");
 
-    let _response = render_not_found(&error_path).unwrap();
-    // Should return fallback 404 response
-    // Testing the actual content is difficult without accessing internal data
+    let _response = render_not_found(&error_path, "missing.html", false).unwrap();
+}
+
+#[test]
+fn test_render_not_found_injects_toolbar_with_live_reload() {
+    let temp_dir = TempDir::new().unwrap();
+    let error_path = temp_dir.path().join("404.html");
+    let content = "<html><body><h1>Not Found</h1></body></html>";
+    fs::write(&error_path, content).unwrap();
+
+    let response = render_not_found(&error_path, "my-page.html", true).unwrap();
+    let mut body = Vec::new();
+    response.into_reader().read_to_end(&mut body).unwrap();
+    let html = String::from_utf8(body).unwrap();
+    assert!(html.contains("__marmite_404_slug__"));
+    assert!(html.contains("\"my-page\""));
+    assert!(html.contains(TOOLBAR_JS_PATH));
+    assert!(html.contains(TOOLBAR_CSS_PATH));
+}
+
+#[test]
+fn test_render_not_found_toolbar_always_injected() {
+    let temp_dir = TempDir::new().unwrap();
+    let error_path = temp_dir.path().join("404.html");
+    let content = "<html><body><h1>Not Found</h1></body></html>";
+    fs::write(&error_path, content).unwrap();
+
+    let response = render_not_found(&error_path, "my-page.html", false).unwrap();
+    let mut body = Vec::new();
+    response.into_reader().read_to_end(&mut body).unwrap();
+    let html = String::from_utf8(body).unwrap();
+    assert!(html.contains("__marmite_404_slug__"));
+    assert!(html.contains(TOOLBAR_JS_PATH));
+    assert!(!html.contains(LIVE_RELOAD_SCRIPT_PATH));
 }
 
 #[test]

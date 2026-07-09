@@ -1664,3 +1664,292 @@ fn test_fm_value_to_json_roundtrip() {
     assert_eq!(back.get("tags").unwrap().as_array().unwrap().len(), 2);
     assert!(back.get("pinned").unwrap().as_bool().unwrap());
 }
+
+#[test]
+fn test_delete_content_success() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        content_dir.join("hello-world.md"),
+        "---\ntitle: Hello World\n---\nHello",
+    )
+    .unwrap();
+
+    let result = delete_content(&content_dir, "hello-world");
+    assert!(result.is_ok());
+    assert!(!content_dir.join("hello-world.md").exists());
+}
+
+#[test]
+fn test_delete_content_not_found() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+
+    let result = delete_content(&content_dir, "nonexistent");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("not found"));
+}
+
+#[test]
+fn test_move_content_rename() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        content_dir.join("old-name.md"),
+        "---\ntitle: Old Name\n---\nContent",
+    )
+    .unwrap();
+
+    let result = move_content(&content_dir, "old-name", "new-name.md");
+    assert!(result.is_ok());
+    let (old_path, new_path) = result.unwrap();
+    assert!(!old_path.exists());
+    assert!(new_path.exists());
+    assert!(new_path.ends_with("new-name.md"));
+}
+
+#[test]
+fn test_move_content_to_subdirectory() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        content_dir.join("hello-world.md"),
+        "---\ntitle: Hello World\n---\nContent",
+    )
+    .unwrap();
+
+    let result = move_content(&content_dir, "hello-world", "posts/hello-world.md");
+    assert!(result.is_ok());
+    let (old_path, new_path) = result.unwrap();
+    assert!(!old_path.exists());
+    assert!(new_path.exists());
+    assert!(content_dir.join("posts").join("hello-world.md").exists());
+}
+
+#[test]
+fn test_move_content_target_exists() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(content_dir.join("first.md"), "---\ntitle: First\n---\n").unwrap();
+    fs::write(content_dir.join("second.md"), "---\ntitle: Second\n---\n").unwrap();
+
+    let result = move_content(&content_dir, "first", "second.md");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("already exists"));
+}
+
+#[test]
+fn test_move_content_not_found() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+
+    let result = move_content(&content_dir, "nonexistent", "new.md");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("not found"));
+}
+
+#[test]
+fn test_move_content_requires_md_extension() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        content_dir.join("test-page.md"),
+        "---\ntitle: Test Page\n---\n",
+    )
+    .unwrap();
+
+    let result = move_content(&content_dir, "test-page", "test-page.txt");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains(".md"));
+}
+
+#[test]
+fn test_create_translation_flat_directory() {
+    // posts/hello.md -> translation goes to posts/ola.md with explicit frontmatter
+    let temp = TempDir::new().unwrap();
+    let input = temp.path().join("site");
+    let content = input.join("content");
+    let posts = content.join("posts");
+    fs::create_dir_all(&posts).unwrap();
+    fs::write(input.join("marmite.yaml"), "name: Test\ntagline: t").unwrap();
+    fs::write(
+        posts.join("hello.md"),
+        "---\ntitle: Hello\ndate: 2024-01-01\n---\nHello!",
+    )
+    .unwrap();
+
+    let params = CreateContentParams {
+        title: "Ola".to_string(),
+        tags: None,
+        directory: None,
+        page: false,
+        lang: Some("pt".to_string()),
+        translates: Some("hello".to_string()),
+    };
+    let result = create_content(&input, &input.join("marmite.yaml"), &params).unwrap();
+
+    // Translation goes in the same directory as the original
+    assert_eq!(
+        result.file_path.parent().unwrap().file_name().unwrap(),
+        "posts"
+    );
+    assert_eq!(
+        result.file_path.file_name().unwrap().to_str().unwrap(),
+        "ola.md"
+    );
+    // Frontmatter must have explicit title, language, and translates
+    let content = fs::read_to_string(&result.file_path).unwrap();
+    assert!(content.contains("title:"), "must have explicit title");
+    assert!(content.contains("language: pt"), "must have language");
+    assert!(
+        content.contains("translates: hello"),
+        "must have translates"
+    );
+}
+
+#[test]
+fn test_create_translation_slug_subfolder() {
+    // posts/hello/hello.md -> translation goes to posts/hello/pt-ola.md (lang prefix)
+    let temp = TempDir::new().unwrap();
+    let input = temp.path().join("site");
+    let content = input.join("content");
+    let subfolder = content.join("posts").join("hello");
+    fs::create_dir_all(&subfolder).unwrap();
+    fs::write(input.join("marmite.yaml"), "name: Test\ntagline: t").unwrap();
+    fs::write(
+        subfolder.join("hello.md"),
+        "---\ntitle: Hello\ndate: 2024-01-01\n---\nHello!",
+    )
+    .unwrap();
+
+    let params = CreateContentParams {
+        title: "Ola".to_string(),
+        tags: None,
+        directory: None,
+        page: false,
+        lang: Some("pt".to_string()),
+        translates: Some("hello".to_string()),
+    };
+    let result = create_content(&input, &input.join("marmite.yaml"), &params).unwrap();
+
+    // Translation goes in the slug-named subfolder with lang prefix
+    assert_eq!(
+        result.file_path.parent().unwrap().file_name().unwrap(),
+        "hello"
+    );
+    assert_eq!(
+        result.file_path.file_name().unwrap().to_str().unwrap(),
+        "pt-ola.md"
+    );
+    // No translates field needed (auto-discovered from folder)
+    let content = fs::read_to_string(&result.file_path).unwrap();
+    assert!(
+        !content.contains("translates:"),
+        "subfolder translations should not have translates field"
+    );
+    assert!(content.contains("language: pt"), "must have language");
+}
+
+#[test]
+fn test_clone_content_copies_everything() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        content_dir.join("original.md"),
+        "---\ntitle: Original\ndate: 2024-01-01\ntags: rust, web\nstream: tutorial\nlanguage: en\n---\n\nThis is the full body.\n\n## Section\n\nMore content here.\n",
+    )
+    .unwrap();
+
+    let (dest, slug) = clone_content(&content_dir, "original", "Copy of Original", None).unwrap();
+
+    assert_eq!(slug, "copy-of-original");
+    assert!(dest.exists());
+    let cloned = fs::read_to_string(&dest).unwrap();
+    // Title and slug are updated
+    assert!(cloned.contains("Copy of Original"));
+    assert!(cloned.contains("copy-of-original"));
+    // Markdown body is preserved
+    assert!(cloned.contains("This is the full body."));
+    assert!(cloned.contains("## Section"));
+    assert!(cloned.contains("More content here."));
+    // Other frontmatter is preserved
+    assert!(cloned.contains("tags:"));
+    assert!(cloned.contains("stream: tutorial"));
+    assert!(cloned.contains("language: en"));
+}
+
+#[test]
+fn test_clone_content_custom_slug() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        content_dir.join("original.md"),
+        "---\ntitle: Original\n---\nBody",
+    )
+    .unwrap();
+
+    let (_, slug) =
+        clone_content(&content_dir, "original", "New Title", Some("custom-slug")).unwrap();
+    assert_eq!(slug, "custom-slug");
+}
+
+#[test]
+fn test_clone_content_strips_aliases_and_translates() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        content_dir.join("original.md"),
+        "---\ntitle: Original\naliases: old-url\ntranslates: some-post\n---\nBody",
+    )
+    .unwrap();
+
+    let (dest, _) = clone_content(&content_dir, "original", "Clone", None).unwrap();
+    let cloned = fs::read_to_string(&dest).unwrap();
+    assert!(!cloned.contains("aliases:"), "aliases should be removed");
+    assert!(
+        !cloned.contains("translates:"),
+        "translates should be removed"
+    );
+}
+
+#[test]
+fn test_clone_content_not_found() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+
+    let result = clone_content(&content_dir, "nonexistent", "Title", None);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("not found"));
+}
+
+#[test]
+fn test_clone_content_duplicate_slug() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        content_dir.join("original.md"),
+        "---\ntitle: Original\n---\nBody",
+    )
+    .unwrap();
+    fs::write(
+        content_dir.join("existing.md"),
+        "---\ntitle: Existing\n---\nBody",
+    )
+    .unwrap();
+
+    let result = clone_content(&content_dir, "original", "Existing", None);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("already exists"));
+}
