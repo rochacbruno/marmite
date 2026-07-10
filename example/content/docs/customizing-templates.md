@@ -39,6 +39,8 @@ Then you can start customizing those assets.
 If instead, you just want to customize the templates use `--init-templates`
 and the `custom.css` and `custom.js` in the root of the project.
 
+> [!TIP]
+> When serving with `--serve`, you can edit templates directly in the [[marmite-editor]]. Template files in the file tree open in the full editor with Tera autocomplete, syntax validation, and a live preview showing a relevant page for each template type.
 
 ## Templates
 

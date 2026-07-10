@@ -445,8 +445,51 @@ if cli_args.configuration.my_feature {
 ### Adding a new template function
 
 1. Implement the function struct in `tera_functions.rs` (implement `tera::Function`).
-2. Register it in `site.rs` where other functions are registered.
+2. Register it in `site.rs` where other functions are registered (search for `tera.register_function`).
 3. Update `.agents/skills/marmite/references/tera-templates.md`.
+4. Add the function name to `write_template_context_files` in `site.rs` (the `functions` vec).
+5. Add it to the `TERA_BUILTIN_FILTERS` or function completion list in `assets/toolbar/editor.js`.
+
+### Adding a new template filter
+
+1. Implement the filter function in `tera_filter.rs` (implement `tera::Filter`).
+2. Register it in `site.rs` where other filters are registered (search for `tera.register_filter`).
+3. Update `.agents/skills/marmite/references/tera-templates.md`.
+4. Add the filter name to `write_template_context_files` in `site.rs` (the `filters` vec).
+5. Add it to the editor's filter completion list in `assets/toolbar/editor.js`.
+
+### Adding a new template variable
+
+1. Insert the variable into the Tera context in `site.rs` (search for `context.insert`).
+2. Determine which templates receive it:
+   - Global context (`render_templates` function) - available to all templates
+   - Content context (`handle_content_pages` function) - available to `content.html`
+   - List context (`render_list_page` function) - available to `list.html`
+   - Group context (`render_group_page` function) - available to `group.html`
+3. Update `.agents/skills/marmite/references/tera-templates.md`.
+4. Add the variable to the relevant template list in `write_template_context_files` in `site.rs`.
+
+### Template rendering architecture
+
+Marmite uses Tera 2.0. Key points for contributors:
+
+- **Template loading** (`initialize_tera` in `site.rs`): loads embedded default templates first, then user templates from `templates_path` which override the defaults. The `preprocess_template` function in `embedded.rs` auto-converts Tera 1.x syntax (dot-notation indexing, positional test args, `ignore missing` includes) to Tera 2.0 syntax.
+- **Template context** is built in layers: global context (site config, fragments, menu) is shared by all templates, then each template type adds its own variables.
+- **Fragment rendering**: files prefixed with `_` in the content directory (e.g., `_hero.md`, `_sidebar.md`) are rendered through Tera with the global context, then converted to HTML, and injected as variables into all templates.
+- **Template fallback**: list pages use a `custom_{filename},list.html` pattern - Tera tries `custom_index.html` first, falls back to `list.html`.
+- **Error handling during --serve**: template rendering errors are logged but do not crash the server. The previous good build remains served.
+- **Template context files**: during `--serve`, `template.{name}.context.json` files are written to the output folder listing available variables, functions, and filters per template type. These are consumed by the editor for autocomplete.
+
+### Tera 2.0 notes for contributors
+
+Marmite uses Tera 2.0. When writing or modifying templates:
+
+- **No macros**: macros were removed in Tera 2.0. Shortcodes use their own `{% shortcode name() %}` syntax which is processed by marmite's shortcode processor before Tera.
+- **Array indexing**: use `items[0]` not `items.0` (the preprocessor auto-converts old syntax).
+- **Optional chaining**: `{{ content?.extra?.key }}` is safe for deeply nested access.
+- **Renamed filters**: `escape` is now `escape_html`, `linebreaksbr` is `newlines_to_br`, `as_str` is `str`. Marmite provides compatibility shims for the old names.
+- **Removed filters**: `addslashes`, `spaceless`, `get_env`, `concat` are gone from Tera. `striptags`, `slice`, `trim_start_matches`, and `date` are provided by marmite as custom filters.
+- **Tests use keyword args**: `value is divisible_by(n=3)` not `value is divisibleby(3)`.
 
 ### Adding embedded assets
 
