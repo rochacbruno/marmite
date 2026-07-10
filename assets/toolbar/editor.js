@@ -1570,6 +1570,7 @@ async function init() {
     }
     if (siteData && !siteData.watch_enabled) {
       toast('File watcher is not active. Run with --watch (-w) to enable auto-rebuild after edits.', true);
+      $('#me-preview-no-watch').classList.remove('me-hidden');
     }
   } catch (e) { /* ok */ }
 
@@ -1657,7 +1658,9 @@ async function init() {
     $('#me-preview-frame').src = `/${slug}.html`;
   }
   updateDirtyIndicator();
-  connectLiveReload();
+  if (!siteData || siteData.watch_enabled) {
+    connectLiveReload();
+  }
 
   // Setup UI
   setupSidebarTabs();

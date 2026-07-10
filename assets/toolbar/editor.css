@@ -408,6 +408,13 @@ html, body {
   flex-shrink: 0;
 }
 
+#me-preview-no-watch {
+  padding: 4px 8px;
+  font-size: 11px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
 #me-preview-frame {
   flex: 1;
   width: 100%;
@@ -629,6 +636,7 @@ body { background: #fff; color: #1a1a1a; }
 .me-sidebar-tab.me-active { color: #0172ad; border-bottom-color: #0172ad; }
 .me-field input, .me-field select, .me-field textarea { background: #fff; border-color: #ddd; color: #1a1a1a; }
 .me-divider { background: #e5e5e5; }
+#me-preview-no-watch { background: #fff3cd; color: #856404; }
 #me-editor-toolbar { border-color: #e5e5e5; background: #f8f9fa; }
 #me-editor-statusbar { background: #f8f9fa; border-color: #e5e5e5; color: #666; }
 #me-editor-statusbar select { background: #fff; border-color: #ddd; color: #1a1a1a; }
@@ -675,6 +683,7 @@ a.me-tree-file { color: #0172ad; }
   :root:not([data-theme="light"]) .me-field select,
   :root:not([data-theme="light"]) .me-field textarea { background: #181825; border-color: #45475a; color: #cdd6f4; }
   :root:not([data-theme="light"]) .me-divider { background: #313244; }
+  :root:not([data-theme="light"]) #me-preview-no-watch { background: #3e2f00; color: #f5c842; }
   :root:not([data-theme="light"]) #me-editor-toolbar { border-color: #313244; background: #181825; }
   :root:not([data-theme="light"]) #me-editor-statusbar { background: #181825; border-color: #313244; color: #a6adc8; }
   :root:not([data-theme="light"]) #me-editor-statusbar select { background: #313244; border-color: #45475a; color: #cdd6f4; }
@@ -722,6 +731,7 @@ a.me-tree-file { color: #0172ad; }
 [data-theme="dark"] .me-field select,
 [data-theme="dark"] .me-field textarea { background: #181825; border-color: #45475a; color: #cdd6f4; }
 [data-theme="dark"] .me-divider { background: #313244; }
+[data-theme="dark"] #me-preview-no-watch { background: #3e2f00; color: #f5c842; }
 [data-theme="dark"] #me-editor-toolbar { border-color: #313244; background: #181825; }
 [data-theme="dark"] #me-editor-statusbar { background: #181825; border-color: #313244; color: #a6adc8; }
 [data-theme="dark"] #me-editor-statusbar select { background: #313244; border-color: #45475a; color: #cdd6f4; }
