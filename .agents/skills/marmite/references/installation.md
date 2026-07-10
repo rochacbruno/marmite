@@ -36,7 +36,7 @@ uvx marmite
 cargo install marmite
 
 # From GitHub source
-cargo install --git https://github.com/rochacbruno/marmite
+cargo install --git https://github.com/rochacbruno/marmite marmite
 
 # Pre-compiled binary via cargo-binstall
 cargo binstall marmite
