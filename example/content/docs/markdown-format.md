@@ -515,7 +515,7 @@ Values deep-merge across layers (site < folder < page), so a page can override j
 
 #### Client-side rendering
 
-To use client-side rendering instead, set `native_mermaid_render: false` in `marmite.yaml` and add `extra: {"mermaid": true}` to each content's frontmatter. MermaidJS is then loaded from a CDN and renders diagrams in the browser. Use `extra: {"mermaid_theme": "dark"}` to set the theme per page, with values `forest`, `neutral`, `dark`, `base`, `default`. Unlike `mermaid_config`, this must be configured individually on each content file.
+To use client-side rendering instead, set `native_mermaid_render: false` in `marmite.yaml` and add `extra: {"mermaid": true}` to each content's frontmatter. MermaidJS is bundled locally and renders diagrams in the browser. Use `extra: {"mermaid_theme": "dark"}` to set the theme per page, with values `forest`, `neutral`, `dark`, `base`, `default`. Unlike `mermaid_config`, this must be configured individually on each content file.
 
 
 #### Example Diagrams
