@@ -286,6 +286,10 @@ pub struct Configuration {
     #[arg(long)]
     pub skip_image_resize: Option<bool>,
 
+    /// Enable the development toolbar when serving [default: true or from config file]
+    #[arg(long)]
+    pub enable_toolbar: Option<bool>,
+
     /// Check internal links during build [default: false or from config file]
     #[arg(long)]
     pub check_internal_links: Option<bool>,

@@ -781,6 +781,14 @@ pub fn generate(
                 error!("Failed to lock site data: {e}");
                 panic!("Cannot proceed without site data lock")
             });
+            if serve {
+                site_data
+                    .site
+                    .markdown_parser
+                    .get_or_insert_with(Default::default)
+                    .render
+                    .sourcepos = true;
+            }
             let build_info_path = moved_output_folder.join("marmite.json");
             let latest_build_info = get_latest_build_info(&build_info_path)?;
             if let Some(build_info) = &latest_build_info {
@@ -902,7 +910,9 @@ pub fn generate(
                         serve,
                     ) {
                         error!("Failed to render templates: {e:?}");
-                        process::exit(1);
+                        if !serve {
+                            process::exit(1);
+                        }
                     }
                 }
                 "handle_static_artifacts" => {
@@ -1000,10 +1010,13 @@ pub fn generate(
         // Keep the thread alive for watching
         if serve {
             info!("Starting built-in HTTP server...");
+            let serve_config = Data::from_file(config_path);
             let ctx = server::ServerContext {
                 output_folder: Arc::clone(output_folder),
                 input_folder: Arc::clone(input_folder),
                 config_path: Arc::clone(config_path),
+                enable_toolbar: serve_config.site.enable_toolbar,
+                watch_enabled: true,
             };
             server::start(bind_address, &ctx, live_reload.as_ref());
         } else {
@@ -2229,6 +2242,10 @@ fn render_templates(
 
     handle_redirect_aliases(&site_data, output_dir)?;
 
+    if generate_metadata {
+        write_template_context_files(output_dir);
+    }
+
     Ok(())
 }
 
@@ -3077,6 +3094,131 @@ fn copy_markdown_sources(site_data: &Data, content_folder: &Path, output_path: &
                 }
             }
         });
+}
+
+#[allow(clippy::too_many_lines)]
+fn write_template_context_files(output_dir: &Path) {
+    let global_vars: Vec<&str> = vec![
+        "site",
+        "site.name",
+        "site.tagline",
+        "site.url",
+        "site.footer",
+        "site.language",
+        "site.pagination",
+        "site.extra",
+        "menu",
+        "language",
+        "languages",
+        "hero",
+        "sidebar",
+        "announce",
+        "header",
+        "footer",
+        "comments",
+        "htmlhead",
+        "htmltail",
+        "markdown_fragments",
+        "site_data",
+    ];
+    let functions: Vec<&str> = vec![
+        "url_for",
+        "group",
+        "get_posts",
+        "get_pages",
+        "get_data_by_slug",
+        "source_link",
+        "stream_display_name",
+        "series_display_name",
+        "language_display_name",
+        "get_gallery",
+    ];
+    let filters: Vec<&str> = vec![
+        "default_date_format",
+        "remove_draft",
+        "slugify",
+        "striptags",
+        "trim_start_matches",
+        "slice",
+        "date",
+    ];
+
+    let templates = vec![
+        (
+            "content",
+            vec![
+                "title",
+                "content",
+                "content.title",
+                "content.slug",
+                "content.html",
+                "content.date",
+                "content.tags",
+                "content.authors",
+                "content.description",
+                "content.stream",
+                "content.series",
+                "content.toc",
+                "content.banner_image",
+                "content.card_image",
+                "content.next",
+                "content.previous",
+                "content.back_links",
+                "content.extra",
+                "content.comments",
+                "content.language",
+                "content.translations",
+                "content.pinned",
+                "current_page",
+            ],
+        ),
+        (
+            "list",
+            vec![
+                "title",
+                "content_list",
+                "per_page",
+                "total_pages",
+                "total_content",
+                "current_page",
+                "current_page_number",
+                "previous_page",
+                "next_page",
+                "author",
+            ],
+        ),
+        ("group", vec!["title", "current_page", "kind"]),
+        ("base", vec![]),
+        (
+            "pagination",
+            vec![
+                "current_page_number",
+                "total_pages",
+                "previous_page",
+                "next_page",
+                "current_page",
+            ],
+        ),
+        ("sitemap", vec!["sitemap_urls"]),
+    ];
+
+    for (name, specific_vars) in &templates {
+        let mut all_vars: Vec<&str> = global_vars.clone();
+        all_vars.extend(specific_vars);
+        let context = serde_json::json!({
+            "template": format!("{name}.html"),
+            "variables": all_vars,
+            "functions": functions,
+            "filters": filters,
+        });
+        let path = output_dir.join(format!("template.{name}.context.json"));
+        if let Err(e) = fs::write(
+            &path,
+            serde_json::to_string_pretty(&context).unwrap_or_default(),
+        ) {
+            error!("Failed to write template context for {name}: {e}");
+        }
+    }
 }
 
 fn write_build_info(output_path: &Path, site_data: &Data, input_folder: &Path, end_time: f64) {
@@ -4397,6 +4539,97 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
         process::exit(1);
     }
     info!("Site initialized in {}", input_folder.display());
+}
+
+pub fn initialize_project(input_folder: &std::path::Path) -> Result<(), String> {
+    let content_folder = input_folder.join("content");
+    let media_folder = content_folder.join("media");
+    let pages_folder = content_folder.join("pages");
+    let posts_folder = content_folder.join("posts");
+
+    fs::create_dir_all(input_folder).map_err(|e| format!("Failed to create input folder: {e}"))?;
+
+    // Determine the output folder name to ignore it when checking emptiness.
+    // Read from config if it exists, otherwise use the default ("site").
+    let config_path = input_folder.join("marmite.yaml");
+    let output_name = if config_path.exists() {
+        let data = Data::from_file(&config_path);
+        let sp = &data.site.site_path;
+        if sp.is_empty() {
+            "site".to_string()
+        } else {
+            sp.clone()
+        }
+    } else {
+        "site".to_string()
+    };
+
+    let has_visible_files = input_folder
+        .read_dir()
+        .map_err(|e| format!("Failed to read input folder: {e}"))?
+        .filter_map(std::result::Result::ok)
+        .any(|entry| {
+            entry
+                .file_name()
+                .to_str()
+                .is_some_and(|n| !n.starts_with('.') && n != output_name)
+        });
+
+    if has_visible_files {
+        return Err(format!(
+            "Input folder is not empty: {}",
+            input_folder.display()
+        ));
+    }
+
+    crate::config::generate_default_config(input_folder)
+        .map_err(|e| format!("Failed to generate config: {e}"))?;
+
+    for dir in [&content_folder, &media_folder, &pages_folder, &posts_folder] {
+        fs::create_dir_all(dir)
+            .map_err(|e| format!("Failed to create directory {}: {e}", dir.display()))?;
+    }
+
+    let files: &[(&str, &str)] = &[
+        ("custom.css", "/* Custom CSS */"),
+        ("custom.js", "// Custom JS"),
+    ];
+    for (name, content) in files {
+        fs::write(input_folder.join(name), content)
+            .map_err(|e| format!("Failed to create {name}: {e}"))?;
+    }
+
+    let content_files: &[(&str, &str)] = &[
+        ("_404.md", "# Not Found"),
+        (
+            "_references.md",
+            "[github]: https://github.com/rochacbruno/marmite",
+        ),
+        ("_hero.md", "##### Welcome to Marmite\n\nMarmite is a static site generator written in Rust.\nEdit `content/_hero.md` to change this content.\nRemove the file to disable the hero section.\n"),
+        ("_announce.md", "Give us a &star; on [github]"),
+    ];
+    for (name, content) in content_files {
+        fs::write(content_folder.join(name), content)
+            .map_err(|e| format!("Failed to create content/{name}: {e}"))?;
+    }
+
+    fs::write(
+        pages_folder.join("about.md"),
+        "# About\n\nEdit `content/pages/about.md` to change this content.\n\nPages are content without a date.\nAdd them to the menu in `marmite.yaml` to make them accessible.\n",
+    )
+    .map_err(|e| format!("Failed to create about.md: {e}"))?;
+
+    let now = chrono::Local::now();
+    let now_str = now.format("%Y-%m-%d %H:%M:%S").to_string();
+    fs::write(
+        posts_folder.join("welcome.md"),
+        format!(
+            "---\ndate: {now_str}\n---\n# Welcome to Marmite\n\nThis is your first post!\n\nEdit `content/posts/welcome.md` to change this post.\nCreate new markdown files in `content/posts/` for posts or `content/pages/` for pages.\n"
+        ),
+    )
+    .map_err(|e| format!("Failed to create welcome.md: {e}"))?;
+
+    Ok(())
 }
 
 /// Show all site URLs in JSON format

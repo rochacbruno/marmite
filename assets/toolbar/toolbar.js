@@ -1,5 +1,6 @@
 (() => {
   if (document.getElementById('mt-toolbar-btn')) return;
+  if (window.self !== window.top) return;
 
   const API = '/__marmite__';
   const STORAGE_KEY = 'marmiteToolbar';
@@ -232,7 +233,10 @@
     panel.innerHTML = `
       <div class="mt-panel-header">
         <h3>Marmite <span style="font-weight:400;font-size:11px;opacity:0.6">${siteData && siteData.marmite_version ? siteData.marmite_version : ''}</span></h3>
-        <button class="mt-close-btn" id="mt-panel-close">&times;</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <a href="${API}/editor/${isContentPage ? currentSlug : ''}" class="mt-btn" style="font-size:11px;padding:2px 8px;text-decoration:none">Editor</a>
+          <button class="mt-close-btn" id="mt-panel-close">&times;</button>
+        </div>
       </div>
       <div class="mt-tabs">
         ${tabs.map(t => `<button class="mt-tab${t === savedTab ? ' mt-active' : ''}" data-tab="${t}">${t}</button>`).join('')}
@@ -387,7 +391,6 @@
         </label>
       </div>
       <button class="mt-btn mt-btn-primary mt-btn-block" id="mt-edit-save">Save Frontmatter</button>
-      <button class="mt-btn mt-btn-block" disabled title="Coming soon - content editing will be added in a future release">Edit Content</button>
     `;
 
     if (siteData) {
@@ -1195,6 +1198,7 @@
   function render404CreateButton() {
     if (!is404) return;
     const slug = window.__marmite_404_slug__;
+    if (slug.includes('.')) return;
     const title = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const contentHtml = document.querySelector('.content-html');
     const target = contentHtml || document.querySelector('.main-content') || document.querySelector('main');
@@ -1230,6 +1234,9 @@
     // Fetch site data for autocomplete
     try {
       siteData = await (await fetch(`${API}/data`)).json();
+      if (siteData && !siteData.watch_enabled) {
+        toast('File watcher is not active. Run with --watch (-w) to enable auto-rebuild after edits.', true);
+      }
     } catch (e) { /* ok */ }
 
     // Try to load metadata for current page

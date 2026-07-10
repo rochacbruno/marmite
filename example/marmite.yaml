@@ -200,3 +200,6 @@ file_mapping:
     dest: install.ps1
 
 native_mermaid_render: true
+
+# Enable the development toolbar and editor during --serve
+# enable_toolbar: true

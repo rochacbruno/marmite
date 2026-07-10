@@ -770,6 +770,21 @@ Cross-site links use `site::path` syntax: `[See gallery](photos::gallery.html)` 
 
 See `references/config-reference.md` and `references/cli-reference.md` for all workspace options.
 
+## Workflow: Content Editor
+
+When serving with `--serve`, the built-in editor is available at `/__marmite__/editor/`. Open it from the toolbar's **Editor** button or navigate directly.
+
+The editor provides:
+- Three-panel layout: collapsible metadata sidebar, CodeMirror 6 markdown editor, live preview iframe
+- Autocomplete for wikilinks, shortcodes, media paths, and frontmatter
+- Auto-save with preview refresh (1.5s debounce)
+- Insert menu for common markdown elements and a media file picker
+- Config dialog with 9 tabs (including raw YAML editing)
+- Raw file editing for fragments, CSS, JS, YAML, and other non-content files
+- Project file tree for navigating and opening files
+
+Disable the toolbar and editor with `enable_toolbar: false` in `marmite.yaml` or `--enable-toolbar false` on the CLI.
+
 ## Workflow: Marmite Playground
 
 Try marmite directly in the browser at [marmite.blog/marmite-playground.html](https://marmite.blog/marmite-playground.html). The playground is a live editor where you can write markdown, tweak settings, and preview your site in real time - no installation required.

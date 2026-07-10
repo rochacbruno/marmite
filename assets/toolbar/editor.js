@@ -1,0 +1,2243 @@
+import { EditorView, basicSetup } from "codemirror";
+import { EditorState, Compartment } from "@codemirror/state";
+import { keymap } from "@codemirror/view";
+import { markdown } from "@codemirror/lang-markdown";
+import { foldEffect } from "@codemirror/language";
+import { oneDark } from "@codemirror/theme-one-dark";
+import {
+  solarizedLight, dracula, cobalt, coolGlow,
+  amy, espresso, clouds, tomorrow,
+  noctisLilac, rosePineDawn, ayuLight,
+} from "thememirror";
+import { autocompletion, startCompletion } from "@codemirror/autocomplete";
+
+const editorThemes = {
+  solarizedLight: { ext: solarizedLight, label: "Solarized Light" },
+  ayuLight: { ext: ayuLight, label: "Ayu Light" },
+  clouds: { ext: clouds, label: "Clouds" },
+  rosePineDawn: { ext: rosePineDawn, label: "Rose Pine Dawn" },
+  noctisLilac: { ext: noctisLilac, label: "Noctis Lilac" },
+  tomorrow: { ext: tomorrow, label: "Tomorrow" },
+  dracula: { ext: dracula, label: "Dracula" },
+  oneDark: { ext: oneDark, label: "One Dark" },
+  cobalt: { ext: cobalt, label: "Cobalt" },
+  coolGlow: { ext: coolGlow, label: "Cool Glow" },
+  amy: { ext: amy, label: "Amy" },
+  espresso: { ext: espresso, label: "Espresso" },
+};
+
+// --- State ---
+const slug = window.__marmite_editor_slug__;
+const API = '/__marmite__';
+const AUTOSAVE_KEY = `marmiteEditor_${slug}`;
+const PREFS_KEY = 'marmiteEditorPrefs';
+
+let editorView = null;
+let frontmatter = {};
+let sourcePath = '';
+let originalBody = '';
+let siteData = null;
+let fileTree = null;
+let fmLineOffset = 0;
+let scrollSyncEnabled = true;
+const emptyMode = !slug;
+const templateMode = !emptyMode && /^(?:[^/]+\/)?templates\/.*\.(?:html|xml)$/i.test(slug);
+const rawMode = !emptyMode && !templateMode && (slug.includes('/') || slug.includes('.') || slug.startsWith('_'));
+let templateContext = null;
+let isDirty = false;
+let autoSaveTimer = null;
+
+const themeCompartment = new Compartment();
+const fontSizeCompartment = new Compartment();
+
+// --- Utilities ---
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+function getPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+  } catch { return {}; }
+}
+
+function savePrefs(updates) {
+  const prefs = { ...getPrefs(), ...updates };
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  return prefs;
+}
+
+function toast(msg, isError) {
+  let el = document.querySelector('.me-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'me-toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.toggle('me-error', !!isError);
+  el.classList.add('me-show');
+  setTimeout(() => el.classList.remove('me-show'), 3000);
+}
+
+function confirmDialog(title, message) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'me-confirm-overlay';
+    overlay.innerHTML = `
+      <div class="me-confirm-box">
+        <h4>${title}</h4>
+        <p>${message}</p>
+        <div class="me-confirm-actions">
+          <button class="me-btn" id="me-confirm-no">Cancel</button>
+          <button class="me-btn me-btn-primary" id="me-confirm-yes">OK</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector('#me-confirm-yes').onclick = () => { overlay.remove(); resolve(true); };
+    overlay.querySelector('#me-confirm-no').onclick = () => { overlay.remove(); resolve(false); };
+  });
+}
+
+function promptDialog(title, label, defaultValue) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'me-confirm-overlay';
+    overlay.innerHTML = `
+      <div class="me-confirm-box">
+        <h4>${title}</h4>
+        <div class="me-field" style="margin-bottom:16px">
+          <label>${label}
+          <input type="text" id="me-prompt-input" value="${(defaultValue || '').replace(/"/g, '&quot;')}">
+          </label>
+        </div>
+        <div class="me-confirm-actions">
+          <button class="me-btn" id="me-prompt-cancel">Cancel</button>
+          <button class="me-btn me-btn-primary" id="me-prompt-ok">OK</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    const input = overlay.querySelector('#me-prompt-input');
+    input.focus();
+    input.select();
+    overlay.querySelector('#me-prompt-ok').onclick = () => { overlay.remove(); resolve(input.value.trim()); };
+    overlay.querySelector('#me-prompt-cancel').onclick = () => { overlay.remove(); resolve(null); };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { overlay.remove(); resolve(input.value.trim()); }
+      if (e.key === 'Escape') { overlay.remove(); resolve(null); }
+    });
+  });
+}
+
+async function api(method, path, body) {
+  const opts = { method, headers: {} };
+  if (body !== undefined) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const resp = await fetch(`${API}${path}`, opts);
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+  return data;
+}
+
+// --- Autocomplete for sidebar ---
+function createAutocomplete(input, items, onSelect) {
+  const wrap = document.createElement('div');
+  wrap.className = 'me-autocomplete-wrap';
+  input.parentNode.insertBefore(wrap, input);
+  wrap.appendChild(input);
+
+  const list = document.createElement('div');
+  list.className = 'me-autocomplete-list';
+  wrap.appendChild(list);
+
+  input.addEventListener('input', () => {
+    const val = input.value.toLowerCase();
+    const parts = val.split(',');
+    const lastPart = parts[parts.length - 1].trim();
+    if (!lastPart) { list.classList.remove('me-show'); return; }
+    const matches = items.filter(i => i.toLowerCase().includes(lastPart));
+    if (matches.length === 0) { list.classList.remove('me-show'); return; }
+    list.innerHTML = matches.slice(0, 10).map(m =>
+      `<div class="me-autocomplete-item">${m}</div>`
+    ).join('');
+    list.classList.add('me-show');
+  });
+
+  list.addEventListener('click', (e) => {
+    const item = e.target.closest('.me-autocomplete-item');
+    if (!item) return;
+    if (onSelect) {
+      onSelect(item.textContent);
+    } else {
+      const parts = input.value.split(',').map(s => s.trim()).filter(Boolean);
+      parts[parts.length - 1] = item.textContent;
+      input.value = parts.join(', ') + ', ';
+    }
+    list.classList.remove('me-show');
+    input.focus();
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(e.target)) list.classList.remove('me-show');
+  });
+}
+
+// --- Live-reload ---
+// Instead of including livereload.js (which would reload the whole page),
+// we open our own WebSocket and only refresh the preview iframe on rebuild.
+function connectLiveReload() {
+  const isHttps = window.location.protocol === 'https:';
+  const host = window.location.hostname.includes(':')
+    ? `[${window.location.hostname}]` : window.location.hostname;
+  const port = window.location.port ? `:${window.location.port}` : '';
+  const url = `${isHttps ? 'wss' : 'ws'}://${host}${port}/__marmite__/livereload`;
+
+  const ws = new WebSocket(url);
+  ws.addEventListener('message', (event) => {
+    try {
+      const payload = JSON.parse(event.data);
+      if (payload.event === 'reload') {
+        const iframe = $('#me-preview-frame');
+        if (iframe && iframe.src) {
+          iframe.src = iframe.src.split('?')[0] + '?t=' + Date.now();
+        }
+      }
+    } catch { /* ignore */ }
+  });
+  ws.addEventListener('close', () => setTimeout(connectLiveReload, 2000));
+  ws.addEventListener('error', () => ws.close());
+}
+
+// --- Preview sync ---
+// When the editor regains focus, snap the preview back to the page being edited
+// (the user may have browsed to other pages in the preview iframe).
+function syncPreviewToSlug() {
+  if (rawMode || templateMode) return;
+  const iframe = $('#me-preview-frame');
+  if (!iframe || !iframe.src) return;
+  const expectedPath = `/${slug}.html`;
+  try {
+    const current = new URL(iframe.src);
+    if (current.pathname !== expectedPath) {
+      iframe.src = expectedPath;
+    }
+  } catch {
+    iframe.src = expectedPath;
+  }
+}
+
+// --- Scroll sync ---
+let scrollSyncFrame = null;
+
+function setupScrollSync() {
+  if (rawMode || emptyMode) return;
+
+  editorView.scrollDOM.addEventListener('scroll', () => {
+    if (scrollSyncFrame) cancelAnimationFrame(scrollSyncFrame);
+    scrollSyncFrame = requestAnimationFrame(syncScrollToPreview);
+  }, { passive: true });
+
+  const iframe = $('#me-preview-frame');
+  if (iframe) {
+    iframe.addEventListener('load', () => {
+      setTimeout(syncScrollToPreview, 200);
+    });
+  }
+}
+
+function findPreviewContext(iframe) {
+  if (!iframe) return null;
+  let previewDoc;
+  try { previewDoc = iframe.contentDocument; } catch { return null; }
+  if (!previewDoc) return null;
+  if ($('#me-preview-panel').classList.contains('me-hidden')) return null;
+
+  const previewEl = previewDoc.scrollingElement || previewDoc.body;
+  if (!previewEl) return null;
+  const previewMax = previewEl.scrollHeight - previewEl.clientHeight;
+  if (previewMax <= 0) return null;
+
+  return { previewDoc, previewEl, previewMax };
+}
+
+function findSourceposElement(previewDoc, sourceLine) {
+  const elements = previewDoc.querySelectorAll('[data-sourcepos]');
+  let bestEl = null;
+  let bestDist = Infinity;
+  // Prefer elements at or before the source line (not after).
+  // Among those, pick the closest. Only use an element after the
+  // source line if nothing before it is close enough.
+  let bestBeforeEl = null;
+  let bestBeforeDist = Infinity;
+  for (const el of elements) {
+    const startLine = parseInt(el.dataset.sourcepos.split(':')[0], 10);
+    const dist = Math.abs(startLine - sourceLine);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestEl = el;
+    }
+    if (startLine <= sourceLine && dist < bestBeforeDist) {
+      bestBeforeDist = dist;
+      bestBeforeEl = el;
+    }
+  }
+  // Use the best element at-or-before the cursor if it's reasonably close
+  if (bestBeforeEl && bestBeforeDist <= bestDist + 5) {
+    return { bestEl: bestBeforeEl, bestDist: bestBeforeDist };
+  }
+  return { bestEl, bestDist };
+}
+
+function scrollPreviewToElement(previewDoc, previewEl, previewMax, el) {
+  const elRect = el.getBoundingClientRect();
+  const bodyRect = previewDoc.documentElement.getBoundingClientRect();
+  const targetTop = elRect.top - bodyRect.top;
+  // Offset so the element appears ~1/4 down the viewport, not at the very top
+  const viewportOffset = (previewEl.clientHeight || 300) * 0.25;
+  previewEl.scrollTop = Math.max(0, Math.min(targetTop - viewportOffset, previewMax));
+}
+
+function syncScrollToPreview() {
+  if (rawMode || emptyMode || !scrollSyncEnabled) return;
+  const iframe = $('#me-preview-frame');
+  const ctx = findPreviewContext(iframe);
+  if (!ctx) return;
+
+  const scrollDOM = editorView.scrollDOM;
+  const scrollTop = scrollDOM.scrollTop;
+  const scrollHeight = scrollDOM.scrollHeight - scrollDOM.clientHeight;
+  if (scrollHeight <= 0) return;
+
+  // Editor at the very top -> preview at the very top
+  if (scrollTop <= 1) {
+    ctx.previewEl.scrollTop = 0;
+    return;
+  }
+  // Editor at the very bottom -> preview at the very bottom
+  if (scrollTop >= scrollHeight - 1) {
+    ctx.previewEl.scrollTop = ctx.previewMax;
+    return;
+  }
+
+  const topBlock = editorView.lineBlockAtHeight(scrollTop);
+  const topLine = editorView.state.doc.lineAt(topBlock.from).number;
+  const sourceLine = topLine + fmLineOffset;
+
+  const { bestEl, bestDist } = findSourceposElement(ctx.previewDoc, sourceLine);
+  if (bestEl && bestDist < 20) {
+    scrollPreviewToElement(ctx.previewDoc, ctx.previewEl, ctx.previewMax, bestEl);
+  } else {
+    const ratio = scrollTop / scrollHeight;
+    ctx.previewEl.scrollTop = ratio * ctx.previewMax;
+  }
+}
+
+function syncCursorToPreview(editorLine) {
+  if (rawMode || emptyMode || !scrollSyncEnabled) return;
+  const iframe = $('#me-preview-frame');
+  const ctx = findPreviewContext(iframe);
+  if (!ctx) return;
+
+  // Cursor on first line -> scroll preview to top
+  if (editorLine <= 1) {
+    ctx.previewEl.scrollTop = 0;
+    return;
+  }
+  // Cursor on last line -> scroll preview to bottom
+  const lastLine = editorView.state.doc.lines;
+  if (editorLine >= lastLine) {
+    ctx.previewEl.scrollTop = ctx.previewMax;
+    return;
+  }
+
+  const sourceLine = editorLine + fmLineOffset;
+  const { bestEl } = findSourceposElement(ctx.previewDoc, sourceLine);
+  if (bestEl) {
+    scrollPreviewToElement(ctx.previewDoc, ctx.previewEl, ctx.previewMax, bestEl);
+  }
+}
+
+// --- Template preview mapping ---
+function getTemplatePreviewUrl() {
+  const name = slug.split('/').pop().replace(/\.html$|\.xml$/i, '');
+  const firstPost = siteData?.content_items?.find(c => c.slug);
+  const map = {
+    list: '/index.html', pagination: '/index.html', base: '/index.html',
+    base_feeds: '/index.html', sitemap: '/sitemap.xml',
+    group: '/archive.html', group_author_avatar: '/authors.html',
+    json_ld_index: '/index.html',
+  };
+  if (map[name]) return map[name];
+  if (name.startsWith('content') || name === 'comments' || name.startsWith('json_ld_content')) {
+    return firstPost ? `/${firstPost.slug}.html` : '/index.html';
+  }
+  return '/index.html';
+}
+
+// --- CodeMirror Editor ---
+function getEditorThemeExt(name) {
+  const entry = editorThemes[name];
+  return entry ? entry.ext : dracula;
+}
+
+function makeFontSizeTheme(size) {
+  return EditorView.theme({
+    ".cm-content": { fontSize: size + "px" },
+    ".cm-gutters": { fontSize: size + "px" },
+  });
+}
+
+const FRONTMATTER_KEYS = [
+  "title", "slug", "date", "tags", "authors", "description",
+  "stream", "series", "pinned", "toc", "comments",
+  "card_image", "banner_image", "language", "translates", "extra",
+];
+
+const TERA_TAGS = [
+  'for', 'endfor', 'if', 'elif', 'else', 'endif',
+  'block', 'endblock', 'extends', 'include',
+  'set', 'filter', 'endfilter', 'raw', 'endraw',
+  'break', 'continue',
+];
+
+const TERA_BUILTIN_FILTERS = [
+  'upper', 'lower', 'capitalize', 'trim', 'trim_start', 'trim_end',
+  'truncate', 'wordcount', 'length', 'reverse',
+  'first', 'last', 'nth', 'join', 'sort', 'unique', 'group_by',
+  'urlencode', 'urlencode_strict', 'json_encode', 'str',
+  'escape_html', 'escape_xml', 'safe', 'newlines_to_br', 'indent',
+  'round', 'filesizeformat', 'pluralize',
+  'title', 'replace', 'split', 'int', 'float',
+  'default', 'get',
+];
+
+function templateCompletions(context) {
+  const pos = context.pos;
+  const line = context.state.doc.lineAt(pos);
+  const textBefore = line.text.slice(0, pos - line.from);
+  const vars = templateContext ? templateContext.variables || [] : [];
+  const fns = templateContext ? templateContext.functions || [] : [];
+  const customFilters = templateContext ? templateContext.filters || [] : [];
+
+  // Variable completion: {{ partial or {{ obj.partial
+  const varMatch = textBefore.match(/\{\{-?\s*([\w.]*)$/);
+  if (varMatch) {
+    const partial = varMatch[1].toLowerCase();
+    const from = pos - varMatch[1].length;
+    const allItems = [...vars, ...fns.map(f => f + '()')];
+    const options = allItems
+      .filter(v => v.toLowerCase().startsWith(partial))
+      .map(v => ({ label: v }));
+    if (options.length) return { from, options };
+  }
+
+  // Tag completion: {% partial
+  const tagMatch = textBefore.match(/\{%-?\s*(\w*)$/);
+  if (tagMatch) {
+    const partial = tagMatch[1].toLowerCase();
+    const from = pos - tagMatch[1].length;
+    const options = TERA_TAGS
+      .filter(t => t.startsWith(partial))
+      .map(t => ({ label: t }));
+    if (options.length) return { from, options };
+  }
+
+  // Filter completion: | partial
+  const filterMatch = textBefore.match(/\|\s*(\w*)$/);
+  if (filterMatch) {
+    const partial = filterMatch[1].toLowerCase();
+    const from = pos - filterMatch[1].length;
+    const allFilters = [...new Set([...customFilters, ...TERA_BUILTIN_FILTERS])];
+    const options = allFilters
+      .filter(f => f.toLowerCase().startsWith(partial))
+      .map(f => ({ label: f }));
+    if (options.length) return { from, options };
+  }
+
+  return null;
+}
+
+function editorCompletions(context) {
+  if (templateMode) return templateCompletions(context);
+  const pos = context.pos;
+  const line = context.state.doc.lineAt(pos);
+  const textBefore = line.text.slice(0, pos - line.from);
+  const doc = context.state.doc.toString();
+
+  // Wikilinks: [[partial
+  const wikiMatch = textBefore.match(/\[\[([^\]|]*)$/);
+  if (wikiMatch && siteData && siteData.content_items) {
+    const partial = wikiMatch[1].toLowerCase();
+    const from = pos - wikiMatch[1].length;
+    const textAfter = line.text.slice(pos - line.from);
+    const closingBrackets = textAfter.match(/^\]{0,2}/)[0].length;
+    const to = pos + closingBrackets;
+    const filtered = partial
+      ? siteData.content_items.filter(c => c.title.toLowerCase().includes(partial) || c.slug.includes(partial))
+      : siteData.content_items;
+    const options = filtered.map(c => ({
+      label: c.title,
+      detail: c.slug,
+      apply: c.title === c.slug ? `${c.slug}]]` : `${c.title}|${c.slug}]]`,
+    }));
+    if (options.length) return { from, to, options, filter: false };
+  }
+
+  // Shortcodes: <!-- .partial
+  const scMatch = textBefore.match(/<!--\s*\.(\w*)$/);
+  if (scMatch && siteData && siteData.shortcodes) {
+    const partial = scMatch[1].toLowerCase();
+    const from = pos - scMatch[1].length;
+    const options = siteData.shortcodes
+      .filter(name => name.toLowerCase().startsWith(partial))
+      .map(name => ({ label: name, apply: `${name} -->` }));
+    if (options.length) return { from, options };
+  }
+
+  // Image paths: ![...]( or src="
+  const imgMatch = textBefore.match(/(?:\!\[[^\]]*\]\(|src=["'])([^)"']*)$/);
+  if (imgMatch && siteData && siteData.images) {
+    const partial = imgMatch[1].toLowerCase();
+    const from = pos - imgMatch[1].length;
+    const options = siteData.images
+      .filter(img => img.toLowerCase().includes(partial))
+      .slice(0, 15)
+      .map(img => ({ label: img }));
+    if (options.length) return { from, options };
+  }
+
+  // Frontmatter context
+  const beforeCursor = doc.slice(0, pos);
+  const fmStart = beforeCursor.indexOf("---\n");
+  if (fmStart === -1 || fmStart > 5) return null;
+  const fmEnd = beforeCursor.indexOf("\n---", fmStart + 4);
+  if (fmEnd !== -1 && pos > fmEnd + 4) return null;
+
+  // Frontmatter key
+  const keyMatch = textBefore.match(/^(\w*)$/);
+  if (keyMatch && keyMatch[1].length > 0) {
+    const partial = keyMatch[1].toLowerCase();
+    const from = pos - keyMatch[1].length;
+    const options = FRONTMATTER_KEYS
+      .filter(k => k.startsWith(partial))
+      .map(k => ({ label: k, apply: `${k}: ` }));
+    if (options.length) return { from, options };
+  }
+
+  // Frontmatter values: tags, authors, stream, series
+  const tagsMatch = textBefore.match(/^tags:\s*(?:.*,\s*)?(\w*)$/);
+  if (tagsMatch && siteData && siteData.tags) {
+    const partial = tagsMatch[1].toLowerCase();
+    const from = pos - tagsMatch[1].length;
+    const options = siteData.tags
+      .filter(t => t.toLowerCase().startsWith(partial))
+      .map(t => ({ label: t }));
+    if (options.length) return { from, options };
+  }
+
+  const authorsMatch = textBefore.match(/^authors?:\s*(?:.*,\s*)?(\w*)$/);
+  if (authorsMatch && siteData && siteData.authors) {
+    const partial = authorsMatch[1].toLowerCase();
+    const from = pos - authorsMatch[1].length;
+    const options = siteData.authors
+      .filter(a => a.toLowerCase().startsWith(partial))
+      .map(a => ({ label: a }));
+    if (options.length) return { from, options };
+  }
+
+  const streamMatch = textBefore.match(/^stream:\s*(\w*)$/);
+  if (streamMatch && siteData && siteData.streams) {
+    const partial = streamMatch[1].toLowerCase();
+    const from = pos - streamMatch[1].length;
+    const options = siteData.streams
+      .filter(s => s.toLowerCase().startsWith(partial))
+      .map(s => ({ label: s }));
+    if (options.length) return { from, options };
+  }
+
+  const seriesMatch = textBefore.match(/^series:\s*(.*)$/);
+  if (seriesMatch && siteData && siteData.series) {
+    const partial = seriesMatch[1].toLowerCase();
+    const from = pos - seriesMatch[1].length;
+    const options = siteData.series
+      .filter(s => s.toLowerCase().startsWith(partial))
+      .map(s => ({ label: s }));
+    if (options.length) return { from, options };
+  }
+
+  return null;
+}
+
+function createEditor(content) {
+  if (editorView) editorView.destroy();
+
+  const prefs = getPrefs();
+  const fontSize = prefs.fontSize || 14;
+  const themeName = prefs.editorTheme || 'dracula';
+
+  const state = EditorState.create({
+    doc: content,
+    extensions: [
+      basicSetup,
+      markdown(),
+      themeCompartment.of(getEditorThemeExt(themeName)),
+      fontSizeCompartment.of(makeFontSizeTheme(fontSize)),
+      autocompletion({ override: [editorCompletions] }),
+      EditorView.inputHandler.of((view, from, to, text) => {
+        if (text === '[' || text === '.') {
+          setTimeout(() => startCompletion(view), 0);
+        }
+        return false;
+      }),
+      keymap.of([{
+        key: "Mod-s",
+        run: () => { saveContent(); return true; },
+      }]),
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+          isDirty = true;
+          updateDirtyIndicator();
+          scheduleAutoSave();
+        }
+        // Update cursor position and sync preview on cursor move
+        const cursor = update.state.selection.main.head;
+        const line = update.state.doc.lineAt(cursor);
+        const col = cursor - line.from + 1;
+        $('#me-cursor-pos').textContent = `Ln ${line.number}, Col ${col}`;
+        if (update.selectionSet) {
+          syncCursorToPreview(line.number);
+        }
+      }),
+      EditorView.domEventHandlers({
+        focus: () => { syncPreviewToSlug(); },
+      }),
+    ],
+  });
+
+  editorView = new EditorView({
+    state,
+    parent: $('#me-editor-container'),
+  });
+
+  // Set up theme/font controls
+  const themeSelect = $('#me-editor-theme');
+  themeSelect.value = themeName;
+  const fontRange = $('#me-font-size');
+  fontRange.value = fontSize;
+  $('#me-font-size-label').textContent = fontSize + 'px';
+}
+
+function updateDirtyIndicator() {
+  const el = $('#me-dirty-indicator');
+  if (el) el.classList.toggle('me-visible', isDirty);
+}
+
+// --- Auto-save ---
+// Debounced: after user stops typing for 1.5s, save to server (triggers rebuild + preview refresh).
+// Also saves a localStorage backup immediately for crash recovery.
+let autoSaveLocalTimer = null;
+
+function scheduleAutoSave() {
+  // Immediate localStorage backup (debounced 500ms)
+  if (autoSaveLocalTimer) clearTimeout(autoSaveLocalTimer);
+  autoSaveLocalTimer = setTimeout(() => {
+    if (!editorView) return;
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
+      body: editorView.state.doc.toString(),
+      timestamp: Date.now(),
+      isDraft: true,
+    }));
+  }, 500);
+
+  // Debounced server save (1.5s after last keystroke)
+  // Skip auto-save for templates to avoid saving incomplete syntax
+  if (!templateMode) {
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      if (!editorView) return;
+      saveContent();
+    }, 1500);
+  }
+}
+
+// --- Frontmatter parsing from editor content ---
+function parseFrontmatterFromContent(content) {
+  const fm = {};
+  if (!content.startsWith('---')) return fm;
+  const end = content.indexOf('\n---', 3);
+  if (end === -1) return fm;
+  const block = content.slice(4, end);
+  for (const line of block.split('\n')) {
+    const colon = line.indexOf(':');
+    if (colon === -1) continue;
+    const key = line.slice(0, colon).trim();
+    const val = line.slice(colon + 1).trim();
+    if (key && val) {
+      if (key === 'tags' || key === 'authors') {
+        fm[key] = val;
+      } else if (val === 'true') {
+        fm[key] = true;
+      } else if (val === 'false') {
+        fm[key] = false;
+      } else {
+        fm[key] = val.replace(/^["']|["']$/g, '');
+      }
+    }
+  }
+  return fm;
+}
+
+function updateContentTitle() {
+  const isPost = !!frontmatter.date;
+  $('#me-content-type').textContent = isPost ? 'post' : 'page';
+  $('#me-content-title').textContent = frontmatter.title || slug;
+}
+
+function getFrontmatterLineCount(content) {
+  if (!content.startsWith('---')) return 0;
+  const end = content.indexOf('\n---', 3);
+  if (end === -1) return 0;
+  return content.slice(0, end + 4).split('\n').length;
+}
+
+// --- Save ---
+function validateTemplateSyntax(content) {
+  const opens = (content.match(/\{\{/g) || []).length;
+  const closes = (content.match(/\}\}/g) || []).length;
+  if (opens !== closes) return `Unmatched {{ }} brackets (${opens} opening, ${closes} closing)`;
+  const tagOpens = (content.match(/\{%/g) || []).length;
+  const tagCloses = (content.match(/%\}/g) || []).length;
+  if (tagOpens !== tagCloses) return `Unmatched {% %} brackets (${tagOpens} opening, ${tagCloses} closing)`;
+  // Check for empty expressions
+  if (/\{\{\s*\}\}/.test(content)) return 'Empty expression {{ }} found';
+  if (/\{%\s*%\}/.test(content)) return 'Empty tag {% %} found';
+  return null;
+}
+
+async function saveContent() {
+  if (!editorView) return;
+  const content = editorView.state.doc.toString();
+  const savePath = (rawMode || templateMode) ? slug : sourcePath;
+
+  if (templateMode) {
+    const err = validateTemplateSyntax(content);
+    if (err) {
+      toast('Template warning: ' + err, true);
+      return;
+    }
+  }
+
+  try {
+    await fetch(`${API}/file/${savePath}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    }).then(async r => {
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
+    });
+
+    if (!rawMode && !templateMode) {
+      frontmatter = parseFrontmatterFromContent(content);
+      renderInfoPanel();
+      updateContentTitle();
+    }
+
+    originalBody = content;
+    isDirty = false;
+    updateDirtyIndicator();
+
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
+      body: content,
+      timestamp: Date.now(),
+      isDraft: false,
+    }));
+
+    toast('Saved');
+  } catch (e) {
+    toast('Save failed: ' + e.message, true);
+  }
+}
+
+async function saveAs() {
+  const title = await promptDialog('Save As', 'New title:', frontmatter.title || '');
+  if (!title) return;
+
+  try {
+    // Create the new content entry (gets the file path and slug)
+    const result = await api('POST', '/content', { title });
+    const newSlug = result.slug;
+    const newFile = result.file;
+
+    // Take the current editor content and update title/slug in the frontmatter
+    let content = editorView.state.doc.toString();
+    if (content.startsWith('---')) {
+      const end = content.indexOf('\n---', 3);
+      if (end !== -1) {
+        let fm = content.slice(0, end + 4);
+        const body = content.slice(end + 4);
+        fm = fm.replace(/^title:.*$/m, `title: "${title}"`);
+        if (fm.match(/^slug:/m)) {
+          fm = fm.replace(/^slug:.*$/m, `slug: ${newSlug}`);
+        } else {
+          fm = fm.replace('\n---', `\nslug: ${newSlug}\n---`);
+        }
+        content = fm + body;
+      }
+    }
+
+    // Overwrite the file created by POST /content with our full content
+    const filePath = newFile.replace(/^.*?content\//, 'content/');
+    await fetch(`${API}/file/${filePath}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    }).then(async r => {
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
+    });
+
+    toast('Saved as new content');
+    window.location.href = `${API}/editor/${newSlug}`;
+  } catch (e) {
+    toast('Save As failed: ' + e.message, true);
+  }
+}
+
+
+// --- Sidebar rendering ---
+function renderInfoPanel() {
+  const container = $('#me-panel-info');
+  if (!container) return;
+
+  const rows = [];
+  if (rawMode) {
+    rows.push(['File', sourcePath || slug]);
+  } else {
+    const fm = frontmatter || {};
+    if (fm.title) rows.push(['Title', fm.title]);
+    if (fm.slug) rows.push(['Slug', fm.slug]);
+    if (fm.date) rows.push(['Date', fm.date]);
+    if (fm.description) rows.push(['Description', fm.description]);
+    if (fm.tags) rows.push(['Tags', Array.isArray(fm.tags) ? fm.tags.join(', ') : String(fm.tags)]);
+    if (fm.authors) rows.push(['Authors', Array.isArray(fm.authors) ? fm.authors.join(', ') : String(fm.authors)]);
+    if (fm.stream) rows.push(['Stream', fm.stream]);
+    if (fm.series) rows.push(['Series', fm.series]);
+    if (fm.language) rows.push(['Language', fm.language]);
+    if (fm.translates) rows.push(['Translates', fm.translates]);
+    if (fm.pinned) rows.push(['Pinned', 'Yes']);
+    if (sourcePath) rows.push(['Source', sourcePath]);
+  }
+
+  let treeHtml = '';
+  const projectEmpty = !fileTree || fileTree.length === 0;
+  if (!projectEmpty) {
+    treeHtml = renderFileTree(fileTree);
+  }
+
+  container.innerHTML = `
+    <div class="me-meta-grid">
+      ${rows.map(([k, v]) => `<span class="me-meta-key">${k}</span><span class="me-meta-val">${v}</span>`).join('')}
+    </div>
+    <div class="me-section-title" style="margin-top:16px">Project Files</div>
+    ${projectEmpty
+      ? `<div class="me-empty-project">
+           <p style="font-size:13px;opacity:0.7;margin:0 0 12px">This project is empty.</p>
+           <button class="me-btn me-btn-primary" id="me-init-project" style="width:100%;justify-content:center">Initialize a marmite project</button>
+         </div>`
+      : `<div class="me-file-tree">${treeHtml}</div>`
+    }
+  `;
+
+  if (projectEmpty) {
+    const initBtn = container.querySelector('#me-init-project');
+    if (initBtn) {
+      initBtn.addEventListener('click', async () => {
+        initBtn.disabled = true;
+        initBtn.textContent = 'Initializing...';
+        try {
+          const resp = await fetch(`${API}/init`, { method: 'POST' });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Init failed');
+          toast('Project initialized');
+          setTimeout(() => window.location.reload(), 2000);
+        } catch (e) {
+          toast('Failed: ' + e.message, true);
+          initBtn.disabled = false;
+          initBtn.textContent = 'Initialize a marmite project';
+        }
+      });
+    }
+  }
+}
+
+function renderFileTree(files) {
+  const tree = {};
+  for (const f of files) {
+    if (f.is_dir) {
+      const parts = f.path.split('/');
+      let node = tree;
+      for (const part of parts) {
+        if (!node[part]) node[part] = {};
+        node = node[part];
+      }
+      continue;
+    }
+    const parts = f.path.split('/');
+    let node = tree;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!node[parts[i]]) node[parts[i]] = {};
+      node = node[parts[i]];
+    }
+    node[parts[parts.length - 1]] = f;
+  }
+
+  function addBtn(dirPath) {
+    return `<a href="#" class="me-tree-add" data-dir="${dirPath}" title="New file in ${dirPath || '/'}">&plus;</a>`;
+  }
+
+  function renderNode(obj, depth, parentPath) {
+    let html = '';
+    const entries = Object.entries(obj).sort(([a], [b]) => {
+      const aIsDir = typeof obj[a] === 'object' && !obj[a].path;
+      const bIsDir = typeof obj[b] === 'object' && !obj[b].path;
+      if (aIsDir && !bIsDir) return -1;
+      if (!aIsDir && bIsDir) return 1;
+      return a.localeCompare(b);
+    });
+    for (const [name, value] of entries) {
+      if (typeof value === 'object' && !value.path) {
+        const dirPath = parentPath ? `${parentPath}/${name}` : name;
+        html += `<details class="me-tree-dir"${depth === 0 ? ' open' : ''}>
+          <summary class="me-tree-label me-tree-folder">${name}/ ${addBtn(dirPath)}</summary>
+          <div class="me-tree-children">${renderNode(value, depth + 1, dirPath)}</div>
+        </details>`;
+      } else {
+        const f = value;
+        if (f.slug) {
+          const isCurrent = f.slug === slug;
+          html += `<a href="${API}/editor/${f.slug}" class="me-tree-label me-tree-file${isCurrent ? ' me-tree-current' : ''}">${name}</a>`;
+        } else if (f.template) {
+          const isCurrent = f.path === slug;
+          html += `<a href="${API}/editor/${f.path}" class="me-tree-label me-tree-file${isCurrent ? ' me-tree-current' : ''}">${name}</a>`;
+        } else if (f.fragment || f.editable) {
+          const isCurrent = f.path === slug;
+          html += `<a href="#" class="me-tree-label me-tree-file me-tree-editable${isCurrent ? ' me-tree-current' : ''}" data-filepath="${f.path}">${name}</a>`;
+        } else {
+          html += `<span class="me-tree-label me-tree-file me-tree-binary">${name}</span>`;
+        }
+      }
+    }
+    return html;
+  }
+
+  return `<div class="me-tree-root-add">${addBtn('')} new file</div>${renderNode(tree, 0, '')}`;
+}
+
+function showNewFileDialog(dirPath) {
+  const overlay = document.createElement('div');
+  overlay.className = 'me-confirm-overlay';
+  const displayDir = dirPath || '/';
+  overlay.innerHTML = `
+    <div class="me-confirm-box" style="max-width:420px;text-align:left">
+      <h4 style="margin-bottom:4px">New file in <code>${displayDir}</code></h4>
+      <p style="font-size:12px;opacity:0.7;margin:0 0 12px">Use path separators to create subfolders (e.g. <code>foo/bar.md</code>)</p>
+      <div class="me-field"><label>Filename<input type="text" id="me-newfile-name" placeholder="example.md"></label></div>
+      <div class="me-confirm-actions" style="gap:6px;flex-wrap:wrap">
+        <button class="me-btn" id="me-newfile-upload" style="margin-right:auto">Upload File</button>
+        <input type="file" id="me-newfile-upload-input" hidden multiple>
+        <button class="me-btn" id="me-newfile-cancel">Cancel</button>
+        <button class="me-btn" id="me-newfile-empty">Empty File</button>
+        <button class="me-btn" id="me-newfile-page">New Page</button>
+        <button class="me-btn me-btn-primary" id="me-newfile-post">New Post</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const input = overlay.querySelector('#me-newfile-name');
+  input.focus();
+  overlay.querySelector('#me-newfile-cancel').addEventListener('click', () => overlay.remove());
+
+  async function createFile(type) {
+    const name = input.value.trim();
+    if (!name) { toast('Filename is required', true); return; }
+    const fullPath = dirPath ? `${dirPath}/${name}` : name;
+
+    let content = '';
+    if (type === 'post') {
+      const title = name.replace(/\.md$/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      content = `---\ntitle: "${title}"\ndate: ${dateStr}\ntags: \n---\n\n# ${title}\n`;
+    } else if (type === 'page') {
+      const title = name.replace(/\.md$/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      content = `---\ntitle: "${title}"\n---\n\n# ${title}\n`;
+    }
+
+    try {
+      await fetch(`${API}/file/${fullPath}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      }).then(async r => {
+        if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
+      });
+      toast('File created');
+      overlay.remove();
+      await refreshFileTree();
+    } catch (e) {
+      toast('Failed: ' + e.message, true);
+    }
+  }
+
+  overlay.querySelector('#me-newfile-post').addEventListener('click', () => createFile('post'));
+  overlay.querySelector('#me-newfile-page').addEventListener('click', () => createFile('page'));
+  overlay.querySelector('#me-newfile-empty').addEventListener('click', () => createFile('empty'));
+
+  const uploadInput = overlay.querySelector('#me-newfile-upload-input');
+  overlay.querySelector('#me-newfile-upload').addEventListener('click', () => uploadInput.click());
+  uploadInput.addEventListener('change', async () => {
+    const files = uploadInput.files;
+    if (!files || files.length === 0) return;
+    let uploaded = 0;
+    for (const file of files) {
+      const fullPath = dirPath ? `${dirPath}/${file.name}` : file.name;
+      try {
+        const data = await file.arrayBuffer();
+        await fetch(`${API}/file/${fullPath}`, {
+          method: 'POST',
+          body: data,
+        }).then(async r => {
+          if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
+        });
+        uploaded++;
+      } catch (e) {
+        toast(`Failed to upload ${file.name}: ${e.message}`, true);
+      }
+    }
+    if (uploaded > 0) {
+      toast(`${uploaded} file${uploaded > 1 ? 's' : ''} uploaded`);
+      overlay.remove();
+      await refreshFileTree();
+    }
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); createFile('post'); }
+    if (e.key === 'Escape') { overlay.remove(); }
+  });
+}
+
+async function refreshFileTree() {
+  try {
+    const ftData = await (await fetch(`${API}/files`)).json();
+    fileTree = ftData.files || [];
+    renderInfoPanel();
+    // Re-attach editable file click handler
+    $('#me-panel-info').addEventListener('click', (e) => {
+      const link = e.target.closest('.me-tree-editable');
+      if (link) { e.preventDefault(); showFileEditModal(link.dataset.filepath); }
+    });
+  } catch { /* ok */ }
+}
+
+function renderActionsPanel() {
+  const container = $('#me-panel-actions');
+  if (!container) return;
+  const fm = frontmatter || {};
+
+  let translationsHtml = '';
+  if (fm.translations && fm.translations.length) {
+    translationsHtml = `<div style="margin-bottom:8px;font-size:12px;">Existing translations: ${fm.translations.map(t => t.lang || t.name).join(', ')}</div>`;
+  }
+
+  container.innerHTML = `
+    <div class="me-section-title">Translation</div>
+    ${translationsHtml}
+    <div class="me-field"><label>Language code<input type="text" id="me-action-trans-lang" placeholder="e.g. pt, es, fr"></label></div>
+    <div class="me-field"><label>Title<input type="text" id="me-action-trans-title" placeholder="Translated title"></label></div>
+    <button class="me-btn me-btn-primary" style="width:100%;justify-content:center;margin-bottom:12px" id="me-action-translate">Add Translation</button>
+
+    <div class="me-section-title">Clone / Copy</div>
+    <div class="me-field"><label>New title<input type="text" id="me-action-clone-title" placeholder="Title for the copy"></label></div>
+    <button class="me-btn" style="width:100%;justify-content:center;margin-bottom:12px" id="me-action-clone">Clone Content</button>
+
+    <div class="me-section-title">Danger Zone</div>
+    <button class="me-btn" style="width:100%;justify-content:center;border-color:#c0392b;color:#c0392b" id="me-action-delete">Delete Content</button>
+  `;
+
+  if (siteData) {
+    const allLangs = siteData.iso_languages || siteData.languages || [];
+    if (allLangs.length) createAutocomplete(container.querySelector('#me-action-trans-lang'), allLangs, (v) => {
+      container.querySelector('#me-action-trans-lang').value = v;
+    });
+  }
+
+  container.querySelector('#me-action-translate').addEventListener('click', async () => {
+    const lang = container.querySelector('#me-action-trans-lang').value.trim();
+    const title = container.querySelector('#me-action-trans-title').value.trim();
+    if (!lang) { toast('Language code is required', true); return; }
+    if (!title) { toast('Title is required', true); return; }
+    try {
+      const result = await api('POST', '/content', {
+        title,
+        lang,
+        translates: slug,
+        tags: (Array.isArray(fm.tags) ? fm.tags.join(', ') : (fm.tags || '')) || undefined,
+      });
+      toast('Translation created');
+      window.location.href = `${API}/editor/${result.slug}`;
+    } catch (e) {
+      toast('Failed: ' + e.message, true);
+    }
+  });
+
+  container.querySelector('#me-action-clone').addEventListener('click', async () => {
+    const title = container.querySelector('#me-action-clone-title').value.trim();
+    if (!title) { toast('Title is required', true); return; }
+    try {
+      const result = await api('POST', `/content/${slug}/clone`, { title });
+      toast('Content cloned');
+      window.location.href = `${API}/editor/${result.slug}`;
+    } catch (e) {
+      toast('Failed: ' + e.message, true);
+    }
+  });
+
+  container.querySelector('#me-action-delete').addEventListener('click', async () => {
+    const ok = await confirmDialog('Delete Content', `Are you sure you want to delete "${fm.title || slug}"? This cannot be undone.`);
+    if (!ok) return;
+    try {
+      await api('DELETE', `/content/${slug}`);
+      toast('Content deleted');
+      window.location.href = '/';
+    } catch (e) {
+      toast('Failed: ' + e.message, true);
+    }
+  });
+}
+
+function renderTemplateHelpPanel(container) {
+  const vars = templateContext ? templateContext.variables || [] : [];
+  const fns = templateContext ? templateContext.functions || [] : [];
+  const customFilters = templateContext ? templateContext.filters || [] : [];
+  const tplName = templateContext ? templateContext.template || '' : slug.split('/').pop();
+
+  container.innerHTML = `
+    <div class="me-help-section">
+      <h4>Tera 2.0 Syntax</h4>
+      <table class="me-help-table">
+        <tr><td>{{ var }}</td><td>Output a variable</td></tr>
+        <tr><td>{{ var | filter }}</td><td>Apply a filter</td></tr>
+        <tr><td>{{ a?.b?.c }}</td><td>Optional chaining</td></tr>
+        <tr><td>{{ x if cond else y }}</td><td>Ternary expression</td></tr>
+        <tr><td>{% if cond %}</td><td>Conditional block</td></tr>
+        <tr><td>{% elif cond %}</td><td>Else-if branch</td></tr>
+        <tr><td>{% else %}</td><td>Else branch</td></tr>
+        <tr><td>{% endif %}</td><td>End conditional</td></tr>
+        <tr><td>{% for x in items %}</td><td>Loop over items</td></tr>
+        <tr><td>{% endfor %}</td><td>End loop</td></tr>
+        <tr><td>{% block name %}</td><td>Define/override a block</td></tr>
+        <tr><td>{% endblock name %}</td><td>End block</td></tr>
+        <tr><td>{% extends "base" %}</td><td>Extend a parent template</td></tr>
+        <tr><td>{% include "file" %}</td><td>Include another template</td></tr>
+        <tr><td>{% set x = val %}</td><td>Set a variable</td></tr>
+        <tr><td>{% raw %}</td><td>Output raw (no parsing)</td></tr>
+        <tr><td>{# comment #}</td><td>Template comment</td></tr>
+        <tr><td>items[0]</td><td>Array indexing (not dot notation)</td></tr>
+        <tr><td>items[:-1]</td><td>Array slicing</td></tr>
+        <tr><td>{...base, "k": v}</td><td>Map spread</td></tr>
+      </table>
+    </div>
+    <div class="me-help-section">
+      <h4>Loop Variables</h4>
+      <table class="me-help-table">
+        <tr><td>loop.index</td><td>1-based iteration count</td></tr>
+        <tr><td>loop.index0</td><td>0-based iteration count</td></tr>
+        <tr><td>loop.first</td><td>True on first iteration</td></tr>
+        <tr><td>loop.last</td><td>True on last iteration</td></tr>
+      </table>
+    </div>
+    ${vars.length ? `
+    <div class="me-help-section">
+      <h4>Variables (${tplName})</h4>
+      <div class="me-shortcode-list">
+        ${vars.map(v => `<span class="me-shortcode-tag">${v}</span>`).join('')}
+      </div>
+    </div>` : ''}
+    ${fns.length ? `
+    <div class="me-help-section">
+      <h4>Functions</h4>
+      <table class="me-help-table">
+        <tr><td>url_for(path="")</td><td>Generate URL with base path</td></tr>
+        <tr><td>group(kind="")</td><td>Group content by tag/archive/author/stream/series</td></tr>
+        <tr><td>get_posts(ord="desc")</td><td>Get sorted posts</td></tr>
+        <tr><td>get_pages(ord="asc")</td><td>Get sorted pages</td></tr>
+        <tr><td>get_data_by_slug(slug="")</td><td>Look up content by slug</td></tr>
+        <tr><td>source_link(content=c)</td><td>Link to markdown source</td></tr>
+        <tr><td>stream_display_name(stream="")</td><td>Display name for stream</td></tr>
+        <tr><td>series_display_name(series="")</td><td>Display name for series</td></tr>
+        <tr><td>get_gallery(path="")</td><td>Get gallery data</td></tr>
+      </table>
+    </div>` : ''}
+    <div class="me-help-section">
+      <h4>Filters</h4>
+      <table class="me-help-table">
+        ${[...new Set([...customFilters, ...TERA_BUILTIN_FILTERS])].sort().map(f =>
+          `<tr><td>${f}</td><td></td></tr>`
+        ).join('')}
+      </table>
+    </div>
+  `;
+}
+
+function renderHelpPanel() {
+  const container = $('#me-panel-help');
+  if (!container) return;
+
+  if (templateMode) {
+    renderTemplateHelpPanel(container);
+    return;
+  }
+
+  const shortcodes = (siteData && siteData.shortcodes) ? siteData.shortcodes : [];
+
+  container.innerHTML = `
+    <div class="me-help-section">
+      <h4>Markdown Syntax</h4>
+      <table class="me-help-table">
+        <tr><td># Heading 1</td><td>Heading level 1</td></tr>
+        <tr><td>## Heading 2</td><td>Heading level 2</td></tr>
+        <tr><td>**bold**</td><td>Bold text</td></tr>
+        <tr><td>*italic*</td><td>Italic text</td></tr>
+        <tr><td>~~strike~~</td><td>Strikethrough</td></tr>
+        <tr><td>[text](url)</td><td>Link</td></tr>
+        <tr><td>![alt](url)</td><td>Image</td></tr>
+        <tr><td>\`code\`</td><td>Inline code</td></tr>
+        <tr><td>\`\`\`lang</td><td>Code block</td></tr>
+        <tr><td>> quote</td><td>Blockquote</td></tr>
+        <tr><td>- item</td><td>Unordered list</td></tr>
+        <tr><td>1. item</td><td>Ordered list</td></tr>
+        <tr><td>- [ ] task</td><td>Task list</td></tr>
+        <tr><td>---</td><td>Horizontal rule</td></tr>
+        <tr><td>| a | b |</td><td>Table</td></tr>
+        <tr><td>[[slug]]</td><td>Wikilink</td></tr>
+        <tr><td>[[Text|slug]]</td><td>Wikilink with text</td></tr>
+        <tr><td>> [!NOTE]</td><td>Alert/callout</td></tr>
+        <tr><td>||spoiler||</td><td>Spoiler text</td></tr>
+        <tr><td>[^1]</td><td>Footnote reference</td></tr>
+        <tr><td>$math$</td><td>Inline math</td></tr>
+        <tr><td>$$math$$</td><td>Display math</td></tr>
+      </table>
+    </div>
+    <div class="me-help-section">
+      <h4>Media</h4>
+      <table class="me-help-table">
+        <tr><td>@/file.jpg</td><td>Media from content subfolder</td></tr>
+        <tr><td>media/file.jpg</td><td>Media from global media dir</td></tr>
+      </table>
+    </div>
+    ${shortcodes.length ? `
+    <div class="me-help-section">
+      <h4>Available Shortcodes</h4>
+      <p style="font-size:12px;margin:0 0 8px">Use: <code>&lt;!-- .name key=value --&gt;</code></p>
+      <div class="me-shortcode-list">
+        ${shortcodes.map(s => `<span class="me-shortcode-tag">${s}</span>`).join('')}
+      </div>
+    </div>` : ''}
+    <div class="me-help-section">
+      <h4>Editor Keybindings</h4>
+      <table class="me-help-table">
+        <tr><td>Ctrl+S</td><td>Save file</td></tr>
+        <tr><td>Ctrl+Z</td><td>Undo</td></tr>
+        <tr><td>Ctrl+Shift+Z</td><td>Redo</td></tr>
+        <tr><td>Ctrl+A</td><td>Select all</td></tr>
+        <tr><td>Ctrl+D</td><td>Select next occurrence</td></tr>
+        <tr><td>Ctrl+F</td><td>Find</td></tr>
+        <tr><td>Ctrl+H</td><td>Find and replace</td></tr>
+        <tr><td>Ctrl+G</td><td>Go to line</td></tr>
+        <tr><td>Ctrl+/</td><td>Toggle comment</td></tr>
+        <tr><td>Ctrl+]</td><td>Indent</td></tr>
+        <tr><td>Ctrl+[</td><td>Dedent</td></tr>
+        <tr><td>Ctrl+Shift+K</td><td>Delete line</td></tr>
+        <tr><td>Alt+Up</td><td>Move line up</td></tr>
+        <tr><td>Alt+Down</td><td>Move line down</td></tr>
+        <tr><td>Ctrl+Shift+Up</td><td>Copy line up</td></tr>
+        <tr><td>Ctrl+Shift+Down</td><td>Copy line down</td></tr>
+        <tr><td>Tab</td><td>Indent / accept autocomplete</td></tr>
+        <tr><td>Escape</td><td>Exit zen mode / close dialogs</td></tr>
+      </table>
+      <p style="font-size:11px;opacity:0.6;margin:8px 0 0">On macOS, use Cmd instead of Ctrl</p>
+    </div>
+  `;
+}
+
+// --- Sidebar tabs ---
+function setupSidebarTabs() {
+  $$('.me-sidebar-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      $$('.me-sidebar-tab').forEach(t => t.classList.remove('me-active'));
+      $$('.me-sidebar-panel').forEach(p => p.classList.remove('me-active'));
+      tab.classList.add('me-active');
+      const panel = $(`[data-panel="${tab.dataset.tab}"]`);
+      if (panel) panel.classList.add('me-active');
+    });
+  });
+}
+
+// --- Insert menu ---
+const INSERT_TEMPLATES = {
+  heading: '## ',
+  bold: '**text**',
+  italic: '*text*',
+  link: '[text](url)',
+  image: '![alt](url)',
+  code: '```\ncode\n```',
+  table: '| Column 1 | Column 2 | Column 3 |\n|----------|----------|----------|\n| Cell 1   | Cell 2   | Cell 3   |\n| Cell 4   | Cell 5   | Cell 6   |',
+  list: '- Item 1\n- Item 2\n- Item 3',
+  quote: '> ',
+  hr: '\n---\n',
+};
+
+function insertAtCursor(text) {
+  if (!editorView) return;
+  const cursor = editorView.state.selection.main.head;
+  editorView.dispatch({
+    changes: { from: cursor, insert: text },
+    selection: { anchor: cursor + text.length },
+  });
+  editorView.focus();
+}
+
+function setupInsertMenu() {
+  const btn = $('#me-btn-insert');
+  const menu = $('#me-insert-menu');
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.classList.toggle('me-open');
+  });
+
+  document.addEventListener('click', () => menu.classList.remove('me-open'));
+
+  $$('.me-dropdown-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menu.classList.remove('me-open');
+      const action = item.dataset.insert;
+      if (action === 'media') {
+        showMediaDialog();
+      } else if (INSERT_TEMPLATES[action]) {
+        insertAtCursor(INSERT_TEMPLATES[action]);
+      }
+    });
+  });
+}
+
+// --- Media dialog ---
+function showMediaDialog() {
+  const images = (siteData && siteData.images) ? siteData.images : [];
+  const overlay = document.createElement('div');
+  overlay.className = 'me-media-overlay';
+  overlay.innerHTML = `
+    <div class="me-media-dialog">
+      <div class="me-media-header">
+        <h4>Insert Media</h4>
+        <div style="display:flex;gap:6px">
+          <button class="me-btn me-btn-sm" id="me-media-upload">Upload</button>
+          <input type="file" id="me-media-upload-input" hidden accept="image/*,video/*,audio/*,.pdf,.svg" multiple>
+          <button class="me-btn me-btn-sm" id="me-media-close">Close</button>
+        </div>
+      </div>
+      <div class="me-media-search">
+        <input type="text" id="me-media-filter" placeholder="Filter images...">
+      </div>
+      <div class="me-media-grid" id="me-media-grid"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const grid = overlay.querySelector('#me-media-grid');
+  const filterInput = overlay.querySelector('#me-media-filter');
+
+  function renderGrid(filter) {
+    const filtered = filter
+      ? images.filter(img => img.toLowerCase().includes(filter.toLowerCase()))
+      : images;
+    grid.innerHTML = filtered.map(img => `
+      <div class="me-media-item" data-path="${img}">
+        <img src="/${img}" alt="${img}" loading="lazy">
+        <div class="me-media-item-name">${img}</div>
+      </div>
+    `).join('');
+
+    if (filtered.length === 0) {
+      grid.innerHTML = '<div style="padding:20px;text-align:center;opacity:0.6;grid-column:1/-1">No images found</div>';
+    }
+  }
+
+  renderGrid('');
+
+  filterInput.addEventListener('input', () => renderGrid(filterInput.value));
+  filterInput.focus();
+
+  grid.addEventListener('click', (e) => {
+    const item = e.target.closest('.me-media-item');
+    if (!item) return;
+    const path = item.dataset.path;
+    insertAtCursor(`![](${path})`);
+    overlay.remove();
+  });
+
+  overlay.querySelector('#me-media-close').addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  const mediaUploadInput = overlay.querySelector('#me-media-upload-input');
+  overlay.querySelector('#me-media-upload').addEventListener('click', () => mediaUploadInput.click());
+  mediaUploadInput.addEventListener('change', async () => {
+    const files = mediaUploadInput.files;
+    if (!files || files.length === 0) return;
+    const mediaPath = siteData?.config?.content_path
+      ? `${siteData.config.content_path}/${siteData?.config?.media_path || 'media'}`
+      : `content/${siteData?.config?.media_path || 'media'}`;
+    let uploaded = 0;
+    for (const file of files) {
+      const fullPath = `${mediaPath}/${file.name}`;
+      try {
+        const data = await file.arrayBuffer();
+        await fetch(`${API}/file/${fullPath}`, {
+          method: 'POST',
+          body: data,
+        }).then(async r => {
+          if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
+        });
+        uploaded++;
+      } catch (e) {
+        toast(`Failed to upload ${file.name}: ${e.message}`, true);
+      }
+    }
+    if (uploaded > 0) {
+      toast(`${uploaded} file${uploaded > 1 ? 's' : ''} uploaded to ${mediaPath}/. Waiting for rebuild...`);
+      // Wait for rebuild to copy media to output, then refresh grid
+      setTimeout(async () => {
+        try { siteData = await (await fetch(`${API}/data`)).json(); } catch {}
+        images.length = 0;
+        images.push(...((siteData && siteData.images) ? siteData.images : []));
+        renderGrid(filterInput.value);
+        toast('Media list refreshed');
+      }, 3000);
+    }
+  });
+}
+
+// --- Divider resizing ---
+function setupDividers() {
+  // Left divider (sidebar | editor)
+  setupDivider($('#me-divider-left'), $('#me-sidebar'), 'width', 200, 500);
+
+  // Right divider (editor | preview)
+  const rightDivider = $('#me-divider-right');
+  const previewPanel = $('#me-preview-panel');
+
+  if (rightDivider && previewPanel) {
+    const prefs = getPrefs();
+    if (prefs.previewWidth) {
+      previewPanel.style.width = prefs.previewWidth + 'px';
+      previewPanel.style.flex = 'none';
+    }
+
+    rightDivider.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startWidth = previewPanel.offsetWidth;
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:col-resize;';
+      document.body.appendChild(overlay);
+
+      function onMove(ev) {
+        const newWidth = startWidth - (ev.clientX - startX);
+        const clamped = Math.max(200, Math.min(window.innerWidth * 0.7, newWidth));
+        previewPanel.style.width = clamped + 'px';
+        previewPanel.style.flex = 'none';
+      }
+
+      function onUp() {
+        overlay.remove();
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        savePrefs({ previewWidth: previewPanel.offsetWidth });
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  }
+}
+
+function setupDivider(divider, target, prop, min, max) {
+  if (!divider || !target) return;
+
+  divider.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startVal = target.offsetWidth;
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:col-resize;';
+    document.body.appendChild(overlay);
+
+    function onMove(ev) {
+      const newVal = startVal + (ev.clientX - startX);
+      target.style[prop] = Math.max(min, Math.min(max, newVal)) + 'px';
+    }
+
+    function onUp() {
+      overlay.remove();
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+}
+
+// --- Top bar ---
+function setupTopBar() {
+  // Back button
+  const backUrl = rawMode ? '/' : `/${slug}.html`;
+  $('#me-btn-back').addEventListener('click', () => {
+    if (isDirty) {
+      confirmDialog('Unsaved Changes', 'You have unsaved changes. Leave anyway?').then(ok => {
+        if (ok) window.location.href = backUrl;
+      });
+    } else {
+      window.location.href = backUrl;
+    }
+  });
+
+  // Save
+  $('#me-btn-save').addEventListener('click', saveContent);
+
+  // Save As
+  $('#me-btn-saveas').addEventListener('click', saveAs);
+
+  // Sidebar toggle
+  const sidebar = $('#me-sidebar');
+  const prefs = getPrefs();
+  if (prefs.sidebarOpen === false) {
+    sidebar.classList.add('me-collapsed');
+  }
+
+  $('#me-btn-sidebar').addEventListener('click', () => {
+    sidebar.classList.toggle('me-collapsed');
+    savePrefs({ sidebarOpen: !sidebar.classList.contains('me-collapsed') });
+  });
+
+  // Theme toggle
+  $('#me-btn-theme').addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('marmiteEditorTheme', next);
+  });
+
+  // Insert menu
+  setupInsertMenu();
+
+  // Preview toggle
+  const previewPanel = $('#me-preview-panel');
+  const rightDivider = $('#me-divider-right');
+  const previewToggle = $('#me-btn-preview-toggle');
+  const prefs2 = getPrefs();
+  if (prefs2.previewHidden) {
+    previewPanel.classList.add('me-hidden');
+    rightDivider.classList.add('me-hidden');
+  }
+  previewToggle.addEventListener('click', () => {
+    const hidden = previewPanel.classList.toggle('me-hidden');
+    rightDivider.classList.toggle('me-hidden', hidden);
+    savePrefs({ previewHidden: hidden });
+  });
+
+  // Preview buttons
+  const syncBtn = $('#me-btn-scroll-sync');
+  const savedSync = getPrefs().scrollSync;
+  scrollSyncEnabled = savedSync !== false;
+  if (scrollSyncEnabled) syncBtn.classList.add('me-active');
+  syncBtn.addEventListener('click', () => {
+    scrollSyncEnabled = !scrollSyncEnabled;
+    syncBtn.classList.toggle('me-active', scrollSyncEnabled);
+    savePrefs({ scrollSync: scrollSyncEnabled });
+  });
+
+  $('#me-btn-refresh-preview').addEventListener('click', () => {
+    const iframe = $('#me-preview-frame');
+    if (iframe) iframe.src = `/${slug}.html?t=${Date.now()}`;
+  });
+
+  $('#me-btn-popout').addEventListener('click', () => {
+    window.open(`/${slug}.html`, '_blank');
+  });
+
+  // Config button
+  $('#me-btn-config').addEventListener('click', showConfigDialog);
+
+  // Zen mode
+  $('#me-btn-zen').addEventListener('click', () => {
+    document.body.classList.toggle('me-zen');
+    if (editorView) editorView.focus();
+  });
+
+  // New content button
+  $('#me-btn-new').addEventListener('click', showNewContentDialog);
+}
+
+// --- Editor controls ---
+function setupEditorControls() {
+  // Editor theme selector
+  const themeSelect = $('#me-editor-theme');
+  themeSelect.addEventListener('change', () => {
+    const name = themeSelect.value;
+    savePrefs({ editorTheme: name });
+    if (editorView) {
+      editorView.dispatch({
+        effects: themeCompartment.reconfigure(getEditorThemeExt(name)),
+      });
+    }
+  });
+
+  // Font size control
+  const fontRange = $('#me-font-size');
+  const fontLabel = $('#me-font-size-label');
+  fontRange.addEventListener('input', () => {
+    const size = parseInt(fontRange.value, 10);
+    fontLabel.textContent = size + 'px';
+    savePrefs({ fontSize: size });
+    if (editorView) {
+      editorView.dispatch({
+        effects: fontSizeCompartment.reconfigure(makeFontSizeTheme(size)),
+      });
+    }
+  });
+}
+
+// --- File edit modal ---
+function showFileEditModal(filePath) {
+  const overlay = document.createElement('div');
+  overlay.className = 'me-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="me-config-dialog" style="max-width:700px">
+      <div class="me-config-header">
+        <h4 style="font-family:'SF Mono','Fira Code',Menlo,Consolas,monospace;font-size:13px">${filePath}</h4>
+        <button class="me-btn me-btn-sm" id="me-file-modal-close">&times;</button>
+      </div>
+      <div class="me-config-body" style="padding:0;display:flex;flex-direction:column">
+        <textarea id="me-file-modal-editor" style="flex:1;width:100%;min-height:400px;border:none;outline:none;resize:none;padding:12px;font-family:'SF Mono','Fira Code',Menlo,Consolas,monospace;font-size:13px;tab-size:2;white-space:pre;line-height:1.5" placeholder="Loading..."></textarea>
+      </div>
+      <div class="me-config-footer">
+        <button class="me-btn" id="me-file-modal-delete" style="color:#c0392b;border-color:#c0392b;margin-right:auto">Delete</button>
+        <button class="me-btn" id="me-file-modal-open-editor">Open in Editor</button>
+        <button class="me-btn" id="me-file-modal-cancel">Cancel</button>
+        <button class="me-btn me-btn-primary" id="me-file-modal-save">Save</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const textarea = overlay.querySelector('#me-file-modal-editor');
+  const status = overlay.querySelector('#me-file-modal-status');
+
+  // Load file content
+  fetch(`${API}/file/${filePath}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { status.textContent = data.error; return; }
+      textarea.value = data.content || '';
+      textarea.placeholder = '';
+    })
+    .catch(e => { status.textContent = 'Failed to load'; });
+
+  overlay.querySelector('#me-file-modal-close').addEventListener('click', () => overlay.remove());
+  overlay.querySelector('#me-file-modal-cancel').addEventListener('click', () => overlay.remove());
+
+  overlay.querySelector('#me-file-modal-delete').addEventListener('click', async () => {
+    const ok = await confirmDialog('Delete File', `Are you sure you want to delete "${filePath}"? This cannot be undone.`);
+    if (!ok) return;
+    try {
+      const resp = await fetch(`${API}/file/${filePath}`, { method: 'DELETE' });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || resp.statusText);
+      toast('File deleted');
+      overlay.remove();
+      await refreshFileTree();
+    } catch (e) {
+      toast('Delete failed: ' + e.message, true);
+    }
+  });
+
+  overlay.querySelector('#me-file-modal-open-editor').addEventListener('click', () => {
+    overlay.remove();
+    window.location.href = `${API}/editor/${filePath}`;
+  });
+
+  overlay.querySelector('#me-file-modal-save').addEventListener('click', async () => {
+    const content = textarea.value;
+    try {
+      const resp = await fetch(`${API}/file/${filePath}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || resp.statusText);
+      toast('File saved');
+      overlay.remove();
+    } catch (e) {
+      toast('Save failed: ' + e.message, true);
+    }
+  });
+
+  // Ctrl+S in the textarea
+  textarea.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      overlay.querySelector('#me-file-modal-save').click();
+    }
+  });
+}
+
+// --- New content dialog ---
+function showNewContentDialog() {
+  const overlay = document.createElement('div');
+  overlay.className = 'me-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="me-confirm-box" style="max-width:450px;text-align:left">
+      <h4 style="margin-bottom:12px">Create New Content</h4>
+      <div class="me-field"><label>Title<input type="text" id="me-new-title" placeholder="Content title"></label></div>
+      <div class="me-field"><label>Tags (comma-separated)<input type="text" id="me-new-tags" placeholder="tag1, tag2"></label></div>
+      <details style="margin-bottom:12px">
+        <summary style="cursor:pointer;font-size:12px;font-weight:600;user-select:none">+ Advanced</summary>
+        <div class="me-field" style="margin-top:8px"><label>Stream<input type="text" id="me-new-stream" placeholder="e.g. tutorial, news"></label></div>
+        <div class="me-field"><label>Language<input type="text" id="me-new-lang" placeholder="e.g. en, pt, es"></label></div>
+        <div class="me-field"><label>Directory<input type="text" id="me-new-directory" placeholder="e.g. tutorials/rust"></label></div>
+      </details>
+      <div class="me-confirm-actions" style="gap:6px">
+        <button class="me-btn" id="me-new-cancel">Cancel</button>
+        <button class="me-btn me-btn-primary" id="me-new-post">New Post</button>
+        <button class="me-btn" id="me-new-page">New Page</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  if (siteData && siteData.tags) {
+    createAutocomplete(overlay.querySelector('#me-new-tags'), siteData.tags);
+  }
+  if (siteData && siteData.streams) {
+    createAutocomplete(overlay.querySelector('#me-new-stream'), siteData.streams, (v) => {
+      overlay.querySelector('#me-new-stream').value = v;
+    });
+  }
+
+  overlay.querySelector('#me-new-title').focus();
+  overlay.querySelector('#me-new-cancel').addEventListener('click', () => overlay.remove());
+
+  async function createContent(isPage) {
+    const title = overlay.querySelector('#me-new-title').value.trim();
+    if (!title) { toast('Title is required', true); return; }
+    const tags = overlay.querySelector('#me-new-tags').value.trim();
+    const stream = overlay.querySelector('#me-new-stream').value.trim();
+    const lang = overlay.querySelector('#me-new-lang').value.trim();
+    const directory = overlay.querySelector('#me-new-directory').value.trim();
+    const body = { title };
+    if (tags) body.tags = tags;
+    if (isPage) body.page = true;
+    if (lang) body.lang = lang;
+    if (directory) body.directory = directory;
+    try {
+      const result = await api('POST', '/content', body);
+      if (stream) {
+        await api('PATCH', `/content/${result.slug}`, { stream });
+      }
+      toast((isPage ? 'Page' : 'Post') + ' created');
+      overlay.remove();
+      window.location.href = `${API}/editor/${result.slug}`;
+    } catch (e) {
+      toast('Failed: ' + e.message, true);
+    }
+  }
+
+  overlay.querySelector('#me-new-post').addEventListener('click', () => createContent(false));
+  overlay.querySelector('#me-new-page').addEventListener('click', () => createContent(true));
+}
+
+// --- Config dialog ---
+function getNestedValue(obj, keys) {
+  let v = obj;
+  for (const k of keys) {
+    if (v == null || typeof v !== 'object') return undefined;
+    v = v[k];
+  }
+  return v;
+}
+
+function showConfigDialog() {
+  const cfg = (siteData && siteData.config) ? siteData.config : {};
+  const extra = cfg.extra || {};
+  const codeHighlight = cfg.code_highlight || {};
+  const esc = (v) => v == null ? '' : String(v).replace(/"/g, '&quot;');
+  const chk = (v, def) => (v != null ? !!v : !!def) ? ' checked' : '';
+  const sel = (v, match) => v === match ? ' selected' : '';
+  const menu = cfg.menu || [];
+
+  const COLORSCHEMES = ['', 'catppuccin', 'clean', 'dracula', 'github', 'gruvbox', 'iceberg', 'minimal', 'minimal_wb', 'monokai', 'nord', 'one', 'solarized', 'typewriter'];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'me-confirm-overlay';
+  overlay.innerHTML = `
+    <div class="me-config-dialog">
+      <div class="me-config-header">
+        <h4>Site Configuration</h4>
+        <button class="me-btn me-btn-sm" id="me-config-close">&times;</button>
+      </div>
+      <div class="me-config-tabs">
+        <button class="me-config-tab me-active" data-ctab="site">Site</button>
+        <button class="me-config-tab" data-ctab="content">Content</button>
+        <button class="me-config-tab" data-ctab="search">Search</button>
+        <button class="me-config-tab" data-ctab="feeds">Feeds</button>
+        <button class="me-config-tab" data-ctab="appearance">Appearance</button>
+        <button class="me-config-tab" data-ctab="images">Images</button>
+        <button class="me-config-tab" data-ctab="menu">Menu</button>
+        <button class="me-config-tab" data-ctab="paths">Paths</button>
+        <button class="me-config-tab" data-ctab="raw">Raw YAML</button>
+      </div>
+      <div class="me-config-body">
+        <div class="me-config-pane me-active" data-cpanel="site">
+          <div class="me-field"><label>Site Name<input type="text" data-key="name" value="${esc(cfg.name)}"></label></div>
+          <div class="me-field"><label>Tagline<input type="text" data-key="tagline" value="${esc(cfg.tagline)}"></label></div>
+          <div class="me-field"><label>Base URL<input type="text" data-key="url" value="${esc(cfg.url)}" placeholder="https://example.com"></label></div>
+          <div class="me-field"><label>Language<input type="text" data-key="language" value="${esc(cfg.language)}" placeholder="en"></label></div>
+          <div class="me-field"><label>Footer<textarea data-key="footer">${cfg.footer || ''}</textarea></label></div>
+          <div class="me-field"><label>Logo Image<input type="text" data-key="logo_image" value="${esc(cfg.logo_image)}" placeholder="media/logo.png"></label></div>
+        </div>
+
+        <div class="me-config-pane" data-cpanel="content">
+          <div class="me-field"><label>Posts per page<input type="number" data-key="pagination" data-type="number" value="${cfg.pagination || 10}" min="1"></label></div>
+          <div class="me-field"><label>Default Author<input type="text" data-key="default_author" value="${esc(cfg.default_author)}"></label></div>
+          <div class="me-field"><label>Date Format<input type="text" data-key="default_date_format" value="${esc(cfg.default_date_format)}" placeholder="%b %e, %Y"></label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="toc" data-bool${chk(cfg.toc)}> Table of Contents</label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="show_next_prev_links" data-bool${chk(cfg.show_next_prev_links, true)}> Next/Previous Links</label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="enable_related_content" data-bool${chk(cfg.enable_related_content, true)}> Related Content</label></div>
+        </div>
+
+        <div class="me-config-pane" data-cpanel="search">
+          <div class="me-field me-check"><label><input type="checkbox" data-key="enable_search" data-bool${chk(cfg.enable_search)}> Enable Search</label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="search_show_matches" data-bool${chk(cfg.search_show_matches)}> Show Match Snippets</label></div>
+          <div class="me-field"><label>Snippets per Result<input type="number" data-key="search_match_count" data-type="number" value="${cfg.search_match_count || 3}" min="1"></label></div>
+          <div class="me-field"><label>Search Page Title<input type="text" data-key="search_title" value="${esc(cfg.search_title)}" placeholder="Search"></label></div>
+        </div>
+
+        <div class="me-config-pane" data-cpanel="feeds">
+          <div class="me-field me-check"><label><input type="checkbox" data-key="json_feed" data-bool${chk(cfg.json_feed)}> JSON Feed</label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="build_sitemap" data-bool${chk(cfg.build_sitemap, true)}> Sitemap</label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="publish_urls_json" data-bool${chk(cfg.publish_urls_json, true)}> URLs JSON</label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="publish_md" data-bool${chk(cfg.publish_md)}> Publish Markdown Source</label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="enable_shortcodes" data-bool${chk(cfg.enable_shortcodes, true)}> Enable Shortcodes</label></div>
+        </div>
+
+        <div class="me-config-pane" data-cpanel="appearance">
+          <div class="me-field"><label>Colorscheme<select data-key="extra.colorscheme">${COLORSCHEMES.map(c => `<option value="${c}"${sel(extra.colorscheme, c)}>${c || 'Default'}</option>`).join('')}</select></label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="extra.colorscheme_toggle" data-bool${chk(extra.colorscheme_toggle)}> Colorscheme Picker</label></div>
+          <div class="me-field"><label>Default Color Mode<select data-key="extra.colormode"><option value=""${sel(extra.colormode, undefined)}>Auto</option><option value="light"${sel(extra.colormode, 'light')}>Light</option><option value="dark"${sel(extra.colormode, 'dark')}>Dark</option></select></label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="extra.colormodetoggle" data-bool${chk(extra.colormodetoggle)}> Light/Dark Toggle</label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="code_highlight.enabled" data-bool${chk(codeHighlight.enabled, true)}> Code Highlighting</label></div>
+        </div>
+
+        <div class="me-config-pane" data-cpanel="images">
+          <div class="me-field"><label>Card Image<input type="text" data-key="card_image" value="${esc(cfg.card_image)}" placeholder="media/og_image.jpg"></label></div>
+          <div class="me-field"><label>Banner Image<input type="text" data-key="banner_image" value="${esc(cfg.banner_image)}" placeholder="media/banner.jpg"></label></div>
+          <div class="me-field me-check"><label><input type="checkbox" data-key="skip_image_resize" data-bool${chk(cfg.skip_image_resize)}> Skip Image Resize</label></div>
+          <div class="me-field"><label>Max Image Width<input type="number" data-key="extra.max_image_width" data-type="number" value="${extra.max_image_width || ''}" placeholder="1200" min="100"></label></div>
+          <div class="me-field"><label>Banner Image Width<input type="number" data-key="extra.banner_image_width" data-type="number" value="${extra.banner_image_width || ''}" placeholder="1200" min="100"></label></div>
+          <div class="me-field"><label>Resize Filter<select data-key="extra.resize_filter"><option value=""${sel(extra.resize_filter, undefined)}>Default</option><option value="fast"${sel(extra.resize_filter, 'fast')}>Fast</option><option value="balanced"${sel(extra.resize_filter, 'balanced')}>Balanced</option><option value="quality"${sel(extra.resize_filter, 'quality')}>Quality</option></select></label></div>
+        </div>
+
+        <div class="me-config-pane" data-cpanel="menu">
+          <p style="font-size:12px;opacity:0.7;margin:0 0 8px">Navigation links in the site header.</p>
+          <div id="me-config-menu-list"></div>
+          <button class="me-btn me-btn-sm" id="me-config-menu-add" style="margin-top:6px">+ Add Menu Item</button>
+        </div>
+
+        <div class="me-config-pane" data-cpanel="paths">
+          <div class="me-field"><label>Content Path<input type="text" data-key="content_path" value="${esc(cfg.content_path)}" placeholder="content"></label></div>
+          <div class="me-field"><label>Site Path<input type="text" data-key="site_path" value="${esc(cfg.site_path)}" placeholder="site"></label></div>
+          <div class="me-field"><label>Media Path<input type="text" data-key="media_path" value="${esc(cfg.media_path)}" placeholder="media"></label></div>
+        </div>
+
+        <div class="me-config-pane" data-cpanel="raw">
+          <p style="font-size:12px;opacity:0.7;margin:0 0 8px">Edit marmite.yaml directly. Saving here overwrites the entire config file.</p>
+          <textarea id="me-config-raw-yaml" style="width:100%;min-height:300px;font-family:'SF Mono','Fira Code',Menlo,Consolas,monospace;font-size:12px;tab-size:2;white-space:pre" placeholder="Loading..."></textarea>
+          <button class="me-btn me-btn-primary" id="me-config-raw-save" style="margin-top:8px;width:100%;justify-content:center">Save Raw YAML</button>
+        </div>
+      </div>
+      <div class="me-config-footer">
+        <button class="me-btn" id="me-config-cancel">Cancel</button>
+        <button class="me-btn me-btn-primary" id="me-config-save">Save Config</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Tab switching
+  overlay.querySelectorAll('.me-config-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      overlay.querySelectorAll('.me-config-tab').forEach(t => t.classList.remove('me-active'));
+      overlay.querySelectorAll('.me-config-pane').forEach(p => p.classList.remove('me-active'));
+      tab.classList.add('me-active');
+      overlay.querySelector(`[data-cpanel="${tab.dataset.ctab}"]`).classList.add('me-active');
+    });
+  });
+
+  // Menu editor
+  const menuList = overlay.querySelector('#me-config-menu-list');
+  function addMenuRow(label, url) {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:4px;align-items:center;margin-bottom:4px';
+    row.innerHTML = `
+      <input type="text" class="me-menu-label" value="${esc(label)}" placeholder="Label" style="flex:1">
+      <input type="text" class="me-menu-url" value="${esc(url)}" placeholder="URL" style="flex:1">
+      <button class="me-btn me-btn-sm me-menu-del" style="color:#c0392b;border-color:#c0392b">&times;</button>
+    `;
+    row.querySelector('.me-menu-del').addEventListener('click', () => row.remove());
+    menuList.appendChild(row);
+  }
+  menu.forEach(item => addMenuRow(item[0] || '', item[1] || ''));
+  overlay.querySelector('#me-config-menu-add').addEventListener('click', () => addMenuRow('', ''));
+
+  // Raw YAML tab - lazy-load content when tab is first clicked
+  let rawLoaded = false;
+  const rawTextarea = overlay.querySelector('#me-config-raw-yaml');
+  overlay.querySelector('.me-config-tab[data-ctab="raw"]').addEventListener('click', async () => {
+    if (rawLoaded) return;
+    rawLoaded = true;
+    try {
+      const resp = await fetch(`${API}/config`);
+      const data = await resp.json();
+      rawTextarea.value = data.yaml || '';
+    } catch (e) {
+      rawTextarea.value = '# Failed to load config';
+    }
+  });
+
+  overlay.querySelector('#me-config-raw-save').addEventListener('click', async () => {
+    const yamlContent = rawTextarea.value;
+    try {
+      const resp = await fetch(`${API}/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yaml: yamlContent }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Save failed');
+      toast('Raw config saved');
+      overlay.remove();
+      try { siteData = await (await fetch(`${API}/data`)).json(); } catch {}
+    } catch (e) {
+      toast('Save failed: ' + e.message, true);
+    }
+  });
+
+  // Image autocomplete
+  if (siteData && siteData.images) {
+    ['card_image', 'banner_image', 'logo_image'].forEach(key => {
+      const input = overlay.querySelector(`[data-key="${key}"]`);
+      if (input) createAutocomplete(input, siteData.images, (v) => { input.value = v; });
+    });
+  }
+
+  // Close/cancel
+  const closeDialog = () => overlay.remove();
+  overlay.querySelector('#me-config-close').addEventListener('click', closeDialog);
+  overlay.querySelector('#me-config-cancel').addEventListener('click', closeDialog);
+
+  // Save
+  overlay.querySelector('#me-config-save').addEventListener('click', async () => {
+    const updates = {};
+
+    // Simple and nested fields
+    overlay.querySelectorAll('[data-key]').forEach(el => {
+      const key = el.dataset.key;
+      const isNested = key.includes('.');
+      let val;
+
+      if (el.type === 'checkbox') {
+        val = el.checked;
+      } else if (el.tagName === 'SELECT') {
+        val = el.value || null;
+        if (val === 'true') val = true;
+        if (val === 'false') val = false;
+      } else if (el.dataset.type === 'number') {
+        val = el.value ? parseInt(el.value, 10) : null;
+        if (val !== null && isNaN(val)) return;
+      } else {
+        val = el.value;
+      }
+
+      if (isNested) {
+        const parts = key.split('.');
+        const origVal = getNestedValue(cfg, parts);
+        const changed = el.type === 'checkbox'
+          ? val !== (origVal != null ? !!origVal : !!(el.dataset.bool !== undefined && el.defaultChecked))
+          : (val || '') !== (origVal != null ? String(origVal) : '');
+        if (changed) {
+          if (!updates[parts[0]]) {
+            updates[parts[0]] = Object.assign({}, cfg[parts[0]] || {});
+          }
+          if (val === null || val === '') {
+            delete updates[parts[0]][parts[1]];
+          } else {
+            updates[parts[0]][parts[1]] = val;
+          }
+        }
+      } else {
+        const orig = cfg[key];
+        if (el.type === 'checkbox') {
+          if (val !== (orig || false)) updates[key] = val;
+        } else if (typeof val === 'number') {
+          if (val !== (orig || 0)) updates[key] = val;
+        } else {
+          if ((val || '') !== (orig || '')) updates[key] = val || null;
+        }
+      }
+    });
+
+    // Menu
+    const menuItems = [];
+    menuList.querySelectorAll('div').forEach(row => {
+      const label = row.querySelector('.me-menu-label');
+      const url = row.querySelector('.me-menu-url');
+      if (label && url) {
+        const l = label.value.trim();
+        const u = url.value.trim();
+        if (l && u) menuItems.push([l, u]);
+      }
+    });
+    if (JSON.stringify(menuItems) !== JSON.stringify(menu)) {
+      updates.menu = menuItems;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      toast('No changes to save');
+      overlay.remove();
+      return;
+    }
+
+    try {
+      await api('PATCH', '/config', updates);
+      toast('Config saved');
+      overlay.remove();
+      try { siteData = await (await fetch(`${API}/data`)).json(); } catch {}
+    } catch (e) {
+      toast('Save failed: ' + e.message, true);
+    }
+  });
+}
+
+// --- Init ---
+async function init() {
+  // Fetch site data
+  try {
+    siteData = await (await fetch(`${API}/data`)).json();
+    if (siteData && siteData.marmite_version) {
+      $('#me-version').textContent = `marmite v${siteData.marmite_version}`;
+    }
+    if (siteData && !siteData.watch_enabled) {
+      toast('File watcher is not active. Run with --watch (-w) to enable auto-rebuild after edits.', true);
+      $('#me-preview-no-watch').classList.remove('me-hidden');
+    }
+  } catch (e) { /* ok */ }
+
+  // Fetch file tree
+  try {
+    const ftData = await (await fetch(`${API}/files`)).json();
+    fileTree = ftData.files || [];
+  } catch { /* ok */ }
+
+  // Fetch content - different paths for empty, raw, and content mode
+  let body = '';
+  if (emptyMode) {
+    // No content to load
+  } else if (rawMode || templateMode) {
+    try {
+      const data = await (await fetch(`${API}/file/${slug}`)).json();
+      if (data.error) throw new Error(data.error);
+      body = data.content || '';
+      sourcePath = slug;
+      originalBody = body;
+    } catch (e) {
+      toast('Failed to load file: ' + e.message, true);
+      return;
+    }
+    if (templateMode) {
+      const tplName = slug.split('/').pop().replace(/\.html$|\.xml$/i, '');
+      try {
+        const resp = await fetch(`/template.${tplName}.context.json`);
+        if (resp.ok) templateContext = await resp.json();
+      } catch { /* ok */ }
+    }
+  } else {
+    // Content mode: get source_path from the body API, then load the full file
+    try {
+      const meta = await api('GET', `/content/${slug}/body`);
+      sourcePath = meta.source_path || '';
+      frontmatter = meta.frontmatter || {};
+    } catch (e) {
+      toast('Failed to load content: ' + e.message, true);
+      return;
+    }
+    try {
+      const data = await (await fetch(`${API}/file/${sourcePath}`)).json();
+      if (data.error) throw new Error(data.error);
+      body = data.content || '';
+      originalBody = body;
+    } catch (e) {
+      toast('Failed to load file: ' + e.message, true);
+      return;
+    }
+  }
+
+  // Check for auto-saved draft
+  if (!emptyMode) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(AUTOSAVE_KEY) || 'null');
+      if (saved && saved.isDraft && saved.body && saved.body !== body) {
+        const age = Date.now() - (saved.timestamp || 0);
+        if (age < 86400000) {
+          const restore = await confirmDialog(
+            'Restore Draft',
+            'A more recent unsaved draft was found in your browser. Restore it?'
+          );
+          if (restore) {
+            body = saved.body;
+            isDirty = true;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  // Set up the page
+  if (emptyMode) {
+    $('#me-content-type').textContent = '';
+    $('#me-content-title').textContent = 'Marmite Editor';
+    $('#me-preview-panel').classList.add('me-hidden');
+    $('#me-divider-right').classList.add('me-hidden');
+    $$('.me-sidebar-tab').forEach(t => {
+      if (t.dataset.tab === 'actions') t.style.display = 'none';
+    });
+    $('#me-editor-toolbar').style.display = 'none';
+  } else if (templateMode) {
+    $('#me-content-type').textContent = 'template';
+    $('#me-content-title').textContent = slug.split('/').pop();
+    $('#me-preview-frame').src = getTemplatePreviewUrl();
+    $$('.me-sidebar-tab').forEach(t => {
+      if (t.dataset.tab === 'actions') t.style.display = 'none';
+    });
+  } else if (rawMode) {
+    $('#me-content-type').textContent = 'file';
+    $('#me-content-title').textContent = slug;
+    $('#me-preview-panel').classList.add('me-hidden');
+    $('#me-divider-right').classList.add('me-hidden');
+    $$('.me-sidebar-tab').forEach(t => {
+      if (t.dataset.tab === 'actions') t.style.display = 'none';
+    });
+  } else {
+    frontmatter = parseFrontmatterFromContent(body);
+    updateContentTitle();
+    $('#me-preview-frame').src = `/${slug}.html`;
+  }
+  updateDirtyIndicator();
+  if (!siteData || siteData.watch_enabled) {
+    connectLiveReload();
+  }
+
+  // Setup UI
+  setupSidebarTabs();
+  setupTopBar();
+  setupEditorControls();
+  setupDividers();
+
+  // Render sidebar panels
+  renderInfoPanel();
+  if (!rawMode && !emptyMode && !templateMode) {
+    renderActionsPanel();
+  }
+  renderHelpPanel();
+
+  // Delegate clicks on file tree items
+  $('#me-panel-info').addEventListener('click', (e) => {
+    const addBtn = e.target.closest('.me-tree-add');
+    if (addBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      showNewFileDialog(addBtn.dataset.dir);
+      return;
+    }
+    const link = e.target.closest('.me-tree-editable');
+    if (link) {
+      e.preventDefault();
+      showFileEditModal(link.dataset.filepath);
+    }
+  });
+
+  // Create editor (skip in emptyMode - show placeholder instead)
+  if (emptyMode) {
+    $('#me-editor-container').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;opacity:0.5;font-size:14px">Select a file from the sidebar to start editing</div>';
+  } else {
+    createEditor(body);
+    setupScrollSync();
+    if (!rawMode) foldFrontmatter();
+  }
+}
+
+function foldFrontmatter() {
+  if (!editorView) return;
+  const doc = editorView.state.doc;
+  const first = doc.line(1).text;
+  if (first !== '---') return;
+  for (let i = 2; i <= doc.lines; i++) {
+    if (doc.line(i).text === '---') {
+      const from = doc.line(1).to;
+      const to = doc.line(i).from;
+      if (to > from) {
+        editorView.dispatch({ effects: foldEffect.of({ from, to }) });
+      }
+      return;
+    }
+  }
+}
+
+// Keyboard: Escape to close dropdowns
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (document.body.classList.contains('me-zen')) {
+      document.body.classList.remove('me-zen');
+    }
+    $$('.me-dropdown-menu.me-open').forEach(m => m.classList.remove('me-open'));
+    $$('.me-media-overlay').forEach(o => o.remove());
+  }
+});
+
+// Warn before leaving with unsaved changes
+window.addEventListener('beforeunload', (e) => {
+  if (isDirty) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+init();

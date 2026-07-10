@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marmite Editor</title>
+  <link rel="stylesheet" href="/__marmite__/editor.css">
+  <script>
+    window.__marmite_editor_slug__ = "{slug}";
+    (function() {
+      var t = localStorage.getItem("marmiteEditorTheme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+  <script type="importmap">
+  {
+    "imports": {
+      "@codemirror/state": "https://esm.sh/@codemirror/state@6.5.2",
+      "@codemirror/view": "https://esm.sh/@codemirror/view@6.36.5?external=@codemirror/state",
+      "@codemirror/language": "https://esm.sh/@codemirror/language@6.10.8?external=@codemirror/state,@codemirror/view",
+      "@codemirror/commands": "https://esm.sh/@codemirror/commands@6.8.0?external=@codemirror/state,@codemirror/view,@codemirror/language",
+      "@codemirror/search": "https://esm.sh/@codemirror/search@6.5.10?external=@codemirror/state,@codemirror/view",
+      "@codemirror/autocomplete": "https://esm.sh/@codemirror/autocomplete@6.18.6?external=@codemirror/state,@codemirror/view,@codemirror/language",
+      "@codemirror/lint": "https://esm.sh/@codemirror/lint@6.8.5?external=@codemirror/state,@codemirror/view",
+      "codemirror": "https://esm.sh/codemirror@6.0.1?external=@codemirror/state,@codemirror/view,@codemirror/language,@codemirror/commands,@codemirror/search,@codemirror/autocomplete,@codemirror/lint",
+      "@codemirror/lang-markdown": "https://esm.sh/@codemirror/lang-markdown@6.3.1?external=@codemirror/state,@codemirror/view,@codemirror/language",
+      "@codemirror/theme-one-dark": "https://esm.sh/@codemirror/theme-one-dark@6.1.2?external=@codemirror/state,@codemirror/view",
+      "thememirror": "https://esm.sh/thememirror@2.0.1?external=@codemirror/state,@codemirror/view,@codemirror/language"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header id="me-topbar">
+    <div id="me-topbar-left">
+      <button class="me-btn me-btn-sm" id="me-btn-sidebar" title="Toggle sidebar">Sidebar</button>
+      <button class="me-btn me-btn-sm" id="me-btn-back" title="Back to page">Back</button>
+      <button class="me-btn me-btn-sm" id="me-btn-new" title="Create new content">New</button>
+      <span class="me-version" id="me-version">marmite</span>
+    </div>
+    <div id="me-topbar-center">
+      <span id="me-content-type"></span>
+      <span id="me-content-title"></span>
+      <span id="me-dirty-indicator" title="Unsaved changes"></span>
+    </div>
+    <div id="me-topbar-right">
+      <button class="me-btn me-btn-sm" id="me-btn-config" title="Site configuration">Config</button>
+      <button class="me-btn me-btn-sm" id="me-btn-theme" title="Toggle light/dark theme">Theme</button>
+      <button class="me-btn me-btn-sm" id="me-btn-preview-toggle" title="Toggle preview panel">Preview</button>
+    </div>
+  </header>
+
+  <main id="me-main">
+    <aside id="me-sidebar">
+      <div class="me-sidebar-tabs">
+        <button class="me-sidebar-tab me-active" data-tab="info">Info</button>
+        <button class="me-sidebar-tab" data-tab="actions">Actions</button>
+        <button class="me-sidebar-tab" data-tab="help">Help</button>
+      </div>
+      <div class="me-sidebar-panel me-active" data-panel="info" id="me-panel-info"></div>
+      <div class="me-sidebar-panel" data-panel="actions" id="me-panel-actions"></div>
+      <div class="me-sidebar-panel" data-panel="help" id="me-panel-help"></div>
+    </aside>
+
+    <div class="me-divider" id="me-divider-left"></div>
+
+    <div id="me-editor-panel">
+      <div id="me-editor-toolbar">
+        <div class="me-dropdown" id="me-insert-dropdown">
+          <button class="me-btn me-btn-sm" id="me-btn-insert">Insert</button>
+          <div class="me-dropdown-menu" id="me-insert-menu">
+            <button class="me-dropdown-item" data-insert="heading">Heading</button>
+            <button class="me-dropdown-item" data-insert="bold">Bold</button>
+            <button class="me-dropdown-item" data-insert="italic">Italic</button>
+            <button class="me-dropdown-item" data-insert="link">Link</button>
+            <button class="me-dropdown-item" data-insert="image">Image</button>
+            <button class="me-dropdown-item" data-insert="code">Code Block</button>
+            <button class="me-dropdown-item" data-insert="table">Table</button>
+            <button class="me-dropdown-item" data-insert="list">List</button>
+            <button class="me-dropdown-item" data-insert="quote">Blockquote</button>
+            <button class="me-dropdown-item" data-insert="hr">Horizontal Rule</button>
+            <div class="me-dropdown-sep"></div>
+            <button class="me-dropdown-item" data-insert="media">Media File...</button>
+          </div>
+        </div>
+        <button class="me-btn me-btn-sm me-btn-primary" id="me-btn-save" title="Save (Ctrl+S)">Save</button>
+        <button class="me-btn me-btn-sm" id="me-btn-saveas" title="Save as new content">Save As</button>
+        <button class="me-btn me-btn-sm" id="me-btn-zen" title="Zen mode (Escape to exit)">Zen</button>
+      </div>
+      <div id="me-editor-container"></div>
+      <div id="me-editor-statusbar">
+        <div class="me-statusbar-group">
+          <span id="me-cursor-pos">Ln 1, Col 1</span>
+        </div>
+        <div class="me-statusbar-group">
+          <label for="me-font-size">Font:</label>
+          <input type="range" id="me-font-size" min="10" max="24" value="14">
+          <span id="me-font-size-label">14px</span>
+          <label for="me-editor-theme">Theme:</label>
+          <select id="me-editor-theme">
+            <optgroup label="Light">
+              <option value="solarizedLight">Solarized Light</option>
+              <option value="ayuLight">Ayu Light</option>
+              <option value="clouds">Clouds</option>
+              <option value="rosePineDawn">Rose Pine Dawn</option>
+              <option value="noctisLilac">Noctis Lilac</option>
+              <option value="tomorrow">Tomorrow</option>
+              <option value="espresso">Espresso</option>
+            </optgroup>
+            <optgroup label="Dark">
+              <option value="dracula" selected>Dracula</option>
+              <option value="oneDark">One Dark</option>
+              <option value="cobalt">Cobalt</option>
+              <option value="coolGlow">Cool Glow</option>
+              <option value="amy">Amy</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="me-divider" id="me-divider-right"></div>
+
+    <div id="me-preview-panel">
+      <div id="me-preview-no-watch" class="me-hidden">Auto-reload disabled - run with -w to enable</div>
+      <div id="me-preview-toolbar">
+        <button class="me-btn me-btn-sm" id="me-btn-scroll-sync" title="Toggle scroll sync">Sync</button>
+        <button class="me-btn me-btn-sm" id="me-btn-refresh-preview" title="Refresh preview">Refresh</button>
+        <button class="me-btn me-btn-sm" id="me-btn-popout" title="Open in new tab">Pop Out</button>
+      </div>
+      <iframe id="me-preview-frame" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
+  </main>
+
+  <script type="module" src="/__marmite__/editor.js"></script>
+</body>
+</html>

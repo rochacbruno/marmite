@@ -699,6 +699,8 @@ fn handle_workspace_watch_serve(
                 output_folder: Arc::new(output_root.to_path_buf()),
                 input_folder: Arc::new(workspace_root.to_path_buf()),
                 config_path: Arc::new(ws_config_path.to_path_buf()),
+                enable_toolbar: true,
+                watch_enabled: true,
             };
             crate::server::start(bind_address, &ctx, live_reload.as_ref());
         } else {
@@ -712,6 +714,8 @@ fn handle_workspace_watch_serve(
             output_folder: Arc::new(output_root.to_path_buf()),
             input_folder: Arc::new(workspace_root.to_path_buf()),
             config_path: Arc::new(ws_config_path.to_path_buf()),
+            enable_toolbar: true,
+            watch_enabled: false,
         };
         crate::server::start(bind_address, &ctx, None);
     }

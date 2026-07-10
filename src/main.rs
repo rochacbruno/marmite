@@ -200,10 +200,13 @@ fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
 
     if serve && !watch {
         info!("Starting built-in HTTP server...");
+        let serve_site_data = crate::site::Data::from_file(&config_path);
         let ctx = server::ServerContext {
             output_folder: Arc::clone(&output_folder),
             input_folder: Arc::clone(&input_folder),
             config_path: Arc::clone(&config_path),
+            enable_toolbar: serve_site_data.site.enable_toolbar,
+            watch_enabled: false,
         };
         server::start(bind_address, &ctx, None);
     }

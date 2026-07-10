@@ -1220,6 +1220,70 @@ pub fn update_frontmatter(
     Ok(serde_json::Value::Object(result))
 }
 
+pub fn get_raw_content(
+    content_folder: &Path,
+    slug: &str,
+) -> Result<(serde_json::Value, String, std::path::PathBuf, usize), String> {
+    let file_path = find_file_by_slug(content_folder, slug)
+        .ok_or_else(|| format!("Content with slug '{slug}' not found"))?;
+
+    let file_content = fs::read_to_string(&file_path).map_err(|e| e.to_string())?;
+    let (frontmatter, raw_markdown) = crate::parser::parse_front_matter(&file_content)?;
+
+    let fm_byte_len = file_content.len() - raw_markdown.len();
+    let frontmatter_lines = file_content[..fm_byte_len]
+        .chars()
+        .filter(|c| *c == '\n')
+        .count();
+
+    let fm_json: serde_json::Map<String, serde_json::Value> = frontmatter
+        .iter()
+        .map(|(k, v)| (k.clone(), fm_value_to_json(v)))
+        .collect();
+
+    Ok((
+        serde_json::Value::Object(fm_json),
+        raw_markdown.to_string(),
+        file_path,
+        frontmatter_lines,
+    ))
+}
+
+pub fn update_content_body(
+    content_folder: &Path,
+    slug: &str,
+    new_body: &str,
+    frontmatter_updates: Option<&serde_json::Map<String, serde_json::Value>>,
+) -> Result<serde_json::Value, String> {
+    let file_path = find_file_by_slug(content_folder, slug)
+        .ok_or_else(|| format!("Content with slug '{slug}' not found"))?;
+
+    let file_content = fs::read_to_string(&file_path).map_err(|e| e.to_string())?;
+    let (mut frontmatter, _) = crate::parser::parse_front_matter(&file_content)?;
+
+    if let Some(updates) = frontmatter_updates {
+        for (key, value) in updates {
+            if value.is_null() {
+                frontmatter.remove(key);
+            } else if let Some(fm_val) = json_to_fm_value(value) {
+                frontmatter.insert(key.clone(), fm_val);
+            }
+        }
+    }
+
+    let yaml_str = serde_yaml::to_string(&frontmatter)
+        .map_err(|e| format!("Failed to serialize frontmatter: {e}"))?;
+
+    let new_content = format!("---\n{yaml_str}---\n{new_body}");
+    fs::write(&file_path, new_content).map_err(|e| format!("Failed to write file: {e}"))?;
+
+    let result: serde_json::Map<String, serde_json::Value> = frontmatter
+        .iter()
+        .map(|(k, v)| (k.clone(), fm_value_to_json(v)))
+        .collect();
+    Ok(serde_json::Value::Object(result))
+}
+
 pub fn clone_content(
     content_folder: &Path,
     source_slug: &str,

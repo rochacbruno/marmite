@@ -1625,6 +1625,97 @@ fn test_update_frontmatter_no_existing_frontmatter() {
 }
 
 #[test]
+fn test_get_raw_content_success() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        content_dir.join("hello-world.md"),
+        "---\ntitle: Hello World\ntags: rust, web\n---\nThis is the body.\n\nWith multiple paragraphs.",
+    )
+    .unwrap();
+
+    let (fm, body, _path, fm_lines) = get_raw_content(&content_dir, "hello-world").unwrap();
+    assert_eq!(fm.get("title").unwrap().as_str().unwrap(), "Hello World");
+    assert!(body.contains("This is the body."));
+    assert!(body.contains("With multiple paragraphs."));
+    assert_eq!(fm_lines, 4);
+}
+
+#[test]
+fn test_get_raw_content_not_found() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+
+    let result = get_raw_content(&content_dir, "nonexistent");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("not found"));
+}
+
+#[test]
+fn test_update_content_body_success() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        content_dir.join("hello-world.md"),
+        "---\ntitle: Hello World\n---\nOriginal body.",
+    )
+    .unwrap();
+
+    let result = update_content_body(&content_dir, "hello-world", "New body content.\n", None);
+    assert!(result.is_ok());
+
+    let written = fs::read_to_string(content_dir.join("hello-world.md")).unwrap();
+    assert!(written.contains("New body content."));
+    assert!(!written.contains("Original body."));
+    assert!(written.contains("title: Hello World"));
+}
+
+#[test]
+fn test_update_content_body_with_frontmatter_updates() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+    fs::write(
+        content_dir.join("hello-world.md"),
+        "---\ntitle: Hello World\n---\nOriginal body.",
+    )
+    .unwrap();
+
+    let mut updates = serde_json::Map::new();
+    updates.insert("title".into(), serde_json::json!("Updated Title"));
+    updates.insert("tags".into(), serde_json::json!("rust, web"));
+
+    let result = update_content_body(
+        &content_dir,
+        "hello-world",
+        "Updated body.\n",
+        Some(&updates),
+    );
+    assert!(result.is_ok());
+
+    let fm = result.unwrap();
+    assert_eq!(fm.get("title").unwrap().as_str().unwrap(), "Updated Title");
+
+    let written = fs::read_to_string(content_dir.join("hello-world.md")).unwrap();
+    assert!(written.contains("Updated body."));
+    assert!(written.contains("Updated Title"));
+}
+
+#[test]
+fn test_update_content_body_not_found() {
+    let temp_dir = TempDir::new().unwrap();
+    let content_dir = temp_dir.path().join("content");
+    fs::create_dir_all(&content_dir).unwrap();
+
+    let result = update_content_body(&content_dir, "nonexistent", "body", None);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("not found"));
+}
+
+#[test]
 fn test_json_to_fm_value_conversions() {
     assert!(json_to_fm_value(&serde_json::Value::Null).is_none());
 

@@ -11,6 +11,7 @@ pub enum ImageProvider {
     Picsum,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct RenderOptions {
     #[serde(rename = "unsafe")]
@@ -20,6 +21,8 @@ pub struct RenderOptions {
     pub ignore_empty_links: bool,
     #[serde(default = "default_render_figure_with_caption")]
     pub figure_with_caption: bool,
+    #[serde(default)]
+    pub sourcepos: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -99,6 +102,7 @@ impl Default for RenderOptions {
             unsafe_: default_render_unsafe(),
             ignore_empty_links: default_render_ignore_empty_links(),
             figure_with_caption: default_render_figure_with_caption(),
+            sourcepos: false,
         }
     }
 }
@@ -308,6 +312,10 @@ pub struct Marmite {
     #[serde(default)]
     pub skip_image_resize: bool,
 
+    /// Enable the development toolbar when serving with --serve
+    #[serde(default = "default_true")]
+    pub enable_toolbar: bool,
+
     /// Check internal links during build and warn about broken ones
     #[serde(default)]
     pub check_internal_links: bool,
@@ -369,6 +377,7 @@ impl Marmite {
             search_match_count: default_search_match_count(),
             search_title: default_search_title(),
             native_mermaid_render: default_true(),
+            enable_toolbar: default_true(),
             ..Default::default()
         }
     }
@@ -503,6 +512,9 @@ impl Marmite {
         if let Some(skip_image_resize) = cli_args.configuration.skip_image_resize {
             self.skip_image_resize = skip_image_resize;
         }
+        if let Some(enable_toolbar) = cli_args.configuration.enable_toolbar {
+            self.enable_toolbar = enable_toolbar;
+        }
         if let Some(check_internal_links) = cli_args.configuration.check_internal_links {
             self.check_internal_links = check_internal_links;
         }
@@ -582,6 +594,18 @@ pub fn generate(input_folder: &Path, cli_args: &Arc<Cli>) {
         return;
     }
     info!("Config file generated: {}", config_path.display());
+}
+
+pub fn generate_default_config(input_folder: &Path) -> Result<(), String> {
+    let config_path = input_folder.join("marmite.yaml");
+    if config_path.exists() {
+        return Ok(());
+    }
+    let config = Marmite::new();
+    let config_str =
+        serde_yaml::to_string(&config).map_err(|e| format!("Failed to serialize config: {e}"))?;
+    std::fs::write(&config_path, config_str).map_err(|e| format!("Failed to write config: {e}"))?;
+    Ok(())
 }
 
 // Defaults

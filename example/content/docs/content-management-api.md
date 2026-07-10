@@ -276,6 +276,112 @@ GET /{slug}.metadata.json
 }
 ```
 
+### Content Body
+
+#### Read content body
+
+```
+GET /__marmite__/content/{slug}/body
+```
+
+Returns the raw markdown body and frontmatter separately. Used by the [[marmite-editor]].
+
+Response:
+
+```json
+{
+  "slug": "my-post",
+  "frontmatter": {"title": "My Post", "tags": "rust, web", "...": "..."},
+  "body": "# My Post\n\nContent here...",
+  "source_path": "content/my-post.md"
+}
+```
+
+#### Write content body
+
+```
+PUT /__marmite__/content/{slug}/body
+Content-Type: application/json
+
+{"body": "# Updated\n\nNew content...", "frontmatter": {"title": "Updated Title"}}
+```
+
+The `frontmatter` field is optional. When provided, the specified fields are merged into the existing frontmatter. The body is written as-is without adding or removing frontmatter delimiters (the function handles serialization).
+
+### Raw File Access
+
+#### Read file
+
+```
+GET /__marmite__/file/{path}
+```
+
+Reads any text file in the project directory. Binary files (images, fonts, archives) are rejected. Path traversal outside the project directory is blocked.
+
+Response:
+
+```json
+{"path": "content/_hero.md", "content": ">>> Welcome to my site >>>"}
+```
+
+#### Write file
+
+```
+PUT /__marmite__/file/{path}
+Content-Type: application/json
+
+{"content": ">>> Updated hero content >>>"}
+```
+
+### File Tree
+
+```
+GET /__marmite__/files
+```
+
+Lists all files in the project directory (excluding the output folder and hidden files). Each entry includes flags for whether the file is editable, a content file with a slug, or a fragment.
+
+Response:
+
+```json
+{
+  "files": [
+    {"path": "content/my-post.md", "slug": "my-post", "editable": true},
+    {"path": "content/_hero.md", "editable": true, "fragment": true},
+    {"path": "marmite.yaml", "editable": true},
+    {"path": "static/custom.css", "editable": true},
+    {"path": "content/media/photo.jpg"}
+  ]
+}
+```
+
+### Raw Config Access
+
+#### Read config
+
+```
+GET /__marmite__/config
+```
+
+Returns the raw YAML content of `marmite.yaml`.
+
+Response:
+
+```json
+{"file": "/path/to/marmite.yaml", "yaml": "name: My Site\ntagline: ..."}
+```
+
+#### Write config
+
+```
+PUT /__marmite__/config
+Content-Type: application/json
+
+{"yaml": "name: My Site\ntagline: Updated\n..."}
+```
+
+The YAML is validated before writing. Returns 400 with an error message if the YAML is malformed.
+
 ## Error responses
 
 All endpoints return JSON error responses:
