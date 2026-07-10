@@ -592,6 +592,18 @@ pub fn generate(input_folder: &Path, cli_args: &Arc<Cli>) {
     info!("Config file generated: {}", config_path.display());
 }
 
+pub fn generate_default_config(input_folder: &Path) -> Result<(), String> {
+    let config_path = input_folder.join("marmite.yaml");
+    if config_path.exists() {
+        return Ok(());
+    }
+    let config = Marmite::new();
+    let config_str =
+        serde_yaml::to_string(&config).map_err(|e| format!("Failed to serialize config: {e}"))?;
+    std::fs::write(&config_path, config_str).map_err(|e| format!("Failed to write config: {e}"))?;
+    Ok(())
+}
+
 // Defaults
 
 fn default_name() -> String {

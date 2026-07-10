@@ -603,7 +603,8 @@ function renderInfoPanel() {
   }
 
   let treeHtml = '';
-  if (fileTree && fileTree.length) {
+  const projectEmpty = !fileTree || fileTree.length === 0;
+  if (!projectEmpty) {
     treeHtml = renderFileTree(fileTree);
   }
 
@@ -612,8 +613,35 @@ function renderInfoPanel() {
       ${rows.map(([k, v]) => `<span class="me-meta-key">${k}</span><span class="me-meta-val">${v}</span>`).join('')}
     </div>
     <div class="me-section-title" style="margin-top:16px">Project Files</div>
-    <div class="me-file-tree">${treeHtml}</div>
+    ${projectEmpty
+      ? `<div class="me-empty-project">
+           <p style="font-size:13px;opacity:0.7;margin:0 0 12px">This project is empty.</p>
+           <button class="me-btn me-btn-primary" id="me-init-project" style="width:100%;justify-content:center">Initialize a marmite project</button>
+         </div>`
+      : `<div class="me-file-tree">${treeHtml}</div>`
+    }
   `;
+
+  if (projectEmpty) {
+    const initBtn = container.querySelector('#me-init-project');
+    if (initBtn) {
+      initBtn.addEventListener('click', async () => {
+        initBtn.disabled = true;
+        initBtn.textContent = 'Initializing...';
+        try {
+          const resp = await fetch(`${API}/init`, { method: 'POST' });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Init failed');
+          toast('Project initialized');
+          setTimeout(() => window.location.reload(), 2000);
+        } catch (e) {
+          toast('Failed: ' + e.message, true);
+          initBtn.disabled = false;
+          initBtn.textContent = 'Initialize a marmite project';
+        }
+      });
+    }
+  }
 }
 
 function renderFileTree(files) {

@@ -4401,6 +4401,82 @@ pub fn initialize(input_folder: &Arc<std::path::PathBuf>, cli_args: &Arc<crate::
     info!("Site initialized in {}", input_folder.display());
 }
 
+pub fn initialize_project(input_folder: &std::path::Path) -> Result<(), String> {
+    let content_folder = input_folder.join("content");
+    let media_folder = content_folder.join("media");
+    let pages_folder = content_folder.join("pages");
+    let posts_folder = content_folder.join("posts");
+
+    fs::create_dir_all(input_folder).map_err(|e| format!("Failed to create input folder: {e}"))?;
+
+    let has_visible_files = input_folder
+        .read_dir()
+        .map_err(|e| format!("Failed to read input folder: {e}"))?
+        .filter_map(std::result::Result::ok)
+        .any(|entry| {
+            entry
+                .file_name()
+                .to_str()
+                .is_some_and(|n| !n.starts_with('.'))
+        });
+
+    if has_visible_files {
+        return Err(format!(
+            "Input folder is not empty: {}",
+            input_folder.display()
+        ));
+    }
+
+    crate::config::generate_default_config(input_folder)
+        .map_err(|e| format!("Failed to generate config: {e}"))?;
+
+    for dir in [&content_folder, &media_folder, &pages_folder, &posts_folder] {
+        fs::create_dir_all(dir)
+            .map_err(|e| format!("Failed to create directory {}: {e}", dir.display()))?;
+    }
+
+    let files: &[(&str, &str)] = &[
+        ("custom.css", "/* Custom CSS */"),
+        ("custom.js", "// Custom JS"),
+    ];
+    for (name, content) in files {
+        fs::write(input_folder.join(name), content)
+            .map_err(|e| format!("Failed to create {name}: {e}"))?;
+    }
+
+    let content_files: &[(&str, &str)] = &[
+        ("_404.md", "# Not Found"),
+        (
+            "_references.md",
+            "[github]: https://github.com/rochacbruno/marmite",
+        ),
+        ("_hero.md", "##### Welcome to Marmite\n\nMarmite is a static site generator written in Rust.\nEdit `content/_hero.md` to change this content.\nRemove the file to disable the hero section.\n"),
+        ("_announce.md", "Give us a &star; on [github]"),
+    ];
+    for (name, content) in content_files {
+        fs::write(content_folder.join(name), content)
+            .map_err(|e| format!("Failed to create content/{name}: {e}"))?;
+    }
+
+    fs::write(
+        pages_folder.join("about.md"),
+        "# About\n\nEdit `content/pages/about.md` to change this content.\n\nPages are content without a date.\nAdd them to the menu in `marmite.yaml` to make them accessible.\n",
+    )
+    .map_err(|e| format!("Failed to create about.md: {e}"))?;
+
+    let now = chrono::Local::now();
+    let now_str = now.format("%Y-%m-%d %H:%M:%S").to_string();
+    fs::write(
+        posts_folder.join("welcome.md"),
+        format!(
+            "---\ndate: {now_str}\n---\n# Welcome to Marmite\n\nThis is your first post!\n\nEdit `content/posts/welcome.md` to change this post.\nCreate new markdown files in `content/posts/` for posts or `content/pages/` for pages.\n"
+        ),
+    )
+    .map_err(|e| format!("Failed to create welcome.md: {e}"))?;
+
+    Ok(())
+}
+
 /// Show all site URLs in JSON format
 #[allow(clippy::too_many_lines)]
 pub fn show_urls(

@@ -31,6 +31,7 @@ const CONTENT_API_PATH: &str = "/__marmite__/content";
 const CONFIG_API_PATH: &str = "/__marmite__/config";
 const DATA_API_PATH: &str = "/__marmite__/data";
 const FILES_API_PATH: &str = "/__marmite__/files";
+const INIT_API_PATH: &str = "/__marmite__/init";
 const FILE_API_PATH: &str = "/__marmite__/file/";
 const EDITOR_PAGE_PATH: &str = "/__marmite__/editor/";
 const EDITOR_JS_PATH: &str = "__marmite__/editor.js";
@@ -204,6 +205,10 @@ fn handle_request(
 
     if decoded_url == FILES_API_PATH {
         return Ok(handle_files_api(ctx));
+    }
+
+    if decoded_url == INIT_API_PATH && request.method() == &Method::Post {
+        return Ok(handle_init_api(ctx));
     }
 
     if let Some(file_path) = decoded_url.strip_prefix(FILE_API_PATH) {
@@ -836,6 +841,14 @@ fn handle_data_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
             "config": config,
         }),
     )
+}
+
+fn handle_init_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    let input_folder = ctx.input_folder.as_path();
+    match crate::site::initialize_project(input_folder) {
+        Ok(()) => json_response(200, &json!({"initialized": true})),
+        Err(e) => json_response(400, &json!({"error": e})),
+    }
 }
 
 fn handle_file_api(
