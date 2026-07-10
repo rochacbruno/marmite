@@ -273,6 +273,22 @@ fn handle_request(
         return Ok(response);
     }
 
+    if let Some(vendor_file) = decoded_url.strip_prefix("/__marmite__/vendor/") {
+        let asset_path = format!("vendor/{vendor_file}");
+        if let Some(content) = crate::embedded::get_toolbar_asset(&asset_path) {
+            let mut response = Response::from_string(content);
+            if let Ok(h) =
+                Header::from_bytes("Content-Type", "application/javascript; charset=utf-8")
+            {
+                response.add_header(h);
+            }
+            if let Ok(h) = Header::from_bytes("Cache-Control", "public, max-age=31536000") {
+                response.add_header(h);
+            }
+            return Ok(response);
+        }
+    }
+
     if let Some(slug) = decoded_url.strip_prefix(EDITOR_PAGE_PATH) {
         return Ok(handle_editor_page(slug, live_reload_enabled));
     }
