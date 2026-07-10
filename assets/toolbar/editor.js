@@ -41,7 +41,9 @@ let fileTree = null;
 let fmLineOffset = 0;
 let scrollSyncEnabled = true;
 const emptyMode = !slug;
-const rawMode = !emptyMode && (slug.includes('/') || slug.includes('.') || slug.startsWith('_'));
+const templateMode = !emptyMode && /^(?:[^/]+\/)?templates\/.*\.(?:html|xml)$/i.test(slug);
+const rawMode = !emptyMode && !templateMode && (slug.includes('/') || slug.includes('.') || slug.startsWith('_'));
+let templateContext = null;
 let isDirty = false;
 let autoSaveTimer = null;
 
@@ -211,7 +213,7 @@ function connectLiveReload() {
 // When the editor regains focus, snap the preview back to the page being edited
 // (the user may have browsed to other pages in the preview iframe).
 function syncPreviewToSlug() {
-  if (rawMode) return;
+  if (rawMode || templateMode) return;
   const iframe = $('#me-preview-frame');
   if (!iframe || !iframe.src) return;
   const expectedPath = `/${slug}.html`;
@@ -356,6 +358,23 @@ function syncCursorToPreview(editorLine) {
   }
 }
 
+// --- Template preview mapping ---
+function getTemplatePreviewUrl() {
+  const name = slug.split('/').pop().replace(/\.html$|\.xml$/i, '');
+  const firstPost = siteData?.content_items?.find(c => c.slug);
+  const map = {
+    list: '/index.html', pagination: '/index.html', base: '/index.html',
+    base_feeds: '/index.html', sitemap: '/sitemap.xml',
+    group: '/archive.html', group_author_avatar: '/authors.html',
+    json_ld_index: '/index.html',
+  };
+  if (map[name]) return map[name];
+  if (name.startsWith('content') || name === 'comments' || name.startsWith('json_ld_content')) {
+    return firstPost ? `/${firstPost.slug}.html` : '/index.html';
+  }
+  return '/index.html';
+}
+
 // --- CodeMirror Editor ---
 function getEditorThemeExt(name) {
   const entry = editorThemes[name];
@@ -375,7 +394,72 @@ const FRONTMATTER_KEYS = [
   "card_image", "banner_image", "language", "translates", "extra",
 ];
 
+const TERA_TAGS = [
+  'for', 'endfor', 'if', 'elif', 'else', 'endif',
+  'block', 'endblock', 'extends', 'include',
+  'set', 'filter', 'endfilter', 'raw', 'endraw',
+  'break', 'continue',
+];
+
+const TERA_BUILTIN_FILTERS = [
+  'upper', 'lower', 'capitalize', 'trim', 'trim_start', 'trim_end',
+  'truncate', 'wordcount', 'length', 'reverse',
+  'first', 'last', 'nth', 'join', 'sort', 'unique', 'group_by',
+  'urlencode', 'urlencode_strict', 'json_encode', 'str',
+  'escape_html', 'escape_xml', 'safe', 'newlines_to_br', 'indent',
+  'round', 'filesizeformat', 'pluralize',
+  'title', 'replace', 'split', 'int', 'float',
+  'default', 'get',
+];
+
+function templateCompletions(context) {
+  const pos = context.pos;
+  const line = context.state.doc.lineAt(pos);
+  const textBefore = line.text.slice(0, pos - line.from);
+  const vars = templateContext ? templateContext.variables || [] : [];
+  const fns = templateContext ? templateContext.functions || [] : [];
+  const customFilters = templateContext ? templateContext.filters || [] : [];
+
+  // Variable completion: {{ partial or {{ obj.partial
+  const varMatch = textBefore.match(/\{\{-?\s*([\w.]*)$/);
+  if (varMatch) {
+    const partial = varMatch[1].toLowerCase();
+    const from = pos - varMatch[1].length;
+    const allItems = [...vars, ...fns.map(f => f + '()')];
+    const options = allItems
+      .filter(v => v.toLowerCase().startsWith(partial))
+      .map(v => ({ label: v }));
+    if (options.length) return { from, options };
+  }
+
+  // Tag completion: {% partial
+  const tagMatch = textBefore.match(/\{%-?\s*(\w*)$/);
+  if (tagMatch) {
+    const partial = tagMatch[1].toLowerCase();
+    const from = pos - tagMatch[1].length;
+    const options = TERA_TAGS
+      .filter(t => t.startsWith(partial))
+      .map(t => ({ label: t }));
+    if (options.length) return { from, options };
+  }
+
+  // Filter completion: | partial
+  const filterMatch = textBefore.match(/\|\s*(\w*)$/);
+  if (filterMatch) {
+    const partial = filterMatch[1].toLowerCase();
+    const from = pos - filterMatch[1].length;
+    const allFilters = [...new Set([...customFilters, ...TERA_BUILTIN_FILTERS])];
+    const options = allFilters
+      .filter(f => f.toLowerCase().startsWith(partial))
+      .map(f => ({ label: f }));
+    if (options.length) return { from, options };
+  }
+
+  return null;
+}
+
 function editorCompletions(context) {
+  if (templateMode) return templateCompletions(context);
   const pos = context.pos;
   const line = context.state.doc.lineAt(pos);
   const textBefore = line.text.slice(0, pos - line.from);
@@ -567,11 +651,14 @@ function scheduleAutoSave() {
   }, 500);
 
   // Debounced server save (1.5s after last keystroke)
-  if (autoSaveTimer) clearTimeout(autoSaveTimer);
-  autoSaveTimer = setTimeout(() => {
-    if (!editorView) return;
-    saveContent();
-  }, 1500);
+  // Skip auto-save for templates to avoid saving incomplete syntax
+  if (!templateMode) {
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      if (!editorView) return;
+      saveContent();
+    }, 1500);
+  }
 }
 
 // --- Frontmatter parsing from editor content ---
@@ -615,10 +702,31 @@ function getFrontmatterLineCount(content) {
 }
 
 // --- Save ---
+function validateTemplateSyntax(content) {
+  const opens = (content.match(/\{\{/g) || []).length;
+  const closes = (content.match(/\}\}/g) || []).length;
+  if (opens !== closes) return `Unmatched {{ }} brackets (${opens} opening, ${closes} closing)`;
+  const tagOpens = (content.match(/\{%/g) || []).length;
+  const tagCloses = (content.match(/%\}/g) || []).length;
+  if (tagOpens !== tagCloses) return `Unmatched {% %} brackets (${tagOpens} opening, ${tagCloses} closing)`;
+  // Check for empty expressions
+  if (/\{\{\s*\}\}/.test(content)) return 'Empty expression {{ }} found';
+  if (/\{%\s*%\}/.test(content)) return 'Empty tag {% %} found';
+  return null;
+}
+
 async function saveContent() {
   if (!editorView) return;
   const content = editorView.state.doc.toString();
-  const savePath = rawMode ? slug : sourcePath;
+  const savePath = (rawMode || templateMode) ? slug : sourcePath;
+
+  if (templateMode) {
+    const err = validateTemplateSyntax(content);
+    if (err) {
+      toast('Template warning: ' + err, true);
+      return;
+    }
+  }
 
   try {
     await fetch(`${API}/file/${savePath}`, {
@@ -629,7 +737,7 @@ async function saveContent() {
       if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
     });
 
-    if (!rawMode) {
+    if (!rawMode && !templateMode) {
       frontmatter = parseFrontmatterFromContent(content);
       renderInfoPanel();
       updateContentTitle();
@@ -808,6 +916,9 @@ function renderFileTree(files) {
         if (f.slug) {
           const isCurrent = f.slug === slug;
           html += `<a href="${API}/editor/${f.slug}" class="me-tree-label me-tree-file${isCurrent ? ' me-tree-current' : ''}">${name}</a>`;
+        } else if (f.template) {
+          const isCurrent = f.path === slug;
+          html += `<a href="${API}/editor/${f.path}" class="me-tree-label me-tree-file${isCurrent ? ' me-tree-current' : ''}">${name}</a>`;
         } else if (f.fragment || f.editable) {
           const isCurrent = f.path === slug;
           html += `<a href="#" class="me-tree-label me-tree-file me-tree-editable${isCurrent ? ' me-tree-current' : ''}" data-filepath="${f.path}">${name}</a>`;
@@ -976,9 +1087,88 @@ function renderActionsPanel() {
   });
 }
 
+function renderTemplateHelpPanel(container) {
+  const vars = templateContext ? templateContext.variables || [] : [];
+  const fns = templateContext ? templateContext.functions || [] : [];
+  const customFilters = templateContext ? templateContext.filters || [] : [];
+  const tplName = templateContext ? templateContext.template || '' : slug.split('/').pop();
+
+  container.innerHTML = `
+    <div class="me-help-section">
+      <h4>Tera 2.0 Syntax</h4>
+      <table class="me-help-table">
+        <tr><td>{{ var }}</td><td>Output a variable</td></tr>
+        <tr><td>{{ var | filter }}</td><td>Apply a filter</td></tr>
+        <tr><td>{{ a?.b?.c }}</td><td>Optional chaining</td></tr>
+        <tr><td>{{ x if cond else y }}</td><td>Ternary expression</td></tr>
+        <tr><td>{% if cond %}</td><td>Conditional block</td></tr>
+        <tr><td>{% elif cond %}</td><td>Else-if branch</td></tr>
+        <tr><td>{% else %}</td><td>Else branch</td></tr>
+        <tr><td>{% endif %}</td><td>End conditional</td></tr>
+        <tr><td>{% for x in items %}</td><td>Loop over items</td></tr>
+        <tr><td>{% endfor %}</td><td>End loop</td></tr>
+        <tr><td>{% block name %}</td><td>Define/override a block</td></tr>
+        <tr><td>{% endblock name %}</td><td>End block</td></tr>
+        <tr><td>{% extends "base" %}</td><td>Extend a parent template</td></tr>
+        <tr><td>{% include "file" %}</td><td>Include another template</td></tr>
+        <tr><td>{% set x = val %}</td><td>Set a variable</td></tr>
+        <tr><td>{% raw %}</td><td>Output raw (no parsing)</td></tr>
+        <tr><td>{# comment #}</td><td>Template comment</td></tr>
+        <tr><td>items[0]</td><td>Array indexing (not dot notation)</td></tr>
+        <tr><td>items[:-1]</td><td>Array slicing</td></tr>
+        <tr><td>{...base, "k": v}</td><td>Map spread</td></tr>
+      </table>
+    </div>
+    <div class="me-help-section">
+      <h4>Loop Variables</h4>
+      <table class="me-help-table">
+        <tr><td>loop.index</td><td>1-based iteration count</td></tr>
+        <tr><td>loop.index0</td><td>0-based iteration count</td></tr>
+        <tr><td>loop.first</td><td>True on first iteration</td></tr>
+        <tr><td>loop.last</td><td>True on last iteration</td></tr>
+      </table>
+    </div>
+    ${vars.length ? `
+    <div class="me-help-section">
+      <h4>Variables (${tplName})</h4>
+      <div class="me-shortcode-list">
+        ${vars.map(v => `<span class="me-shortcode-tag">${v}</span>`).join('')}
+      </div>
+    </div>` : ''}
+    ${fns.length ? `
+    <div class="me-help-section">
+      <h4>Functions</h4>
+      <table class="me-help-table">
+        <tr><td>url_for(path="")</td><td>Generate URL with base path</td></tr>
+        <tr><td>group(kind="")</td><td>Group content by tag/archive/author/stream/series</td></tr>
+        <tr><td>get_posts(ord="desc")</td><td>Get sorted posts</td></tr>
+        <tr><td>get_pages(ord="asc")</td><td>Get sorted pages</td></tr>
+        <tr><td>get_data_by_slug(slug="")</td><td>Look up content by slug</td></tr>
+        <tr><td>source_link(content=c)</td><td>Link to markdown source</td></tr>
+        <tr><td>stream_display_name(stream="")</td><td>Display name for stream</td></tr>
+        <tr><td>series_display_name(series="")</td><td>Display name for series</td></tr>
+        <tr><td>get_gallery(path="")</td><td>Get gallery data</td></tr>
+      </table>
+    </div>` : ''}
+    <div class="me-help-section">
+      <h4>Filters</h4>
+      <table class="me-help-table">
+        ${[...new Set([...customFilters, ...TERA_BUILTIN_FILTERS])].sort().map(f =>
+          `<tr><td>${f}</td><td></td></tr>`
+        ).join('')}
+      </table>
+    </div>
+  `;
+}
+
 function renderHelpPanel() {
   const container = $('#me-panel-help');
   if (!container) return;
+
+  if (templateMode) {
+    renderTemplateHelpPanel(container);
+    return;
+  }
 
   const shortcodes = (siteData && siteData.shortcodes) ? siteData.shortcodes : [];
 
@@ -1810,7 +2000,7 @@ async function init() {
   let body = '';
   if (emptyMode) {
     // No content to load
-  } else if (rawMode) {
+  } else if (rawMode || templateMode) {
     try {
       const data = await (await fetch(`${API}/file/${slug}`)).json();
       if (data.error) throw new Error(data.error);
@@ -1820,6 +2010,13 @@ async function init() {
     } catch (e) {
       toast('Failed to load file: ' + e.message, true);
       return;
+    }
+    if (templateMode) {
+      const tplName = slug.split('/').pop().replace(/\.html$|\.xml$/i, '');
+      try {
+        const resp = await fetch(`/template.${tplName}.context.json`);
+        if (resp.ok) templateContext = await resp.json();
+      } catch { /* ok */ }
     }
   } else {
     // Content mode: get source_path from the body API, then load the full file
@@ -1872,6 +2069,13 @@ async function init() {
       if (t.dataset.tab === 'actions') t.style.display = 'none';
     });
     $('#me-editor-toolbar').style.display = 'none';
+  } else if (templateMode) {
+    $('#me-content-type').textContent = 'template';
+    $('#me-content-title').textContent = slug.split('/').pop();
+    $('#me-preview-frame').src = getTemplatePreviewUrl();
+    $$('.me-sidebar-tab').forEach(t => {
+      if (t.dataset.tab === 'actions') t.style.display = 'none';
+    });
   } else if (rawMode) {
     $('#me-content-type').textContent = 'file';
     $('#me-content-title').textContent = slug;
@@ -1898,7 +2102,7 @@ async function init() {
 
   // Render sidebar panels
   renderInfoPanel();
-  if (!rawMode && !emptyMode) {
+  if (!rawMode && !emptyMode && !templateMode) {
     renderActionsPanel();
   }
   renderHelpPanel();

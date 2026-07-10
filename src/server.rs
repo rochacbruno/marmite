@@ -947,6 +947,7 @@ fn handle_files_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
     let site_data = crate::site::Data::from_file(&ctx.config_path);
     let content_path = &site_data.site.content_path;
     let site_path = &site_data.site.site_path;
+    let templates_path = &site_data.site.templates_path;
     let output_rel = ctx
         .output_folder
         .strip_prefix(input_folder)
@@ -1027,6 +1028,13 @@ fn handle_files_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
         }
         if is_fragment {
             entry_json["fragment"] = json!(true);
+        }
+        let is_template = rel_str.starts_with(templates_path)
+            && path.extension().is_some_and(|ext| {
+                ext.eq_ignore_ascii_case("html") || ext.eq_ignore_ascii_case("xml")
+            });
+        if is_template {
+            entry_json["template"] = json!(true);
         }
 
         files.push(entry_json);
