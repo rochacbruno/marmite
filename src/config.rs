@@ -308,6 +308,10 @@ pub struct Marmite {
     #[serde(default)]
     pub skip_image_resize: bool,
 
+    /// Enable the development toolbar when serving with --serve
+    #[serde(default = "default_true")]
+    pub enable_toolbar: bool,
+
     /// Check internal links during build and warn about broken ones
     #[serde(default)]
     pub check_internal_links: bool,
@@ -369,6 +373,7 @@ impl Marmite {
             search_match_count: default_search_match_count(),
             search_title: default_search_title(),
             native_mermaid_render: default_true(),
+            enable_toolbar: default_true(),
             ..Default::default()
         }
     }
@@ -502,6 +507,9 @@ impl Marmite {
         }
         if let Some(skip_image_resize) = cli_args.configuration.skip_image_resize {
             self.skip_image_resize = skip_image_resize;
+        }
+        if let Some(enable_toolbar) = cli_args.configuration.enable_toolbar {
+            self.enable_toolbar = enable_toolbar;
         }
         if let Some(check_internal_links) = cli_args.configuration.check_internal_links {
             self.check_internal_links = check_internal_links;

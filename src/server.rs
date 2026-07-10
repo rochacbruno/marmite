@@ -19,6 +19,7 @@ pub struct ServerContext {
     pub output_folder: Arc<PathBuf>,
     pub input_folder: Arc<PathBuf>,
     pub config_path: Arc<PathBuf>,
+    pub enable_toolbar: bool,
 }
 
 const FALLBACK_BIND_ADDRESS: &str = "0.0.0.0:0";
@@ -29,6 +30,11 @@ const LIVE_RELOAD_WS_PATH: &str = "/__marmite__/livereload";
 const CONTENT_API_PATH: &str = "/__marmite__/content";
 const CONFIG_API_PATH: &str = "/__marmite__/config";
 const DATA_API_PATH: &str = "/__marmite__/data";
+const FILES_API_PATH: &str = "/__marmite__/files";
+const FILE_API_PATH: &str = "/__marmite__/file/";
+const EDITOR_PAGE_PATH: &str = "/__marmite__/editor/";
+const EDITOR_JS_PATH: &str = "__marmite__/editor.js";
+const EDITOR_CSS_PATH: &str = "__marmite__/editor.css";
 const LIVE_RELOAD_SCRIPT: &str = r#"(() => {
     const isHttps = window.location.protocol === "https:";
     const hostPart = window.location.hostname.includes(":") ? `[${window.location.hostname}]` : window.location.hostname;
@@ -69,6 +75,21 @@ static TOOLBAR_CSS: LazyLock<String> = LazyLock::new(|| {
 static TOOLBAR_JS: LazyLock<String> = LazyLock::new(|| {
     crate::embedded::get_toolbar_asset("toolbar.js")
         .expect("embedded toolbar.js missing - this is a build-time error")
+});
+
+static EDITOR_CSS: LazyLock<String> = LazyLock::new(|| {
+    crate::embedded::get_toolbar_asset("editor.css")
+        .expect("embedded editor.css missing - this is a build-time error")
+});
+
+static EDITOR_JS: LazyLock<String> = LazyLock::new(|| {
+    crate::embedded::get_toolbar_asset("editor.js")
+        .expect("embedded editor.js missing - this is a build-time error")
+});
+
+static EDITOR_HTML: LazyLock<String> = LazyLock::new(|| {
+    crate::embedded::get_toolbar_asset("editor.html")
+        .expect("embedded editor.html missing - this is a build-time error")
 });
 
 pub fn start(bind_address: &str, ctx: &ServerContext, live_reload: Option<&LiveReload>) {
@@ -181,6 +202,16 @@ fn handle_request(
         return Ok(handle_data_api(ctx));
     }
 
+    if decoded_url == FILES_API_PATH {
+        return Ok(handle_files_api(ctx));
+    }
+
+    if let Some(file_path) = decoded_url.strip_prefix(FILE_API_PATH) {
+        if !file_path.is_empty() {
+            return Ok(handle_file_api(request, file_path, ctx));
+        }
+    }
+
     if live_reload_enabled && decoded_url == format!("/{LIVE_RELOAD_SCRIPT_PATH}") {
         let mut response = Response::from_string(LIVE_RELOAD_SCRIPT);
         let js_header = Header::from_bytes("Content-Type", "application/javascript")
@@ -214,7 +245,37 @@ fn handle_request(
         return Ok(response);
     }
 
-    let request_path = match decoded_url.as_str() {
+    if decoded_url == format!("/{EDITOR_JS_PATH}") {
+        let mut response = Response::from_string(EDITOR_JS.as_str());
+        if let Ok(h) = Header::from_bytes("Content-Type", "application/javascript; charset=utf-8") {
+            response.add_header(h);
+        }
+        if let Ok(h) = Header::from_bytes("Cache-Control", "no-store") {
+            response.add_header(h);
+        }
+        return Ok(response);
+    }
+
+    if decoded_url == format!("/{EDITOR_CSS_PATH}") {
+        let mut response = Response::from_string(EDITOR_CSS.as_str());
+        if let Ok(h) = Header::from_bytes("Content-Type", "text/css; charset=utf-8") {
+            response.add_header(h);
+        }
+        if let Ok(h) = Header::from_bytes("Cache-Control", "no-store") {
+            response.add_header(h);
+        }
+        return Ok(response);
+    }
+
+    if let Some(slug) = decoded_url.strip_prefix(EDITOR_PAGE_PATH) {
+        return Ok(handle_editor_page(slug, live_reload_enabled));
+    }
+    if decoded_url == "/__marmite__/editor" {
+        return Ok(handle_editor_page("", live_reload_enabled));
+    }
+
+    let url_without_query = decoded_url.split('?').next().unwrap_or(&decoded_url);
+    let request_path = match url_without_query {
         "/" => "index.html".to_string(),
         url if url.ends_with('/') => format!("{}index.html", &url[1..]),
         url => url[1..].to_string(),
@@ -238,7 +299,7 @@ fn handle_request(
                                 "\n<script src=\"/{LIVE_RELOAD_SCRIPT_PATH}\"></script>\n"
                             );
                         }
-                        if !html.contains(TOOLBAR_CSS_PATH) {
+                        if ctx.enable_toolbar && !html.contains(TOOLBAR_CSS_PATH) {
                             let _ = write!(
                                 snippet,
                                 "<link rel=\"stylesheet\" href=\"/{TOOLBAR_CSS_PATH}\">\n\
@@ -284,7 +345,12 @@ fn handle_request(
             request_path,
             request.http_version()
         );
-        render_not_found(&error_path, &request_path, live_reload_enabled)
+        render_not_found(
+            &error_path,
+            &request_path,
+            live_reload_enabled,
+            ctx.enable_toolbar,
+        )
     }
 }
 
@@ -319,6 +385,20 @@ fn handle_content_api(
         .unwrap_or("");
 
     match *request.method() {
+        Method::Get if rest.ends_with("/body") => {
+            let slug = rest.strip_suffix("/body").unwrap_or("");
+            if slug.is_empty() {
+                return json_response(400, &json!({"error": "slug is required in URL path"}));
+            }
+            handle_get_content_body(slug, ctx)
+        }
+        Method::Put if rest.ends_with("/body") => {
+            let slug = rest.strip_suffix("/body").unwrap_or("");
+            if slug.is_empty() {
+                return json_response(400, &json!({"error": "slug is required in URL path"}));
+            }
+            handle_put_content_body(request, slug, ctx)
+        }
         Method::Post if rest.is_empty() => handle_create_content(request, ctx),
         Method::Post if rest.ends_with("/move") => {
             let slug = rest.strip_suffix("/move").unwrap_or("");
@@ -705,6 +785,37 @@ fn handle_data_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
     }
     images.sort();
 
+    let shortcodes: Vec<String> = build_info
+        .get("shortcodes")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let mut content_items: Vec<serde_json::Value> = Vec::new();
+    for key in &["posts", "pages"] {
+        if let Some(items) = build_info.get(key).and_then(|v| v.as_array()) {
+            for item in items {
+                let title = item
+                    .get("title")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let item_slug = item
+                    .get("slug")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                if !item_slug.is_empty() {
+                    content_items.push(json!({"title": title, "slug": item_slug}));
+                }
+            }
+        }
+    }
+
     json_response(
         200,
         &json!({
@@ -716,6 +827,8 @@ fn handle_data_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
             "iso_languages": iso_languages,
             "slugs": slugs,
             "images": images,
+            "shortcodes": shortcodes,
+            "content_items": content_items,
             "post_count": build_info.get("posts").and_then(|v| v.as_array()).map_or(0, Vec::len),
             "page_count": build_info.get("pages").and_then(|v| v.as_array()).map_or(0, Vec::len),
             "elapsed_time": build_info.get("elapsed_time").and_then(serde_json::Value::as_f64).unwrap_or(0.0),
@@ -725,12 +838,220 @@ fn handle_data_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
     )
 }
 
-fn handle_config_api(request: &mut Request, ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+fn handle_file_api(
+    request: &mut Request,
+    rel_path: &str,
+    ctx: &ServerContext,
+) -> Response<Cursor<Vec<u8>>> {
+    let input_folder = ctx.input_folder.as_path();
+    let file_path = input_folder.join(rel_path);
+
+    // Safety: ensure the resolved path is inside the input folder
+    let canonical_input = input_folder
+        .canonicalize()
+        .unwrap_or_else(|_| input_folder.to_path_buf());
+    let canonical_file = file_path
+        .canonicalize()
+        .unwrap_or_else(|_| file_path.clone());
+    if !canonical_file.starts_with(&canonical_input) {
+        return json_response(403, &json!({"error": "path traversal not allowed"}));
+    }
+
+    // Block editing binary/image files
+    let ext = file_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_lowercase();
+    let binary_exts = [
+        "png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "tiff", "ico", "svg", "woff", "woff2",
+        "ttf", "otf", "pdf", "zip", "tar", "gz",
+    ];
+    if binary_exts.contains(&ext.as_str()) {
+        return json_response(400, &json!({"error": "binary files cannot be edited"}));
+    }
+
     match *request.method() {
-        Method::Post => handle_create_config(ctx),
-        Method::Patch => handle_patch_config(request, ctx),
+        Method::Get => {
+            if !file_path.is_file() {
+                return json_response(
+                    404,
+                    &json!({"error": format!("file not found: {rel_path}")}),
+                );
+            }
+            match std::fs::read_to_string(&file_path) {
+                Ok(content) => json_response(200, &json!({ "path": rel_path, "content": content })),
+                Err(e) => {
+                    json_response(500, &json!({"error": format!("failed to read file: {e}")}))
+                }
+            }
+        }
+        Method::Put => {
+            let body = match read_request_body(request) {
+                Ok(b) => b,
+                Err(e) => return json_response(400, &json!({"error": e})),
+            };
+            let parsed: serde_json::Value = match serde_json::from_str(&body) {
+                Ok(v) => v,
+                Err(e) => {
+                    return json_response(400, &json!({"error": format!("Invalid JSON: {e}")}))
+                }
+            };
+            let Some(content) = parsed.get("content").and_then(|v| v.as_str()) else {
+                return json_response(400, &json!({"error": "content field is required"}));
+            };
+            if let Some(parent) = file_path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            match std::fs::write(&file_path, content) {
+                Ok(()) => json_response(200, &json!({"path": rel_path})),
+                Err(e) => {
+                    json_response(500, &json!({"error": format!("failed to write file: {e}")}))
+                }
+            }
+        }
         _ => json_response(405, &json!({"error": "method not allowed"})),
     }
+}
+
+fn handle_files_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    let input_folder = ctx.input_folder.as_path();
+    let site_data = crate::site::Data::from_file(&ctx.config_path);
+    let content_path = &site_data.site.content_path;
+    let site_path = &site_data.site.site_path;
+    let output_rel = ctx
+        .output_folder
+        .strip_prefix(input_folder)
+        .ok()
+        .and_then(|p| p.to_str())
+        .map(String::from);
+
+    let mut files: Vec<serde_json::Value> = Vec::new();
+
+    for entry in walkdir::WalkDir::new(input_folder)
+        .sort_by_file_name()
+        .into_iter()
+        .filter_map(std::result::Result::ok)
+    {
+        let path = entry.path();
+        if !path.is_file() {
+            continue;
+        }
+        let Ok(rel) = path.strip_prefix(input_folder) else {
+            continue;
+        };
+        let rel_str = rel.to_string_lossy().to_string();
+
+        // Skip output folder and hidden directories
+        if (!site_path.is_empty() && rel_str.starts_with(site_path))
+            || output_rel
+                .as_ref()
+                .is_some_and(|op| rel_str.starts_with(op.as_str()))
+            || rel_str.starts_with('.')
+            || rel
+                .components()
+                .any(|c| c.as_os_str().to_str().is_some_and(|s| s.starts_with('.')))
+        {
+            continue;
+        }
+
+        let is_md = path
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("md"));
+        let is_content = rel_str.starts_with(content_path) && is_md;
+        let file_ext = path
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        let editable_exts = [
+            "md", "txt", "css", "js", "json", "yaml", "yml", "toml", "html", "xml", "svg", "csv",
+            "sh",
+        ];
+        let editable = editable_exts.contains(&file_ext.as_str());
+        let is_fragment = is_md
+            && path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.starts_with('_'));
+
+        let mut entry_json = json!({ "path": rel_str });
+
+        if is_content {
+            if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                let slug = crate::content::remove_date_from_filename(stem);
+                if !is_fragment {
+                    entry_json["slug"] = json!(slug);
+                }
+            }
+        }
+        if editable {
+            entry_json["editable"] = json!(true);
+        }
+        if is_fragment {
+            entry_json["fragment"] = json!(true);
+        }
+
+        files.push(entry_json);
+    }
+
+    json_response(200, &json!({ "files": files }))
+}
+
+fn handle_config_api(request: &mut Request, ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    match *request.method() {
+        Method::Get => handle_get_config_raw(ctx),
+        Method::Post => handle_create_config(ctx),
+        Method::Patch => handle_patch_config(request, ctx),
+        Method::Put => handle_put_config_raw(request, ctx),
+        _ => json_response(405, &json!({"error": "method not allowed"})),
+    }
+}
+
+fn handle_get_config_raw(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    let config_path = ctx.config_path.as_path();
+    let content = if config_path.exists() {
+        std::fs::read_to_string(config_path).unwrap_or_default()
+    } else {
+        String::new()
+    };
+    json_response(
+        200,
+        &json!({ "file": config_path.display().to_string(), "yaml": content }),
+    )
+}
+
+fn handle_put_config_raw(request: &mut Request, ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    let body = match read_request_body(request) {
+        Ok(b) => b,
+        Err(e) => return json_response(400, &json!({"error": e})),
+    };
+
+    let parsed: serde_json::Value = match serde_json::from_str(&body) {
+        Ok(v) => v,
+        Err(e) => return json_response(400, &json!({"error": format!("Invalid JSON: {e}")})),
+    };
+
+    let Some(yaml_content) = parsed.get("yaml").and_then(|v| v.as_str()) else {
+        return json_response(400, &json!({"error": "yaml field is required"}));
+    };
+
+    // Validate that the YAML is parseable
+    if !yaml_content.trim().is_empty() {
+        if let Err(e) = serde_yaml::from_str::<serde_yaml::Value>(yaml_content) {
+            return json_response(400, &json!({"error": format!("Invalid YAML: {e}")}));
+        }
+    }
+
+    let config_path = ctx.config_path.as_path();
+    if let Err(e) = std::fs::write(config_path, yaml_content) {
+        return json_response(
+            500,
+            &json!({"error": format!("Failed to write config: {e}")}),
+        );
+    }
+
+    json_response(200, &json!({ "file": config_path.display().to_string() }))
 }
 
 fn handle_create_config(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
@@ -840,6 +1161,92 @@ fn handle_patch_config(request: &mut Request, ctx: &ServerContext) -> Response<C
     )
 }
 
+fn handle_get_content_body(slug: &str, ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
+    let site_data = crate::site::Data::from_file(&ctx.config_path);
+    let content_folder = crate::site::get_content_folder(&site_data.site, &ctx.input_folder);
+
+    match crate::content::get_raw_content(&content_folder, slug) {
+        Ok((frontmatter, body, file_path)) => {
+            let source_path = file_path
+                .strip_prefix(&*ctx.input_folder)
+                .unwrap_or(&file_path)
+                .display()
+                .to_string();
+            json_response(
+                200,
+                &json!({
+                    "slug": slug,
+                    "frontmatter": frontmatter,
+                    "body": body,
+                    "source_path": source_path,
+                }),
+            )
+        }
+        Err(e) if e.contains("not found") => json_response(404, &json!({"error": e})),
+        Err(e) => json_response(500, &json!({"error": e})),
+    }
+}
+
+fn handle_put_content_body(
+    request: &mut Request,
+    slug: &str,
+    ctx: &ServerContext,
+) -> Response<Cursor<Vec<u8>>> {
+    let body = match read_request_body(request) {
+        Ok(b) => b,
+        Err(e) => return json_response(400, &json!({"error": e})),
+    };
+
+    let parsed: serde_json::Value = match serde_json::from_str(&body) {
+        Ok(v) => v,
+        Err(e) => return json_response(400, &json!({"error": format!("Invalid JSON: {e}")})),
+    };
+
+    let Some(new_body) = parsed.get("body").and_then(|v| v.as_str()) else {
+        return json_response(400, &json!({"error": "body field is required"}));
+    };
+
+    let fm_updates = parsed
+        .get("frontmatter")
+        .and_then(|v| v.as_object())
+        .cloned();
+
+    let site_data = crate::site::Data::from_file(&ctx.config_path);
+    let content_folder = crate::site::get_content_folder(&site_data.site, &ctx.input_folder);
+
+    match crate::content::update_content_body(&content_folder, slug, new_body, fm_updates.as_ref())
+    {
+        Ok(frontmatter) => json_response(
+            200,
+            &json!({
+                "slug": slug,
+                "frontmatter": frontmatter,
+            }),
+        ),
+        Err(e) if e.contains("not found") => json_response(404, &json!({"error": e})),
+        Err(e) => json_response(500, &json!({"error": e})),
+    }
+}
+
+fn handle_editor_page(slug: &str, _live_reload_enabled: bool) -> Response<Cursor<Vec<u8>>> {
+    let escaped_slug = slug
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;");
+
+    let html = EDITOR_HTML.replace("{slug}", &escaped_slug);
+
+    let mut resp = Response::from_string(html).with_status_code(200);
+    if let Ok(h) = Header::from_bytes("Content-Type", "text/html; charset=utf-8") {
+        resp.add_header(h);
+    }
+    if let Ok(h) = Header::from_bytes("Cache-Control", "no-store") {
+        resp.add_header(h);
+    }
+    resp
+}
+
 fn content_type_for(path: &str) -> Option<&'static str> {
     let ext = path.rsplit('.').next()?;
     Some(match ext {
@@ -870,6 +1277,7 @@ fn render_not_found(
     error_path: &PathBuf,
     request_path: &str,
     live_reload_enabled: bool,
+    enable_toolbar: bool,
 ) -> Result<Response<Cursor<Vec<u8>>>, String> {
     match File::open(error_path) {
         Ok(mut file) => {
@@ -882,13 +1290,17 @@ fn render_not_found(
                 } else {
                     String::new()
                 };
-                let inject = format!(
-                    "<script>window.__marmite_404_slug__={slug};</script>\n\
-                     <link rel=\"stylesheet\" href=\"/{TOOLBAR_CSS_PATH}\">\n\
-                     <script src=\"/{TOOLBAR_JS_PATH}\"></script>\n\
-                     {live_reload_tag}",
-                    slug = serde_json::to_string(slug).unwrap_or_else(|_| "null".into()),
-                );
+                let toolbar_tag = if enable_toolbar {
+                    format!(
+                        "<script>window.__marmite_404_slug__={slug};</script>\n\
+                         <link rel=\"stylesheet\" href=\"/{TOOLBAR_CSS_PATH}\">\n\
+                         <script src=\"/{TOOLBAR_JS_PATH}\"></script>\n",
+                        slug = serde_json::to_string(slug).unwrap_or_else(|_| "null".into()),
+                    )
+                } else {
+                    String::new()
+                };
+                let inject = format!("{toolbar_tag}{live_reload_tag}");
                 if let Some(pos) = html.rfind("</body>") {
                     html.insert_str(pos, &inject);
                 } else {

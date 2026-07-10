@@ -1000,10 +1000,12 @@ pub fn generate(
         // Keep the thread alive for watching
         if serve {
             info!("Starting built-in HTTP server...");
+            let serve_config = Data::from_file(config_path);
             let ctx = server::ServerContext {
                 output_folder: Arc::clone(output_folder),
                 input_folder: Arc::clone(input_folder),
                 config_path: Arc::clone(config_path),
+                enable_toolbar: serve_config.site.enable_toolbar,
             };
             server::start(bind_address, &ctx, live_reload.as_ref());
         } else {

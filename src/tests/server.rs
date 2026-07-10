@@ -9,7 +9,7 @@ fn test_render_not_found_with_file() {
     let error_path = temp_dir.path().join("404.html");
     fs::write(&error_path, "Custom 404 page").unwrap();
 
-    let response = render_not_found(&error_path, "missing.html", false);
+    let response = render_not_found(&error_path, "missing.html", false, true);
     assert!(response.is_ok());
 }
 
@@ -18,7 +18,7 @@ fn test_render_not_found_without_file() {
     let temp_dir = TempDir::new().unwrap();
     let error_path = temp_dir.path().join("nonexistent_404.html");
 
-    let response = render_not_found(&error_path, "missing.html", false);
+    let response = render_not_found(&error_path, "missing.html", false, true);
     assert!(response.is_ok());
 }
 
@@ -29,7 +29,7 @@ fn test_render_not_found_with_file_content() {
     let content = "<html><body><h1>404 - Page Not Found</h1></body></html>";
     fs::write(&error_path, content).unwrap();
 
-    let _response = render_not_found(&error_path, "missing.html", false).unwrap();
+    let _response = render_not_found(&error_path, "missing.html", false, true).unwrap();
 }
 
 #[test]
@@ -37,7 +37,7 @@ fn test_render_not_found_fallback() {
     let temp_dir = TempDir::new().unwrap();
     let error_path = temp_dir.path().join("non_existent_404.html");
 
-    let _response = render_not_found(&error_path, "missing.html", false).unwrap();
+    let _response = render_not_found(&error_path, "missing.html", false, true).unwrap();
 }
 
 #[test]
@@ -47,7 +47,7 @@ fn test_render_not_found_injects_toolbar_with_live_reload() {
     let content = "<html><body><h1>Not Found</h1></body></html>";
     fs::write(&error_path, content).unwrap();
 
-    let response = render_not_found(&error_path, "my-page.html", true).unwrap();
+    let response = render_not_found(&error_path, "my-page.html", true, true).unwrap();
     let mut body = Vec::new();
     response.into_reader().read_to_end(&mut body).unwrap();
     let html = String::from_utf8(body).unwrap();
@@ -64,7 +64,7 @@ fn test_render_not_found_toolbar_always_injected() {
     let content = "<html><body><h1>Not Found</h1></body></html>";
     fs::write(&error_path, content).unwrap();
 
-    let response = render_not_found(&error_path, "my-page.html", false).unwrap();
+    let response = render_not_found(&error_path, "my-page.html", false, true).unwrap();
     let mut body = Vec::new();
     response.into_reader().read_to_end(&mut body).unwrap();
     let html = String::from_utf8(body).unwrap();
