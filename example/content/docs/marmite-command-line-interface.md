@@ -714,6 +714,8 @@ Options:
           Fail the build on broken internal links [default: false or from config file] [possible values: true, false]
       --native-mermaid-render <NATIVE_MERMAID_RENDER>
           Render mermaid diagrams to SVG at build time [default: true or from config file] [possible values: true, false]
+      --enable-toolbar <ENABLE_TOOLBAR>
+          Enable the development toolbar when serving [default: true or from config file] [possible values: true, false]
   -h, --help
           Print help
   -V, --version

@@ -87,6 +87,7 @@ $ marmite myblog --serve
 - [Redirect Aliases](https://marmite.blog/redirect-aliases.html): Generate redirect pages for old URLs when content slugs change
 - [Internal Link Validation](https://marmite.blog/internal-link-validation.html): Build-time validation of internal links with warning and strict failure modes
 - [Marmite Playground](https://marmite.blog/marmite-playground.html): Try marmite in the browser with a live editor and real-time preview
+- [Marmite Editor](https://marmite.blog/marmite-editor.html): Three-panel content editor with CodeMirror 6, live preview, metadata sidebar, auto-save, autocomplete, raw file editing, and config dialog during --serve mode
 - [Marmite Toolbar](https://marmite.blog/marmite-toolbar.html): Floating dev toolbar for creating, editing, moving, cloning, and deleting content from the browser during --serve mode
 - [Content Management API](https://marmite.blog/content-management-api.html): REST API under /__marmite__/ for programmatic content and config management during --serve mode
 

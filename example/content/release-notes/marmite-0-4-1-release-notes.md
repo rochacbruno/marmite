@@ -1,13 +1,34 @@
 ---
 title: Marmite 0.4.1 Release Notes
 slug: marmite-0-4-1-release-notes
-description: "Marmite 0.4.1 adds a development toolbar, content management API, smart directory auto-detection, and duplicate slug detection."
+description: "Marmite 0.4.1 adds a content editor, development toolbar, content management API, smart directory auto-detection, and duplicate slug detection."
 tags: [release-notes, marmite, features]
 author: rochacbruno
 stream: draft
 ---
 
 ## New Features
+
+### Content Editor
+
+Marmite now includes a full-featured content editor accessible from the toolbar. Click the **Editor** button in the toolbar header to open a three-panel editing environment with a CodeMirror 6 markdown editor, live preview, and metadata sidebar.
+
+Key features:
+
+- **CodeMirror 6 editor** with markdown syntax highlighting, 12 editor themes, and adjustable font size
+- **Autocomplete** for wikilinks, shortcodes, media paths, and frontmatter keys/values
+- **Auto-save** after 1.5 seconds of inactivity, with automatic preview refresh via WebSocket
+- **Insert menu** for headings, bold, italic, links, images, code blocks, tables, and a visual media file picker
+- **Metadata sidebar** with frontmatter editing, content actions (translate, clone, delete), project file tree, and markdown/shortcode help reference
+- **Config dialog** with 9 tabs covering all marmite.yaml options, including raw YAML editing
+- **Raw file editing** for fragments (`_hero.md`), CSS, JS, YAML, and other non-content files without frontmatter handling
+- **File tree navigation** at `/__marmite__/editor/` for browsing and opening project files
+- **Save As** for creating new content from the editor
+- **`enable_toolbar`** config option and `--enable-toolbar` CLI flag to disable toolbar injection
+
+New API endpoints: `GET/PUT /__marmite__/content/{slug}/body`, `GET/PUT /__marmite__/file/{path}`, `GET/PUT /__marmite__/config`, `GET /__marmite__/files`.
+
+See [[marmite-editor]] for full documentation.
 
 ### Development Toolbar
 

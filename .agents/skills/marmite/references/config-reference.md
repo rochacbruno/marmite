@@ -66,6 +66,12 @@ Default menu includes Tags, Archive, and Authors links.
 | `site_path` | String | `""` | Subfolder within output directory |
 | `gallery_path` | String | `"gallery"` | Subfolder for gallery images |
 
+## Server
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enable_toolbar` | bool | `true` | Enable the development toolbar and editor when serving with `--serve` |
+
 ## Feeds and Output
 
 | Field | Type | Default | Description |

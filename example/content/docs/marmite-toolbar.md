@@ -21,6 +21,10 @@ $ marmite myblog --serve --watch
 
 A small gear icon appears at the top-left corner of every page. Click it to open the toolbar sidebar. Press `Escape` or click the overlay to close it. The toolbar remembers its open/closed state and active tab across page reloads.
 
+The toolbar header shows the marmite version and an **Editor** button. On content pages, the Editor button opens the [[marmite-editor]] for that specific content. On non-content pages, it opens the editor with a file tree for navigation.
+
+To disable the toolbar, set `enable_toolbar: false` in `marmite.yaml` or use `--enable-toolbar false` on the CLI. The API endpoints and editor page remain accessible even when the toolbar is disabled.
+
 ## Tabs
 
 The toolbar organizes its features into tabs. On content pages (posts and pages), all tabs are available. On non-content pages (index, tag listings, archive), only the Site, Layout, and Config tabs are shown.
