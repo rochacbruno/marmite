@@ -4409,6 +4409,21 @@ pub fn initialize_project(input_folder: &std::path::Path) -> Result<(), String> 
 
     fs::create_dir_all(input_folder).map_err(|e| format!("Failed to create input folder: {e}"))?;
 
+    // Determine the output folder name to ignore it when checking emptiness.
+    // Read from config if it exists, otherwise use the default ("site").
+    let config_path = input_folder.join("marmite.yaml");
+    let output_name = if config_path.exists() {
+        let data = Data::from_file(&config_path);
+        let sp = &data.site.site_path;
+        if sp.is_empty() {
+            "site".to_string()
+        } else {
+            sp.clone()
+        }
+    } else {
+        "site".to_string()
+    };
+
     let has_visible_files = input_folder
         .read_dir()
         .map_err(|e| format!("Failed to read input folder: {e}"))?
@@ -4417,7 +4432,7 @@ pub fn initialize_project(input_folder: &std::path::Path) -> Result<(), String> 
             entry
                 .file_name()
                 .to_str()
-                .is_some_and(|n| !n.starts_with('.'))
+                .is_some_and(|n| !n.starts_with('.') && n != output_name)
         });
 
     if has_visible_files {
