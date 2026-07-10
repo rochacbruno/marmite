@@ -1025,6 +1025,30 @@ function renderHelpPanel() {
         ${shortcodes.map(s => `<span class="me-shortcode-tag">${s}</span>`).join('')}
       </div>
     </div>` : ''}
+    <div class="me-help-section">
+      <h4>Editor Keybindings</h4>
+      <table class="me-help-table">
+        <tr><td>Ctrl+S</td><td>Save file</td></tr>
+        <tr><td>Ctrl+Z</td><td>Undo</td></tr>
+        <tr><td>Ctrl+Shift+Z</td><td>Redo</td></tr>
+        <tr><td>Ctrl+A</td><td>Select all</td></tr>
+        <tr><td>Ctrl+D</td><td>Select next occurrence</td></tr>
+        <tr><td>Ctrl+F</td><td>Find</td></tr>
+        <tr><td>Ctrl+H</td><td>Find and replace</td></tr>
+        <tr><td>Ctrl+G</td><td>Go to line</td></tr>
+        <tr><td>Ctrl+/</td><td>Toggle comment</td></tr>
+        <tr><td>Ctrl+]</td><td>Indent</td></tr>
+        <tr><td>Ctrl+[</td><td>Dedent</td></tr>
+        <tr><td>Ctrl+Shift+K</td><td>Delete line</td></tr>
+        <tr><td>Alt+Up</td><td>Move line up</td></tr>
+        <tr><td>Alt+Down</td><td>Move line down</td></tr>
+        <tr><td>Ctrl+Shift+Up</td><td>Copy line up</td></tr>
+        <tr><td>Ctrl+Shift+Down</td><td>Copy line down</td></tr>
+        <tr><td>Tab</td><td>Indent / accept autocomplete</td></tr>
+        <tr><td>Escape</td><td>Exit zen mode / close dialogs</td></tr>
+      </table>
+      <p style="font-size:11px;opacity:0.6;margin:8px 0 0">On macOS, use Cmd instead of Ctrl</p>
+    </div>
   `;
 }
 
