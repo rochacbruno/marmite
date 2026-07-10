@@ -11,6 +11,7 @@ pub enum ImageProvider {
     Picsum,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 pub struct RenderOptions {
     #[serde(rename = "unsafe")]
@@ -20,6 +21,8 @@ pub struct RenderOptions {
     pub ignore_empty_links: bool,
     #[serde(default = "default_render_figure_with_caption")]
     pub figure_with_caption: bool,
+    #[serde(default)]
+    pub sourcepos: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
@@ -99,6 +102,7 @@ impl Default for RenderOptions {
             unsafe_: default_render_unsafe(),
             ignore_empty_links: default_render_ignore_empty_links(),
             figure_with_caption: default_render_figure_with_caption(),
+            sourcepos: false,
         }
     }
 }

@@ -1198,6 +1198,7 @@
   function render404CreateButton() {
     if (!is404) return;
     const slug = window.__marmite_404_slug__;
+    if (slug.includes('.')) return;
     const title = slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
     const contentHtml = document.querySelector('.content-html');
     const target = contentHtml || document.querySelector('.main-content') || document.querySelector('main');
