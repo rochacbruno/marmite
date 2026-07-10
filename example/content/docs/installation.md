@@ -32,7 +32,7 @@ curl -sS https://marmite.blog/install.sh | sh
 
 ```bash
 # Or install from GitHub directly
-cargo install --git https://github.com/rochacbruno/marmite
+cargo install --git https://github.com/rochacbruno/marmite marmite
 ```
 
 Check [[Python Installation with pip]] for more details on the pip/uvx method.
