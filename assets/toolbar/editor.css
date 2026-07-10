@@ -553,6 +553,29 @@ html, body {
   line-height: 1.8;
 }
 .me-tree-folder { font-weight: 600; }
+.me-tree-add {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  border-radius: 3px;
+  text-decoration: none;
+  vertical-align: middle;
+  margin-left: 4px;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+.me-tree-add:hover { opacity: 1; }
+.me-tree-root-add {
+  font-size: 11px;
+  margin-bottom: 4px;
+  opacity: 0.6;
+}
+.me-tree-root-add:hover { opacity: 1; }
+.me-tree-root-add .me-tree-add { margin-left: 0; }
 .me-tree-binary { opacity: 0.4; }
 a.me-tree-file { text-decoration: none; transition: background 0.1s; }
 a.me-tree-file:hover { background: rgba(1,114,173,0.1); }
@@ -664,6 +687,7 @@ body { background: #fff; color: #1a1a1a; }
 .me-section-title { border-color: #e5e5e5; color: #888; }
 .me-meta-key { color: #555; }
 a.me-tree-file { color: #0172ad; }
+.me-tree-add { color: #0172ad; }
 .me-tree-current { background: #e9f2fc; color: #0172ad; }
 .me-help-table td { border-color: #eee; }
 .me-shortcode-tag { background: #e9f2fc; border-color: #9bccfd; color: #0172ad; }
@@ -713,6 +737,7 @@ a.me-tree-file { color: #0172ad; }
   :root:not([data-theme="light"]) .me-section-title { border-color: #313244; color: #6c7086; }
   :root:not([data-theme="light"]) .me-meta-key { color: #a6adc8; }
   :root:not([data-theme="light"]) a.me-tree-file { color: #89b4fa; }
+  :root:not([data-theme="light"]) .me-tree-add { color: #89b4fa; }
   :root:not([data-theme="light"]) .me-tree-current { background: #1e3a5f; color: #89b4fa; }
   :root:not([data-theme="light"]) .me-help-table td { border-color: #313244; }
   :root:not([data-theme="light"]) .me-shortcode-tag { background: #1e3a5f; border-color: #2a5a8f; color: #89b4fa; }
@@ -761,6 +786,7 @@ a.me-tree-file { color: #0172ad; }
 [data-theme="dark"] .me-section-title { border-color: #313244; color: #6c7086; }
 [data-theme="dark"] .me-meta-key { color: #a6adc8; }
 [data-theme="dark"] a.me-tree-file { color: #89b4fa; }
+[data-theme="dark"] .me-tree-add { color: #89b4fa; }
 [data-theme="dark"] .me-tree-current { background: #1e3a5f; color: #89b4fa; }
 [data-theme="dark"] .me-help-table td { border-color: #313244; }
 [data-theme="dark"] .me-shortcode-tag { background: #1e3a5f; border-color: #2a5a8f; color: #89b4fa; }

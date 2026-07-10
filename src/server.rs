@@ -861,14 +861,12 @@ fn handle_file_api(
     let input_folder = ctx.input_folder.as_path();
     let file_path = input_folder.join(rel_path);
 
-    // Safety: ensure the resolved path is inside the input folder
-    let canonical_input = input_folder
-        .canonicalize()
-        .unwrap_or_else(|_| input_folder.to_path_buf());
-    let canonical_file = file_path
-        .canonicalize()
-        .unwrap_or_else(|_| file_path.clone());
-    if !canonical_file.starts_with(&canonical_input) {
+    // Safety: reject paths that attempt traversal outside the input folder
+    if rel_path.contains("..")
+        || rel_path.starts_with('/')
+        || rel_path.starts_with('\\')
+        || rel_path.contains("/../")
+    {
         return json_response(403, &json!({"error": "path traversal not allowed"}));
     }
 
@@ -925,6 +923,21 @@ fn handle_file_api(
                 }
             }
         }
+        Method::Delete => {
+            if !file_path.is_file() {
+                return json_response(
+                    404,
+                    &json!({"error": format!("file not found: {rel_path}")}),
+                );
+            }
+            match std::fs::remove_file(&file_path) {
+                Ok(()) => json_response(200, &json!({"path": rel_path, "deleted": true})),
+                Err(e) => json_response(
+                    500,
+                    &json!({"error": format!("failed to delete file: {e}")}),
+                ),
+            }
+        }
         _ => json_response(405, &json!({"error": "method not allowed"})),
     }
 }
@@ -943,13 +956,15 @@ fn handle_files_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
 
     let mut files: Vec<serde_json::Value> = Vec::new();
 
+    let mut dirs_seen: std::collections::HashSet<String> = std::collections::HashSet::new();
+
     for entry in walkdir::WalkDir::new(input_folder)
         .sort_by_file_name()
         .into_iter()
         .filter_map(std::result::Result::ok)
     {
         let path = entry.path();
-        if !path.is_file() {
+        if path == input_folder {
             continue;
         }
         let Ok(rel) = path.strip_prefix(input_folder) else {
@@ -967,6 +982,13 @@ fn handle_files_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
                 .components()
                 .any(|c| c.as_os_str().to_str().is_some_and(|s| s.starts_with('.')))
         {
+            continue;
+        }
+
+        if path.is_dir() {
+            if dirs_seen.insert(rel_str.clone()) {
+                files.push(json!({ "path": rel_str, "is_dir": true }));
+            }
             continue;
         }
 

@@ -765,6 +765,15 @@ function renderInfoPanel() {
 function renderFileTree(files) {
   const tree = {};
   for (const f of files) {
+    if (f.is_dir) {
+      const parts = f.path.split('/');
+      let node = tree;
+      for (const part of parts) {
+        if (!node[part]) node[part] = {};
+        node = node[part];
+      }
+      continue;
+    }
     const parts = f.path.split('/');
     let node = tree;
     for (let i = 0; i < parts.length - 1; i++) {
@@ -774,7 +783,11 @@ function renderFileTree(files) {
     node[parts[parts.length - 1]] = f;
   }
 
-  function renderNode(obj, depth) {
+  function addBtn(dirPath) {
+    return `<a href="#" class="me-tree-add" data-dir="${dirPath}" title="New file in ${dirPath || '/'}">&plus;</a>`;
+  }
+
+  function renderNode(obj, depth, parentPath) {
     let html = '';
     const entries = Object.entries(obj).sort(([a], [b]) => {
       const aIsDir = typeof obj[a] === 'object' && !obj[a].path;
@@ -785,9 +798,10 @@ function renderFileTree(files) {
     });
     for (const [name, value] of entries) {
       if (typeof value === 'object' && !value.path) {
+        const dirPath = parentPath ? `${parentPath}/${name}` : name;
         html += `<details class="me-tree-dir"${depth === 0 ? ' open' : ''}>
-          <summary class="me-tree-label me-tree-folder">${name}/</summary>
-          <div class="me-tree-children">${renderNode(value, depth + 1)}</div>
+          <summary class="me-tree-label me-tree-folder">${name}/ ${addBtn(dirPath)}</summary>
+          <div class="me-tree-children">${renderNode(value, depth + 1, dirPath)}</div>
         </details>`;
       } else {
         const f = value;
@@ -805,7 +819,85 @@ function renderFileTree(files) {
     return html;
   }
 
-  return renderNode(tree, 0);
+  return `<div class="me-tree-root-add">${addBtn('')} new file</div>${renderNode(tree, 0, '')}`;
+}
+
+function showNewFileDialog(dirPath) {
+  const overlay = document.createElement('div');
+  overlay.className = 'me-confirm-overlay';
+  const displayDir = dirPath || '/';
+  overlay.innerHTML = `
+    <div class="me-confirm-box" style="max-width:420px;text-align:left">
+      <h4 style="margin-bottom:4px">New file in <code>${displayDir}</code></h4>
+      <p style="font-size:12px;opacity:0.7;margin:0 0 12px">Use path separators to create subfolders (e.g. <code>foo/bar.md</code>)</p>
+      <div class="me-field"><label>Filename<input type="text" id="me-newfile-name" placeholder="example.md"></label></div>
+      <div class="me-confirm-actions" style="gap:6px">
+        <button class="me-btn" id="me-newfile-cancel">Cancel</button>
+        <button class="me-btn" id="me-newfile-empty">Empty File</button>
+        <button class="me-btn" id="me-newfile-page">New Page</button>
+        <button class="me-btn me-btn-primary" id="me-newfile-post">New Post</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const input = overlay.querySelector('#me-newfile-name');
+  input.focus();
+  overlay.querySelector('#me-newfile-cancel').addEventListener('click', () => overlay.remove());
+
+  async function createFile(type) {
+    const name = input.value.trim();
+    if (!name) { toast('Filename is required', true); return; }
+    const fullPath = dirPath ? `${dirPath}/${name}` : name;
+
+    let content = '';
+    if (type === 'post') {
+      const title = name.replace(/\.md$/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      content = `---\ntitle: "${title}"\ndate: ${dateStr}\ntags: \n---\n\n# ${title}\n`;
+    } else if (type === 'page') {
+      const title = name.replace(/\.md$/, '').replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      content = `---\ntitle: "${title}"\n---\n\n# ${title}\n`;
+    }
+
+    try {
+      await fetch(`${API}/file/${fullPath}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      }).then(async r => {
+        if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
+      });
+      toast('File created');
+      overlay.remove();
+      await refreshFileTree();
+    } catch (e) {
+      toast('Failed: ' + e.message, true);
+    }
+  }
+
+  overlay.querySelector('#me-newfile-post').addEventListener('click', () => createFile('post'));
+  overlay.querySelector('#me-newfile-page').addEventListener('click', () => createFile('page'));
+  overlay.querySelector('#me-newfile-empty').addEventListener('click', () => createFile('empty'));
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); createFile('post'); }
+    if (e.key === 'Escape') { overlay.remove(); }
+  });
+}
+
+async function refreshFileTree() {
+  try {
+    const ftData = await (await fetch(`${API}/files`)).json();
+    fileTree = ftData.files || [];
+    renderInfoPanel();
+    // Re-attach editable file click handler
+    $('#me-panel-info').addEventListener('click', (e) => {
+      const link = e.target.closest('.me-tree-editable');
+      if (link) { e.preventDefault(); showFileEditModal(link.dataset.filepath); }
+    });
+  } catch { /* ok */ }
 }
 
 function renderActionsPanel() {
@@ -1262,7 +1354,7 @@ function showFileEditModal(filePath) {
         <textarea id="me-file-modal-editor" style="flex:1;width:100%;min-height:400px;border:none;outline:none;resize:none;padding:12px;font-family:'SF Mono','Fira Code',Menlo,Consolas,monospace;font-size:13px;tab-size:2;white-space:pre;line-height:1.5" placeholder="Loading..."></textarea>
       </div>
       <div class="me-config-footer">
-        <span style="font-size:11px;opacity:0.6;margin-right:auto" id="me-file-modal-status"></span>
+        <button class="me-btn" id="me-file-modal-delete" style="color:#c0392b;border-color:#c0392b;margin-right:auto">Delete</button>
         <button class="me-btn" id="me-file-modal-open-editor">Open in Editor</button>
         <button class="me-btn" id="me-file-modal-cancel">Cancel</button>
         <button class="me-btn me-btn-primary" id="me-file-modal-save">Save</button>
@@ -1286,6 +1378,21 @@ function showFileEditModal(filePath) {
 
   overlay.querySelector('#me-file-modal-close').addEventListener('click', () => overlay.remove());
   overlay.querySelector('#me-file-modal-cancel').addEventListener('click', () => overlay.remove());
+
+  overlay.querySelector('#me-file-modal-delete').addEventListener('click', async () => {
+    const ok = await confirmDialog('Delete File', `Are you sure you want to delete "${filePath}"? This cannot be undone.`);
+    if (!ok) return;
+    try {
+      const resp = await fetch(`${API}/file/${filePath}`, { method: 'DELETE' });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || resp.statusText);
+      toast('File deleted');
+      overlay.remove();
+      await refreshFileTree();
+    } catch (e) {
+      toast('Delete failed: ' + e.message, true);
+    }
+  });
 
   overlay.querySelector('#me-file-modal-open-editor').addEventListener('click', () => {
     overlay.remove();
@@ -1772,8 +1879,15 @@ async function init() {
   }
   renderHelpPanel();
 
-  // Delegate clicks on editable file tree items to open modal
+  // Delegate clicks on file tree items
   $('#me-panel-info').addEventListener('click', (e) => {
+    const addBtn = e.target.closest('.me-tree-add');
+    if (addBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      showNewFileDialog(addBtn.dataset.dir);
+      return;
+    }
     const link = e.target.closest('.me-tree-editable');
     if (link) {
       e.preventDefault();
