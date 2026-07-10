@@ -781,6 +781,14 @@ pub fn generate(
                 error!("Failed to lock site data: {e}");
                 panic!("Cannot proceed without site data lock")
             });
+            if serve {
+                site_data
+                    .site
+                    .markdown_parser
+                    .get_or_insert_with(Default::default)
+                    .render
+                    .sourcepos = true;
+            }
             let build_info_path = moved_output_folder.join("marmite.json");
             let latest_build_info = get_latest_build_info(&build_info_path)?;
             if let Some(build_info) = &latest_build_info {

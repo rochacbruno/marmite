@@ -37,6 +37,8 @@ let sourcePath = '';
 let originalBody = '';
 let siteData = null;
 let fileTree = null;
+let fmLineOffset = 0;
+let scrollSyncEnabled = true;
 const emptyMode = !slug;
 const rawMode = !emptyMode && (slug.includes('/') || slug.includes('.') || slug.startsWith('_'));
 let isDirty = false;
@@ -222,6 +224,137 @@ function syncPreviewToSlug() {
   }
 }
 
+// --- Scroll sync ---
+let scrollSyncFrame = null;
+
+function setupScrollSync() {
+  if (rawMode || emptyMode) return;
+
+  editorView.scrollDOM.addEventListener('scroll', () => {
+    if (scrollSyncFrame) cancelAnimationFrame(scrollSyncFrame);
+    scrollSyncFrame = requestAnimationFrame(syncScrollToPreview);
+  }, { passive: true });
+
+  const iframe = $('#me-preview-frame');
+  if (iframe) {
+    iframe.addEventListener('load', () => {
+      setTimeout(syncScrollToPreview, 200);
+    });
+  }
+}
+
+function findPreviewContext(iframe) {
+  if (!iframe) return null;
+  let previewDoc;
+  try { previewDoc = iframe.contentDocument; } catch { return null; }
+  if (!previewDoc) return null;
+  if ($('#me-preview-panel').classList.contains('me-hidden')) return null;
+
+  const previewEl = previewDoc.scrollingElement || previewDoc.body;
+  if (!previewEl) return null;
+  const previewMax = previewEl.scrollHeight - previewEl.clientHeight;
+  if (previewMax <= 0) return null;
+
+  return { previewDoc, previewEl, previewMax };
+}
+
+function findSourceposElement(previewDoc, sourceLine) {
+  const elements = previewDoc.querySelectorAll('[data-sourcepos]');
+  let bestEl = null;
+  let bestDist = Infinity;
+  // Prefer elements at or before the source line (not after).
+  // Among those, pick the closest. Only use an element after the
+  // source line if nothing before it is close enough.
+  let bestBeforeEl = null;
+  let bestBeforeDist = Infinity;
+  for (const el of elements) {
+    const startLine = parseInt(el.dataset.sourcepos.split(':')[0], 10);
+    const dist = Math.abs(startLine - sourceLine);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestEl = el;
+    }
+    if (startLine <= sourceLine && dist < bestBeforeDist) {
+      bestBeforeDist = dist;
+      bestBeforeEl = el;
+    }
+  }
+  // Use the best element at-or-before the cursor if it's reasonably close
+  if (bestBeforeEl && bestBeforeDist <= bestDist + 5) {
+    return { bestEl: bestBeforeEl, bestDist: bestBeforeDist };
+  }
+  return { bestEl, bestDist };
+}
+
+function scrollPreviewToElement(previewDoc, previewEl, previewMax, el) {
+  const elRect = el.getBoundingClientRect();
+  const bodyRect = previewDoc.documentElement.getBoundingClientRect();
+  const targetTop = elRect.top - bodyRect.top;
+  // Offset so the element appears ~1/4 down the viewport, not at the very top
+  const viewportOffset = (previewEl.clientHeight || 300) * 0.25;
+  previewEl.scrollTop = Math.max(0, Math.min(targetTop - viewportOffset, previewMax));
+}
+
+function syncScrollToPreview() {
+  if (rawMode || emptyMode || !scrollSyncEnabled) return;
+  const iframe = $('#me-preview-frame');
+  const ctx = findPreviewContext(iframe);
+  if (!ctx) return;
+
+  const scrollDOM = editorView.scrollDOM;
+  const scrollTop = scrollDOM.scrollTop;
+  const scrollHeight = scrollDOM.scrollHeight - scrollDOM.clientHeight;
+  if (scrollHeight <= 0) return;
+
+  // Editor at the very top -> preview at the very top
+  if (scrollTop <= 1) {
+    ctx.previewEl.scrollTop = 0;
+    return;
+  }
+  // Editor at the very bottom -> preview at the very bottom
+  if (scrollTop >= scrollHeight - 1) {
+    ctx.previewEl.scrollTop = ctx.previewMax;
+    return;
+  }
+
+  const topBlock = editorView.lineBlockAtHeight(scrollTop);
+  const topLine = editorView.state.doc.lineAt(topBlock.from).number;
+  const sourceLine = topLine + fmLineOffset;
+
+  const { bestEl, bestDist } = findSourceposElement(ctx.previewDoc, sourceLine);
+  if (bestEl && bestDist < 20) {
+    scrollPreviewToElement(ctx.previewDoc, ctx.previewEl, ctx.previewMax, bestEl);
+  } else {
+    const ratio = scrollTop / scrollHeight;
+    ctx.previewEl.scrollTop = ratio * ctx.previewMax;
+  }
+}
+
+function syncCursorToPreview(editorLine) {
+  if (rawMode || emptyMode || !scrollSyncEnabled) return;
+  const iframe = $('#me-preview-frame');
+  const ctx = findPreviewContext(iframe);
+  if (!ctx) return;
+
+  // Cursor on first line -> scroll preview to top
+  if (editorLine <= 1) {
+    ctx.previewEl.scrollTop = 0;
+    return;
+  }
+  // Cursor on last line -> scroll preview to bottom
+  const lastLine = editorView.state.doc.lines;
+  if (editorLine >= lastLine) {
+    ctx.previewEl.scrollTop = ctx.previewMax;
+    return;
+  }
+
+  const sourceLine = editorLine + fmLineOffset;
+  const { bestEl } = findSourceposElement(ctx.previewDoc, sourceLine);
+  if (bestEl) {
+    scrollPreviewToElement(ctx.previewDoc, ctx.previewEl, ctx.previewMax, bestEl);
+  }
+}
+
 // --- CodeMirror Editor ---
 function getEditorThemeExt(name) {
   const entry = editorThemes[name];
@@ -382,11 +515,14 @@ function createEditor(content) {
           updateDirtyIndicator();
           scheduleAutoSave();
         }
-        // Update cursor position
+        // Update cursor position and sync preview on cursor move
         const cursor = update.state.selection.main.head;
         const line = update.state.doc.lineAt(cursor);
         const col = cursor - line.from + 1;
         $('#me-cursor-pos').textContent = `Ln ${line.number}, Col ${col}`;
+        if (update.selectionSet) {
+          syncCursorToPreview(line.number);
+        }
       }),
       EditorView.domEventHandlers({
         focus: () => { syncPreviewToSlug(); },
@@ -1108,6 +1244,16 @@ function setupTopBar() {
   });
 
   // Preview buttons
+  const syncBtn = $('#me-btn-scroll-sync');
+  const savedSync = getPrefs().scrollSync;
+  scrollSyncEnabled = savedSync !== false;
+  if (scrollSyncEnabled) syncBtn.classList.add('me-active');
+  syncBtn.addEventListener('click', () => {
+    scrollSyncEnabled = !scrollSyncEnabled;
+    syncBtn.classList.toggle('me-active', scrollSyncEnabled);
+    savePrefs({ scrollSync: scrollSyncEnabled });
+  });
+
   $('#me-btn-refresh-preview').addEventListener('click', () => {
     const iframe = $('#me-preview-frame');
     if (iframe) iframe.src = `/${slug}.html?t=${Date.now()}`;
@@ -1600,6 +1746,7 @@ async function init() {
       const data = await api('GET', `/content/${slug}/body`);
       frontmatter = data.frontmatter || {};
       sourcePath = data.source_path || '';
+      fmLineOffset = data.frontmatter_lines || 0;
       body = data.body || '';
       originalBody = body;
     } catch (e) {
@@ -1690,6 +1837,7 @@ async function init() {
     $('#me-editor-container').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;opacity:0.5;font-size:14px">Select a file from the sidebar to start editing</div>';
   } else {
     createEditor(body);
+    setupScrollSync();
   }
 }
 

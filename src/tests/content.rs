@@ -1635,10 +1635,11 @@ fn test_get_raw_content_success() {
     )
     .unwrap();
 
-    let (fm, body, _path) = get_raw_content(&content_dir, "hello-world").unwrap();
+    let (fm, body, _path, fm_lines) = get_raw_content(&content_dir, "hello-world").unwrap();
     assert_eq!(fm.get("title").unwrap().as_str().unwrap(), "Hello World");
     assert!(body.contains("This is the body."));
     assert!(body.contains("With multiple paragraphs."));
+    assert_eq!(fm_lines, 4);
 }
 
 #[test]

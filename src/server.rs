@@ -1181,7 +1181,7 @@ fn handle_get_content_body(slug: &str, ctx: &ServerContext) -> Response<Cursor<V
     let content_folder = crate::site::get_content_folder(&site_data.site, &ctx.input_folder);
 
     match crate::content::get_raw_content(&content_folder, slug) {
-        Ok((frontmatter, body, file_path)) => {
+        Ok((frontmatter, body, file_path, frontmatter_lines)) => {
             let source_path = file_path
                 .strip_prefix(&*ctx.input_folder)
                 .unwrap_or(&file_path)
@@ -1194,6 +1194,7 @@ fn handle_get_content_body(slug: &str, ctx: &ServerContext) -> Response<Cursor<V
                     "frontmatter": frontmatter,
                     "body": body,
                     "source_path": source_path,
+                    "frontmatter_lines": frontmatter_lines,
                 }),
             )
         }

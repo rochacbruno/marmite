@@ -391,6 +391,8 @@ html, body {
   gap: 8px;
 }
 
+#me-btn-scroll-sync.me-active { border-color: #0172ad; color: #0172ad; font-weight: 600; }
+
 /* Preview panel */
 #me-preview-panel {
   display: flex;

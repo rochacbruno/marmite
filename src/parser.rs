@@ -117,6 +117,7 @@ pub fn get_html_with_options(
     options.render.figure_with_caption = parser_options.render.figure_with_caption;
     options.render.ignore_empty_links = parser_options.render.ignore_empty_links;
     options.render.r#unsafe = parser_options.render.unsafe_;
+    options.render.sourcepos = parser_options.render.sourcepos;
 
     // Apply configurable parse options
     options.parse.broken_link_callback = Some(Arc::new(warn_broken_link)); // Not configurable

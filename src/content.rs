@@ -1223,12 +1223,18 @@ pub fn update_frontmatter(
 pub fn get_raw_content(
     content_folder: &Path,
     slug: &str,
-) -> Result<(serde_json::Value, String, std::path::PathBuf), String> {
+) -> Result<(serde_json::Value, String, std::path::PathBuf, usize), String> {
     let file_path = find_file_by_slug(content_folder, slug)
         .ok_or_else(|| format!("Content with slug '{slug}' not found"))?;
 
     let file_content = fs::read_to_string(&file_path).map_err(|e| e.to_string())?;
     let (frontmatter, raw_markdown) = crate::parser::parse_front_matter(&file_content)?;
+
+    let fm_byte_len = file_content.len() - raw_markdown.len();
+    let frontmatter_lines = file_content[..fm_byte_len]
+        .chars()
+        .filter(|c| *c == '\n')
+        .count();
 
     let fm_json: serde_json::Map<String, serde_json::Value> = frontmatter
         .iter()
@@ -1239,6 +1245,7 @@ pub fn get_raw_content(
         serde_json::Value::Object(fm_json),
         raw_markdown.to_string(),
         file_path,
+        frontmatter_lines,
     ))
 }
 
