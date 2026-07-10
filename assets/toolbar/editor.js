@@ -942,7 +942,9 @@ function showNewFileDialog(dirPath) {
       <h4 style="margin-bottom:4px">New file in <code>${displayDir}</code></h4>
       <p style="font-size:12px;opacity:0.7;margin:0 0 12px">Use path separators to create subfolders (e.g. <code>foo/bar.md</code>)</p>
       <div class="me-field"><label>Filename<input type="text" id="me-newfile-name" placeholder="example.md"></label></div>
-      <div class="me-confirm-actions" style="gap:6px">
+      <div class="me-confirm-actions" style="gap:6px;flex-wrap:wrap">
+        <button class="me-btn" id="me-newfile-upload" style="margin-right:auto">Upload File</button>
+        <input type="file" id="me-newfile-upload-input" hidden multiple>
         <button class="me-btn" id="me-newfile-cancel">Cancel</button>
         <button class="me-btn" id="me-newfile-empty">Empty File</button>
         <button class="me-btn" id="me-newfile-page">New Page</button>
@@ -991,6 +993,34 @@ function showNewFileDialog(dirPath) {
   overlay.querySelector('#me-newfile-post').addEventListener('click', () => createFile('post'));
   overlay.querySelector('#me-newfile-page').addEventListener('click', () => createFile('page'));
   overlay.querySelector('#me-newfile-empty').addEventListener('click', () => createFile('empty'));
+
+  const uploadInput = overlay.querySelector('#me-newfile-upload-input');
+  overlay.querySelector('#me-newfile-upload').addEventListener('click', () => uploadInput.click());
+  uploadInput.addEventListener('change', async () => {
+    const files = uploadInput.files;
+    if (!files || files.length === 0) return;
+    let uploaded = 0;
+    for (const file of files) {
+      const fullPath = dirPath ? `${dirPath}/${file.name}` : file.name;
+      try {
+        const data = await file.arrayBuffer();
+        await fetch(`${API}/file/${fullPath}`, {
+          method: 'POST',
+          body: data,
+        }).then(async r => {
+          if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
+        });
+        uploaded++;
+      } catch (e) {
+        toast(`Failed to upload ${file.name}: ${e.message}`, true);
+      }
+    }
+    if (uploaded > 0) {
+      toast(`${uploaded} file${uploaded > 1 ? 's' : ''} uploaded`);
+      overlay.remove();
+      await refreshFileTree();
+    }
+  });
 
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); createFile('post'); }
@@ -1313,7 +1343,11 @@ function showMediaDialog() {
     <div class="me-media-dialog">
       <div class="me-media-header">
         <h4>Insert Media</h4>
-        <button class="me-btn me-btn-sm" id="me-media-close">Close</button>
+        <div style="display:flex;gap:6px">
+          <button class="me-btn me-btn-sm" id="me-media-upload">Upload</button>
+          <input type="file" id="me-media-upload-input" hidden accept="image/*,video/*,audio/*,.pdf,.svg" multiple>
+          <button class="me-btn me-btn-sm" id="me-media-close">Close</button>
+        </div>
       </div>
       <div class="me-media-search">
         <input type="text" id="me-media-filter" placeholder="Filter images...">
@@ -1358,6 +1392,43 @@ function showMediaDialog() {
   overlay.querySelector('#me-media-close').addEventListener('click', () => overlay.remove());
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) overlay.remove();
+  });
+
+  const mediaUploadInput = overlay.querySelector('#me-media-upload-input');
+  overlay.querySelector('#me-media-upload').addEventListener('click', () => mediaUploadInput.click());
+  mediaUploadInput.addEventListener('change', async () => {
+    const files = mediaUploadInput.files;
+    if (!files || files.length === 0) return;
+    const mediaPath = siteData?.config?.content_path
+      ? `${siteData.config.content_path}/${siteData?.config?.media_path || 'media'}`
+      : `content/${siteData?.config?.media_path || 'media'}`;
+    let uploaded = 0;
+    for (const file of files) {
+      const fullPath = `${mediaPath}/${file.name}`;
+      try {
+        const data = await file.arrayBuffer();
+        await fetch(`${API}/file/${fullPath}`, {
+          method: 'POST',
+          body: data,
+        }).then(async r => {
+          if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
+        });
+        uploaded++;
+      } catch (e) {
+        toast(`Failed to upload ${file.name}: ${e.message}`, true);
+      }
+    }
+    if (uploaded > 0) {
+      toast(`${uploaded} file${uploaded > 1 ? 's' : ''} uploaded to ${mediaPath}/. Waiting for rebuild...`);
+      // Wait for rebuild to copy media to output, then refresh grid
+      setTimeout(async () => {
+        try { siteData = await (await fetch(`${API}/data`)).json(); } catch {}
+        images.length = 0;
+        images.push(...((siteData && siteData.images) ? siteData.images : []));
+        renderGrid(filterInput.value);
+        toast('Media list refreshed');
+      }, 3000);
+    }
   });
 }
 

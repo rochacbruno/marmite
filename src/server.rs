@@ -880,12 +880,35 @@ fn handle_file_api(
         "png", "jpg", "jpeg", "gif", "webp", "avif", "bmp", "tiff", "ico", "svg", "woff", "woff2",
         "ttf", "otf", "pdf", "zip", "tar", "gz",
     ];
-    if binary_exts.contains(&ext.as_str()) {
-        return json_response(400, &json!({"error": "binary files cannot be edited"}));
-    }
+    let is_binary = binary_exts.contains(&ext.as_str());
 
     match *request.method() {
+        Method::Post => {
+            // Upload: accept raw binary body, write to file
+            if let Some(parent) = file_path.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            let mut data = Vec::new();
+            if let Err(e) = request.as_reader().read_to_end(&mut data) {
+                return json_response(
+                    400,
+                    &json!({"error": format!("failed to read upload: {e}")}),
+                );
+            }
+            match std::fs::write(&file_path, &data) {
+                Ok(()) => json_response(200, &json!({"path": rel_path})),
+                Err(e) => {
+                    json_response(500, &json!({"error": format!("failed to write file: {e}")}))
+                }
+            }
+        }
         Method::Get => {
+            if is_binary {
+                return json_response(
+                    400,
+                    &json!({"error": "binary files cannot be edited as text"}),
+                );
+            }
             if !file_path.is_file() {
                 return json_response(
                     404,
