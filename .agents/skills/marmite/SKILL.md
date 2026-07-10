@@ -103,6 +103,36 @@ If you already have markdown files in a folder, just run `marmite <folder>` with
 
 ## Workflow: Content Authoring
 
+### Before writing content - consult site metadata
+
+Before creating or editing content, read the site's build metadata to understand what already exists. This prevents tag typos, slug collisions, orphaned streams, and inconsistent author names.
+
+The output folder defaults to `site/` inside the input folder, but can be overridden by the second CLI argument (`marmite <input> <output>`). Check `marmite.yaml` for a `site_path` override, or look for the `site/` directory. All paths below use `<output>/` to mean whichever output folder the site uses.
+
+**`<output>/marmite.json`** - the full site manifest (always generated). Read this file first:
+
+- `posts` / `pages` - every content item with its slug, URL, date, tags, authors, stream, series, description, and pinned status. Use this to check existing slugs, reuse exact tag names, and match established patterns.
+- `config` - the active site configuration including `authors` (configured profiles), `streams` (display names), `series` (display names and descriptions), `menu`, `language`, and `extra` settings.
+- `shortcodes` - list of available shortcode names.
+
+**`<output>/urls.json`** - all generated URLs grouped by type (enabled by default via `publish_urls_json: true`). Useful for:
+
+- Checking which tag/author/stream/series pages exist.
+- Counting content totals via the `summary` section.
+- Verifying a slug won't collide with an existing URL.
+
+You can also get the same URL data without a build via the CLI: `marmite <input_folder> --show-urls`.
+
+**What to check before writing:**
+
+1. **Tags** - read `marmite.json` posts to see existing tag names. Reuse them exactly (e.g., use `rust` not `Rust` if the site uses lowercase).
+2. **Authors** - check `config.authors` for configured profiles and `config.default_author` for the fallback.
+3. **Streams** - check `config.streams` for defined streams and look at existing posts' `stream` values.
+4. **Series** - check `config.series` and existing posts' `series` values before assigning content to a series.
+5. **Slugs** - scan existing slugs in `posts` and `pages` to avoid collisions. Also check `urls.json` redirects.
+6. **Date format** - look at existing posts' dates to match the pattern.
+7. **Description style** - look at existing descriptions for length and tone consistency.
+
 ### Posts vs Pages
 
 Content with a **date** is a **post** (appears in feeds, index, archive, search). Content without a date is a **page** (standalone, accessible by direct link or menu).
@@ -805,84 +835,98 @@ Try marmite directly in the browser at [marmite.blog/marmite-playground.html](ht
 
 ## Tools for agent to call
 
-### Show urls
+### Read site metadata
+
+Before writing content, read the output metadata files to understand the existing site. The output folder defaults to `site/` inside the input folder (e.g., `./site/`), but can be any path passed as the second CLI argument or set via `site_path` in `marmite.yaml`. All paths below use `<output>/` as a placeholder.
+
+**`<output>/marmite.json`** - full site manifest (always generated):
+
+```json
+{
+  "marmite_version": "0.4.1-dev",
+  "generated_at": "2026-07-06 18:32:55...",
+  "elapsed_time": 7.5,
+  "config": {
+    "name": "My Blog",
+    "authors": {"alice": {"name": "Alice", "bio": "..."}},
+    "streams": {"tutorial": {"display_name": "Tutorials"}},
+    "series": {"python-tutorial": {"display_name": "Python Tutorial"}},
+    "default_author": "alice",
+    "language": "en",
+    "...": "all other marmite.yaml fields"
+  },
+  "posts": [
+    {
+      "title": "My Post",
+      "slug": "my-post",
+      "url": "/my-post.html",
+      "source_path": "content/2024-06-15-my-post.md",
+      "date": "2024-06-15",
+      "tags": ["rust", "web"],
+      "authors": ["alice"],
+      "description": "A short description",
+      "stream": "index",
+      "series": "my-series",
+      "pinned": false
+    }
+  ],
+  "pages": [
+    {
+      "title": "About",
+      "slug": "about",
+      "url": "/about.html",
+      "source_path": "content/about.md",
+      "authors": ["alice"],
+      "pinned": false
+    }
+  ],
+  "shortcodes": ["youtube", "gallery", "posts", "tags", "..."]
+}
+```
+
+Use this to:
+- Check existing tags, authors, streams, series before writing content
+- Verify slug availability
+- See the active site configuration and author profiles
+- List available shortcodes
+
+**`<output>/urls.json`** - all generated URLs by type (when `publish_urls_json: true`, default):
+
+```json
+{
+  "posts": ["/my-post.html"],
+  "pages": ["/about.html"],
+  "tags": ["/tag-rust.html", "/tags.html"],
+  "authors": ["/author-alice.html", "/authors.html"],
+  "streams": ["/tutorial.html", "/streams.html"],
+  "series": ["/series-python-tutorial.html", "/series.html"],
+  "archives": ["/archive-2024.html", "/archive.html"],
+  "feeds": ["/index.rss", "/tag-rust.rss"],
+  "redirects": ["/old-slug.html"],
+  "pagination": ["/index-1.html"],
+  "languages": ["/languages.html"],
+  "file_mappings": ["/llms.txt"],
+  "misc": ["/index.html"],
+  "summary": {
+    "posts": 10, "pages": 3, "tags": 5, "total": 150,
+    "meta": {"absolute_urls": false, "url": ""}
+  }
+}
+```
+
+Use this to:
+- Compare URLs before and after a refactor
+- Check generated content slugs
+- Count content totals
+- Verify no URL collisions
+
+### Show urls (CLI alternative)
+
+The same URL data from `urls.json` is available without a build via:
 
 ```
 marmite input_folder --show-urls
 ```
-```
-{
-  "archives": [
-    "/archive-2027.html",
-    "/archive.html"
-  ],
-  "authors": [
-    "/author-jao.html",
-    "/authors.html"
-  ],
-  "feeds": [
-    "/index.rss",
-    "/internet.rss",
-    "/tag-python.rss",
-    "/author-jao.rss",
-    "/archive-2026.rss"
-  ],
-  "file_mappings": [],
-  "misc": [
-    "/index.html"
-  ],
-  "pages": [
-    "/about.html",
-    "/pages.html"
-  ],
-  "pagination": [
-    "/pages-1.html",
-    "/tag-dev-1.html",
-    "/tag-python-1.html",
-    "/author-jao-1.html",
-    "/archive-2026-1.html",
-    "/index-1.html",
-  ],
-  "posts": [
-    "/code-django.html",
-    "/code-python.html",
-  ],
-  "redirects": [],
-  "series": [],
-  "streams": [
-    "/code.html",
-    "/streams.html"
-  ],
-  "summary": {
-    "archives": 1,
-    "authors": 1,
-    "feeds": 5,
-    "file_mappings": 0,
-    "meta": {
-      "absolute_urls": false,
-      "url": ""
-    },
-    "misc": 1,
-    "pages": 1,
-    "pagination": 1,
-    "posts": 2,
-    "redirects": 0,
-    "series": 0,
-    "streams": 2,
-    "tags": 1,
-  },
-  "tags": [
-    "/tag-python.html",
-    "/tags.html"
-  ]
-}
-```
-
-This tool allows the agent to:
-
-- compare urls before and after a refactor
-- check generated content slug
-- count number of contents
 
 ### init site
 
