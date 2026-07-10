@@ -1,4 +1,4 @@
-import Fuse from "https://cdnjs.cloudflare.com/ajax/libs/fuse.js/7.0.0/fuse.basic.min.mjs";
+import Fuse from "./vendor/fuse.basic.min.mjs";
 
 function buildSnippet(text, start, len) {
     const end = start + len;
