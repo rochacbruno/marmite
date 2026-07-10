@@ -2,6 +2,7 @@ import { EditorView, basicSetup } from "codemirror";
 import { EditorState, Compartment } from "@codemirror/state";
 import { keymap } from "@codemirror/view";
 import { markdown } from "@codemirror/lang-markdown";
+import { foldEffect } from "@codemirror/language";
 import { oneDark } from "@codemirror/theme-one-dark";
 import {
   solarizedLight, dracula, cobalt, coolGlow,
@@ -573,36 +574,73 @@ function scheduleAutoSave() {
   }, 1500);
 }
 
+// --- Frontmatter parsing from editor content ---
+function parseFrontmatterFromContent(content) {
+  const fm = {};
+  if (!content.startsWith('---')) return fm;
+  const end = content.indexOf('\n---', 3);
+  if (end === -1) return fm;
+  const block = content.slice(4, end);
+  for (const line of block.split('\n')) {
+    const colon = line.indexOf(':');
+    if (colon === -1) continue;
+    const key = line.slice(0, colon).trim();
+    const val = line.slice(colon + 1).trim();
+    if (key && val) {
+      if (key === 'tags' || key === 'authors') {
+        fm[key] = val;
+      } else if (val === 'true') {
+        fm[key] = true;
+      } else if (val === 'false') {
+        fm[key] = false;
+      } else {
+        fm[key] = val.replace(/^["']|["']$/g, '');
+      }
+    }
+  }
+  return fm;
+}
+
+function updateContentTitle() {
+  const isPost = !!frontmatter.date;
+  $('#me-content-type').textContent = isPost ? 'post' : 'page';
+  $('#me-content-title').textContent = frontmatter.title || slug;
+}
+
+function getFrontmatterLineCount(content) {
+  if (!content.startsWith('---')) return 0;
+  const end = content.indexOf('\n---', 3);
+  if (end === -1) return 0;
+  return content.slice(0, end + 4).split('\n').length;
+}
+
 // --- Save ---
 async function saveContent() {
   if (!editorView) return;
-  const body = editorView.state.doc.toString();
+  const content = editorView.state.doc.toString();
+  const savePath = rawMode ? slug : sourcePath;
 
   try {
-    if (rawMode) {
-      await fetch(`${API}/file/${slug}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: body }),
-      }).then(async r => {
-        if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
-      });
-    } else {
-      const fmUpdates = collectFrontmatterUpdates();
-      const result = await api('PUT', `/content/${slug}/body`, {
-        body,
-        frontmatter: Object.keys(fmUpdates).length > 0 ? fmUpdates : undefined,
-      });
-      frontmatter = result.frontmatter || frontmatter;
+    await fetch(`${API}/file/${savePath}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    }).then(async r => {
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
+    });
+
+    if (!rawMode) {
+      frontmatter = parseFrontmatterFromContent(content);
       renderInfoPanel();
+      updateContentTitle();
     }
 
-    originalBody = body;
+    originalBody = content;
     isDirty = false;
     updateDirtyIndicator();
 
     localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({
-      body,
+      body: content,
       timestamp: Date.now(),
       isDraft: false,
     }));
@@ -618,11 +656,38 @@ async function saveAs() {
   if (!title) return;
 
   try {
+    // Create the new content entry (gets the file path and slug)
     const result = await api('POST', '/content', { title });
     const newSlug = result.slug;
-    const body = editorView.state.doc.toString();
+    const newFile = result.file;
 
-    await api('PUT', `/content/${newSlug}/body`, { body });
+    // Take the current editor content and update title/slug in the frontmatter
+    let content = editorView.state.doc.toString();
+    if (content.startsWith('---')) {
+      const end = content.indexOf('\n---', 3);
+      if (end !== -1) {
+        let fm = content.slice(0, end + 4);
+        const body = content.slice(end + 4);
+        fm = fm.replace(/^title:.*$/m, `title: "${title}"`);
+        if (fm.match(/^slug:/m)) {
+          fm = fm.replace(/^slug:.*$/m, `slug: ${newSlug}`);
+        } else {
+          fm = fm.replace('\n---', `\nslug: ${newSlug}\n---`);
+        }
+        content = fm + body;
+      }
+    }
+
+    // Overwrite the file created by POST /content with our full content
+    const filePath = newFile.replace(/^.*?content\//, 'content/');
+    await fetch(`${API}/file/${filePath}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+    }).then(async r => {
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error || r.statusText); }
+    });
+
     toast('Saved as new content');
     window.location.href = `${API}/editor/${newSlug}`;
   } catch (e) {
@@ -630,89 +695,6 @@ async function saveAs() {
   }
 }
 
-function collectFrontmatterUpdates() {
-  const updates = {};
-  const panel = $('#me-panel-edit');
-  if (!panel) return updates;
-
-  const fields = {
-    'me-edit-title': { key: 'title', orig: frontmatter.title },
-    'me-edit-slug': { key: 'slug', orig: frontmatter.slug },
-    'me-edit-desc': { key: 'description', orig: frontmatter.description },
-    'me-edit-stream': { key: 'stream', orig: frontmatter.stream },
-    'me-edit-series': { key: 'series', orig: frontmatter.series },
-    'me-edit-lang': { key: 'language', orig: frontmatter.language },
-    'me-edit-translates': { key: 'translates', orig: frontmatter.translates },
-    'me-edit-banner': { key: 'banner_image', orig: frontmatter.banner_image },
-    'me-edit-card': { key: 'card_image', orig: frontmatter.card_image },
-  };
-
-  for (const [id, { key, orig }] of Object.entries(fields)) {
-    const el = panel.querySelector(`#${id}`);
-    if (!el) continue;
-    const val = el.value.trim();
-    if (val !== (orig || '')) {
-      updates[key] = val || null;
-    }
-  }
-
-  const dateEl = panel.querySelector('#me-edit-date');
-  if (dateEl) {
-    const rawDate = dateEl.value.trim();
-    const newDate = rawDate ? rawDate.replace('T', ' ') : '';
-    if (newDate !== (frontmatter.date || '')) {
-      updates.date = newDate || null;
-    }
-  }
-
-  const tagsEl = panel.querySelector('#me-edit-tags');
-  if (tagsEl) {
-    const newTags = tagsEl.value.split(',').map(s => s.trim()).filter(Boolean);
-    const origTags = Array.isArray(frontmatter.tags) ? frontmatter.tags : (frontmatter.tags ? String(frontmatter.tags).split(',').map(s => s.trim()).filter(Boolean) : []);
-    if (JSON.stringify(newTags) !== JSON.stringify(origTags)) {
-      updates.tags = newTags.length ? newTags.join(', ') : null;
-    }
-  }
-
-  const authorsEl = panel.querySelector('#me-edit-authors');
-  if (authorsEl) {
-    const newAuthors = authorsEl.value.split(',').map(s => s.trim()).filter(Boolean);
-    const origAuthors = Array.isArray(frontmatter.authors) ? frontmatter.authors : (frontmatter.authors ? String(frontmatter.authors).split(',').map(s => s.trim()).filter(Boolean) : []);
-    if (JSON.stringify(newAuthors) !== JSON.stringify(origAuthors)) {
-      updates.authors = newAuthors.length ? newAuthors.join(', ') : null;
-    }
-  }
-
-  const pinnedEl = panel.querySelector('#me-edit-pinned');
-  if (pinnedEl) {
-    const newPinned = pinnedEl.value === 'true';
-    if (newPinned !== (frontmatter.pinned || false)) {
-      updates.pinned = newPinned || null;
-    }
-  }
-
-  const commentsEl = panel.querySelector('#me-edit-comments');
-  if (commentsEl) {
-    const v = commentsEl.value;
-    const newComments = v === 'true' ? true : v === 'false' ? false : null;
-    const origComments = frontmatter.comments === undefined ? null : frontmatter.comments;
-    if (newComments !== origComments) updates.comments = newComments;
-  }
-
-  const extraEl = panel.querySelector('#me-edit-extra');
-  if (extraEl) {
-    const extraText = extraEl.value.trim();
-    if (extraText) {
-      try {
-        updates.extra = JSON.parse(extraText);
-      } catch { /* ignore invalid JSON */ }
-    } else if (frontmatter.extra) {
-      updates.extra = null;
-    }
-  }
-
-  return updates;
-}
 
 // --- Sidebar rendering ---
 function renderInfoPanel() {
@@ -824,45 +806,6 @@ function renderFileTree(files) {
   }
 
   return renderNode(tree, 0);
-}
-
-function renderEditPanel() {
-  const container = $('#me-panel-edit');
-  if (!container) return;
-  const fm = frontmatter || {};
-  const esc = (v) => v == null ? '' : String(v).replace(/"/g, '&quot;');
-
-  container.innerHTML = `
-    <div class="me-field"><label>Title<input type="text" id="me-edit-title" value="${esc(fm.title)}"></label></div>
-    <div class="me-field"><label>Slug<input type="text" id="me-edit-slug" value="${esc(fm.slug)}"></label></div>
-    <div class="me-field"><label>Description<textarea id="me-edit-desc">${fm.description || ''}</textarea></label></div>
-    <div class="me-field"><label>Date<input type="datetime-local" id="me-edit-date" value="${fm.date ? fm.date.replace(' ', 'T').slice(0, 19) : ''}"></label></div>
-    <div class="me-field"><label>Tags (comma-separated)<input type="text" id="me-edit-tags" value="${(Array.isArray(fm.tags) ? fm.tags.join(', ') : (fm.tags || ''))}"></label></div>
-    <div class="me-field"><label>Stream<input type="text" id="me-edit-stream" value="${fm.stream || ''}"></label></div>
-    <div class="me-field"><label>Series<input type="text" id="me-edit-series" value="${fm.series || ''}"></label></div>
-    <div class="me-field"><label>Authors (comma-separated)<input type="text" id="me-edit-authors" value="${(Array.isArray(fm.authors) ? fm.authors.join(', ') : (fm.authors || ''))}"></label></div>
-    <div class="me-field"><label>Language<input type="text" id="me-edit-lang" value="${fm.language || ''}"></label></div>
-    <div class="me-field"><label>Translates (slug)<input type="text" id="me-edit-translates" value="${fm.translates || ''}"></label></div>
-    <div class="me-field"><label>Banner Image<input type="text" id="me-edit-banner" value="${esc(fm.banner_image)}" placeholder="media/banner.jpg"></label></div>
-    <div class="me-field"><label>Card Image<input type="text" id="me-edit-card" value="${esc(fm.card_image)}" placeholder="media/card.jpg"></label></div>
-    <div class="me-field"><label>Pinned<select id="me-edit-pinned"><option value=""${!fm.pinned ? ' selected' : ''}>No</option><option value="true"${fm.pinned ? ' selected' : ''}>Yes</option></select></label></div>
-    <div class="me-field"><label>Comments<select id="me-edit-comments"><option value=""${fm.comments == null ? ' selected' : ''}>Default</option><option value="true"${fm.comments === true ? ' selected' : ''}>Enabled</option><option value="false"${fm.comments === false ? ' selected' : ''}>Disabled</option></select></label></div>
-    <div class="me-field"><label>Extra (JSON)<textarea id="me-edit-extra">${fm.extra ? JSON.stringify(fm.extra, null, 2) : ''}</textarea></label></div>
-  `;
-
-  if (siteData) {
-    if (siteData.tags) createAutocomplete(container.querySelector('#me-edit-tags'), siteData.tags);
-    if (siteData.streams) createAutocomplete(container.querySelector('#me-edit-stream'), siteData.streams, (v) => { container.querySelector('#me-edit-stream').value = v; });
-    if (siteData.series) createAutocomplete(container.querySelector('#me-edit-series'), siteData.series, (v) => { container.querySelector('#me-edit-series').value = v; });
-    if (siteData.authors) createAutocomplete(container.querySelector('#me-edit-authors'), siteData.authors);
-    const allLangs = siteData.iso_languages || siteData.languages || [];
-    if (allLangs.length) createAutocomplete(container.querySelector('#me-edit-lang'), allLangs, (v) => { container.querySelector('#me-edit-lang').value = v; });
-    if (siteData.slugs) createAutocomplete(container.querySelector('#me-edit-translates'), siteData.slugs, (v) => { container.querySelector('#me-edit-translates').value = v; });
-    if (siteData.images) {
-      createAutocomplete(container.querySelector('#me-edit-banner'), siteData.images, (v) => { container.querySelector('#me-edit-banner').value = v; });
-      createAutocomplete(container.querySelector('#me-edit-card'), siteData.images, (v) => { container.querySelector('#me-edit-card').value = v; });
-    }
-  }
 }
 
 function renderActionsPanel() {
@@ -1265,6 +1208,12 @@ function setupTopBar() {
 
   // Config button
   $('#me-btn-config').addEventListener('click', showConfigDialog);
+
+  // Zen mode
+  $('#me-btn-zen').addEventListener('click', () => {
+    document.body.classList.toggle('me-zen');
+    if (editorView) editorView.focus();
+  });
 
   // New content button
   $('#me-btn-new').addEventListener('click', showNewContentDialog);
@@ -1742,15 +1691,22 @@ async function init() {
       return;
     }
   } else {
+    // Content mode: get source_path from the body API, then load the full file
     try {
-      const data = await api('GET', `/content/${slug}/body`);
-      frontmatter = data.frontmatter || {};
-      sourcePath = data.source_path || '';
-      fmLineOffset = data.frontmatter_lines || 0;
-      body = data.body || '';
-      originalBody = body;
+      const meta = await api('GET', `/content/${slug}/body`);
+      sourcePath = meta.source_path || '';
+      frontmatter = meta.frontmatter || {};
     } catch (e) {
       toast('Failed to load content: ' + e.message, true);
+      return;
+    }
+    try {
+      const data = await (await fetch(`${API}/file/${sourcePath}`)).json();
+      if (data.error) throw new Error(data.error);
+      body = data.content || '';
+      originalBody = body;
+    } catch (e) {
+      toast('Failed to load file: ' + e.message, true);
       return;
     }
   }
@@ -1782,11 +1738,8 @@ async function init() {
     $('#me-preview-panel').classList.add('me-hidden');
     $('#me-divider-right').classList.add('me-hidden');
     $$('.me-sidebar-tab').forEach(t => {
-      if (t.dataset.tab === 'edit' || t.dataset.tab === 'actions') {
-        t.style.display = 'none';
-      }
+      if (t.dataset.tab === 'actions') t.style.display = 'none';
     });
-    // Hide editor toolbar save/saveas/insert (nothing to save)
     $('#me-editor-toolbar').style.display = 'none';
   } else if (rawMode) {
     $('#me-content-type').textContent = 'file';
@@ -1794,14 +1747,11 @@ async function init() {
     $('#me-preview-panel').classList.add('me-hidden');
     $('#me-divider-right').classList.add('me-hidden');
     $$('.me-sidebar-tab').forEach(t => {
-      if (t.dataset.tab === 'edit' || t.dataset.tab === 'actions') {
-        t.style.display = 'none';
-      }
+      if (t.dataset.tab === 'actions') t.style.display = 'none';
     });
   } else {
-    const isPost = !!frontmatter.date;
-    $('#me-content-type').textContent = isPost ? 'post' : 'page';
-    $('#me-content-title').textContent = frontmatter.title || slug;
+    frontmatter = parseFrontmatterFromContent(body);
+    updateContentTitle();
     $('#me-preview-frame').src = `/${slug}.html`;
   }
   updateDirtyIndicator();
@@ -1818,7 +1768,6 @@ async function init() {
   // Render sidebar panels
   renderInfoPanel();
   if (!rawMode && !emptyMode) {
-    renderEditPanel();
     renderActionsPanel();
   }
   renderHelpPanel();
@@ -1838,12 +1787,33 @@ async function init() {
   } else {
     createEditor(body);
     setupScrollSync();
+    if (!rawMode) foldFrontmatter();
+  }
+}
+
+function foldFrontmatter() {
+  if (!editorView) return;
+  const doc = editorView.state.doc;
+  const first = doc.line(1).text;
+  if (first !== '---') return;
+  for (let i = 2; i <= doc.lines; i++) {
+    if (doc.line(i).text === '---') {
+      const from = doc.line(1).to;
+      const to = doc.line(i).from;
+      if (to > from) {
+        editorView.dispatch({ effects: foldEffect.of({ from, to }) });
+      }
+      return;
+    }
   }
 }
 
 // Keyboard: Escape to close dropdowns
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    if (document.body.classList.contains('me-zen')) {
+      document.body.classList.remove('me-zen');
+    }
     $$('.me-dropdown-menu.me-open').forEach(m => m.classList.remove('me-open'));
     $$('.me-media-overlay').forEach(o => o.remove());
   }

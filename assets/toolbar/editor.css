@@ -766,6 +766,25 @@ a.me-tree-file { color: #0172ad; }
 [data-theme="dark"] .me-shortcode-tag { background: #1e3a5f; border-color: #2a5a8f; color: #89b4fa; }
 [data-theme="dark"] .me-media-item-name { color: #a6adc8; }
 
+/* Zen mode */
+body.me-zen #me-topbar { display: none; }
+body.me-zen #me-sidebar { display: none; }
+body.me-zen #me-divider-left { display: none; }
+body.me-zen #me-divider-right { display: none; }
+body.me-zen #me-preview-panel { display: none; }
+body.me-zen #me-editor-statusbar { display: none; }
+body.me-zen #me-main { top: 0; }
+body.me-zen #me-editor-toolbar {
+  border-top: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+body.me-zen #me-editor-toolbar:hover { opacity: 1; }
+body.me-zen #me-editor-container .cm-editor {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   #me-sidebar { display: none; }
