@@ -1233,6 +1233,9 @@
     // Fetch site data for autocomplete
     try {
       siteData = await (await fetch(`${API}/data`)).json();
+      if (siteData && !siteData.watch_enabled) {
+        toast('File watcher is not active. Run with --watch (-w) to enable auto-rebuild after edits.', true);
+      }
     } catch (e) { /* ok */ }
 
     // Try to load metadata for current page

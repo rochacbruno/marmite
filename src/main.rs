@@ -206,6 +206,7 @@ fn run_cli(args: cli::Cli) -> Result<(), Box<dyn std::error::Error>> {
             input_folder: Arc::clone(&input_folder),
             config_path: Arc::clone(&config_path),
             enable_toolbar: serve_site_data.site.enable_toolbar,
+            watch_enabled: false,
         };
         server::start(bind_address, &ctx, None);
     }

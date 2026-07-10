@@ -1568,6 +1568,9 @@ async function init() {
     if (siteData && siteData.marmite_version) {
       $('#me-version').textContent = `marmite v${siteData.marmite_version}`;
     }
+    if (siteData && !siteData.watch_enabled) {
+      toast('File watcher is not active. Run with --watch (-w) to enable auto-rebuild after edits.', true);
+    }
   } catch (e) { /* ok */ }
 
   // Fetch file tree

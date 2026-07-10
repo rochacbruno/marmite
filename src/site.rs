@@ -1006,6 +1006,7 @@ pub fn generate(
                 input_folder: Arc::clone(input_folder),
                 config_path: Arc::clone(config_path),
                 enable_toolbar: serve_config.site.enable_toolbar,
+                watch_enabled: true,
             };
             server::start(bind_address, &ctx, live_reload.as_ref());
         } else {

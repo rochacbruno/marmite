@@ -20,6 +20,7 @@ pub struct ServerContext {
     pub input_folder: Arc<PathBuf>,
     pub config_path: Arc<PathBuf>,
     pub enable_toolbar: bool,
+    pub watch_enabled: bool,
 }
 
 const FALLBACK_BIND_ADDRESS: &str = "0.0.0.0:0";
@@ -838,6 +839,7 @@ fn handle_data_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
             "page_count": build_info.get("pages").and_then(|v| v.as_array()).map_or(0, Vec::len),
             "elapsed_time": build_info.get("elapsed_time").and_then(serde_json::Value::as_f64).unwrap_or(0.0),
             "marmite_version": build_info.get("marmite_version").and_then(|v| v.as_str()).unwrap_or(""),
+            "watch_enabled": ctx.watch_enabled,
             "config": config,
         }),
     )
