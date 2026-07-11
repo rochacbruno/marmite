@@ -3133,9 +3133,9 @@ dependencies = [
 
 [[package]]
 name = "mermaid-rs-renderer"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fa635d9f0aba57f8d4d0b62652494a2db467e4e3d17e23b2637ec5a35b5bf68"
+checksum = "6cb5b469222ce6b9896edf0a969cf68464f5a028ef394fd6643f00bd943df117"
 dependencies = [
  "anyhow",
  "fontdb",
