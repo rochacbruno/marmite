@@ -99,7 +99,7 @@ fn test_get_links_to_with_internal_link_with_heading() {
 #[test]
 fn test_get_html_basic_markdown() {
     let markdown = "# Title\n\nThis is a paragraph.";
-    let expected = "<h1><a href=\"#title\" aria-hidden=\"true\" class=\"anchor\" id=\"title\"></a>Title</h1>\n<p>This is a paragraph.</p>\n";
+    let expected = "<h1 id=\"title\">Title<a href=\"#title\" aria-label=\"Link to heading 'Title'\" data-heading-content=\"Title\" class=\"anchor\"></a></h1>\n<p>This is a paragraph.</p>\n";
     assert_eq!(get_html(markdown), expected);
 }
 

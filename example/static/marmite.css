@@ -72,10 +72,8 @@ h3:hover > a.anchor::before,
 h4:hover > a.anchor::before,
 h5:hover > a.anchor::before,
 h6:hover > a.anchor::before {
- content: "🔗            \00a0";
+ content: " 🔗";
  font-size: 0.8em;
- position: absolute;
- margin-left: -2rem;
 }
 
 blockquote {

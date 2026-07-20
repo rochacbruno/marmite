@@ -30,7 +30,7 @@ serde_yaml = "0.9"
 serde_json = "1.0"
 hotwatch = "0.5"
 tera = {version = "2.0", features = ["preserve_order"]}
-comrak = { version = "0.53.0", features = ["shortcodes"], default-features = false }
+comrak = { version = "0.54.0", features = ["shortcodes"], default-features = false }
 walkdir = "2.5"
 chrono = { version = "0.4", features = ["serde"] }
 frontmatter-gen = { version = "0.0.6", features=["default"] }
