@@ -54,6 +54,12 @@ This creates a clean, minimal theme from the embedded theme template with:
 - Font files (Atkinson Hyperlegible Next for accessibility)
 - Essential assets (favicon, logo, robots.txt)
 
+> [!NOTE]
+> The generated theme is a clean, minimal scaffold - intentionally different from Marmite's built-in look and feel. All the same functionality is present (search, dark mode, pagination, etc.), but the design is stripped down and meant to be customized. Think of it as a blank canvas rather than a copy of the default theme.
+
+> [!IMPORTANT]
+> After creating a theme with `--start-theme`, you must activate it - either by adding `theme: mytheme` to your `marmite.yaml`, or by passing `--theme mytheme` on the CLI. The theme is not applied automatically.
+
 ## Installing Themes
 
 ### Download Remote Themes (New in 0.2.6+)
