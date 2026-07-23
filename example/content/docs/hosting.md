@@ -22,8 +22,7 @@ Examples:
 This is the easiest and cheapest option to publish your static blog,
 you need a **Github Repository** containing a `content` directory and a `marmite.yaml`
 
-
-Use this template repository https://github.com/rochacbruno/blog and give a meaninful name like `blog`.
+Use this template repository <https://github.com/rochacbruno/blog> and give a meaninful name like `blog`.
 
 Or start from scratch! it is very simple!
 
@@ -56,7 +55,6 @@ menu:
 > [!TIP]  
 > you can use `--generate-config` to generate a default configuration file.
 
-
 Now you need to tell github actions to go inside your repo root and run
 
 ```
@@ -67,12 +65,13 @@ And then publish the `site/` directory as the github page for your repo.
 
 You can automate that:
 
-First access https://github.com/YOURUSER/REPONAME/settings/pages and set the
+First access <https://github.com/YOURUSER/REPONAME/settings/pages> and set the
 pages source to **Github Actions**
 
 Then add a workflow to your repository.
 
 `.github/workflows/main.yaml`
+
 ```yaml
 name: GH Pages Deploy
 
@@ -97,6 +96,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
       - name: Checkout 🛎
         uses: actions/checkout@v4
@@ -113,7 +116,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'site'
+          path: "site"
 
       - name: Deploy to GitHub Pages
         id: deployment
@@ -122,8 +125,7 @@ jobs:
 
 Now commit and push to the main branch and wait for your blog to be published at
 
-https://YOURUSER.github.io/REPONAME
+<https://YOURUSER.github.io/REPONAME>
 
-
-Read [Customizing Templates](./customizing-templates.html) to learn how 
+Read [Customizing Templates](./customizing-templates.html) to learn how
 to customize the look and feel of your blog.
