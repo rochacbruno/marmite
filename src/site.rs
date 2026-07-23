@@ -2990,6 +2990,19 @@ fn handle_static_artifacts(
         }
     }
 
+    // Copy favicon.ico to the output root so browsers can find it at /favicon.ico
+    // (browsers request this path automatically in addition to the <link> tag in <head>)
+    let favicon_at_static = output_folder
+        .join(site_data.site.static_path.clone())
+        .join("favicon.ico");
+    let favicon_at_root = output_folder.join("favicon.ico");
+    if favicon_at_static.exists() && !favicon_at_root.exists() {
+        match fs::copy(&favicon_at_static, &favicon_at_root) {
+            Ok(_) => info!("Copied favicon.ico to site root"),
+            Err(e) => error!("Failed to copy favicon.ico to site root: {e:?}"),
+        }
+    }
+
     // Generate code highlighting CSS based on the site settings
     write_code_highlight_css(&site_data.site, output_folder);
 }
