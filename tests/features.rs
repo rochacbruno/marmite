@@ -424,6 +424,98 @@ file_mapping:
 }
 
 #[test]
+fn test_favicon_copied_to_site_root() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Site").unwrap();
+    fs::write(input_dir.join("content").join("page.md"), "# Page").unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // favicon.ico must exist in static/ (referenced by <link> in templates)
+    assert!(
+        output_dir.join("static").join("favicon.ico").exists(),
+        "favicon.ico missing from output/static/"
+    );
+    // favicon.ico must also exist at the site root (browsers request /favicon.ico automatically)
+    assert!(
+        output_dir.join("favicon.ico").exists(),
+        "favicon.ico missing from site root - browsers request /favicon.ico automatically"
+    );
+}
+
+#[test]
+fn test_favicon_file_mapping_not_overwritten() {
+    // When the user provides a custom favicon via file_mapping, the auto-copy
+    // must not overwrite it (the file_mapping runs first).
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(&input_dir).unwrap();
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+    fs::create_dir_all(input_dir.join("static")).unwrap();
+
+    // Custom favicon in static/
+    fs::write(
+        input_dir.join("static").join("favicon.ico"),
+        b"CUSTOM_FAVICON",
+    )
+    .unwrap();
+
+    let config = r"name: Site
+file_mapping:
+  - source: static/favicon.ico
+    dest: favicon.ico
+";
+    fs::write(input_dir.join("marmite.yaml"), config).unwrap();
+    fs::write(input_dir.join("content").join("page.md"), "# Page").unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    // The custom favicon placed by file_mapping must survive unchanged
+    let content = fs::read(output_dir.join("favicon.ico")).unwrap();
+    assert_eq!(
+        content, b"CUSTOM_FAVICON",
+        "file_mapping favicon was overwritten by auto-copy"
+    );
+}
+
+#[test]
 fn test_redirect_aliases() {
     let temp_dir = TempDir::new().unwrap();
     let input_dir = temp_dir.path().join("input");

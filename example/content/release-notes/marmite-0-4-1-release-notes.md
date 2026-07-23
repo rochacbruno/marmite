@@ -79,6 +79,12 @@ The `-d` flag still works to override auto-detection. Flat projects without `pos
 
 ## Bug Fixes
 
+### favicon.ico automatically served at site root
+
+Browsers request `/favicon.ico` from the root of a site automatically, in addition to following the `<link rel="icon">` tag in `<head>`. Previously, marmite only placed the favicon at `static/favicon.ico` (correctly linked by the templates), meaning browsers that rely on the automatic root lookup would receive a 404 unless the user added a manual `file_mapping` entry.
+
+Marmite now automatically copies `favicon.ico` to the site root during every build. No configuration is required. If a `file_mapping` already places a custom `favicon.ico` at the root, marmite will not overwrite it.
+
 ### Duplicate slug detection in `--new` command
 
 The `--new` command now detects duplicate slugs and uses clean filenames. Previously, creating content with a title that matched an existing slug could overwrite or conflict with existing content. Now it reports an error.
