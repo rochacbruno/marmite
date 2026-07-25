@@ -291,18 +291,22 @@ pub fn publish(
     // Auto-sync if state is empty
     if state.posts.is_empty() && !dry_run {
         eprintln!("State file is empty, syncing from PDS...");
-        if let Ok(records) = client::list_records(&pds_url, &session.did, "site.standard.document") {
+        if let Ok(records) = client::list_records(&pds_url, &session.did, "site.standard.document")
+        {
             for record in records {
                 if let Some(path_val) = record.value.get("path") {
                     if let Some(path_str) = path_val.as_str() {
-                        let slug = path_str.trim_start_matches('/').trim_end_matches(".html").to_string();
+                        let slug = path_str
+                            .trim_start_matches('/')
+                            .trim_end_matches(".html")
+                            .to_string();
                         state.posts.insert(
                             slug,
                             StateEntry {
                                 content_hash: String::new(), // Leave empty to force an update on first run
                                 at_uri: record.uri.clone(),
                                 last_published: Utc::now().to_rfc3339(),
-                            }
+                            },
                         );
                     }
                 }
