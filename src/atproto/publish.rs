@@ -289,7 +289,7 @@ pub fn publish(
     let mut state = load_state(input_folder);
 
     // Auto-sync if state is empty
-    if state.posts.is_empty() && !dry_run {
+    if state.posts.is_empty() {
         eprintln!("State file is empty, syncing from PDS...");
         if let Ok(records) = client::list_records(&pds_url, &session.did, "site.standard.document")
         {
