@@ -52,7 +52,6 @@ pub fn create_session(
 #[derive(Debug, Deserialize)]
 pub struct RecordItem {
     pub uri: String,
-    pub cid: String,
     pub value: serde_json::Value,
 }
 
