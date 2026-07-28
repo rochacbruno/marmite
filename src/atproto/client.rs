@@ -49,7 +49,55 @@ pub fn create_session(
     Ok(session)
 }
 
+#[derive(Debug, Deserialize)]
+pub struct RecordItem {
+    pub uri: String,
+    pub value: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListRecordsResponse {
+    pub cursor: Option<String>,
+    pub records: Vec<RecordItem>,
+}
+
+pub fn list_records(
+    pds_url: &str,
+    repo: &str,
+    collection: &str,
+) -> Result<Vec<RecordItem>, Box<dyn std::error::Error>> {
+    let mut all_records = Vec::new();
+    let mut cursor: Option<String> = None;
+
+    loop {
+        let mut url = format!("{pds_url}/xrpc/com.atproto.repo.listRecords?repo={repo}&collection={collection}&limit=100");
+        if let Some(ref c) = cursor {
+            url.push_str(&format!("&cursor={}", urlencoding::encode(c)));
+        }
+
+        let mut response = ureq::get(&url)
+            .call()
+            .map_err(|e| format!("listRecords request failed: {e}"))?;
+
+        let mut page: ListRecordsResponse = response
+            .body_mut()
+            .read_json()
+            .map_err(|e| format!("Failed to parse listRecords response: {e}"))?;
+
+        all_records.append(&mut page.records);
+
+        if page.cursor.is_none() || page.records.is_empty() {
+            break;
+        }
+        cursor = page.cursor;
+    }
+
+    Ok(all_records)
+}
+
 /// Create a new repository record.
+
 /// Calls `com.atproto.repo.createRecord`.
 pub fn create_record(
     pds_url: &str,

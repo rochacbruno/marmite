@@ -93,7 +93,7 @@ fn build_record(
         "$type": "site.standard.document",
         "title": post.title,
         "site": publication_uri,
-        "path": format!("/{}", post.slug),
+        "path": format!("/{}.html", post.slug),
         "canonicalUrl": canonical_url,
         "publishedAt": published_at,
     });
@@ -287,6 +287,35 @@ pub fn publish(
 
     // 4. Load state
     let mut state = load_state(input_folder);
+
+    // Auto-sync if state is empty
+    if state.posts.is_empty() {
+        eprintln!("State file is empty, syncing from PDS...");
+        if let Ok(records) = client::list_records(&pds_url, &session.did, "site.standard.document")
+        {
+            for record in records {
+                if let Some(path_val) = record.value.get("path") {
+                    if let Some(path_str) = path_val.as_str() {
+                        let slug = path_str
+                            .trim_start_matches('/')
+                            .trim_end_matches(".html")
+                            .to_string();
+                        state.posts.insert(
+                            slug,
+                            StateEntry {
+                                content_hash: String::new(), // Leave empty to force an update on first run
+                                at_uri: record.uri.clone(),
+                                last_published: Utc::now().to_rfc3339(),
+                            },
+                        );
+                    }
+                }
+            }
+            eprintln!("Synced {} posts from PDS.", state.posts.len());
+        } else {
+            eprintln!("Warning: Failed to sync state from PDS.");
+        }
+    }
 
     // 5. Collect publishable posts
     let posts = collect_publishable_posts(input_folder, &config_path);
