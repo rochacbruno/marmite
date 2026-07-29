@@ -4,6 +4,8 @@
 /// - `com.atproto.server.createSession`
 /// - `com.atproto.repo.createRecord`
 /// - `com.atproto.repo.putRecord`
+use std::fmt::Write;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -73,7 +75,7 @@ pub fn list_records(
     loop {
         let mut url = format!("{pds_url}/xrpc/com.atproto.repo.listRecords?repo={repo}&collection={collection}&limit=100");
         if let Some(ref c) = cursor {
-            url.push_str(&format!("&cursor={}", urlencoding::encode(c)));
+            let _ = write!(url, "&cursor={}", urlencoding::encode(c));
         }
 
         let mut response = ureq::get(&url)
@@ -97,7 +99,7 @@ pub fn list_records(
 }
 
 /// Create a new repository record.
-
+///
 /// Calls `com.atproto.repo.createRecord`.
 pub fn create_record(
     pds_url: &str,
