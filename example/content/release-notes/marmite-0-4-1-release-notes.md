@@ -1,9 +1,11 @@
 ---
+date: 2026-07-29
 title: Marmite 0.4.1 Release Notes
 slug: marmite-0-4-1-release-notes
 description: "Marmite 0.4.1 adds a content editor, development toolbar, content management API, smart directory auto-detection, and duplicate slug detection."
 tags: [release-notes, marmite, features]
 author: rochacbruno
+pinned: true
 ---
 
 ## New Features
