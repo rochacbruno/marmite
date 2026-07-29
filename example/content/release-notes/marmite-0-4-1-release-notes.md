@@ -4,7 +4,6 @@ slug: marmite-0-4-1-release-notes
 description: "Marmite 0.4.1 adds a content editor, development toolbar, content management API, smart directory auto-detection, and duplicate slug detection."
 tags: [release-notes, marmite, features]
 author: rochacbruno
-stream: draft
 ---
 
 ## New Features
@@ -77,7 +76,28 @@ $ marmite myblog --new "About" -p
 
 The `-d` flag still works to override auto-detection. Flat projects without `posts/`/`pages/` subdirectories are unaffected.
 
+### Offline support for editor and site features
+
+All JavaScript dependencies are now bundled locally and embedded in the binary, so both the content editor and generated site features work fully offline without any external network requests.
+
+- **CodeMirror 6** editor files (13 modules, 776 KB) are bundled from `esm.sh` CDN imports into embedded vendor files served at `/__marmite__/vendor/*`
+- **Fuse.js 7.0.0** for search (previously loaded from cdnjs.cloudflare.com)
+- **Mermaid 11.3.0** for diagrams (previously loaded from cdnjs.cloudflare.com)
+- **MathJax 3** for math rendering (previously loaded from cdn.mathjax.org) - also upgraded from deprecated v2 to v3 with the SVG output renderer
+
+Vendor files are stored in `static/vendor/` and embedded in the binary via `rust_embed`, following the same pattern used for all other embedded assets.
+
 ## Bug Fixes
+
+### AT Protocol: auto-sync state from PDS when local state is empty
+
+When publishing to AT Protocol (Bluesky/PDS) with an empty or missing local state file, marmite now automatically syncs the existing state from the PDS before publishing. Previously, an empty state would cause all posts to be treated as new, resulting in duplicate records on the PDS.
+
+On first publish with empty state, marmite fetches all existing `site.standard.document` records from the PDS (with full pagination support for large collections), rebuilds the local state from them, and then publishes only the content that has actually changed.
+
+The `--dry-run` flag is now respected during the PDS sync phase as well.
+
+Additionally, the `path` field in published records now correctly includes the `.html` extension, matching the actual file paths on the server.
 
 ### favicon.ico automatically served at site root
 
@@ -102,3 +122,6 @@ The link checker now properly handles wikilink title resolution, avoiding false 
 - Fixed Arch Linux installation instructions
 - Added `install` shortcode
 - CI: allow CLI overrides, fixed CI for fork PRs
+- Updated hosting docs to match the latest GitHub Actions environment requirements
+- Added tutorial for customizing the landing page (`_hero.md`, `_sidebar.md` fragments)
+- Dependency updates: tera 2.1, comrak 0.54, tungstenite 0.30, clap 4.6.4
