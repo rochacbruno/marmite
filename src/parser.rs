@@ -18,6 +18,13 @@ use std::sync::Arc;
 use url::Url;
 use urlencoding::decode as urldecode;
 
+const MEDIA_EXTENSIONS: &[&str] = &[
+    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif", ".bmp", ".tiff", ".tif", ".ico",
+    ".pdf", ".mp4", ".mov", ".avi", ".mkv", ".webm", ".mp3", ".wav", ".ogg", ".flac", ".zip",
+    ".tar", ".gz", ".7z", ".rar", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt",
+    ".csv", ".json", ".xml", ".yaml", ".yml", ".toml",
+];
+
 pub fn append_references(content: &str, references_path: &Path) -> String {
     if references_path.exists() {
         let references = fs::read_to_string(references_path).unwrap_or_default();
@@ -40,6 +47,30 @@ pub fn get_links_to(html: &str) -> Option<Vec<String>> {
                 let page = href.trim_start_matches("./").to_string();
                 let heading = cap.get(2).map_or("", |h| h.as_str());
                 result.push(format!("{page}{heading}").to_string());
+            }
+        }
+    }
+    if result.is_empty() {
+        return None;
+    }
+    Some(result)
+}
+
+pub fn get_media_links_to(html: &str) -> Option<Vec<String>> {
+    let mut result = Vec::new();
+    let re = Regex::new(re::CAPTURE_MEDIA_SRC_OR_HREF).expect("Media links regex should compile");
+    for cap in re.captures_iter(html) {
+        if let Some(m) = cap.get(1) {
+            let value = m.as_str();
+            if value.starts_with("http") || value.starts_with("//") || value.starts_with('#') {
+                continue;
+            }
+            let lower = value.to_lowercase();
+            if MEDIA_EXTENSIONS.iter().any(|ext| lower.ends_with(ext)) {
+                let normalized = value.trim_start_matches("./").to_string();
+                if !result.contains(&normalized) {
+                    result.push(normalized);
+                }
             }
         }
     }
@@ -170,16 +201,8 @@ pub fn fix_internal_links(html: &str) -> String {
         let link = caps.get(0).map_or("", |m| m.as_str());
         let href = caps.get(1).map_or("", |m| m.as_str());
         let text = caps.get(2).map_or("", |m| m.as_str());
-        // Check if this is a media file link
-        let media_extensions = [
-            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif", ".bmp", ".tiff", ".tif",
-            ".ico", ".pdf", ".mp4", ".mov", ".avi", ".mkv", ".webm", ".mp3", ".wav", ".ogg",
-            ".flac", ".zip", ".tar", ".gz", ".7z", ".rar", ".doc", ".docx", ".xls", ".xlsx",
-            ".ppt", ".pptx", ".txt", ".csv", ".json", ".xml", ".yaml", ".yml", ".toml",
-        ];
-
         let href_lower = href.to_lowercase();
-        let is_media_file = media_extensions.iter().any(|ext| href_lower.ends_with(ext));
+        let is_media_file = MEDIA_EXTENSIONS.iter().any(|ext| href_lower.ends_with(ext));
 
         if link.contains("class=\"anchor\"")
             || link.contains("data-footnote-ref")

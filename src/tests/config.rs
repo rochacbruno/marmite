@@ -65,6 +65,7 @@ fn test_cli() -> crate::cli::Cli {
             enable_toolbar: None,
             check_internal_links: None,
             strict_internal_links: None,
+            check_media_links: None,
             native_mermaid_render: None,
         },
         subcommand: None,
@@ -101,6 +102,7 @@ fn test_marmite_new_defaults() {
     assert!(!m.skip_image_resize);
     assert!(!m.check_internal_links);
     assert!(!m.strict_internal_links);
+    assert!(!m.check_media_links);
     assert!(m.native_mermaid_render);
 }
 

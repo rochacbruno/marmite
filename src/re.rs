@@ -107,6 +107,13 @@ pub const CAPTURE_DATE_PREFIX_FROM_TEXT: &str = r"^\d{4}-\d{2}-\d{2}( \d{2}:\d{2
 /// Used for replacing @/ with media/{slug}/ in rendered HTML
 pub const REPLACE_AT_MEDIA_REF_IN_HTML: &str = r#"(?P<attr>src|href)="@/"#;
 
+// === Media Link Patterns ===
+
+/// Matches src or href attributes in HTML tags
+/// Captures: 1) attribute name (src or href), 2) attribute value
+/// Used for extracting media file references from HTML content
+pub const CAPTURE_MEDIA_SRC_OR_HREF: &str = r#"(?:src|href)=['\"]([^'\"]+)['\"]"#;
+
 // === Mermaid Patterns ===
 
 /// Matches pre/code blocks with language-mermaid class in rendered HTML

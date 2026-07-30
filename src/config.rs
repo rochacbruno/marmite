@@ -324,6 +324,10 @@ pub struct Marmite {
     #[serde(default)]
     pub strict_internal_links: bool,
 
+    /// Check media file links during build and warn about broken ones
+    #[serde(default)]
+    pub check_media_links: bool,
+
     /// Render mermaid diagrams to SVG at build time instead of using client-side JS
     #[serde(default = "default_true")]
     pub native_mermaid_render: bool,
@@ -520,6 +524,9 @@ impl Marmite {
         }
         if let Some(strict_internal_links) = cli_args.configuration.strict_internal_links {
             self.strict_internal_links = strict_internal_links;
+        }
+        if let Some(check_media_links) = cli_args.configuration.check_media_links {
+            self.check_media_links = check_media_links;
         }
         if let Some(native_mermaid_render) = cli_args.configuration.native_mermaid_render {
             self.native_mermaid_render = native_mermaid_render;

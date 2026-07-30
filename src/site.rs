@@ -649,6 +649,20 @@ pub(crate) fn build_site_with_config(
         }
     }
 
+    if site_data.site.check_media_links {
+        let broken = validate_media_links(&site_data, &content_folder);
+        for (source, target) in &broken {
+            warn!("Broken media link in \"{source}\": \"{target}\" does not exist");
+        }
+        if !broken.is_empty() {
+            warn!("Found {} broken media link(s)", broken.len());
+            if site_data.site.strict_internal_links {
+                error!("Build failed due to broken media links (strict_internal_links is enabled)");
+                process::exit(1);
+            }
+        }
+    }
+
     let site_path = site_data.site.site_path.clone();
     let output_path = output_folder.join(site_path);
     if let Err(e) = fs::create_dir_all(&output_path) {
@@ -873,6 +887,20 @@ pub fn generate(
                     warn!("Found {} broken internal link(s)", broken.len());
                     if site_data.site.strict_internal_links {
                         error!("Build failed due to broken internal links (strict_internal_links is enabled)");
+                        process::exit(1);
+                    }
+                }
+            }
+
+            if site_data.site.check_media_links {
+                let broken = validate_media_links(&site_data, &content_folder);
+                for (source, target) in &broken {
+                    warn!("Broken media link in \"{source}\": \"{target}\" does not exist");
+                }
+                if !broken.is_empty() {
+                    warn!("Found {} broken media link(s)", broken.len());
+                    if site_data.site.strict_internal_links {
+                        error!("Build failed due to broken media links (strict_internal_links is enabled)");
                         process::exit(1);
                     }
                 }
@@ -1245,6 +1273,80 @@ fn validate_internal_links(site_data: &Data) -> Vec<(String, String)> {
                 let slug = link.split('#').next().unwrap_or(link);
                 if !valid_slugs.contains(slug) && !title_slugs.contains(slug) {
                     broken.push((content.slug.clone(), slug.to_string()));
+                }
+            }
+        }
+    }
+    broken
+}
+
+fn collect_media_files(
+    content_folder: &Path,
+    media_path: &str,
+) -> std::collections::HashSet<String> {
+    let mut files = std::collections::HashSet::new();
+
+    let global_media = content_folder.join(media_path);
+    if global_media.is_dir() {
+        for entry in WalkDir::new(&global_media)
+            .into_iter()
+            .filter_map(Result::ok)
+        {
+            if entry.path().is_file() {
+                if let Ok(rel) = entry.path().strip_prefix(content_folder) {
+                    files.insert(rel.to_string_lossy().to_string());
+                }
+            }
+        }
+    }
+
+    for entry in WalkDir::new(content_folder)
+        .min_depth(1)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let Some(dir_name) = path.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if dir_name != media_path {
+            continue;
+        }
+        if path.parent() == Some(content_folder) {
+            continue;
+        }
+        let Some(parent) = path.parent() else {
+            continue;
+        };
+        let Some(subfolder_name) = parent.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        for file_entry in WalkDir::new(path).into_iter().filter_map(Result::ok) {
+            if file_entry.path().is_file() {
+                if let Ok(rel) = file_entry.path().strip_prefix(path) {
+                    files.insert(format!(
+                        "{media_path}/{subfolder_name}/{}",
+                        rel.to_string_lossy()
+                    ));
+                }
+            }
+        }
+    }
+
+    files
+}
+
+fn validate_media_links(site_data: &Data, content_folder: &Path) -> Vec<(String, String)> {
+    let valid_files = collect_media_files(content_folder, &site_data.site.media_path);
+    let mut broken = Vec::new();
+    for content in site_data.posts.iter().chain(&site_data.pages) {
+        if let Some(ref links) = content.media_links_to {
+            for link in links {
+                if !valid_files.contains(link.as_str()) {
+                    broken.push((content.slug.clone(), link.clone()));
                 }
             }
         }

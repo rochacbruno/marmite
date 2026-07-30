@@ -778,6 +778,145 @@ Check out [the about page](about.html).
 }
 
 #[test]
+fn test_check_media_links_warns_on_broken() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content").join("media")).unwrap();
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Site\ncheck_media_links: true",
+    )
+    .unwrap();
+
+    let post = r#"---
+title: Post With Broken Media
+date: 2024-01-01
+---
+# Post
+
+![missing](media/nonexistent.jpg)
+"#;
+    fs::write(input_dir.join("content").join("post.md"), post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Build should succeed with warnings, not fail"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Broken media link"),
+        "Should warn about broken media link, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("nonexistent.jpg"),
+        "Warning should mention the broken media file, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_check_media_links_passes_with_valid() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    let media_dir = input_dir.join("content").join("media");
+    fs::create_dir_all(&media_dir).unwrap();
+    fs::write(media_dir.join("photo.jpg"), "fake image data").unwrap();
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Site\ncheck_media_links: true",
+    )
+    .unwrap();
+
+    let post = r#"---
+title: Post With Valid Media
+date: 2024-01-01
+---
+# Post
+
+![photo](media/photo.jpg)
+"#;
+    fs::write(input_dir.join("content").join("post.md"), post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Build should succeed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        !stderr.contains("Broken media link"),
+        "Should not warn about broken media links when all links are valid, got: {stderr}"
+    );
+}
+
+#[test]
+fn test_strict_media_links_fails_build() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content").join("media")).unwrap();
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Site\ncheck_media_links: true\nstrict_internal_links: true",
+    )
+    .unwrap();
+
+    let post = r#"---
+title: Post With Broken Media
+date: 2024-01-01
+---
+# Post
+
+![missing](media/nonexistent.jpg)
+"#;
+    fs::write(input_dir.join("content").join("post.md"), post).unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        !output.status.success(),
+        "Build should fail with strict_internal_links enabled and broken media links"
+    );
+}
+
+#[test]
 fn test_subfolder_media_copied_to_slug_based_path() {
     let temp_dir = TempDir::new().unwrap();
     let input_dir = temp_dir.path().join("input");

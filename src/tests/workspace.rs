@@ -304,6 +304,7 @@ fn test_cli() -> crate::cli::Cli {
             enable_toolbar: None,
             check_internal_links: None,
             strict_internal_links: None,
+            check_media_links: None,
             native_mermaid_render: None,
         },
         subcommand: None,

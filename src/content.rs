@@ -3,8 +3,8 @@ use crate::config::Marmite;
 use crate::highlight::MarmiteHighlighter;
 use crate::image_provider;
 use crate::parser::{
-    append_references, get_html_with_options, get_links_to, get_table_of_contents_from_html,
-    parse_front_matter,
+    append_references, get_html_with_options, get_links_to, get_media_links_to,
+    get_table_of_contents_from_html, parse_front_matter,
 };
 use crate::re;
 use crate::site::{get_content_folder, Data};
@@ -106,6 +106,7 @@ pub struct Content {
     pub date: Option<NaiveDateTime>,
     pub extra: Option<Value>,
     pub links_to: Option<Vec<String>>,
+    pub media_links_to: Option<Vec<String>>,
     pub back_links: Vec<Self>,
     pub card_image: Option<String>,
     pub banner_image: Option<String>,
@@ -214,6 +215,7 @@ impl Content {
         let date = get_date(&frontmatter, path);
         let extra = frontmatter.get("extra").map(std::borrow::ToOwned::to_owned);
         let links_to = get_links_to(&html);
+        let media_links_to = get_media_links_to(&html);
         let back_links = Vec::new(); // will be mutated later
 
         // Download banner image if image provider is configured and this is a post (has date)
@@ -271,6 +273,7 @@ impl Content {
             date,
             extra,
             links_to,
+            media_links_to,
             back_links,
             card_image,
             banner_image,
@@ -305,6 +308,7 @@ pub struct ContentBuilder {
     date: Option<NaiveDateTime>,
     extra: Option<Value>,
     links_to: Option<Vec<String>>,
+    media_links_to: Option<Vec<String>>,
     back_links: Option<Vec<Content>>,
     card_image: Option<String>,
     banner_image: Option<String>,
@@ -365,6 +369,11 @@ impl ContentBuilder {
 
     pub fn links_to(mut self, links_to: Vec<String>) -> Self {
         self.links_to = Some(links_to);
+        self
+    }
+
+    pub fn media_links_to(mut self, media_links_to: Vec<String>) -> Self {
+        self.media_links_to = Some(media_links_to);
         self
     }
 
@@ -453,6 +462,7 @@ impl ContentBuilder {
             date: self.date,
             extra: self.extra,
             links_to: self.links_to,
+            media_links_to: self.media_links_to,
             back_links: self.back_links.unwrap_or_default(),
             card_image: self.card_image,
             banner_image: self.banner_image,
