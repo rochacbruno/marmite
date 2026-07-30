@@ -1716,3 +1716,82 @@ fn test_build_content_metadata_page_no_date() {
     assert!(fm.get("date").unwrap().is_null());
     assert!(metadata.get("source_path").unwrap().is_null());
 }
+
+#[test]
+fn test_validate_media_links_no_broken() {
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let content_folder = temp_dir.path().join("content");
+    let media_folder = content_folder.join("media");
+    std::fs::create_dir_all(&media_folder).unwrap();
+    std::fs::write(media_folder.join("photo.jpg"), "fake image data").unwrap();
+
+    let mut data = Data::new("", Path::new("test.yaml"));
+    let post = ContentBuilder::new()
+        .title("Post 1".to_string())
+        .slug("post-1".to_string())
+        .media_links_to(vec!["media/photo.jpg".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+    data.push_content(post);
+
+    let broken = validate_media_links(&data, &content_folder);
+    assert!(broken.is_empty());
+}
+
+#[test]
+fn test_validate_media_links_broken() {
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let content_folder = temp_dir.path().join("content");
+    let media_folder = content_folder.join("media");
+    std::fs::create_dir_all(&media_folder).unwrap();
+
+    let mut data = Data::new("", Path::new("test.yaml"));
+    let post = ContentBuilder::new()
+        .title("Post 1".to_string())
+        .slug("post-1".to_string())
+        .media_links_to(vec!["media/missing.jpg".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+    data.push_content(post);
+
+    let broken = validate_media_links(&data, &content_folder);
+    assert_eq!(broken.len(), 1);
+    assert_eq!(broken[0].0, "post-1");
+    assert_eq!(broken[0].1, "media/missing.jpg");
+}
+
+#[test]
+fn test_validate_media_links_subfolder_media() {
+    let temp_dir = tempfile::TempDir::new().unwrap();
+    let content_folder = temp_dir.path().join("content");
+    let subfolder_media = content_folder.join("my-post").join("media");
+    std::fs::create_dir_all(&subfolder_media).unwrap();
+    std::fs::write(subfolder_media.join("diagram.svg"), "fake svg").unwrap();
+
+    let mut data = Data::new("", Path::new("test.yaml"));
+    let post = ContentBuilder::new()
+        .title("My Post".to_string())
+        .slug("my-post".to_string())
+        .media_links_to(vec!["media/my-post/diagram.svg".to_string()])
+        .date(
+            NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        )
+        .build();
+    data.push_content(post);
+
+    let broken = validate_media_links(&data, &content_folder);
+    assert!(broken.is_empty());
+}

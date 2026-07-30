@@ -275,6 +275,9 @@ These flags override values from `marmite.yaml` for a single build:
 | `--enable-shortcodes <BOOL>` | bool | true |
 | `--shortcode-pattern <REGEX>` | String | HTML comment pattern |
 | `--skip-image-resize <BOOL>` | bool | false |
+| `--check-internal-links <BOOL>` | bool | false |
+| `--strict-internal-links <BOOL>` | bool | false |
+| `--check-media-links <BOOL>` | bool | false |
 | `--native-mermaid-render <BOOL>` | bool | true |
 | `--enable-toolbar <BOOL>` | bool | true |
 

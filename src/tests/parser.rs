@@ -97,6 +97,62 @@ fn test_get_links_to_with_internal_link_with_heading() {
 }
 
 #[test]
+fn test_get_media_links_to_with_images() {
+    let html =
+        r#"<img src="media/photo.jpg" alt="photo"><img src="media/banner.png" alt="banner">"#;
+    let result = get_media_links_to(html).unwrap();
+    assert_eq!(result.len(), 2);
+    assert!(result.contains(&"media/photo.jpg".to_string()));
+    assert!(result.contains(&"media/banner.png".to_string()));
+}
+
+#[test]
+fn test_get_media_links_to_with_href() {
+    let html = r#"<a href="media/report.pdf">Download</a>"#;
+    let result = get_media_links_to(html).unwrap();
+    assert_eq!(result, vec!["media/report.pdf".to_string()]);
+}
+
+#[test]
+fn test_get_media_links_to_skips_external() {
+    let html = r#"<img src="https://example.com/photo.jpg" alt="photo">"#;
+    assert_eq!(get_media_links_to(html), None);
+}
+
+#[test]
+fn test_get_media_links_to_skips_html_links() {
+    let html = r#"<a href="about.html">About</a>"#;
+    assert_eq!(get_media_links_to(html), None);
+}
+
+#[test]
+fn test_get_media_links_to_empty() {
+    assert_eq!(get_media_links_to(""), None);
+    assert_eq!(get_media_links_to("<p>No links here</p>"), None);
+}
+
+#[test]
+fn test_get_media_links_to_normalizes_dot_slash() {
+    let html = r#"<img src="./media/photo.jpg" alt="photo">"#;
+    let result = get_media_links_to(html).unwrap();
+    assert_eq!(result, vec!["media/photo.jpg".to_string()]);
+}
+
+#[test]
+fn test_get_media_links_to_deduplicates() {
+    let html = r#"<img src="media/photo.jpg"><a href="media/photo.jpg">link</a>"#;
+    let result = get_media_links_to(html).unwrap();
+    assert_eq!(result.len(), 1);
+}
+
+#[test]
+fn test_get_media_links_to_subfolder_media() {
+    let html = r#"<img src="media/my-post/diagram.svg" alt="diagram">"#;
+    let result = get_media_links_to(html).unwrap();
+    assert_eq!(result, vec!["media/my-post/diagram.svg".to_string()]);
+}
+
+#[test]
 fn test_get_html_basic_markdown() {
     let markdown = "# Title\n\nThis is a paragraph.";
     let expected = "<h1 id=\"title\">Title<a href=\"#title\" aria-label=\"Link to heading 'Title'\" data-heading-content=\"Title\" class=\"anchor\"></a></h1>\n<p>This is a paragraph.</p>\n";
