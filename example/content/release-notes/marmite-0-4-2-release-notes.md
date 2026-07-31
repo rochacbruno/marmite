@@ -1,11 +1,10 @@
 ---
-date: 2026-07-30
+date: 2026-07-31
 title: Marmite 0.4.2 Release Notes
 slug: marmite-0-4-2-release-notes
 description: "Marmite 0.4.2 adds media file link validation and fixes broken TOC anchor links."
 tags: [release-notes, marmite, features]
 author: rochacbruno
-stream: draft
 ---
 
 ## New Features
