@@ -259,7 +259,8 @@ https://github.com/rochacbruno/marmite
 
 ### Wikilinks 
 
-Wikilinks allows to link using `[[name|url]]` syntax.
+Wikilinks with display text use the `[[Display Text|target]]` syntax (default mode: `wikilinks_title_before_pipe`).
+The text before the pipe is what the reader sees, and the part after the pipe is the slug or title of the target page.
 
 [[Read the Tutorial|getting-started]] and [[Read the Tutorial|getting-started.md]] and [[Read the Tutorial|getting-started.html]]  
 
@@ -267,7 +268,7 @@ Anchors also supported [[FAQ|about#faq]]
 
 [[Pudim|https://pudim.com.br]]
 
-It also resolve anchors like [[Wikilinks|#wikilinks]]  
+It also resolves anchors like [[Wikilinks|#wikilinks]]  
 and internal content by title like 
 [[MD Wikilinks|Markdown Format#Wikilinks]] or [[MD Format|Markdown Format]]
 
@@ -276,11 +277,13 @@ and internal content by title like
 
 [[Pudim|https://pudim.com.br]]
 
-It also resolve anchors like [[Wikilinks|#wikilinks]]  
+It also resolves anchors like [[Wikilinks|#wikilinks]]  
 and internal content by title like 
 [[MD Wikilinks|Markdown Format#Wikilinks]] or [[MD Format|Markdown Format]]
 
 ```
+
+> For a full guide with more examples, see the [[Wikilinks Demo & How To Guide]].
 
 ### Obsidian Links
 
