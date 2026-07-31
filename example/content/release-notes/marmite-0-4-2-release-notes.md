@@ -2,7 +2,7 @@
 date: 2026-07-30
 title: Marmite 0.4.2 Release Notes
 slug: marmite-0-4-2-release-notes
-description: "Marmite 0.4.2 adds media file link validation to catch broken image and file references at build time."
+description: "Marmite 0.4.2 adds media file link validation and fixes broken TOC anchor links."
 tags: [release-notes, marmite, features]
 author: rochacbruno
 stream: draft
@@ -43,3 +43,11 @@ strict_internal_links: true
 ```
 
 Supported file types include images (jpg, png, gif, webp, svg, avif, bmp, tiff, ico), documents (pdf, doc, docx, xls, xlsx, ppt, pptx, txt, csv), data files (json, xml, yaml, yml, toml), audio (mp3, wav, ogg, flac), video (mp4, mov, avi, mkv, webm), and archives (zip, tar, gz, 7z, rar).
+
+## Bug Fixes
+
+### TOC anchors included comrak anchor tag HTML in slugs
+
+Table of Contents anchor links were broken when using comrak's heading ID generation. The TOC regex expected comrak's anchor `<a>` tag to appear before the heading text, but comrak places it after. This caused the anchor tag's attributes to leak into the generated slug, producing links like `#how-it-works-a-href-how-it-works-aria-label-...` instead of the correct `#how-it-works`.
+
+Fixed by capturing the `id` attribute directly from the `<h>` tag and stripping comrak's auto-generated anchor tags from the heading text before building the TOC.
