@@ -7,7 +7,8 @@ fn test_all_patterns_compile() {
     Regex::new(MATCH_HTML_OR_TEMPLATE_TAGS).unwrap();
     Regex::new(MATCH_HTML_TAGS).unwrap();
     Regex::new(CAPTURE_SLUG_ANCHOR_FROM_HREF).unwrap();
-    Regex::new(CAPTURE_LEVEL_ANCHOR_TEXT_FROM_H_TAG).unwrap();
+    Regex::new(CAPTURE_LEVEL_ID_CONTENT_FROM_H_TAG).unwrap();
+    Regex::new(MATCH_COMRAK_HEADING_ANCHOR).unwrap();
     Regex::new(CAPTURE_LINK_AND_TEXT_FROM_A_TAG).unwrap();
     Regex::new(CAPTURE_SRC_FROM_IMG_HTMLTAG).unwrap();
     Regex::new(CAPTURE_WIKILINK_HREF_AND_TITLE).unwrap();
@@ -60,19 +61,36 @@ fn test_capture_slug_anchor_from_href() {
 }
 
 #[test]
-fn test_capture_level_anchor_text_from_h_tag() {
-    let re = Regex::new(CAPTURE_LEVEL_ANCHOR_TEXT_FROM_H_TAG).unwrap();
+fn test_capture_level_id_content_from_h_tag() {
+    let re = Regex::new(CAPTURE_LEVEL_ID_CONTENT_FROM_H_TAG).unwrap();
 
     let caps = re.captures(r#"<h2>My Heading</h2>"#).unwrap();
     assert_eq!(&caps[1], "2");
+    assert!(caps.get(2).is_none());
     assert_eq!(&caps[3], "My Heading");
 
-    let caps = re
-        .captures(r##"<h3><a href="#anchor"></a>With Anchor</h3>"##)
-        .unwrap();
+    let caps = re.captures(r#"<h3 id="anchor">With Anchor</h3>"#).unwrap();
     assert_eq!(&caps[1], "3");
-    assert_eq!(&caps[2], "#anchor");
+    assert_eq!(&caps[2], "anchor");
     assert_eq!(&caps[3], "With Anchor");
+
+    // Comrak output format: id on h tag, anchor after text
+    let caps = re
+        .captures(r##"<h1 id="how-it-works">How it works<a href="#how-it-works" aria-label="Link to heading 'How it works'" data-heading-content="How it works" class="anchor"></a></h1>"##)
+        .unwrap();
+    assert_eq!(&caps[1], "1");
+    assert_eq!(&caps[2], "how-it-works");
+    assert!(caps[3].starts_with("How it works"));
+}
+
+#[test]
+fn test_match_comrak_heading_anchor() {
+    let re = Regex::new(MATCH_COMRAK_HEADING_ANCHOR).unwrap();
+
+    assert!(re.is_match(
+        r##"<a href="#title" aria-label="Link to heading 'Title'" data-heading-content="Title" class="anchor"></a>"##
+    ));
+    assert!(!re.is_match(r#"<a href="https://example.com">Link</a>"#));
 }
 
 #[test]

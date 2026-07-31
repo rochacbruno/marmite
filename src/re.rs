@@ -15,11 +15,16 @@ pub const MATCH_HTML_TAGS: &str = r"<[^>]*>";
 /// Used for converting markdown links to HTML links
 pub const CAPTURE_SLUG_ANCHOR_FROM_HREF: &str = r#"href=['\"]([^'\"]+)\.html(#[^'\"]+)?['\"]"#;
 
-/// Matches HTML heading tags (h1-h6) with optional anchor links inside
-/// Captures: 1) heading level, 2) optional anchor href, 3) heading content
+/// Matches HTML heading tags (h1-h6) with optional id attribute
+/// Captures: 1) heading level, 2) optional id from the h tag, 3) heading inner HTML
 /// Used for extracting table of contents from HTML
-pub const CAPTURE_LEVEL_ANCHOR_TEXT_FROM_H_TAG: &str =
-    r#"<h([1-6])[^>]*>(?:<a[^>]*href=['\"]([^'\"]+)['\"][^>]*></a>)?(.*?)</h[1-6]>"#;
+pub const CAPTURE_LEVEL_ID_CONTENT_FROM_H_TAG: &str =
+    r#"<h([1-6])(?:\s[^>]*?\bid=['\"]([^'\"]+)['\"])?[^>]*>(.*?)</h[1-6]>"#;
+
+/// Matches anchor tags with class="anchor" (comrak heading anchors)
+/// Used for stripping comrak's auto-generated anchor tags from heading text
+pub const MATCH_COMRAK_HEADING_ANCHOR: &str =
+    r#"<a[^>]*\bclass=['\"][^'\"]*\banchor\b[^'\"]*['\"][^>]*>.*?</a>"#;
 
 /// Matches anchor tags in HTML
 /// Captures: 1) href attribute value, 2) link text

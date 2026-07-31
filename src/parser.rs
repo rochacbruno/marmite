@@ -98,17 +98,21 @@ fn warn_broken_link(link_ref: BrokenLinkReference) -> Option<ResolvedReference> 
 }
 
 pub fn get_table_of_contents_from_html(html: &str) -> String {
-    let re = Regex::new(re::CAPTURE_LEVEL_ANCHOR_TEXT_FROM_H_TAG)
+    let re = Regex::new(re::CAPTURE_LEVEL_ID_CONTENT_FROM_H_TAG)
         .expect("Table of contents regex should compile");
+    let anchor_re =
+        Regex::new(re::MATCH_COMRAK_HEADING_ANCHOR).expect("Anchor strip regex should compile");
     let mut toc = String::new();
     let mut last_level = 0;
 
     for cap in re.captures_iter(html) {
         let level = cap.get(1).map_or(0, |m| m.as_str().parse().unwrap_or(0));
-        let title = cap.get(3).map_or("", |m| m.as_str());
+        let raw_content = cap.get(3).map_or("", |m| m.as_str());
+        let title = anchor_re.replace_all(raw_content, "");
+        let title = title.trim();
         let slug = cap.get(2).map_or_else(
             || format!("#{}", crate::slugify::slugify(title)),
-            |m| m.as_str().to_string(),
+            |m| format!("#{}", m.as_str()),
         );
 
         match level.cmp(&last_level) {

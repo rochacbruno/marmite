@@ -274,30 +274,30 @@ fn test_get_html_with_table() {
 
 #[test]
 fn test_get_table_of_contents_from_html_with_single_header() {
-    let html = r##"<h1><a href="#header1"></a>Header 1</h1>"##;
-    let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n</ul>\n";
+    let html = r##"<h1 id="header-1">Header 1<a href="#header-1" aria-label="Link to heading 'Header 1'" data-heading-content="Header 1" class="anchor"></a></h1>"##;
+    let expected = "<ul>\n<li><a href=\"#header-1\">Header 1</a></li>\n</ul>\n";
     assert_eq!(get_table_of_contents_from_html(html), expected);
 }
 
 #[test]
 fn test_get_table_of_contents_from_html_with_multiple_headers() {
     let html = r##"
-        <h1><a href="#header1"></a>Header 1</h1>
-        <h2><a href="#header2"></a>Header 2</h2>
-        <h3><a href="#header3"></a>Header 3</h3>
+        <h1 id="header-1">Header 1<a href="#header-1" class="anchor"></a></h1>
+        <h2 id="header-2">Header 2<a href="#header-2" class="anchor"></a></h2>
+        <h3 id="header-3">Header 3<a href="#header-3" class="anchor"></a></h3>
     "##;
-    let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header2\">Header 2</a></li>\n<ul>\n<li><a href=\"#header3\">Header 3</a></li>\n</ul>\n</ul>\n</ul>\n";
+    let expected = "<ul>\n<li><a href=\"#header-1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header-2\">Header 2</a></li>\n<ul>\n<li><a href=\"#header-3\">Header 3</a></li>\n</ul>\n</ul>\n</ul>\n";
     assert_eq!(get_table_of_contents_from_html(html), expected);
 }
 
 #[test]
 fn test_get_table_of_contents_from_html_with_nested_headers() {
     let html = r##"
-        <h1><a href="#header1"></a>Header 1</h1>
-        <h2><a href="#header2"></a>Header 2</h2>
-        <h1><a href="#header3"></a>Header 3</h1>
+        <h1 id="header-1">Header 1<a href="#header-1" class="anchor"></a></h1>
+        <h2 id="header-2">Header 2<a href="#header-2" class="anchor"></a></h2>
+        <h1 id="header-3">Header 3<a href="#header-3" class="anchor"></a></h1>
     "##;
-    let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header2\">Header 2</a></li>\n</ul>\n<li><a href=\"#header3\">Header 3</a></li>\n</ul>\n";
+    let expected = "<ul>\n<li><a href=\"#header-1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header-2\">Header 2</a></li>\n</ul>\n<li><a href=\"#header-3\">Header 3</a></li>\n</ul>\n";
     assert_eq!(get_table_of_contents_from_html(html), expected);
 }
 
@@ -311,13 +311,56 @@ fn test_get_table_of_contents_from_html_with_no_headers() {
 #[test]
 fn test_get_table_of_contents_from_html_with_mixed_content() {
     let html = r##"
-        <h1><a href="#header1"></a>Header 1</h1>
+        <h1 id="header-1">Header 1<a href="#header-1" class="anchor"></a></h1>
         <p>Some content</p>
-        <h2><a href="#header2"></a>Header 2</h2>
+        <h2 id="header-2">Header 2<a href="#header-2" class="anchor"></a></h2>
         <p>More content</p>
     "##;
-    let expected = "<ul>\n<li><a href=\"#header1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header2\">Header 2</a></li>\n</ul>\n</ul>\n";
+    let expected = "<ul>\n<li><a href=\"#header-1\">Header 1</a></li>\n<ul>\n<li><a href=\"#header-2\">Header 2</a></li>\n</ul>\n</ul>\n";
     assert_eq!(get_table_of_contents_from_html(html), expected);
+}
+
+#[test]
+fn test_get_table_of_contents_from_html_without_id_falls_back_to_slugify() {
+    let html = r#"<h1>My Heading</h1>"#;
+    let expected = "<ul>\n<li><a href=\"#my-heading\">My Heading</a></li>\n</ul>\n";
+    assert_eq!(get_table_of_contents_from_html(html), expected);
+}
+
+#[test]
+fn test_get_table_of_contents_from_comrak_output() {
+    let markdown =
+        "# How it works\n\nSome text\n\n## Getting Started\n\nMore text\n\n## Advanced Usage\n";
+    let html = get_html(markdown);
+    let toc = get_table_of_contents_from_html(&html);
+    assert!(
+        toc.contains(r##"href="#how-it-works""##),
+        "TOC should link to #how-it-works, got: {toc}"
+    );
+    assert!(
+        toc.contains(r##"href="#getting-started""##),
+        "TOC should link to #getting-started, got: {toc}"
+    );
+    assert!(
+        toc.contains(r##"href="#advanced-usage""##),
+        "TOC should link to #advanced-usage, got: {toc}"
+    );
+    assert!(
+        toc.contains(">How it works<"),
+        "TOC should show clean title text, got: {toc}"
+    );
+    assert!(
+        toc.contains(">Getting Started<"),
+        "TOC should show clean title text, got: {toc}"
+    );
+    assert!(
+        !toc.contains("anchor"),
+        "TOC should not contain anchor class, got: {toc}"
+    );
+    assert!(
+        !toc.contains("aria-label"),
+        "TOC should not contain aria-label, got: {toc}"
+    );
 }
 
 // Helper function to create test site data
