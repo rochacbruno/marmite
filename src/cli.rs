@@ -52,12 +52,12 @@ pub struct Cli {
     #[arg(long, short)]
     pub watch: bool,
 
-    /// Serve the site with a built-in HTTP server
+    /// Serve the site with a development-only HTTP server (not for production)
     #[arg(long)]
     pub serve: bool,
 
     /// Address to bind the server
-    #[arg(long, default_value = "0.0.0.0:8000", requires = "serve")]
+    #[arg(long, default_value = "127.0.0.1:8000", requires = "serve")]
     pub bind: String,
 
     /// Path to custom configuration file

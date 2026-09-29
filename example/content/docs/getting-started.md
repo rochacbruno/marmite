@@ -193,13 +193,15 @@ webserver such as **Apache** or **Nginx**, or most probably use a free
 static hosting service such as **Github pages**, **Netlify** or **CLoudflare**.
 
 However, during the content writing you want to check how the website looks,
-so the built-in server comes handy, just add `--serve`
+so the built-in development-only server comes handy, just add `--serve`.
+It defaults to `127.0.0.1:8000` and is not for production deployments.
 
 ```
 marmite myblog site --watch --serve
 ...
 Watching for changes in folder: myblog
 Starting built-in HTTP server
+Development-only server. Not for production deployments.
 Server started at http://localhost:8000/ - Type ^C to stop.
 ```
 
@@ -210,7 +212,7 @@ When the server is running, a [[marmite-toolbar]] icon appears at the top-left c
 The server also exposes a [[content-management-api]] under `/__marmite__/` for programmatic content and config management.
 
 If you want to share your site with others in the same network, just 
-pass `--bind "0.0.0.0:8000` and then share your local IP address.
+pass `--bind 0.0.0.0:8000` and then share your local IP address.
 
 ## Media
 

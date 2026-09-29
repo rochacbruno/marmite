@@ -4,6 +4,41 @@ use std::io::Read;
 use tempfile::TempDir;
 
 #[test]
+fn test_default_bind_is_loopback_and_custom_bind_is_preserved() {
+    use clap::Parser;
+
+    let args = crate::cli::Cli::try_parse_from(["marmite", ".", "--serve"]).unwrap();
+    assert_eq!(args.bind, "127.0.0.1:8000");
+    let args =
+        crate::cli::Cli::try_parse_from(["marmite", ".", "--serve", "--bind", "0.0.0.0:9000"])
+            .unwrap();
+    assert_eq!(args.bind, "0.0.0.0:9000");
+}
+
+#[test]
+fn test_bind_fallback_preserves_interface() {
+    for ip in ["127.0.0.1", "0.0.0.0", "::1"] {
+        let ip: std::net::IpAddr = ip.parse().unwrap();
+        let occupied = match std::net::TcpListener::bind((ip, 0)) {
+            Ok(listener) => listener,
+            Err(err) if ip.is_ipv6() && err.kind() == ErrorKind::AddrNotAvailable => continue,
+            Err(err) => panic!("Failed to bind test listener: {err}"),
+        };
+        let requested = occupied.local_addr().unwrap();
+        let server = bind_server(&requested.to_string()).unwrap();
+        let actual = server.server_addr().to_ip().unwrap();
+        assert_eq!(actual.ip(), requested.ip());
+        assert_ne!(actual.port(), 0);
+        assert_ne!(actual.port(), requested.port());
+    }
+}
+
+#[test]
+fn test_invalid_bind_does_not_fall_back_to_all_interfaces() {
+    assert!(bind_server("invalid-address").is_err());
+}
+
+#[test]
 fn test_render_not_found_with_file() {
     let temp_dir = TempDir::new().unwrap();
     let error_path = temp_dir.path().join("404.html");

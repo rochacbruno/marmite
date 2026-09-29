@@ -174,19 +174,23 @@ Watching for changed on: myblog/
 Marmite generates a flat site, which means you can open it directly on your browser (with some limitations) 
 or use any web server to serve it.
 
-Marmite comes with a built-in server to use only locally.
+Marmite comes with a development-only server, not for production deployments.
+It binds to `127.0.0.1:8000` by default.
 
 Use `--serve` to start the server.
 
 ```console
-$ /marmite myblog /var/www/myblog -w
+$ /marmite myblog /var/www/myblog -w --serve
 Site generated at: /var/www/myblog
 Watching for changed on: myblog/
 Starting built-in HTTP server...
-Server started at http://0.0.0.0:8000/ - Type ^C to stop.
+Development-only server. Not for production deployments.
+Server started at http://127.0.0.1:8000/ - Type ^C to stop.
 ```
 
-If you want to change the address use `--bind ip:port`
+If you want to change the address use `--bind ip:port`. For access from other
+machines on your network, use `--bind 0.0.0.0:8000`. If the requested port is
+unavailable, the server uses an OS-assigned port on the requested interface.
 
 > [!IMPORTANT]  
 > The built-in server is not suitable for production, when deploying use a webserver such as [Nginx] or read the [[hosting]] guide to learn how to deploy to Github pages, Gitlab pages, Codeberg Pages, Netlify and more.
@@ -591,9 +595,9 @@ Options:
   -w, --watch
           Detect changes and rebuild the site automatically
       --serve
-          Serve the site with a built-in HTTP server
+          Serve the site with a development-only HTTP server (not for production)
       --bind <BIND>
-          Address to bind the server [default: 0.0.0.0:8000]
+          Address to bind the server [default: 127.0.0.1:8000]
   -c, --config <CONFIG>
           Path to custom configuration file [default: marmite.yaml]
       --init-templates

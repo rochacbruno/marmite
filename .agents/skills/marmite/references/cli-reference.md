@@ -201,8 +201,8 @@ marmite [site_folder] atproto publish --dry-run
 |------|-------|---------|-------------|
 | `--verbose` | `-v` | 0 (warn) | Verbosity: `-v` info, `-vv` debug, `-vvv` trace, `-vvvv` trace all |
 | `--watch` | `-w` | false | Auto-rebuild on file changes |
-| `--serve` | | false | Start built-in HTTP server |
-| `--bind <ADDR>` | | `0.0.0.0:8000` | Server bind address (requires `--serve`) |
+| `--serve` | | false | Start development-only HTTP server (not for production) |
+| `--bind <ADDR>` | | `127.0.0.1:8000` | Server bind address (requires `--serve`) |
 | `--config <FILE>` | `-c` | `marmite.yaml` | Path to config file |
 | `--force` | | false | Force full rebuild |
 
