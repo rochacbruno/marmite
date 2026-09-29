@@ -1,8 +1,11 @@
+//! Development-only preview server and editor API, not for production deployments.
+
 use chrono::Utc;
 use log::{error, info, warn};
 use serde_json::json;
 use std::fmt::Write as _;
 use std::io::{Cursor, ErrorKind};
+use std::net::ToSocketAddrs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc;
@@ -23,7 +26,6 @@ pub struct ServerContext {
     pub watch_enabled: bool,
 }
 
-const FALLBACK_BIND_ADDRESS: &str = "0.0.0.0:0";
 const LIVE_RELOAD_SCRIPT_PATH: &str = "__marmite__/livereload.js";
 const TOOLBAR_JS_PATH: &str = "__marmite__/toolbar.js";
 const TOOLBAR_CSS_PATH: &str = "__marmite__/toolbar.css";
@@ -94,22 +96,30 @@ static EDITOR_HTML: LazyLock<String> = LazyLock::new(|| {
         .expect("embedded editor.html missing - this is a build-time error")
 });
 
+fn bind_server(bind_address: &str) -> Result<Server, Box<dyn std::error::Error + Send + Sync>> {
+    let mut addresses: Vec<_> = bind_address.to_socket_addrs()?.collect();
+    Server::http(addresses.as_slice()).or_else(|err| {
+        warn!(
+            "Failed to start server on address {bind_address}: {err:?}. Falling back to OS-assigned port on the same interface."
+        );
+        // Only change the port; retain the requested IPv4/IPv6 interfaces.
+        for address in &mut addresses {
+            address.set_port(0);
+        }
+        Server::http(addresses.as_slice())
+    })
+}
+
 pub fn start(bind_address: &str, ctx: &ServerContext, live_reload: Option<&LiveReload>) {
-    let server = match Server::http(bind_address) {
+    let server = match bind_server(bind_address) {
         Ok(server) => server,
         Err(e) => {
-            warn!(
-                "Failed to start server on address {bind_address}: {e:?}. Falling back to OS-assigned port."
-            );
-            match Server::http(FALLBACK_BIND_ADDRESS) {
-                Ok(server) => server,
-                Err(e) => {
-                    error!("Failed to start server on fallback address: {e:?}");
-                    return;
-                }
-            }
+            error!("Failed to start development server: {e:?}");
+            return;
         }
     };
+
+    info!("Development-only server. Not for production deployments.");
 
     let Some(server_addr) = server.server_addr().to_ip() else {
         warn!("Failed to get server IP address, using fallback display");
