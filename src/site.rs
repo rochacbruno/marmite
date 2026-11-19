@@ -25,7 +25,7 @@ use log::{debug, error, info, warn};
 use rayon::prelude::*;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::{fs, process, sync::Arc, sync::Mutex};
 use tera::Value;
@@ -3399,10 +3399,28 @@ fn generate_sitemap(site_data: &Data, tera: &Tera, output_path: &Path) {
         url_for.resolve(path, abs)
     };
 
+    // Drafts stay out of the sitemap, as they do out of the feeds: the draft posts, the
+    // draft stream pages and its feeds (which are never generated)
+    let draft_posts: HashSet<String> = site_data
+        .posts
+        .iter()
+        .filter(|post| post.stream.as_deref() == Some("draft"))
+        .map(|post| format!("{}.html", post.slug))
+        .collect();
+    let is_draft_url = |path: &str| {
+        draft_posts.contains(path)
+            || matches!(path, "draft.html" | "draft.rss" | "draft.json")
+            || path
+                .strip_prefix("draft-")
+                .and_then(|rest| rest.strip_suffix(".html"))
+                .is_some_and(|page| page.chars().all(|c| c.is_ascii_digit()))
+    };
+
     // Get all URLs from the shared collection and apply URL generation
     let all_raw_urls = site_data.generated_urls.get_all_urls();
     let sitemap_urls: Vec<String> = all_raw_urls
         .iter()
+        .filter(|url| !is_draft_url(url.strip_prefix('/').unwrap_or(url)))
         .map(|url| {
             // Remove leading slash if present for consistent path handling
             let path = url.strip_prefix('/').unwrap_or(url);

@@ -585,6 +585,58 @@ Content here.";
 }
 
 #[test]
+fn test_drafts_not_in_sitemap() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+    fs::write(
+        input_dir.join("marmite.yaml"),
+        "name: Site\nbuild_sitemap: true\nurl: https://example.com",
+    )
+    .unwrap();
+    fs::write(
+        input_dir.join("content").join("published.md"),
+        "---\ntitle: Published\ndate: 2024-01-01\n---\nDone",
+    )
+    .unwrap();
+    fs::write(
+        input_dir.join("content").join("wip.md"),
+        "---\ntitle: Wip\ndate: 2024-01-02\nstream: draft\n---\nNot yet",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let sitemap = fs::read_to_string(output_dir.join("sitemap.xml")).unwrap();
+    assert!(sitemap.contains("published.html"));
+    assert!(
+        !sitemap.contains("wip.html"),
+        "Sitemap should not list draft posts"
+    );
+    assert!(
+        !sitemap.contains("/draft"),
+        "Sitemap should not list the draft stream or its feed"
+    );
+}
+
+#[test]
 fn test_redirect_aliases_not_in_sitemap() {
     let temp_dir = TempDir::new().unwrap();
     let input_dir = temp_dir.path().join("input");
