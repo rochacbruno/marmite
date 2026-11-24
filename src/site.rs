@@ -1359,6 +1359,9 @@ fn set_next_and_previous_links(site_data: &mut Data) {
     // First, handle series navigation (takes precedence over stream navigation)
     let mut series_posts: HashMap<String, Vec<Content>> = HashMap::new();
     for post in &site_data.posts {
+        if post.stream.as_deref() == Some("draft") {
+            continue;
+        }
         if let Some(series_name) = &post.series {
             series_posts
                 .entry(series_name.clone())
@@ -2490,7 +2493,12 @@ fn handle_series_pages(
                 .replace("$series", series);
 
             // Series content is already sorted chronologically (oldest to newest) by GroupedContent::sort_all
-            let sorted_series_contents = series_contents.clone();
+            // Filter out draft content
+            let sorted_series_contents: Vec<Content> = series_contents
+                .iter()
+                .filter(|content| content.stream.as_deref() != Some("draft"))
+                .cloned()
+                .collect();
 
             handle_list_page(
                 global_context,
