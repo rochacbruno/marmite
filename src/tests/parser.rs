@@ -484,6 +484,7 @@ fn test_fix_internal_links_with_percent_encoded_spaces_and_fragment() {
 #[test]
 fn test_decode_html_entities() {
     assert_eq!(decode_html_entities("Test &amp; Example"), "Test & Example");
+    assert_eq!(decode_html_entities("a &amp;lt; b"), "a &lt; b");
     assert_eq!(decode_html_entities("&lt;tag&gt;"), "<tag>");
     assert_eq!(decode_html_entities("&quot;quoted&quot;"), "\"quoted\"");
     assert_eq!(decode_html_entities("It&#39;s working"), "It's working");
