@@ -1276,3 +1276,52 @@ fn test_native_mermaid_render_disabled_preserves_js_flow() {
         "Should not contain build-time rendered diagram"
     );
 }
+
+#[test]
+fn test_drafts_not_in_series() {
+    let temp_dir = TempDir::new().unwrap();
+    let input_dir = temp_dir.path().join("input");
+    let output_dir = temp_dir.path().join("output");
+
+    fs::create_dir_all(input_dir.join("content")).unwrap();
+    fs::write(input_dir.join("marmite.yaml"), "name: Site").unwrap();
+    fs::write(
+        input_dir.join("content").join("part-one.md"),
+        "---\ntitle: Part One\ndate: 2024-01-01\nseries: tips\n---\nDone",
+    )
+    .unwrap();
+    fs::write(
+        input_dir.join("content").join("part-two.md"),
+        "---\ntitle: Part Two\ndate: 2024-01-02\nseries: tips\nstream: draft\n---\nNot yet",
+    )
+    .unwrap();
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            input_dir.to_str().unwrap(),
+            output_dir.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute marmite");
+
+    assert!(
+        output.status.success(),
+        "Command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let series_page = fs::read_to_string(output_dir.join("series-tips.html")).unwrap();
+    assert!(series_page.contains("Part One"));
+    assert!(
+        !series_page.contains("Part Two"),
+        "Series page should not list draft posts"
+    );
+    let published = fs::read_to_string(output_dir.join("part-one.html")).unwrap();
+    assert!(
+        !published.contains("Part Two"),
+        "Published posts should not link to a draft in their series"
+    );
+}
