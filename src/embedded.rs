@@ -149,7 +149,7 @@ pub fn generate_static(static_folder: &Path) {
         }
 
         match write_bytes_to_file(file_path.as_path(), file_data) {
-            Ok(()) => info!("Generated {}", &file_path.display()),
+            Ok(()) => info!("Generated {}", file_path.display()),
             Err(e) => error!("Error writing file: {e:?}"),
         }
     }
@@ -187,7 +187,7 @@ fn install_skills_to_dir(base_dir: &Path) {
         }
 
         match write_bytes_to_file(file_path.as_path(), file_data) {
-            Ok(()) => info!("Generated {}", &file_path.display()),
+            Ok(()) => info!("Generated {}", file_path.display()),
             Err(e) => error!("Error writing file: {e:?}"),
         }
     }

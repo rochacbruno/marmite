@@ -99,7 +99,7 @@ impl Data {
         let config_str = fs::read_to_string(config_path).unwrap_or_else(|e| {
             info!(
                 "Unable to read '{}', assuming defaults.: {e:?}",
-                &config_path.display()
+                config_path.display()
             );
             String::new()
         });
@@ -1203,7 +1203,7 @@ fn collect_global_fragments(
         let fragment_content =
             crate::parser::get_html_with_options(&rendered_fragment, parser_options, highlighter);
         // global_context.insert((*fragment).to_string(), &fragment_content);
-        debug!("{} fragment {}", fragment, &fragment_content);
+        debug!("{fragment} fragment {fragment_content}");
         ((*fragment).to_string(), fragment_content)
     })
     .collect::<Vec<_>>();
@@ -1461,12 +1461,7 @@ pub(crate) fn collect_content(
                         .unwrap_or_else(|| panic!("Could not get file name {e:?}")),
                 );
             let file_extension = e.path().extension().and_then(|ext| ext.to_str());
-            if !(e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_'))
-            {
-                return false;
-            }
-
-            true
+            e.path().is_file() && file_extension == Some("md") && !file_name.starts_with('_')
         })
         .map(|entry| {
             let file_metadata = match entry.metadata() {
@@ -2086,14 +2081,12 @@ fn initialize_tera(
 ) -> (Tera, Option<ShortcodeProcessor>) {
     let mut tera = Tera::default();
     tera.autoescape_on(Vec::<&str>::new());
-    let all_site_prefixes = cross_site_data
-        .map(|csd| {
-            csd.sites
-                .values()
-                .map(|sd| sd.output_path.clone())
-                .collect()
-        })
-        .unwrap_or_default();
+    let all_site_prefixes = cross_site_data.map_or_default(|csd| {
+        csd.sites
+            .values()
+            .map(|sd| sd.output_path.clone())
+            .collect()
+    });
     tera.register_function(
         "url_for",
         UrlFor {
@@ -2265,7 +2258,7 @@ fn initialize_tera(
         None
     };
 
-    debug!("{:#?}", &tera);
+    debug!("{tera:#?}");
     (tera, shortcode_processor)
 }
 
@@ -2293,7 +2286,7 @@ fn render_templates(
     global_context.insert("menu", &site_data.site.menu);
     global_context.insert("language", &site_data.site.language);
     global_context.insert("languages", &site_data.site.languages);
-    debug!("Global Context site: {:?}", &site_data.site);
+    debug!("Global Context site: {:?}", site_data.site);
     debug!("Site data galleries count: {}", site_data.galleries.len());
     collect_global_fragments(
         content_dir,
@@ -2658,7 +2651,7 @@ fn handle_author_pages(
                 }
             });
 
-            let filename = format!("author-{}", &author_slug);
+            let filename = format!("author-{author_slug}");
             handle_list_page(
                 &author_context,
                 &author.name,
@@ -2912,8 +2905,8 @@ fn handle_static_artifacts(
 
         info!(
             "Copied '{}' to '{}/'",
-            &static_source.display(),
-            &output_folder.display()
+            static_source.display(),
+            output_folder.display()
         );
     } else {
         // No theme (or theme without static dir) - use embedded as base
@@ -2935,8 +2928,8 @@ fn handle_static_artifacts(
 
             info!(
                 "Copied '{}' on top of embedded static to '{}/'",
-                &user_static.display(),
-                &output_folder.display()
+                user_static.display(),
+                output_folder.display()
             );
         }
     }
@@ -2982,8 +2975,8 @@ fn handle_static_artifacts(
 
         info!(
             "Copied '{}' to '{}/'",
-            &media_source.display(),
-            &output_folder.display()
+            media_source.display(),
+            output_folder.display()
         );
     }
 
@@ -3091,7 +3084,7 @@ fn handle_static_artifacts(
                         info!(
                             "Copied {} to {}",
                             source_file.display(),
-                            &destiny_path.display()
+                            destiny_path.display()
                         );
                     }
                     Err(e) => error!("Failed to copy {}: {e:?}", source_file.display()),
@@ -3987,11 +3980,9 @@ fn build_content_metadata(content: &Content, content_dir: &Path) -> serde_json::
         .and_then(|p| p.strip_prefix(content_dir).ok())
         .map(|p| p.display().to_string());
 
-    let last_updated = content.modified_time.map(|ts| {
-        chrono::DateTime::from_timestamp(ts, 0)
-            .map(|dt| dt.to_rfc3339())
-            .unwrap_or_default()
-    });
+    let last_updated = content
+        .modified_time
+        .map(|ts| chrono::DateTime::from_timestamp(ts, 0).map_or_default(|dt| dt.to_rfc3339()));
 
     serde_json::json!({
         "frontmatter": {
@@ -4055,13 +4046,13 @@ fn handle_content_pages(
             let mut content_context = global_context.clone();
             content_context.insert("title", &content.title);
             content_context.insert("content", &content);
-            content_context.insert("current_page", &format!("{}.html", &content.slug));
+            content_context.insert("current_page", &format!("{}.html", content.slug));
             if let Some(ref lang) = content.language {
                 content_context.insert("language", lang);
             }
             debug!(
                 "{} context: {:?}",
-                &content.slug,
+                content.slug,
                 format!(
                     "title: {},date: {:?},tags: {:?}",
                     &content.title, &content.date, &content.tags
@@ -4074,7 +4065,7 @@ fn handle_content_pages(
 
             let result = render_html_with_shortcodes(
                 "content.html",
-                &format!("{}.html", &content.slug),
+                &format!("{}.html", content.slug),
                 tera,
                 &content_context,
                 output_dir,
@@ -4088,7 +4079,7 @@ fn handle_content_pages(
 
             if generate_metadata && result.is_ok() {
                 let metadata = build_content_metadata(content, content_dir);
-                let metadata_path = output_dir.join(format!("{}.metadata.json", &content.slug));
+                let metadata_path = output_dir.join(format!("{}.metadata.json", content.slug));
                 if let Err(e) = fs::write(
                     &metadata_path,
                     serde_json::to_string_pretty(&metadata).unwrap_or_default(),
@@ -4477,7 +4468,7 @@ fn render_html_with_shortcodes(
 
     let output_file = output_dir.join(filename);
     fs::write(&output_file, rendered).map_err(|e| e.to_string())?;
-    info!("Generated {}", &output_file.display());
+    info!("Generated {}", output_file.display());
     Ok(())
 }
 
