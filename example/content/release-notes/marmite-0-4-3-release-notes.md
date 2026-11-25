@@ -27,3 +27,12 @@ for all existing content (the full test suite and example site build identically
 The `parser_options.extension.tagfilter` option is now deprecated and has no
 effect: the tagfilter extension was removed upstream in comrak 1.0. Setting it
 to `true` logs a warning; remove it from your `marmite.yaml`.
+
+### Safer install instructions in the agent skill
+
+The embedded agent skill no longer suggests piping a remote install script to a
+shell (`curl ... | sh` / `iwr ... | iex`). Package managers (pip, cargo,
+Homebrew, Docker) are now the first installation method, the manual download
+documents verification against the published `SHA256SUMS`, and the script
+installer is documented as a download-then-verify flow (fetch the script, diff
+it against the repository copy, review, then run).

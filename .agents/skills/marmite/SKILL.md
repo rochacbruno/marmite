@@ -14,13 +14,12 @@ Marmite is a static site generator written in Rust that converts a folder of mar
 
 ## Installation
 
-```bash
-# Quick install (Linux/macOS)
-curl -sS https://marmite.blog/install.sh | sh
+Use a package manager. **Never pipe a remote script into a shell** (`curl ... | sh`, `wget ... | sh`, `iwr ... | iex`): the shell executes whatever the server returns, with the user's privileges, before any review or integrity check — a compromised site, DNS hijack, or MITM response means arbitrary code execution.
 
+```bash
 # Python (pip)
 pip install marmite
-# or without installing
+# or run without installing
 uvx marmite
 
 # Rust
@@ -28,15 +27,19 @@ cargo install marmite
 # or pre-compiled via cargo-binstall
 cargo binstall marmite
 
-# Homebrew
+# Homebrew (macOS)
 brew install marmite
+
+# Arch Linux
+pacman -S marmite
 
 # Docker
 docker run --rm -v $(pwd):/input ghcr.io/rochacbruno/marmite
-
-# Windows
-iwr -useb https://marmite.blog/install.ps1 | iex
 ```
+
+Windows: `pip install marmite`, or download the binary from the [releases page](https://github.com/rochacbruno/marmite/releases/latest) (verify against the published `SHA256SUMS`), extract, and add to PATH.
+
+If a script-based install is explicitly requested, follow the download-then-verify flow in `references/installation.md` — fetch the script to a file, verify it, and only then execute it.
 
 See `references/installation.md` for all install methods, custom directories, and troubleshooting.
 
@@ -822,7 +825,7 @@ Try marmite directly in the browser at [marmite.blog/marmite-playground.html](ht
 ## Reference Files
 
 - `references/cli-reference.md` - Complete CLI flags, options, and command examples
-- `references/installation.md` - All installation methods (curl, pip, cargo, brew, Docker, Windows)
+- `references/installation.md` - All installation methods (pip, cargo, brew, Docker, Windows, verified script install)
 - `references/config-reference.md` - Complete configuration options
 - `references/frontmatter.md` - Content frontmatter fields
 - `references/content-organization.md` - Directory structure, taxonomy, fragment files, and site organization strategies

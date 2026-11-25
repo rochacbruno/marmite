@@ -68,7 +68,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install marmite
-        run: curl -sS https://marmite.blog/install.sh | sh
+        run: pip install marmite
 
       - name: Build site
         run: marmite . site
@@ -99,12 +99,12 @@ Use the template at https://github.com/rochacbruno/blog to get started quickly.
 Create `.gitlab-ci.yml`:
 
 ```yaml
-image: rust:latest
+image: python:3.12
 
 pages:
   stage: deploy
   script:
-    - curl -sS https://marmite.blog/install.sh | sh
+    - pip install marmite
     - marmite . public
   artifacts:
     paths:
@@ -126,7 +126,7 @@ Create `netlify.toml` in the repository root:
 
 ```toml
 [build]
-  command = "curl -sS https://marmite.blog/install.sh | sh && marmite . site"
+  command = "pip install marmite && marmite . site"
   publish = "site"
 ```
 
@@ -151,7 +151,7 @@ Create `vercel.json`:
 
 ```json
 {
-  "buildCommand": "curl -sS https://marmite.blog/install.sh | sh && marmite . site",
+  "buildCommand": "pip install marmite && marmite . site",
   "outputDirectory": "site"
 }
 ```
@@ -168,7 +168,7 @@ Create `vercel.json`:
 
 1. Connect your repository in the Cloudflare Pages dashboard
 2. Set the build configuration:
-   - Build command: `curl -sS https://marmite.blog/install.sh | sh && marmite . site`
+   - Build command: `pip install marmite && marmite . site`
    - Build output directory: `site`
 3. Set `url` in `marmite.yaml` to your Cloudflare Pages domain
 
