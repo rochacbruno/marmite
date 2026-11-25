@@ -11,10 +11,10 @@ Marmite is the easiest static site generator optimized for blogs. It doesn't req
 ### Install
 
 ```console
-$ curl -sS https://marmite.blog/install.sh | sh
+$ pip install marmite
 ```
 
-<small> or check [installation guide](https://marmite.blog/installation.html) for more install options </small>
+<small> or check [installation guide](https://marmite.blog/installation.html) for more install options (cargo, brew, Docker, verified binary download) </small>
 
 ### Start blogging
 
