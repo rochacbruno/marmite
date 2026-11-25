@@ -15,6 +15,7 @@ permissions:
   pages: write
   id-token: write
   pull-requests: write
+  actions: read
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
@@ -119,6 +120,28 @@ jobs:
         uses: actions/upload-pages-artifact@v5
         with:
           path: 'site'
+
+      # deploy-pages fails hard if the artifact is not yet visible to the
+      # Actions API ("No artifacts named github-pages were found"), which
+      # happens intermittently right after a successful upload due to
+      # API eventual consistency. Poll until it is listable before deploying.
+      - name: Wait for artifact visibility 📦
+        if: github.event_name == 'push' && steps.version.outputs.is_release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for i in $(seq 1 12); do
+            id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
+              --jq '.artifacts[] | select(.name == "github-pages") | .id' || true)
+            if [ -n "$id" ]; then
+              echo "github-pages artifact is visible to the API (id: $id)"
+              exit 0
+            fi
+            echo "Artifact not visible yet (attempt $i/12); retrying in 10s"
+            sleep 10
+          done
+          echo "::error::github-pages artifact never became visible to the API"
+          exit 1
 
       - name: Deploy to GitHub Pages 🚀
         if: github.event_name == 'push' && steps.version.outputs.is_release == 'true'

@@ -348,8 +348,7 @@ fn resize_image(
     let extension = output_path
         .extension()
         .and_then(|e| e.to_str())
-        .map(|e| format!(".{e}"))
-        .unwrap_or_default();
+        .map_or_default(|e| format!(".{e}"));
 
     let temp_file = TempFileBuilder::new()
         .suffix(&extension)

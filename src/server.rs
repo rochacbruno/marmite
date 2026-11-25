@@ -820,12 +820,11 @@ fn handle_data_api(ctx: &ServerContext) -> Response<Cursor<Vec<u8>>> {
     let shortcodes: Vec<String> = build_info
         .get("shortcodes")
         .and_then(|v| v.as_array())
-        .map(|arr| {
+        .map_or_default(|arr| {
             arr.iter()
                 .filter_map(|v| v.as_str().map(String::from))
                 .collect()
-        })
-        .unwrap_or_default();
+        });
 
     let mut content_items: Vec<serde_json::Value> = Vec::new();
     for key in &["posts", "pages"] {

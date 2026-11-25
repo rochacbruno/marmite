@@ -125,8 +125,7 @@ impl UrlFor {
             String::new()
         } else {
             Url::parse(&base_url)
-                .map(|parsed_url| parsed_url.path().trim_end_matches('/').to_string())
-                .unwrap_or_default()
+                .map_or_default(|parsed_url| parsed_url.path().trim_end_matches('/').to_string())
         };
 
         // Construct the URL based on the presence of base_url and abs flag

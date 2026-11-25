@@ -22,7 +22,7 @@ pub fn generate_rss(
         } else {
             "http://"
         };
-        format!("{}{}", protocol, &config.url)
+        format!("{}{}", protocol, config.url)
     } else {
         config.url.clone()
     };
@@ -53,11 +53,11 @@ pub fn generate_rss(
             .expect("Content should have date - filtered above");
         let mut item = ItemBuilder::default()
             .title(content.title.clone())
-            .link(format!("{}/{}.html", &feed_url, &content.slug))
+            .link(format!("{}/{}.html", feed_url, content.slug))
             .description(content.description.clone())
             .guid(
                 rss::GuidBuilder::default()
-                    .value(format!("{}/{}.html", &feed_url, &content.slug))
+                    .value(format!("{}/{}.html", feed_url, content.slug))
                     .build(),
             )
             .pub_date(content_date.format(date_format).to_string())
@@ -90,7 +90,7 @@ pub fn generate_rss(
     if !config.card_image.is_empty() {
         channel.image = Some(
             rss::ImageBuilder::default()
-                .url(format!("{}/{}", &feed_url, &config.card_image))
+                .url(format!("{}/{}", feed_url, config.card_image))
                 .build(),
         );
     }
@@ -99,7 +99,7 @@ pub fn generate_rss(
     let feed_path = output_path.join(format!("{filename}.rss"));
     let mut file = File::create(&feed_path).map_err(|e| e.to_string())?;
     file.write_all(rss.as_bytes()).map_err(|e| e.to_string())?;
-    info!("Generated {}", &feed_path.display());
+    info!("Generated {}", feed_path.display());
 
     Ok(())
 }
@@ -171,8 +171,8 @@ pub fn generate_json(
             .date
             .expect("Content should have date - filtered above");
         let item = JsonFeedItem {
-            id: format!("{}/{}.html", &config.url, &content.slug),
-            url: format!("{}/{}.html", &config.url, &content.slug),
+            id: format!("{}/{}.html", config.url, content.slug),
+            url: format!("{}/{}.html", config.url, content.slug),
             title: content.title.clone(),
             content_html: content.html.clone(),
             // content_text: content.html.clone(), // requires stripping HTML tags
@@ -219,7 +219,7 @@ pub fn generate_json(
         version: "https://jsonfeed.org/version/1".to_string(),
         title: config.name.clone(),
         home_page_url: config.url.clone(),
-        feed_url: format!("{}/{}.json", &config.url, filename),
+        feed_url: format!("{}/{}.json", config.url, filename),
         description: config.tagline.clone(),
         items,
     };
@@ -228,7 +228,7 @@ pub fn generate_json(
     let feed_path = output_path.join(format!("{filename}.json"));
     let mut file = File::create(&feed_path).map_err(|e| e.to_string())?;
     file.write_all(json.as_bytes()).map_err(|e| e.to_string())?;
-    info!("Generated {}", &feed_path.display());
+    info!("Generated {}", feed_path.display());
 
     Ok(())
 }
