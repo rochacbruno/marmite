@@ -267,12 +267,13 @@ pub fn fix_internal_links(html: &str) -> String {
 /// Decode common HTML entities in text
 /// Handles &amp;, &lt;, &gt;, &quot;, &#39; and numeric entities
 fn decode_html_entities(text: &str) -> String {
-    text.replace("&amp;", "&")
-        .replace("&lt;", "<")
+    // `&amp;` goes last, so that `&amp;lt;` becomes `&lt;` and not `<`
+    text.replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&quot;", "\"")
         .replace("&#39;", "'")
         .replace("&#x27;", "'")
+        .replace("&amp;", "&")
 }
 
 /// Convert a `serde_yaml::Value` mermaid config into `RenderOptions`.
