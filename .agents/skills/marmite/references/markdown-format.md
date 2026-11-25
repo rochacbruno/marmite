@@ -417,5 +417,5 @@ markdown_parser:
     wikilinks_title_before_pipe: true # [[Title|slug]] (default: true)
     wikilinks_title_after_pipe: false # [[slug|Title]] (default: false)
     alerts: true                      # > [!NOTE] alerts (default: true)
-    tagfilter: false                  # Filter dangerous HTML tags (default: false)
+    tagfilter: false                  # DEPRECATED: no effect since comrak 1.0 (default: false)
 ```

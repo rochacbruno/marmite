@@ -263,7 +263,7 @@ markdown_parser:
   parse:
     relaxed_tasklist_matching: true    # Relaxed task list syntax (default: true)
   extension:
-    tagfilter: false                  # HTML tag filtering (default: false)
+    tagfilter: false                  # DEPRECATED: no effect since comrak 1.0 (default: false)
     strikethrough: true               # ~~strikethrough~~ (default: true)
     table: true                       # Table support (default: true)
     autolink: true                    # Auto-detect URLs (default: true)

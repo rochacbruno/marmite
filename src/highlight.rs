@@ -1,11 +1,11 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt::{self, Write as _};
 use std::sync::{Arc, Mutex};
 
 use arborium::theme::{builtin as builtin_themes, Theme};
 use arborium::{Config, Error as ArboriumError, Highlighter, HtmlFormat};
-use comrak::adapters::SyntaxHighlighterAdapter;
+use comrak::adapters::{SyntaxHighlightMeta, SyntaxHighlighterAdapter};
 use comrak::html;
 use log::warn;
 
@@ -36,14 +36,16 @@ impl SyntaxHighlighterAdapter for MarmiteHighlighter {
     fn write_highlighted(
         &self,
         output: &mut dyn fmt::Write,
-        lang: Option<&str>,
-        code: &str,
+        highlight: &SyntaxHighlightMeta<'_>,
     ) -> fmt::Result {
-        let Some(raw_lang) = lang.map(str::trim).filter(|s| !s.is_empty()) else {
+        let code = highlight.code;
+        let raw_lang = highlight.lang.trim();
+        if raw_lang.is_empty() {
             return html::escape(output, code);
-        };
+        }
         // Fence info strings can carry metadata after the language name
-        // (e.g. ```rust main.rs); arborium wants just the language token.
+        // (e.g. ```rust main.rs); comrak gives us just the language token,
+        // but trim defensively in case of odd info strings.
         let lang = raw_lang.split_whitespace().next().unwrap_or(raw_lang);
 
         // Some fence "languages" are rendered client-side
@@ -78,7 +80,8 @@ impl SyntaxHighlighterAdapter for MarmiteHighlighter {
     fn write_pre_tag(
         &self,
         output: &mut dyn fmt::Write,
-        mut attributes: HashMap<&'static str, Cow<'_, str>>,
+        _highlight: &SyntaxHighlightMeta<'_>,
+        mut attributes: BTreeMap<&str, Cow<'_, str>>,
     ) -> fmt::Result {
         attributes
             .entry("class")
@@ -90,7 +93,8 @@ impl SyntaxHighlighterAdapter for MarmiteHighlighter {
     fn write_code_tag(
         &self,
         output: &mut dyn fmt::Write,
-        mut attributes: HashMap<&'static str, Cow<'_, str>>,
+        _highlight: &SyntaxHighlightMeta<'_>,
+        mut attributes: BTreeMap<&str, Cow<'_, str>>,
     ) -> fmt::Result {
         attributes
             .entry("class")
@@ -223,7 +227,8 @@ mod tests {
         let hl = MarmiteHighlighter::new();
         let body = "graph LR\n  A --> B\n";
         let mut out = String::new();
-        hl.write_highlighted(&mut out, Some("mermaid"), body)
+        let highlight = SyntaxHighlightMeta::new("mermaid", "", body);
+        hl.write_highlighted(&mut out, &highlight)
             .expect("write_highlighted should succeed for mermaid");
 
         let mut expected = String::new();
