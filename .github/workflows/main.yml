@@ -121,32 +121,18 @@ jobs:
         with:
           path: 'site'
 
-      # deploy-pages fails hard if the artifact is not yet visible to the
-      # Actions API ("No artifacts named github-pages were found"), which
-      # happens intermittently right after a successful upload due to
-      # API eventual consistency. Poll until it is listable before deploying.
-      - name: Wait for artifact visibility 📦
-        if: github.event_name == 'push' && steps.version.outputs.is_release == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          for i in $(seq 1 12); do
-            id=$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" \
-              --jq '.artifacts[] | select(.name == "github-pages") | .id' || true)
-            if [ -n "$id" ]; then
-              echo "github-pages artifact is visible to the API (id: $id)"
-              exit 0
-            fi
-            echo "Artifact not visible yet (attempt $i/12); retrying in 10s"
-            sleep 10
-          done
-          echo "::error::github-pages artifact never became visible to the API"
-          exit 1
-
+      # Custom deploy script instead of actions/deploy-pages: the official
+      # action resolves the artifact ID via the Actions Results (Twirp)
+      # service, which intermittently returns empty artifact lists right
+      # after a successful upload. The script resolves the ID via the REST
+      # API and drives the same Pages deployment endpoints. See
+      # .github/deploy_pages.sh for details.
       - name: Deploy to GitHub Pages 🚀
         if: github.event_name == 'push' && steps.version.outputs.is_release == 'true'
         id: deployment
-        uses: actions/deploy-pages@v5
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: .github/deploy_pages.sh
 
   coverage:
     name: Coverage
