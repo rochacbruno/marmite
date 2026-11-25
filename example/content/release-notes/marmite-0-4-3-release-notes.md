@@ -17,3 +17,13 @@ access from other machines on your network.
 
 The CLI help and server startup message now explicitly identify the built-in
 server as development-only, not for production deployments.
+
+## Changes
+
+### Markdown engine upgraded to comrak 1.0
+
+Marmite now uses comrak 1.0 for Markdown parsing. Rendered output is unchanged
+for all existing content (the full test suite and example site build identically).
+The `parser_options.extension.tagfilter` option is now deprecated and has no
+effect: the tagfilter extension was removed upstream in comrak 1.0. Setting it
+to `true` logs a warning; remove it from your `marmite.yaml`.

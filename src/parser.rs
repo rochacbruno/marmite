@@ -4,7 +4,7 @@ use crate::re;
 use crate::site::Data;
 use comrak::{
     markdown_to_html, markdown_to_html_with_plugins, options::BrokenLinkReference,
-    options::Plugins, options::RenderPlugins, Options, ResolvedReference,
+    options::Plugins, Options, ResolvedReference,
 };
 use frontmatter_gen::{detect_format, extract_raw_frontmatter, parse, Frontmatter};
 use log::warn;
@@ -167,7 +167,9 @@ pub fn get_html_with_options(
     options.extension.header_id_prefix = Some(String::new());
     // options.extension.image_url_rewriter = TODO: implement this to point to a resized image
     options.extension.multiline_block_quotes = parser_options.extension.multiline_block_quotes;
-    options.extension.tagfilter = parser_options.extension.tagfilter;
+    if parser_options.extension.tagfilter {
+        warn!("The 'tagfilter' parser option is deprecated and no longer has any effect; it was removed upstream in comrak 1.0. Remove it from your marmite.yaml.");
+    }
     options.extension.shortcodes = parser_options.extension.shortcodes;
     options.extension.spoiler = parser_options.extension.spoiler;
     options.extension.strikethrough = parser_options.extension.strikethrough;
@@ -181,13 +183,8 @@ pub fn get_html_with_options(
 
     // Apply syntax highlighting (or not)
     let rendered = if let Some(hl) = highlighter {
-        let render_plugins = RenderPlugins {
-            codefence_syntax_highlighter: Some(hl),
-            ..RenderPlugins::default()
-        };
-        let plugins = Plugins {
-            render: render_plugins,
-        };
+        let mut plugins = Plugins::default();
+        plugins.render.codefence_syntax_highlighter = Some(hl);
         markdown_to_html_with_plugins(markdown, &options, &plugins)
     } else {
         markdown_to_html(markdown, &options)

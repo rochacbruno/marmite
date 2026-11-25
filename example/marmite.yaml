@@ -172,7 +172,7 @@ extra:
 #   parse:
 #     relaxed_tasklist_matching: true # Allow relaxed task list syntax (default: true)
 #   extension:
-#     tagfilter: false               # Enable/disable tag filtering (default: false)
+#     tagfilter: false               # DEPRECATED: no effect since comrak 1.0 (default: false)
 #     strikethrough: true            # Enable/disable ~~strikethrough~~ (default: true)
 #     table: true                    # Enable/disable table support (default: true)
 #     autolink: true                 # Enable/disable automatic link detection (default: true)
